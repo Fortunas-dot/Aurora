@@ -18,7 +18,23 @@
       "Bash(eas build:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(set:*)",
+      "Bash(npx eas-cli:*)",
+      "Bash(where:*)",
+      "Bash(npx expo-cli:*)",
+      "Bash(npx expo:*)",
+      "Bash(cat:*)",
+      "Bash(npm info:*)",
+      "Bash(npm view:*)",
+      "Bash(dir:*)",
+      "Bash(ping:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx expo-doctor)",
+      "Bash(npx expo-doctor:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
