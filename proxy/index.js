@@ -98,6 +98,19 @@ wss.on('connection', (clientWs, req) => {
     console.log('Connected to OpenAI Realtime API');
     isOpenAIConnected = true;
     
+    // TEST: Send a test message directly from proxy after 2 seconds
+    setTimeout(() => {
+      console.log('🧪 PROXY TEST: Sending session.update directly from proxy...');
+      const testMsg = JSON.stringify({
+        type: 'session.update',
+        session: {
+          voice: 'alloy'
+        }
+      });
+      console.log('🧪 PROXY TEST message:', testMsg);
+      openaiWs.send(testMsg);
+    }, 2000);
+    
     // Send any queued messages
     while (messageQueue.length > 0) {
       const msg = messageQueue.shift();
