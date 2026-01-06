@@ -14,8 +14,8 @@ const http = require('http');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const PORT = process.env.PORT || 8080;
-// Use the latest realtime model - try without date suffix
-const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview';
+// Use the dated model version as per OpenAI docs
+const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
 
 if (!OPENAI_API_KEY) {
   console.error('ERROR: OPENAI_API_KEY environment variable not set!');
@@ -57,8 +57,11 @@ wss.on('connection', (clientWs, req) => {
     try {
       const parsed = JSON.parse(msgStr);
       console.log(`📤 Client -> OpenAI: ${parsed.type}`);
+      // Log full message for debugging
+      console.log(`📤 Full message: ${msgStr.substring(0, 500)}`);
     } catch (e) {
       console.log(`📤 Client -> OpenAI: (binary or invalid JSON)`);
+      console.log(`📤 Raw data (first 200 chars): ${msgStr.substring(0, 200)}`);
     }
     
     if (isOpenAIConnected && openaiWs.readyState === WebSocket.OPEN) {
