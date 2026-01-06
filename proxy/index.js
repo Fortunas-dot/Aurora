@@ -14,8 +14,8 @@ const http = require('http');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const PORT = process.env.PORT || 8080;
-// Use the dated model version as per OpenAI docs
-const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
+// Try the mini model which might have better availability
+const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview';
 
 if (!OPENAI_API_KEY) {
   console.error('ERROR: OPENAI_API_KEY environment variable not set!');
@@ -77,7 +77,12 @@ wss.on('connection', (clientWs, req) => {
     const msgStr = isBinary ? '(binary)' : data.toString();
     try {
       const parsed = JSON.parse(msgStr);
-      console.log(`📥 OpenAI -> Client: ${parsed.type}${parsed.error ? ' ERROR: ' + parsed.error.message : ''}`);
+      if (parsed.type === 'error') {
+        console.log(`📥 OpenAI -> Client: ERROR`);
+        console.log(`📥 Full error: ${JSON.stringify(parsed, null, 2)}`);
+      } else {
+        console.log(`📥 OpenAI -> Client: ${parsed.type}`);
+      }
     } catch (e) {
       console.log(`📥 OpenAI -> Client: (binary or non-JSON)`);
     }
