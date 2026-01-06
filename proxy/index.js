@@ -61,9 +61,11 @@ wss.on('connection', (clientWs, req) => {
   });
 
   // Forward messages from OpenAI to client
-  openaiWs.on('message', (data) => {
+  openaiWs.on('message', (data, isBinary) => {
     if (clientWs.readyState === WebSocket.OPEN) {
-      clientWs.send(data);
+      // Ensure we send as string for JSON messages
+      const message = isBinary ? data : data.toString();
+      clientWs.send(message);
     }
   });
 
@@ -132,4 +134,5 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+
 
