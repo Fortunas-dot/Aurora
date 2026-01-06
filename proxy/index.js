@@ -14,6 +14,7 @@ const http = require('http');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const PORT = process.env.PORT || 8080;
+// Use the latest realtime model
 const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
 
 if (!OPENAI_API_KEY) {
