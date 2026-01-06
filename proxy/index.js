@@ -53,11 +53,11 @@ wss.on('connection', (clientWs, req) => {
 
   // Forward messages from client to OpenAI
   clientWs.on('message', (data) => {
+    // IMPORTANT: Convert to string before forwarding - fixes encoding issues
     const msgStr = data.toString();
     try {
       const parsed = JSON.parse(msgStr);
       console.log(`📤 Client -> OpenAI: ${parsed.type}`);
-      // Log full message for debugging
       console.log(`📤 Full message: ${msgStr.substring(0, 500)}`);
     } catch (e) {
       console.log(`📤 Client -> OpenAI: (binary or invalid JSON)`);
@@ -65,10 +65,11 @@ wss.on('connection', (clientWs, req) => {
     }
     
     if (isOpenAIConnected && openaiWs.readyState === WebSocket.OPEN) {
-      openaiWs.send(data);
+      // Send as STRING, not Buffer - this fixes the server_error!
+      openaiWs.send(msgStr);
     } else {
       console.log('⏳ Queuing message - OpenAI not ready');
-      messageQueue.push(data);
+      messageQueue.push(msgStr);
     }
   });
 
@@ -98,20 +99,7 @@ wss.on('connection', (clientWs, req) => {
     console.log('Connected to OpenAI Realtime API');
     isOpenAIConnected = true;
     
-    // TEST: Send a test message directly from proxy after 2 seconds
-    setTimeout(() => {
-      console.log('🧪 PROXY TEST: Sending session.update directly from proxy...');
-      const testMsg = JSON.stringify({
-        type: 'session.update',
-        session: {
-          voice: 'alloy'
-        }
-      });
-      console.log('🧪 PROXY TEST message:', testMsg);
-      openaiWs.send(testMsg);
-    }, 2000);
-    
-    // Send any queued messages
+    // Send any queued messages (as strings)
     while (messageQueue.length > 0) {
       const msg = messageQueue.shift();
       openaiWs.send(msg);
