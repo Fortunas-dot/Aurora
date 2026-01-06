@@ -53,18 +53,33 @@ wss.on('connection', (clientWs, req) => {
 
   // Forward messages from client to OpenAI
   clientWs.on('message', (data) => {
+    const msgStr = data.toString();
+    try {
+      const parsed = JSON.parse(msgStr);
+      console.log(`📤 Client -> OpenAI: ${parsed.type}`);
+    } catch (e) {
+      console.log(`📤 Client -> OpenAI: (binary or invalid JSON)`);
+    }
+    
     if (isOpenAIConnected && openaiWs.readyState === WebSocket.OPEN) {
       openaiWs.send(data);
     } else {
-      // Queue messages until OpenAI connection is ready
+      console.log('⏳ Queuing message - OpenAI not ready');
       messageQueue.push(data);
     }
   });
 
   // Forward messages from OpenAI to client
   openaiWs.on('message', (data, isBinary) => {
+    const msgStr = isBinary ? '(binary)' : data.toString();
+    try {
+      const parsed = JSON.parse(msgStr);
+      console.log(`📥 OpenAI -> Client: ${parsed.type}${parsed.error ? ' ERROR: ' + parsed.error.message : ''}`);
+    } catch (e) {
+      console.log(`📥 OpenAI -> Client: (binary or non-JSON)`);
+    }
+    
     if (clientWs.readyState === WebSocket.OPEN) {
-      // Ensure we send as string for JSON messages
       const message = isBinary ? data : data.toString();
       clientWs.send(message);
     }
