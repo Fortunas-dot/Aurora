@@ -77,6 +77,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (avatar !== undefined) updateData.avatar = avatar;
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
     if (showEmail !== undefined) updateData.showEmail = showEmail;
+    if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;
 
     const user = await User.findByIdAndUpdate(
       req.userId,

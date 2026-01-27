@@ -18,22 +18,38 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     const query: any = {};
 
     // Show public groups and user's private groups
+    const privacyQuery: any[] = [];
     if (req.userId) {
-      query.$or = [
+      privacyQuery.push(
         { isPrivate: false },
-        { members: req.userId },
-      ];
+        { members: req.userId }
+      );
     } else {
-      query.isPrivate = false;
+      privacyQuery.push({ isPrivate: false });
     }
 
+    const andConditions: any[] = [{ $or: privacyQuery }];
+
     if (search) {
-      query.$text = { $search: search };
+      andConditions.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      });
     }
 
     if (tag) {
-      query.tags = tag.toLowerCase();
+      andConditions.push({ tags: tag.toLowerCase() });
     }
+
+    if (andConditions.length > 1) {
+      query.$and = andConditions;
+    } else {
+      query.$or = privacyQuery;
+    }
+
+    console.log('Groups query:', JSON.stringify(query, null, 2));
 
     const groups = await Group.find(query)
       .populate('admins', 'username displayName avatar')
@@ -42,6 +58,8 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
       .limit(limit);
 
     const total = await Group.countDocuments(query);
+
+    console.log(`Found ${groups.length} groups (total: ${total})`);
 
     res.json({
       success: true,

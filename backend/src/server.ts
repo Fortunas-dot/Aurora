@@ -11,6 +11,7 @@ import groupRoutes from './routes/groups';
 import messageRoutes from './routes/messages';
 import userRoutes from './routes/users';
 import notificationRoutes from './routes/notifications';
+import uploadRoutes from './routes/upload';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -29,6 +30,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (uploads)
+import path from 'path';
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -42,6 +47,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

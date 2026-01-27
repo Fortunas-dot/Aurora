@@ -10,6 +10,12 @@ export interface IUser extends Document {
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;
+  healthInfo?: {
+    mentalHealth?: string[];
+    physicalHealth?: string[];
+    medications?: string[];
+    therapies?: string[];
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -61,6 +67,48 @@ const UserSchema = new Schema<IUser>(
     showEmail: {
       type: Boolean,
       default: false,
+    },
+    healthInfo: {
+      mentalHealth: [{
+        condition: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        type: {
+          type: String,
+          trim: true,
+        },
+        severity: {
+          type: String,
+          enum: ['mild', 'moderate', 'severe'],
+          default: 'moderate',
+        },
+      }],
+      physicalHealth: [{
+        condition: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        type: {
+          type: String,
+          trim: true,
+        },
+        severity: {
+          type: String,
+          enum: ['mild', 'moderate', 'severe'],
+          default: 'moderate',
+        },
+      }],
+      medications: [{
+        type: String,
+        trim: true,
+      }],
+      therapies: [{
+        type: String,
+        trim: true,
+      }],
     },
   },
   {

@@ -86,12 +86,13 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 // @access  Private
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, tags, groupId } = req.body;
+    const { content, tags, groupId, images } = req.body;
 
     const post = await Post.create({
       author: req.userId,
       content,
       tags: tags || [],
+      images: images || [],
       groupId: groupId || null,
     });
 

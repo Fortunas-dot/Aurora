@@ -4,6 +4,7 @@ export interface IPost extends Document {
   author: Types.ObjectId;
   content: string;
   tags: string[];
+  images?: string[];
   groupId?: Types.ObjectId;
   likes: Types.ObjectId[];
   commentsCount: number;
@@ -33,6 +34,9 @@ const PostSchema = new Schema<IPost>(
       type: String,
       trim: true,
       lowercase: true,
+    }],
+    images: [{
+      type: String,
     }],
     groupId: {
       type: Schema.Types.ObjectId,
