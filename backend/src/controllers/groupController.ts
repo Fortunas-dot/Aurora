@@ -1,0 +1,313 @@
+import { Response } from 'express';
+import Group from '../models/Group';
+import Post from '../models/Post';
+import Notification from '../models/Notification';
+import { AuthRequest } from '../middleware/auth';
+
+// @desc    Get all groups
+// @route   GET /api/groups
+// @access  Public
+export const getGroups = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+    const tag = req.query.tag as string;
+
+    const query: any = {};
+
+    // Show public groups and user's private groups
+    if (req.userId) {
+      query.$or = [
+        { isPrivate: false },
+        { members: req.userId },
+      ];
+    } else {
+      query.isPrivate = false;
+    }
+
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    if (tag) {
+      query.tags = tag.toLowerCase();
+    }
+
+    const groups = await Group.find(query)
+      .populate('admins', 'username displayName avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Group.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: groups.map((group) => ({
+        ...group.toObject(),
+        memberCount: group.members.length,
+        isMember: req.userId ? group.members.some((m) => m.toString() === req.userId) : false,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching groups',
+    });
+  }
+};
+
+// @desc    Get single group
+// @route   GET /api/groups/:id
+// @access  Public
+export const getGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const group = await Group.findById(req.params.id)
+      .populate('admins', 'username displayName avatar')
+      .populate('members', 'username displayName avatar');
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check access for private groups
+    if (group.isPrivate && req.userId) {
+      const isMember = group.members.some((m: any) => m._id.toString() === req.userId);
+      if (!isMember) {
+        res.status(403).json({
+          success: false,
+          message: 'This is a private group',
+        });
+        return;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...group.toObject(),
+        memberCount: group.members.length,
+        isMember: req.userId ? group.members.some((m: any) => m._id.toString() === req.userId) : false,
+        isAdmin: req.userId ? group.admins.some((a: any) => a._id.toString() === req.userId) : false,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching group',
+    });
+  }
+};
+
+// @desc    Create group
+// @route   POST /api/groups
+// @access  Private
+export const createGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, description, tags, isPrivate } = req.body;
+
+    const group = await Group.create({
+      name,
+      description,
+      tags: tags || [],
+      isPrivate: isPrivate || false,
+      members: [req.userId],
+      admins: [req.userId],
+    });
+
+    await group.populate('admins', 'username displayName avatar');
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...group.toObject(),
+        memberCount: 1,
+        isMember: true,
+        isAdmin: true,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error creating group',
+    });
+  }
+};
+
+// @desc    Join group
+// @route   POST /api/groups/:id/join
+// @access  Private
+export const joinGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if already a member
+    if (group.members.some((m) => m.toString() === req.userId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Already a member of this group',
+      });
+      return;
+    }
+
+    group.members.push(req.userId as any);
+    await group.save();
+
+    // Notify admins
+    for (const adminId of group.admins) {
+      if (adminId.toString() !== req.userId) {
+        await Notification.create({
+          user: adminId,
+          type: 'group_join',
+          relatedUser: req.userId,
+          relatedGroup: group._id,
+          message: 'joined your group',
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Joined group successfully',
+      data: {
+        memberCount: group.members.length,
+        isMember: true,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error joining group',
+    });
+  }
+};
+
+// @desc    Leave group
+// @route   POST /api/groups/:id/leave
+// @access  Private
+export const leaveGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if member
+    const memberIndex = group.members.findIndex((m) => m.toString() === req.userId);
+    if (memberIndex === -1) {
+      res.status(400).json({
+        success: false,
+        message: 'Not a member of this group',
+      });
+      return;
+    }
+
+    // Remove from members
+    group.members.splice(memberIndex, 1);
+
+    // Remove from admins if applicable
+    const adminIndex = group.admins.findIndex((a) => a.toString() === req.userId);
+    if (adminIndex !== -1) {
+      group.admins.splice(adminIndex, 1);
+    }
+
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Left group successfully',
+      data: {
+        memberCount: group.members.length,
+        isMember: false,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error leaving group',
+    });
+  }
+};
+
+// @desc    Get posts in group
+// @route   GET /api/groups/:id/posts
+// @access  Public/Private (based on group privacy)
+export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check access for private groups
+    if (group.isPrivate) {
+      const isMember = group.members.some((m) => m.toString() === req.userId);
+      if (!isMember) {
+        res.status(403).json({
+          success: false,
+          message: 'This is a private group',
+        });
+        return;
+      }
+    }
+
+    const posts = await Post.find({ groupId: req.params.id })
+      .populate('author', 'username displayName avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Post.countDocuments({ groupId: req.params.id });
+
+    res.json({
+      success: true,
+      data: posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching group posts',
+    });
+  }
+};
+

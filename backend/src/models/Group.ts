@@ -1,0 +1,60 @@
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface IGroup extends Document {
+  name: string;
+  description: string;
+  tags: string[];
+  members: Types.ObjectId[];
+  admins: Types.ObjectId[];
+  isPrivate: boolean;
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const GroupSchema = new Schema<IGroup>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Group name is required'],
+      trim: true,
+      maxlength: [100, 'Group name cannot exceed 100 characters'],
+    },
+    description: {
+      type: String,
+      maxlength: [1000, 'Description cannot exceed 1000 characters'],
+      default: '',
+    },
+    tags: [{
+      type: String,
+      trim: true,
+      lowercase: true,
+    }],
+    members: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    admins: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    isPrivate: {
+      type: Boolean,
+      default: false,
+    },
+    avatar: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Index for searching
+GroupSchema.index({ name: 'text', description: 'text' });
+GroupSchema.index({ tags: 1 });
+
+export default mongoose.model<IGroup>('Group', GroupSchema);
+
