@@ -6,6 +6,7 @@ nixPkgs = ["python310", "opusfile"]
 
 [phases.install]
 cmds = [
+  "python -m ensurepip --upgrade",
   "cd moshi && python -m pip install .",
   "python -m pip install accelerate"
 ]
