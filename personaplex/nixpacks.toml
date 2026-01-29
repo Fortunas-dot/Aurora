@@ -2,7 +2,7 @@
 # This helps Railway detect Python and install system dependencies
 
 [phases.setup]
-nixPkgs = ["python310", "opusfile", "libopus-dev"]
+nixPkgs = ["python310", "opusfile"]
 
 [phases.install]
 cmds = [
