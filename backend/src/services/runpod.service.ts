@@ -13,6 +13,16 @@ interface RunPodPodStatus {
     podHostId: string;
     publicIp: string;
   } | null;
+  runtime?: {
+    ports?: Array<{
+      privatePort: number;
+      publicPort: number;
+      type: string;
+      ip: string;
+      isIpPublic: boolean;
+    }>;
+  };
+  gpuCount?: number;
 }
 
 interface RunPodApiResponse<T> {
@@ -74,6 +84,16 @@ export class RunPodService {
               podHostId
               publicIp
             }
+            runtime {
+              ports {
+                privatePort
+                publicPort
+                type
+                ip
+                isIpPublic
+              }
+            }
+            gpuCount
           }
         }
       `;
@@ -252,22 +272,44 @@ export class RunPodService {
 
   /**
    * Get pod public URL (for PersonaPlex connection)
+   * Tries to get proxy URL from RunPod API, falls back to static URL or constructs from IP
    */
   async getPodPublicUrl(): Promise<string | null> {
     const status = await this.getPodStatus();
-    if (!status?.machine?.publicIp) {
-      return null;
+    if (!status) {
+      console.warn('⚠️ Cannot get pod status, using static URL if available');
+      return process.env.PERSONAPLEX_SERVER_URL || null;
     }
 
-    // Construct URL from environment or pod IP
-    const baseUrl = process.env.PERSONAPLEX_SERVER_URL || '';
-    if (baseUrl) {
-      return baseUrl;
+    // Try to get proxy URL from runtime ports (RunPod proxy)
+    if (status.runtime?.ports && status.runtime.ports.length > 0) {
+      // Find port 8998 in the ports list
+      const port8998 = status.runtime.ports.find(p => p.privatePort === 8998);
+      if (port8998 && port8998.ip) {
+        // RunPod proxy URLs use the IP from the port
+        // Format: wss://{ip} (the IP is already the proxy domain)
+        const proxyUrl = `wss://${port8998.ip}`;
+        console.log('✅ Found proxy URL from RunPod API:', proxyUrl);
+        return proxyUrl;
+      }
     }
 
-    // Fallback: construct from pod IP (if you know the port)
-    const port = '8998';
-    return `wss://${status.machine.publicIp}:${port}`;
+    // Fallback 1: Use static URL from environment if configured
+    const staticUrl = process.env.PERSONAPLEX_SERVER_URL;
+    if (staticUrl && staticUrl !== 'wss://localhost:8998') {
+      console.log('⚠️ Using static PERSONAPLEX_SERVER_URL:', staticUrl);
+      return staticUrl;
+    }
+
+    // Fallback 2: Construct from public IP (direct connection, not via proxy)
+    if (status.machine?.publicIp) {
+      const directUrl = `wss://${status.machine.publicIp}:8998`;
+      console.log('⚠️ Constructing URL from public IP (may require firewall rules):', directUrl);
+      return directUrl;
+    }
+
+    console.error('❌ Cannot determine pod URL - no proxy, static URL, or public IP available');
+    return null;
   }
 }
 
