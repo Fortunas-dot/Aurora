@@ -11,11 +11,19 @@ export class PersonaPlexProxy {
 
   constructor() {
     // RunPod pod URL (will be set dynamically)
-    this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL || 
-      'wss://localhost:8998';
+    let url = process.env.PERSONAPLEX_SERVER_URL || 'wss://localhost:8998';
+    
+    // Remove trailing slash if present
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
+    
+    this.personaplexUrl = url;
     
     // Accept self-signed certs (PersonaPlex gebruikt temporary SSL)
     this.rejectUnauthorized = false;
+    
+    console.log('🔧 PersonaPlexProxy initialized with URL:', this.personaplexUrl);
   }
 
   /**
@@ -25,9 +33,19 @@ export class PersonaPlexProxy {
    */
   private async ensurePodRunning(): Promise<void> {
     // Check if Railway is configured (static URL, no management needed)
-    const railwayUrl = process.env.PERSONAPLEX_SERVER_URL;
+    let railwayUrl = process.env.PERSONAPLEX_SERVER_URL;
+    
+    // Remove trailing slash if present
+    if (railwayUrl && railwayUrl.endsWith('/')) {
+      railwayUrl = railwayUrl.slice(0, -1);
+    }
+    
     const isRailway = railwayUrl && 
       (railwayUrl.includes('railway.app') || railwayUrl.includes('railway.railway.app'));
+    
+    console.log('🔍 Checking PersonaPlex configuration:');
+    console.log('  - PERSONAPLEX_SERVER_URL:', railwayUrl || 'not set');
+    console.log('  - Is Railway URL:', isRailway);
     
     if (isRailway) {
       console.log('✅ Using Railway PersonaPlex service (static URL, no management needed)');
