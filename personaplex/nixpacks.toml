@@ -2,12 +2,13 @@
 # This helps Railway detect Python and install system dependencies
 
 [phases.setup]
-nixPkgs = ["python310", "python310Packages.pip", "opusfile"]
+nixPkgs = ["python310", "python310Packages.pip", "python310Packages.setuptools", "opusfile"]
 
 [phases.install]
 cmds = [
-  "cd moshi && python -m pip install .",
-  "python -m pip install accelerate"
+  "pip install --upgrade pip setuptools wheel",
+  "cd moshi && pip install .",
+  "pip install accelerate"
 ]
 
 [phases.build]
