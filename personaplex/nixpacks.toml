@@ -14,9 +14,11 @@ cmds = [
 
 [phases.build]
 cmds = [
+  "find /nix/store -name 'libstdc++.so.6' -type f 2>/dev/null | head -1 | xargs dirname > /tmp/libstdc_path.txt || true",
   "echo '#!/bin/bash' > /app/start-personaplex.sh",
-  "echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(find /nix/store -name libstdc++.so.6 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo \"\")' >> /app/start-personaplex.sh",
-  "echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(nix-build -E \"(import <nixpkgs> {}).gcc.cc.lib\" --no-out-link 2>/dev/null)/lib || echo \"\"' >> /app/start-personaplex.sh",
+  "echo 'if [ -f /tmp/libstdc_path.txt ]; then' >> /app/start-personaplex.sh",
+  "echo '  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(cat /tmp/libstdc_path.txt)' >> /app/start-personaplex.sh",
+  "echo 'fi' >> /app/start-personaplex.sh",
   "echo '/app/venv/bin/python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload' >> /app/start-personaplex.sh",
   "chmod +x /app/start-personaplex.sh"
 ]
