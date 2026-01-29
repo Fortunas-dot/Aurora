@@ -128,7 +128,7 @@ export class PersonaPlexProxy {
       });
 
       // Handle errors
-      personaplexWs.on('error', (error) => {
+      personaplexWs.on('error', (error: Error) => {
         console.error('❌ PersonaPlex connection error:', error);
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.close(1011, 'PersonaPlex connection failed');
@@ -136,8 +136,8 @@ export class PersonaPlexProxy {
         reject(error);
       });
 
-      personaplexWs.on('close', (code, reason) => {
-        console.log(`PersonaPlex connection closed: ${code} - ${reason}`);
+      personaplexWs.on('close', (code: number, reason: Buffer) => {
+        console.log(`PersonaPlex connection closed: ${code} - ${reason.toString()}`);
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.close();
         }

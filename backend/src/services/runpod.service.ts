@@ -88,7 +88,7 @@ export class RunPodService {
         throw new Error(`RunPod API error: ${response.statusText}`);
       }
 
-      const data: RunPodApiResponse<{ pod: RunPodPodStatus }> = await response.json();
+      const data = await response.json() as RunPodApiResponse<{ pod: RunPodPodStatus }>;
       return data.data?.pod || null;
     } catch (error) {
       console.error('Error getting pod status:', error);
