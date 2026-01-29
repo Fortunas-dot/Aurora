@@ -43,6 +43,15 @@ class ApiService {
         headers,
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API GET Error:', response.status, errorData);
+        return {
+          success: false,
+          message: errorData.message || `HTTP ${response.status}`,
+        };
+      }
+      
       const data = await response.json();
       return data;
     } catch (error: any) {

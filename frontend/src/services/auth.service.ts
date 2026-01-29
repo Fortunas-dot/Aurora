@@ -10,6 +10,12 @@ export interface User {
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;
+  healthInfo?: {
+    mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
+    physicalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
+    medications?: string[];
+    therapies?: string[];
+  };
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -62,6 +62,32 @@ export const PostCard: React.FC<PostCardProps> = ({
 
       {/* Content */}
       <Text style={styles.content}>{post.content}</Text>
+
+      {/* Images */}
+      {post.images && post.images.length > 0 && (
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.imagesContainer}
+          contentContainerStyle={styles.imagesContent}
+        >
+          {post.images.map((imageUrl, index) => {
+            const fullUrl = imageUrl.startsWith('http') 
+              ? imageUrl 
+              : `https://aurora-production.up.railway.app${imageUrl}`;
+            
+            return (
+              <Image
+                key={index}
+                source={{ uri: fullUrl }}
+                style={styles.postImage}
+                resizeMode="cover"
+              />
+            );
+          })}
+        </ScrollView>
+      )}
 
       {/* Tags */}
       {post.tags.length > 0 && (
@@ -151,6 +177,18 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
+  },
+  imagesContainer: {
+    marginBottom: SPACING.sm,
+  },
+  imagesContent: {
+    paddingHorizontal: SPACING.md,
+  },
+  postImage: {
+    width: Dimensions.get('window').width - SPACING.md * 4,
+    height: 300,
+    borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.sm,
   },
   tagsContainer: {
     flexDirection: 'row',

@@ -1,0 +1,72 @@
+import { apiService, ApiResponse } from './api.service';
+import { User } from './auth.service';
+
+export interface Group {
+  _id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  memberCount: number;
+  isPrivate: boolean;
+  isMember: boolean;
+  isAdmin?: boolean;
+  admins?: User[];
+  members?: User[];
+  createdAt: string;
+}
+
+class GroupService {
+  async getGroups(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    tag?: string
+  ): Promise<ApiResponse<Group[]>> {
+    let endpoint = `/groups?page=${page}&limit=${limit}`;
+    if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+    if (tag) endpoint += `&tag=${encodeURIComponent(tag)}`;
+    
+    return apiService.get<Group[]>(endpoint);
+  }
+
+  async getGroup(id: string): Promise<ApiResponse<Group>> {
+    return apiService.get<Group>(`/groups/${id}`);
+  }
+
+  async createGroup(
+    name: string,
+    description: string,
+    tags?: string[],
+    isPrivate?: boolean
+  ): Promise<ApiResponse<Group>> {
+    return apiService.post<Group>('/groups', {
+      name,
+      description,
+      tags,
+      isPrivate,
+    });
+  }
+
+  async joinGroup(id: string): Promise<ApiResponse<{ memberCount: number; isMember: boolean }>> {
+    return apiService.post(`/groups/${id}/join`, {});
+  }
+
+  async leaveGroup(id: string): Promise<ApiResponse<{ memberCount: number; isMember: boolean }>> {
+    return apiService.post(`/groups/${id}/leave`, {});
+  }
+
+  async getGroupPosts(
+    id: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ApiResponse<any[]>> {
+    return apiService.get<any[]>(`/groups/${id}/posts?page=${page}&limit=${limit}`);
+  }
+}
+
+export const groupService = new GroupService();
+
+
+
+
+

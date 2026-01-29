@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,89 +13,58 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { GlassCard, Avatar, GlassInput } from '../../src/components/common';
+import { GlassCard, Avatar, GlassInput, LoadingSpinner } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
-
-interface Conversation {
-  _id: string;
-  user: {
-    _id: string;
-    username: string;
-    displayName?: string;
-    avatar?: string;
-  };
-  lastMessage: {
-    content: string;
-    createdAt: string;
-    isOwn: boolean;
-  };
-  unreadCount: number;
-}
-
-// Mock data
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    _id: '1',
-    user: {
-      _id: 'u1',
-      username: 'sarah_wellness',
-      displayName: 'Sarah',
-    },
-    lastMessage: {
-      content: 'Dankjewel voor je steun! Het betekent veel voor me.',
-      createdAt: new Date(Date.now() - 1800000).toISOString(),
-      isOwn: false,
-    },
-    unreadCount: 2,
-  },
-  {
-    _id: '2',
-    user: {
-      _id: 'u2',
-      username: 'peaceful_mike',
-      displayName: 'Mike',
-    },
-    lastMessage: {
-      content: 'Natuurlijk! Laat maar weten als ik kan helpen.',
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      isOwn: true,
-    },
-    unreadCount: 0,
-  },
-  {
-    _id: '3',
-    user: {
-      _id: 'u3',
-      username: 'emma_growth',
-      displayName: 'Emma',
-    },
-    lastMessage: {
-      content: 'Hoe gaat het met je meditatie oefeningen?',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      isOwn: false,
-    },
-    unreadCount: 0,
-  },
-];
+import { messageService, Conversation } from '../../src/services/message.service';
 
 export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
   
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadConversations = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    setIsLoading(true);
+    try {
+      const response = await messageService.getConversations();
+      if (response.success && response.data) {
+        setConversations(response.data);
+      } else {
+        console.error('Error loading conversations:', response.message);
+        setConversations([]);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      setConversations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadConversations();
+    setIsRefreshing(false);
+  }, [loadConversations]);
 
   const filteredConversations = conversations.filter((conv) =>
     conv.user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.user.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1000);
+  const handleCreateNewChat = () => {
+    router.push('/search-users');
   };
 
   const renderConversation = ({ item }: { item: Conversation }) => {
@@ -108,7 +77,7 @@ export default function ChatScreen() {
       <GlassCard
         style={styles.conversationCard}
         padding={0}
-        onPress={() => {}}
+        onPress={() => router.push(`/conversation/${item.user._id}`)}
       >
         <View style={styles.conversationContent}>
           <Avatar
@@ -184,7 +153,7 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Text style={styles.headerTitle}>Berichten</Text>
-        <Pressable style={styles.headerButton}>
+        <Pressable style={styles.headerButton} onPress={handleCreateNewChat}>
           <Ionicons name="create-outline" size={24} color={COLORS.text} />
         </Pressable>
       </View>
@@ -215,13 +184,25 @@ export default function ChatScreen() {
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Geen gesprekken</Text>
-            <Text style={styles.emptySubtext}>
-              Start een gesprek met iemand uit de community
-            </Text>
-          </View>
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner size="lg" />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyText}>Geen gesprekken</Text>
+              <Text style={styles.emptySubtext}>
+                Start een gesprek met iemand uit de community
+              </Text>
+              <Pressable
+                style={styles.startChatButton}
+                onPress={handleCreateNewChat}
+              >
+                <Text style={styles.startChatButtonText}>Nieuw gesprek starten</Text>
+              </Pressable>
+            </View>
+          )
         }
       />
     </LinearGradient>
@@ -320,6 +301,10 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '600',
   },
+  loadingContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+  },
   emptyContainer: {
     padding: SPACING.xxl,
     alignItems: 'center',
@@ -334,6 +319,20 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+    marginBottom: SPACING.lg,
+  },
+  startChatButton: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginTop: SPACING.md,
+  },
+  startChatButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
   },
   authPrompt: {
     flex: 1,

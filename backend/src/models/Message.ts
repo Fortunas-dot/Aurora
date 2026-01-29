@@ -43,3 +43,7 @@ MessageSchema.index({ receiver: 1, readAt: 1 });
 
 export default mongoose.model<IMessage>('Message', MessageSchema);
 
+
+
+
+

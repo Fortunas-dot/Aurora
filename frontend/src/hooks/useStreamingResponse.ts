@@ -1,11 +1,16 @@
 import 'react-native-get-random-values';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { openAIService } from '../services/openai.service';
+import { useAuthStore } from '../store/authStore';
+import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
+import { journalService, AuroraJournalContext } from '../services/journal.service';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useStreamingResponse = () => {
+  const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [journalContext, setJournalContext] = useState<AuroraJournalContext[]>([]);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const {
@@ -15,6 +20,24 @@ export const useStreamingResponse = () => {
     setStreaming,
     setError,
   } = useChatStore();
+
+  // Load journal context when component mounts or user changes
+  useEffect(() => {
+    const loadJournalContext = async () => {
+      try {
+        const response = await journalService.getAuroraContext(5);
+        if (response.success && response.data) {
+          setJournalContext(response.data);
+        }
+      } catch (error) {
+        console.log('Could not load journal context:', error);
+      }
+    };
+
+    if (user) {
+      loadJournalContext();
+    }
+  }, [user]);
 
   const sendMessage = useCallback(
     async (userMessage: string) => {
@@ -35,10 +58,20 @@ export const useStreamingResponse = () => {
       setIsLoading(true);
       setError(null);
 
+      // Format complete context (health info + journal entries) for AI
+      const completeContext = formatCompleteContextForAI(user, journalContext);
+      
       // Prepare conversation history for OpenAI with therapist system message
+      let systemContent = 'Je bent Aurora, een empathische en professionele therapeut. Je luistert aandachtig, stelt doordachte vragen en biedt ondersteunende begeleiding. Je bent warm, begripvol en niet-oordelend. Je helpt mensen hun gedachten en gevoelens te verkennen op een veilige en ondersteunende manier. Spreek in het Nederlands.';
+      
+      // Add complete context (health + journal) if available
+      if (completeContext) {
+        systemContent += completeContext;
+      }
+      
       const systemMessage = {
         role: 'system' as const,
-        content: 'Je bent Aurora, een empathische en professionele therapeut. Je luistert aandachtig, stelt doordachte vragen en biedt ondersteunende begeleiding. Je bent warm, begripvol en niet-oordelend. Je helpt mensen hun gedachten en gevoelens te verkennen op een veilige en ondersteunende manier. Spreek in het Nederlands.',
+        content: systemContent,
       };
 
       const conversationMessages = [

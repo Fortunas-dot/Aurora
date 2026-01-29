@@ -17,127 +17,117 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { postService, Post } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
 
-// Mock data for demonstration
-const MOCK_POSTS: Post[] = [
-  {
-    _id: '1',
-    author: {
-      _id: 'u1',
-      email: 'sarah@example.com',
-      username: 'sarah_wellness',
-      displayName: 'Sarah',
-      avatar: null,
-      bio: '',
-      isAnonymous: false,
-      showEmail: false,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-    content: 'Vandaag heb ik voor het eerst in maanden weer kunnen mediteren. Het voelt als een kleine overwinning. 💫 Stap voor stap vooruit.',
-    tags: ['meditatie', 'vooruitgang', 'mindfulness'],
-    likes: ['u2', 'u3'],
-    commentsCount: 5,
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    _id: '2',
-    author: {
-      _id: 'u2',
-      email: 'mike@example.com',
-      username: 'peaceful_mike',
-      displayName: 'Mike',
-      avatar: null,
-      bio: '',
-      isAnonymous: true,
-      showEmail: false,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-    content: 'Heeft iemand tips voor het omgaan met sociale angst? Ik merk dat ik steeds meer sociale situaties ga vermijden en wil dit doorbreken.',
-    tags: ['socialeangst', 'hulpgevraagd'],
-    likes: ['u1'],
-    commentsCount: 12,
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    updatedAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    _id: '3',
-    author: {
-      _id: 'u3',
-      email: 'emma@example.com',
-      username: 'emma_growth',
-      displayName: 'Emma',
-      avatar: null,
-      bio: '',
-      isAnonymous: false,
-      showEmail: false,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-    content: 'Na 6 maanden therapie durf ik eindelijk te zeggen: het wordt beter. Voor iedereen die nog aan het begin staat - geef niet op. ❤️',
-    tags: ['therapie', 'hoop', 'herstel'],
-    likes: ['u1', 'u2', 'u4', 'u5'],
-    commentsCount: 23,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
 
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
   
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
+    if (isLoading) return;
+    
     setIsLoading(true);
     try {
-      // In production, use: const response = await postService.getPosts();
-      // For now, use mock data
-      setPosts(MOCK_POSTS);
+      const response = await postService.getPosts(pageNum, 20);
+      
+      if (response.success && response.data) {
+        if (append) {
+          setPosts((prev) => [...prev, ...response.data!]);
+        } else {
+          setPosts(response.data);
+        }
+        
+        // Check if there are more pages
+        if (response.pagination) {
+          setHasMore(pageNum < response.pagination.pages);
+        }
+      } else {
+        console.error('Error loading posts:', response.message);
+        // Fallback to empty array on error
+        if (!append) {
+          setPosts([]);
+        }
+      }
     } catch (error) {
       console.error('Error loading posts:', error);
+      if (!append) {
+        setPosts([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isLoading]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadPosts();
+    setPage(1);
+    setHasMore(true);
+    await loadPosts(1, false);
     setIsRefreshing(false);
   }, [loadPosts]);
 
   useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+    loadPosts(1, false);
+  }, []);
 
   const handleLike = async (postId: string) => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
       return;
     }
-    // In production: await postService.likePost(postId);
+    
+    try {
+      const response = await postService.likePost(postId);
+      if (response.success) {
+        // Update local state
+        setPosts((prev) =>
+          prev.map((post) => {
+            if (post._id === postId) {
+              const isLiked = post.likes.includes(user!._id);
+              return {
+                ...post,
+                likes: isLiked
+                  ? post.likes.filter((id) => id !== user!._id)
+                  : [...post.likes, user!._id],
+              };
+            }
+            return post;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
   };
+
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadPosts(nextPage, true);
+    }
+  }, [isLoading, hasMore, page, loadPosts]);
 
   const handleCreatePost = () => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
       return;
     }
-    // Navigate to create post screen
+    router.push('/create-post');
   };
 
   const renderPost = ({ item }: { item: Post }) => (
     <PostCard
       post={item}
-      onPress={() => {}}
+      onPress={() => router.push(`/post/${item._id}`)}
       onLike={() => handleLike(item._id)}
-      onComment={() => {}}
+      onComment={() => router.push(`/post/${item._id}`)}
       currentUserId={user?._id}
     />
   );
@@ -206,6 +196,15 @@ export default function FeedScreen() {
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
           />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isLoading && posts.length > 0 ? (
+            <View style={styles.loadingFooter}>
+              <LoadingSpinner size="md" />
+            </View>
+          ) : null
         }
         ListEmptyComponent={
           isLoading ? (
@@ -319,6 +318,10 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     padding: SPACING.xxl,
+    alignItems: 'center',
+  },
+  loadingFooter: {
+    padding: SPACING.md,
     alignItems: 'center',
   },
   emptyContainer: {

@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard, GlassButton, Avatar } from '../../src/components/common';
+import { GlassCard, GlassButton, Avatar, TagChip } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 
@@ -143,6 +143,72 @@ export default function ProfileScreen() {
 
             {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
 
+            {/* Health Info Tags */}
+            {user.healthInfo && (
+              <View style={styles.healthInfoSection}>
+                {(user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) && (
+                  <View style={styles.healthCategory}>
+                    <Text style={styles.healthCategoryLabel}>Mentale gezondheid</Text>
+                    <View style={styles.healthTags}>
+                      {user.healthInfo.mentalHealth.slice(0, 3).map((item, index) => {
+                        const condition = typeof item === 'string' ? item : item.condition;
+                        const type = typeof item === 'string' ? undefined : item.type;
+                        const severity = typeof item === 'string' ? undefined : item.severity;
+                        const displayText = type ? `${condition}: ${type}` : condition;
+                        return (
+                          <View key={index} style={styles.healthTagContainer}>
+                            <TagChip label={displayText} size="sm" />
+                            {severity && (
+                              <View style={[
+                                styles.severityIndicator,
+                                {
+                                  backgroundColor: severity === 'mild' ? COLORS.success :
+                                    severity === 'moderate' ? COLORS.warning : COLORS.error,
+                                }
+                              ]} />
+                            )}
+                          </View>
+                        );
+                      })}
+                      {user.healthInfo.mentalHealth.length > 3 && (
+                        <Text style={styles.moreTags}>+{user.healthInfo.mentalHealth.length - 3}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+                {(user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) && (
+                  <View style={styles.healthCategory}>
+                    <Text style={styles.healthCategoryLabel}>Fysieke gezondheid</Text>
+                    <View style={styles.healthTags}>
+                      {user.healthInfo.physicalHealth.slice(0, 3).map((item, index) => {
+                        const condition = typeof item === 'string' ? item : item.condition;
+                        const type = typeof item === 'string' ? undefined : item.type;
+                        const severity = typeof item === 'string' ? undefined : item.severity;
+                        const displayText = type ? `${condition}: ${type}` : condition;
+                        return (
+                          <View key={index} style={styles.healthTagContainer}>
+                            <TagChip label={displayText} size="sm" />
+                            {severity && (
+                              <View style={[
+                                styles.severityIndicator,
+                                {
+                                  backgroundColor: severity === 'mild' ? COLORS.success :
+                                    severity === 'moderate' ? COLORS.warning : COLORS.error,
+                                }
+                              ]} />
+                            )}
+                          </View>
+                        );
+                      })}
+                      {user.healthInfo.physicalHealth.length > 3 && (
+                        <Text style={styles.moreTags}>+{user.healthInfo.physicalHealth.length - 3}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Stats */}
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
@@ -171,7 +237,14 @@ export default function ProfileScreen() {
               icon="person-outline"
               title="Bewerk profiel"
               subtitle="Naam, bio, foto"
-              onPress={() => {}}
+              onPress={() => router.push('/edit-profile')}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="heart-outline"
+              title="Gezondheidsinformatie"
+              subtitle="Mentale & fysieke gezondheid"
+              onPress={() => router.push('/health-info')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
@@ -294,6 +367,40 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
     marginBottom: SPACING.md,
+  },
+  healthInfoSection: {
+    marginBottom: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+  },
+  healthCategory: {
+    marginBottom: SPACING.sm,
+  },
+  healthCategoryLabel: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+  },
+  healthTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    alignItems: 'center',
+  },
+  healthTagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  severityIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  moreTags: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
   },
   statsRow: {
     flexDirection: 'row',

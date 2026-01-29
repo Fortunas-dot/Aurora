@@ -46,6 +46,10 @@ interface RealtimeServiceCallbacks {
   onAudioLevel?: (level: number) => void;
 }
 
+interface ConnectOptions extends RealtimeServiceCallbacks {
+  healthInfoContext?: string; // Optional health information context for AI
+}
+
 export class RealtimeService {
   private apiKey: string;
   private ws: WebSocket | null = null;
@@ -56,6 +60,7 @@ export class RealtimeService {
   private audioChunks: ArrayBuffer[] = [];
   private isPlayingAudio: boolean = false; // Track if audio is currently playing
   private currentSound: Audio.Sound | null = null;
+  private healthInfoContext: string = ''; // Store health info context
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || OPENAI_API_KEY;
@@ -68,13 +73,15 @@ export class RealtimeService {
   /**
    * Connect to OpenAI Realtime API
    */
-  async connect(callbacks: RealtimeServiceCallbacks): Promise<void> {
+  async connect(options: ConnectOptions): Promise<void> {
     if (this.isConnected) {
       console.warn('Already connected to Realtime API');
       return;
     }
 
+    const { healthInfoContext, ...callbacks } = options;
     this.callbacks = callbacks;
+    this.healthInfoContext = healthInfoContext || '';
 
     return new Promise((resolve, reject) => {
       try {
@@ -132,12 +139,20 @@ export class RealtimeService {
       return;
     }
 
+    // Base instructions
+    let instructions = 'Je bent Aurora, een warme en empathische AI therapeut. Je luistert aandachtig, stelt doordachte vragen en biedt ondersteunende begeleiding. Je bent warm, begripvol en niet-oordelend. Je helpt mensen hun gedachten en gevoelens te verkennen op een veilige en ondersteunende manier. Houd je antwoorden beknopt voor spraakgesprekken. Spreek altijd in het Nederlands.';
+
+    // Add health information context if available
+    if (this.healthInfoContext) {
+      instructions += this.healthInfoContext;
+    }
+
     const config = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
         voice: 'alloy',
-        instructions: 'You are Aurora, a warm and empathetic AI therapist. Respond with care and understanding. Keep responses concise for voice conversation.',
+        instructions: instructions,
         input_audio_transcription: {
           model: 'whisper-1',
         },
@@ -150,7 +165,7 @@ export class RealtimeService {
       },
     };
 
-    console.log('📤 Sending session.update...');
+    console.log('📤 Sending session.update with health context...');
     this.ws.send(JSON.stringify(config));
   }
 

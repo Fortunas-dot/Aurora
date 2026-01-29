@@ -4,4 +4,5 @@ export { default as Comment, IComment } from './Comment';
 export { default as Group, IGroup } from './Group';
 export { default as Message, IMessage } from './Message';
 export { default as Notification, INotification, NotificationType } from './Notification';
+export { default as JournalEntry, IJournalEntry, ISymptom, IAIInsights, SeverityLevel } from './JournalEntry';
 

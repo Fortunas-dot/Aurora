@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { runpodService } from './runpod.service';
+import { lambdalabsService } from './lambdalabs.service';
 
 export class PersonaPlexProxy {
   private personaplexUrl: string;
@@ -18,16 +19,104 @@ export class PersonaPlexProxy {
   }
 
   /**
-   * Ensure pod is running before connecting
+   * Ensure instance/pod is running before connecting
+   * Supports Railway (static URL), Lambda Labs, and RunPod
+   * Railway takes priority (no management needed, just use static URL)
    */
   private async ensurePodRunning(): Promise<void> {
-    // Check if RunPod is configured
-    if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_POD_ID) {
-      console.warn('⚠️ RunPod not configured - skipping pod auto-start');
-      console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL:', this.personaplexUrl);
+    // Check if Railway is configured (static URL, no management needed)
+    const railwayUrl = process.env.PERSONAPLEX_SERVER_URL;
+    const isRailway = railwayUrl && 
+      (railwayUrl.includes('railway.app') || railwayUrl.includes('railway.railway.app'));
+    
+    if (isRailway) {
+      console.log('✅ Using Railway PersonaPlex service (static URL, no management needed)');
+      this.personaplexUrl = railwayUrl;
+      return; // Railway is always "running", just use the URL
+    }
+
+    // Check which GPU provider is configured (Lambda Labs takes priority)
+    const useLambdaLabs = process.env.LAMBDALABS_API_KEY && process.env.LAMBDALABS_INSTANCE_ID;
+    const useRunPod = process.env.RUNPOD_API_KEY && process.env.RUNPOD_POD_ID;
+
+    if (!useLambdaLabs && !useRunPod) {
+      console.warn('⚠️ No provider configured - using static PERSONAPLEX_SERVER_URL:', this.personaplexUrl);
       return; // Continue with static URL if configured
     }
 
+    // Use Lambda Labs if configured
+    if (useLambdaLabs) {
+      return this.ensureLambdaLabsInstanceRunning();
+    }
+
+    // Fallback to RunPod
+    if (useRunPod) {
+      return this.ensureRunPodRunning();
+    }
+  }
+
+  /**
+   * Ensure Lambda Labs instance is running
+   */
+  private async ensureLambdaLabsInstanceRunning(): Promise<void> {
+    console.log('🔍 Checking Lambda Labs instance status...');
+    let isRunning = false;
+    try {
+      isRunning = await lambdalabsService.isInstanceRunning();
+    } catch (error: any) {
+      console.warn('⚠️ Error checking instance status:', error.message);
+      console.warn('⚠️ Will attempt to start instance anyway...');
+    }
+    
+    if (!isRunning) {
+      console.log('🚀 Instance is stopped, starting it...');
+      const started = await lambdalabsService.startInstance();
+      
+      if (!started) {
+        // Check if we have a static URL configured - if so, use that as fallback
+        if (process.env.PERSONAPLEX_SERVER_URL && process.env.PERSONAPLEX_SERVER_URL !== 'wss://localhost:8998') {
+          console.warn('⚠️ Failed to start Lambda Labs instance');
+          console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL as fallback:', process.env.PERSONAPLEX_SERVER_URL);
+          this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL;
+          return; // Continue with static URL
+        }
+        throw new Error('Failed to start Lambda Labs instance. Check Lambda Labs dashboard and API credentials.');
+      }
+
+      console.log('⏳ Waiting for instance to be ready...');
+      // Wait for instance to be ready
+      const ready = await lambdalabsService.waitForInstanceReady(120); // 2 minutes max
+      if (!ready) {
+        // Check if we have a static URL configured - if so, use that as fallback
+        if (process.env.PERSONAPLEX_SERVER_URL && process.env.PERSONAPLEX_SERVER_URL !== 'wss://localhost:8998') {
+          console.warn('⚠️ Instance did not become ready in time');
+          console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL as fallback:', process.env.PERSONAPLEX_SERVER_URL);
+          this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL;
+          return; // Continue with static URL
+        }
+        throw new Error('Instance did not become ready in time');
+      }
+
+      // Get instance URL (Lambda Labs has static IPs)
+      const newUrl = await lambdalabsService.getInstancePublicUrl();
+      if (newUrl) {
+        console.log('🔄 Updated PersonaPlex URL:', newUrl);
+        this.personaplexUrl = newUrl;
+      }
+    } else {
+      console.log('✅ Instance is already running');
+      // Update URL in case it changed
+      const newUrl = await lambdalabsService.getInstancePublicUrl();
+      if (newUrl) {
+        this.personaplexUrl = newUrl;
+      }
+    }
+  }
+
+  /**
+   * Ensure RunPod pod is running (legacy support)
+   */
+  private async ensureRunPodRunning(): Promise<void> {
     console.log('🔍 Checking RunPod pod status...');
     let isRunning = false;
     try {
@@ -83,18 +172,42 @@ export class PersonaPlexProxy {
   }
 
   /**
-   * Reset idle timeout (pod will stop after inactivity)
+   * Reset idle timeout (instance/pod will stop after inactivity)
+   * Note: Railway doesn't need stop management (always available)
    */
   private resetIdleTimeout(): void {
     if (this.idleTimeout) {
       clearTimeout(this.idleTimeout);
     }
 
-    // Only set timeout if no active connections
+    // Check if Railway is configured (no idle timeout needed)
+    const railwayUrl = process.env.PERSONAPLEX_SERVER_URL;
+    const isRailway = railwayUrl && 
+      (railwayUrl.includes('railway.app') || railwayUrl.includes('railway.railway.app'));
+    
+    if (isRailway) {
+      // Railway is always available, no need to stop
+      return;
+    }
+
+    // Only set timeout if no active connections (for GPU providers)
     if (this.activeConnections.size === 0) {
       this.idleTimeout = setTimeout(async () => {
-        console.log('⏰ No activity for 15 minutes, stopping pod...');
-        await runpodService.stopPod();
+        console.log('⏰ No activity for 15 minutes, stopping instance/pod...');
+        
+        // Check which provider is configured
+        const useLambdaLabs = process.env.LAMBDALABS_API_KEY && process.env.LAMBDALABS_INSTANCE_ID;
+        const useRunPod = process.env.RUNPOD_API_KEY && process.env.RUNPOD_POD_ID;
+
+        if (useLambdaLabs) {
+          // Lambda Labs doesn't support "stop" - only "terminate" (permanent)
+          // We log the idle timeout but don't terminate (would lose all data)
+          await lambdalabsService.stopInstance();
+          console.warn('⚠️ Lambda Labs instance is still running (costs money)');
+          console.warn('⚠️ Manually terminate in dashboard if you want to save costs');
+        } else if (useRunPod) {
+          await runpodService.stopPod();
+        }
       }, this.IDLE_TIMEOUT_MS);
     }
   }

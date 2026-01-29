@@ -31,3 +31,7 @@ router.get('/:id/posts', optionalAuth, getGroupPosts);
 
 export default router;
 
+
+
+
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,90 +13,136 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, GlassInput, Avatar, TagChip, LoadingSpinner } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
-
-interface Group {
-  _id: string;
-  name: string;
-  description: string;
-  tags: string[];
-  memberCount: number;
-  isPrivate: boolean;
-  isMember: boolean;
-  avatar?: string;
-}
-
-// Mock data
-const MOCK_GROUPS: Group[] = [
-  {
-    _id: '1',
-    name: 'Angst & Paniek Support',
-    description: 'Een veilige plek voor iedereen die te maken heeft met angst of paniekaanvallen.',
-    tags: ['angst', 'paniek', 'support'],
-    memberCount: 234,
-    isPrivate: false,
-    isMember: true,
-  },
-  {
-    _id: '2',
-    name: 'Mindfulness Beginners',
-    description: 'Leer samen de basis van mindfulness en meditatie.',
-    tags: ['mindfulness', 'meditatie', 'beginners'],
-    memberCount: 156,
-    isPrivate: false,
-    isMember: false,
-  },
-  {
-    _id: '3',
-    name: 'Depressie Herstelgroep',
-    description: 'Steun elkaar op de weg naar herstel. Je bent niet alleen.',
-    tags: ['depressie', 'herstel', 'community'],
-    memberCount: 312,
-    isPrivate: false,
-    isMember: true,
-  },
-  {
-    _id: '4',
-    name: 'Slaapproblemen',
-    description: 'Tips en steun voor iedereen met slaapproblemen.',
-    tags: ['slaap', 'insomnia'],
-    memberCount: 89,
-    isPrivate: false,
-    isMember: false,
-  },
-];
+import { groupService, Group } from '../../src/services/group.service';
+import { useAuthStore } from '../../src/store/authStore';
 
 export default function GroupsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuthStore();
   
-  const [groups, setGroups] = useState<Group[]>(MOCK_GROUPS);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const loadGroups = useCallback(async (pageNum: number = 1, append: boolean = false, search?: string) => {
+    setIsLoading(true);
+    try {
+      const response = await groupService.getGroups(pageNum, 20, search || undefined);
+      
+      console.log('Groups API Response:', response);
+      
+      if (response.success) {
+        const groupsData = response.data || [];
+        
+        if (append) {
+          setGroups((prev) => [...prev, ...groupsData]);
+        } else {
+          setGroups(groupsData);
+        }
+        
+        if (response.pagination) {
+          setHasMore(pageNum < response.pagination.pages);
+        } else {
+          setHasMore(false);
+        }
+      } else {
+        console.error('Groups API Error:', response.message);
+        if (!append) {
+          setGroups([]);
+        }
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading groups:', error);
+      if (!append) {
+        setGroups([]);
+      }
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGroups(1, false);
+  }, []);
+
+  // Search effect - debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadGroups(1, false, searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    await loadGroups(1, false, searchQuery);
+    setIsRefreshing(false);
+  }, [loadGroups, searchQuery]);
+
+  const handleJoinGroup = async (groupId: string) => {
+    if (!isAuthenticated) {
+      router.push('/(auth)/login');
+      return;
+    }
+
+    try {
+      const group = groups.find((g) => g._id === groupId);
+      if (!group) return;
+
+      if (group.isMember) {
+        const response = await groupService.leaveGroup(groupId);
+        if (response.success) {
+          setGroups((prev) =>
+            prev.map((g) =>
+              g._id === groupId
+                ? { ...g, isMember: false, memberCount: response.data!.memberCount }
+                : g
+            )
+          );
+        }
+      } else {
+        const response = await groupService.joinGroup(groupId);
+        if (response.success) {
+          setGroups((prev) =>
+            prev.map((g) =>
+              g._id === groupId
+                ? { ...g, isMember: true, memberCount: response.data!.memberCount }
+                : g
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error joining/leaving group:', error);
+    }
+  };
+
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadGroups(nextPage, true);
+    }
+  }, [isLoading, hasMore, page, loadGroups]);
 
   const filteredGroups = groups.filter((group) => {
-    const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      group.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === 'all' || group.isMember;
-    return matchesSearch && matchesFilter;
+    return matchesFilter;
   });
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    // In production: fetch groups from API
-    setTimeout(() => setIsRefreshing(false), 1000);
-  };
-
-  const handleJoinGroup = (groupId: string) => {
-    setGroups(groups.map((g) =>
-      g._id === groupId
-        ? { ...g, isMember: !g.isMember, memberCount: g.isMember ? g.memberCount - 1 : g.memberCount + 1 }
-        : g
-    ));
-  };
-
   const renderGroup = ({ item }: { item: Group }) => (
-    <GlassCard style={styles.groupCard} padding={0} onPress={() => {}}>
+    <GlassCard style={styles.groupCard} padding={0} onPress={() => router.push(`/group/${item._id}`)}>
       <View style={styles.groupHeader}>
         <View style={styles.groupAvatar}>
           <LinearGradient
@@ -158,7 +204,16 @@ export default function GroupsScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Text style={styles.headerTitle}>Groepen</Text>
-        <Pressable style={styles.headerButton}>
+        <Pressable
+          style={styles.headerButton}
+          onPress={() => {
+            if (!isAuthenticated) {
+              router.push('/(auth)/login');
+            } else {
+              router.push('/create-group');
+            }
+          }}
+        >
           <Ionicons name="add" size={24} color={COLORS.text} />
         </Pressable>
       </View>
@@ -169,7 +224,6 @@ export default function GroupsScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Zoek groepen..."
-          icon="search"
           style={styles.searchInput}
         />
       </View>
@@ -208,11 +262,34 @@ export default function GroupsScreen() {
             tintColor={COLORS.primary}
           />
         }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isLoading && groups.length > 0 ? (
+            <View style={styles.loadingFooter}>
+              <LoadingSpinner size="md" />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Geen groepen gevonden</Text>
-          </View>
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner size="lg" />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyText}>Geen groepen gevonden</Text>
+              {isAuthenticated && (
+                <Pressable
+                  style={styles.createGroupButton}
+                  onPress={() => router.push('/create-group')}
+                >
+                  <Text style={styles.createGroupButtonText}>Maak een groep</Text>
+                </Pressable>
+              )}
+            </View>
+          )
         }
       />
     </LinearGradient>
@@ -335,6 +412,14 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'flex-start',
   },
+  loadingContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+  },
+  loadingFooter: {
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
   emptyContainer: {
     padding: SPACING.xxl,
     alignItems: 'center',
@@ -343,6 +428,19 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     marginTop: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  createGroupButton: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  createGroupButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
   },
 });
 

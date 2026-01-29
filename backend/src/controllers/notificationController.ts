@@ -105,3 +105,7 @@ export const markAllAsRead = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+
+
+
+

@@ -6,6 +6,7 @@ export interface Post {
   author: User;
   content: string;
   tags: string[];
+  images?: string[];
   groupId?: string;
   likes: string[];
   commentsCount: number;
@@ -44,12 +45,14 @@ class PostService {
   async createPost(
     content: string,
     tags?: string[],
-    groupId?: string
+    groupId?: string,
+    images?: string[]
   ): Promise<ApiResponse<Post>> {
     return apiService.post<Post>('/posts', {
       content,
       tags,
       groupId,
+      images,
     });
   }
 
