@@ -164,10 +164,17 @@ export class RunPodService {
         const errorMessages = data.errors.map((e: any) => e.message).join(', ');
         console.error('❌ GraphQL errors:', errorMessages);
         
-        // Check if it's a GPU availability issue
-        if (errorMessages.includes('not enough free GPUs') || errorMessages.includes('GPU')) {
-          console.warn('⚠️ No free GPUs available - pod cannot start automatically');
-          console.warn('⚠️ Consider using a static PERSONAPLEX_SERVER_URL if you have a running pod');
+        // Check for specific GPU availability issues
+        if (errorMessages.includes('not enough free GPUs') || 
+            errorMessages.includes('GPU') ||
+            errorMessages.includes('GPUs are no longer available') ||
+            errorMessages.includes('undergoing scheduled maintenance')) {
+          console.warn('⚠️ GPU availability issue detected:');
+          console.warn('   - GPUs may have been reassigned to another user');
+          console.warn('   - GPUs may be undergoing maintenance');
+          console.warn('   - The pod may need to be recreated with new GPUs');
+          console.warn('⚠️ Solution: Check RunPod dashboard and manually start/assign a new pod');
+          console.warn('⚠️ Then update RUNPOD_POD_ID with the new pod ID');
         }
         
         return false;

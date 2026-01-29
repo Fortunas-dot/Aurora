@@ -44,12 +44,17 @@ export class PersonaPlexProxy {
       if (!started) {
         // Check if we have a static URL configured - if so, use that as fallback
         if (process.env.PERSONAPLEX_SERVER_URL && process.env.PERSONAPLEX_SERVER_URL !== 'wss://localhost:8998') {
-          console.warn('⚠️ Failed to start RunPod pod (possibly no free GPUs available)');
+          console.warn('⚠️ Failed to start RunPod pod');
+          console.warn('⚠️ Possible reasons:');
+          console.warn('   - GPUs are no longer available (reassigned or maintenance)');
+          console.warn('   - No free GPUs on the host machine');
+          console.warn('   - Pod needs to be recreated with new GPUs');
           console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL as fallback:', process.env.PERSONAPLEX_SERVER_URL);
+          console.warn('⚠️ Note: This will only work if you have a manually started pod running');
           this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL;
           return; // Continue with static URL
         }
-        throw new Error('Failed to start RunPod pod. No free GPUs available or check RunPod API credentials.');
+        throw new Error('Failed to start RunPod pod. GPUs may no longer be available. Check RunPod dashboard and manually start a pod, then update RUNPOD_POD_ID.');
       }
 
       console.log('⏳ Waiting for pod to be ready...');
