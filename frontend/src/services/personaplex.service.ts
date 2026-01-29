@@ -106,23 +106,44 @@ export class PersonaPlexService {
 
         this.ws.onclose = (event) => {
           const reason = event.reason || 'No reason provided';
-          console.log(`PersonaPlex disconnected: ${event.code} - ${reason}`);
+          const code = event.code || 0;
+          console.log(`PersonaPlex disconnected: ${code} - ${reason}`);
           
           // Provide more specific error messages based on close code
-          if (event.code === 1006) {
-            console.error('❌ Abnormal closure - server may not be responding or route not found');
-          } else if (event.code === 1008) {
+          let errorMessage = `Connection closed: ${reason} (code: ${code})`;
+          
+          if (code === 0 || code === 1006) {
+            // Abnormal closure - connection closed without proper handshake
+            errorMessage = 'Kan niet verbinden met PersonaPlex server. Controleer of de server draait en bereikbaar is.';
+            console.error('❌ Abnormal closure - server may not be responding, route not found, or connection refused');
+            console.error('❌ This usually means:');
+            console.error('   1. PersonaPlex server is not running on Railway');
+            console.error('   2. Backend cannot reach PersonaPlex server URL');
+            console.error('   3. WebSocket route not found (404)');
+            console.error('   4. SSL/TLS certificate issue');
+          } else if (code === 1008) {
+            errorMessage = 'Authenticatie mislukt. Log opnieuw in.';
             console.error('❌ Policy violation - authentication failed');
-          } else if (event.code === 1011) {
+          } else if (code === 1011) {
+            errorMessage = 'Backend kan niet verbinden met PersonaPlex server. Check backend logs.';
             console.error('❌ Server error - backend connection failed');
+          } else if (code === 1000 || code === 1001) {
+            // Normal closure - don't show error
+            console.log('✅ Normal WebSocket closure');
+            this.isConnected = false;
+            return;
           }
           
           this.isConnected = false;
           
-          // If connection failed during setup, call error callback
-          if (event.code !== 1000 && event.code !== 1001) {
+          // Always call error callback for abnormal closures
+          if (code !== 1000 && code !== 1001) {
             if (this.callbacks.onError) {
-              this.callbacks.onError(new Error(`Connection closed: ${reason} (code: ${event.code})`));
+              this.callbacks.onError(new Error(errorMessage));
+            }
+            // Also reject the promise if connection failed during setup
+            if (!this.isConnected) {
+              reject(new Error(errorMessage));
             }
           }
         };

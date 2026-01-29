@@ -294,16 +294,42 @@ export class PersonaPlexProxy {
       personaplexWs.on('error', (error: Error) => {
         console.error('❌ PersonaPlex connection error:', error);
         console.error('Error details:', error.message, error.stack);
+        console.error('PersonaPlex URL:', this.personaplexUrl);
+        console.error('Error name:', error.name);
+        
+        // Provide more specific error information
+        if (error.message.includes('ECONNREFUSED')) {
+          console.error('❌ Connection refused - PersonaPlex server is not running or not accessible');
+        } else if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+          console.error('❌ DNS resolution failed - PersonaPlex server URL is invalid');
+        } else if (error.message.includes('certificate') || error.message.includes('SSL')) {
+          console.error('❌ SSL/TLS certificate error - check certificate configuration');
+        } else if (error.message.includes('timeout')) {
+          console.error('❌ Connection timeout - PersonaPlex server is not responding');
+        }
+        
         if (clientWs.readyState === WebSocket.OPEN) {
-          clientWs.close(1011, 'PersonaPlex connection failed');
+          clientWs.close(1011, `PersonaPlex connection failed: ${error.message}`);
         }
         reject(error);
       });
 
       personaplexWs.on('close', (code: number, reason: Buffer) => {
-        console.log(`PersonaPlex connection closed: ${code} - ${reason.toString()}`);
+        const reasonStr = reason.toString() || 'No reason provided';
+        console.log(`PersonaPlex connection closed: ${code} - ${reasonStr}`);
+        console.log('PersonaPlex URL was:', this.personaplexUrl);
+        
+        // Provide more context about why connection closed
+        if (code === 1006) {
+          console.error('❌ PersonaPlex connection closed abnormally (1006) - server may have crashed or network issue');
+        } else if (code === 1000) {
+          console.log('✅ PersonaPlex connection closed normally');
+        } else {
+          console.error(`❌ PersonaPlex connection closed with code ${code}: ${reasonStr}`);
+        }
+        
         if (clientWs.readyState === WebSocket.OPEN) {
-          clientWs.close();
+          clientWs.close(code, `PersonaPlex server closed: ${reasonStr}`);
         }
       });
 
@@ -318,11 +344,26 @@ export class PersonaPlexProxy {
       });
 
       // Timeout after 30 seconds
-      setTimeout(() => {
-        if (personaplexWs.readyState !== WebSocket.OPEN) {
-          reject(new Error('PersonaPlex connection timeout'));
+      const timeoutId = setTimeout(() => {
+        if (personaplexWs && personaplexWs.readyState !== WebSocket.OPEN) {
+          console.error('❌ PersonaPlex connection timeout after 30 seconds');
+          console.error('PersonaPlex URL:', this.personaplexUrl);
+          console.error('ReadyState:', personaplexWs.readyState);
+          if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.close(1011, 'PersonaPlex connection timeout');
+          }
+          if (personaplexWs) {
+            personaplexWs.removeAllListeners();
+            personaplexWs.close();
+          }
+          reject(new Error('PersonaPlex connection timeout - server did not respond within 30 seconds'));
         }
       }, 30000);
+      
+      // Clear timeout if connection succeeds
+      personaplexWs.on('open', () => {
+        clearTimeout(timeoutId);
+      });
     });
   }
 }
