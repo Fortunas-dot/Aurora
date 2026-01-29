@@ -47,7 +47,7 @@ export class PersonaPlexProxy {
     console.log('  - PERSONAPLEX_SERVER_URL:', railwayUrl || 'not set');
     console.log('  - Is Railway URL:', isRailway);
     
-    if (isRailway) {
+    if (isRailway && railwayUrl) {
       console.log('✅ Using Railway PersonaPlex service (static URL, no management needed)');
       this.personaplexUrl = railwayUrl;
       return; // Railway is always "running", just use the URL
