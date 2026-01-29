@@ -133,7 +133,7 @@ export class RunPodService {
         throw new Error(`RunPod API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data?: any; errors?: any[] };
       console.log('✅ RunPod pod start requested:', JSON.stringify(data, null, 2));
       
       // Check for GraphQL errors
@@ -180,8 +180,15 @@ export class RunPodService {
         throw new Error(`RunPod API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('🛑 RunPod pod stop requested:', data);
+      const data = await response.json() as { data?: any; errors?: any[] };
+      console.log('🛑 RunPod pod stop requested:', JSON.stringify(data, null, 2));
+      
+      // Check for GraphQL errors
+      if (data.errors) {
+        console.error('❌ GraphQL errors:', data.errors);
+        return false;
+      }
+      
       return true;
     } catch (error) {
       console.error('❌ Error stopping pod:', error);
