@@ -1,51 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuroraCore } from '../src/components/voice/AuroraCore';
-import { WaveformVisualizer } from '../src/components/voice/WaveformVisualizer';
-import { useVoiceTherapy } from '../src/hooks/useVoiceTherapy';
 import { COLORS, SPACING, TYPOGRAPHY } from '../src/constants/theme';
 
 export default function VoiceTherapyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  // Use OpenAI voice therapy
-  const therapy = useVoiceTherapy({ enabled: true });
-  
-  const {
-    state,
-    audioLevel,
-    error,
-    isMuted,
-    toggleMute,
-  } = therapy;
-
-  const getStateText = () => {
-    switch (state) {
-      case 'initializing':
-        return 'Verbinding maken...';
-      case 'listening':
-        return isMuted ? 'Gepauzeerd' : 'Ik luister naar je...';
-      case 'processing':
-        return 'Even nadenken...';
-      case 'speaking':
-        return 'Aurora spreekt...';
-      case 'error':
-        return 'Er is een fout opgetreden';
-      default:
-        return 'Welkom bij voice therapy';
-    }
-  };
-
-  const getAuroraCoreState = () => {
-    if (state === 'speaking') return 'speaking';
-    if (state === 'listening' && !isMuted) return 'listening';
-    return 'idle';
-  };
 
   return (
     <LinearGradient
@@ -64,58 +28,42 @@ export default function VoiceTherapyScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-
-      {/* Main Content */}
+      {/* Coming Soon Content */}
       <View style={styles.content}>
         {/* Aurora Core */}
         <View style={styles.coreContainer}>
-          <AuroraCore state={getAuroraCoreState()} audioLevel={audioLevel} />
+          <AuroraCore state="idle" audioLevel={0} />
         </View>
 
-        {/* Waveform */}
-        {(state === 'listening' || state === 'speaking') && (
-          <View style={styles.waveformContainer}>
-            <WaveformVisualizer
-              audioLevel={audioLevel}
-              isActive={state === 'listening' || state === 'speaking'}
-            />
-          </View>
-        )}
+        {/* Coming Soon Badge */}
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>Binnenkort beschikbaar</Text>
+        </View>
 
-        {/* State Text */}
-        <Text style={styles.stateText}>{getStateText()}</Text>
+        {/* Title */}
+        <Text style={styles.titleText}>Voice Therapy</Text>
 
-        {/* Hint */}
-        {state === 'listening' && !isMuted && (
-          <Text style={styles.hintText}>
-            Spreek je gedachten uit. Ik stop automatisch wanneer je klaar bent.
-          </Text>
-        )}
-
-        {/* Error */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Bottom Controls */}
-      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + SPACING.lg }]}>
-        <Pressable
-          style={[styles.muteButton, isMuted && styles.muteButtonActive]}
-          onPress={toggleMute}
-        >
-          <Ionicons
-            name={isMuted ? 'mic-off' : 'mic'}
-            size={32}
-            color={isMuted ? COLORS.error : COLORS.primary}
-          />
-        </Pressable>
-        <Text style={styles.muteHint}>
-          {isMuted ? 'Tik om te hervatten' : 'Tik om te pauzeren'}
+        {/* Description */}
+        <Text style={styles.descriptionText}>
+          We werken hard aan een geweldige voice therapy ervaring. 
+          Binnenkort kun je met Aurora praten via spraak in een veilige en ondersteunende omgeving.
         </Text>
+
+        {/* Features List */}
+        <View style={styles.featuresContainer}>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+            <Text style={styles.featureText}>Real-time spraak conversaties</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+            <Text style={styles.featureText}>Natuurlijke gesprekken met Aurora</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+            <Text style={styles.featureText}>Veilige en privé omgeving</Text>
+          </View>
+        </View>
       </View>
     </LinearGradient>
   );
@@ -158,55 +106,47 @@ const styles = StyleSheet.create({
   coreContainer: {
     marginBottom: SPACING.xl,
   },
-  waveformContainer: {
+  badgeContainer: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 20,
     marginBottom: SPACING.lg,
   },
-  stateText: {
-    ...TYPOGRAPHY.h3,
+  badgeText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.background,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  titleText: {
+    ...TYPOGRAPHY.h2,
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  hintText: {
+  descriptionText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.xl,
+    lineHeight: 24,
   },
-  errorContainer: {
+  featuresContainer: {
+    width: '100%',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
+  },
+  featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.errorGlass,
-    borderRadius: 12,
-    padding: SPACING.md,
-    marginTop: SPACING.md,
+    gap: SPACING.sm,
   },
-  errorText: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.error,
-    marginLeft: SPACING.sm,
-  },
-  bottomContainer: {
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-  },
-  muteButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 2,
-    borderColor: COLORS.glass.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  muteButtonActive: {
-    backgroundColor: COLORS.errorGlass,
-    borderColor: COLORS.error,
-  },
-  muteHint: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginTop: SPACING.sm,
+  featureText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    flex: 1,
   },
 });

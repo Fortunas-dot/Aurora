@@ -51,7 +51,12 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Voice Therapy</Text>
+                <View style={styles.optionTitleRow}>
+                  <Text style={styles.optionTitle}>Voice Therapy</Text>
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>Binnenkort</Text>
+                  </View>
+                </View>
                 <Text style={styles.optionDescription}>
                   Praat met Aurora via spraak in een veilige omgeving
                 </Text>
@@ -167,10 +172,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: SPACING.md,
   },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: 2,
+  },
   optionTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    marginBottom: 2,
+  },
+  comingSoonBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  comingSoonText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.background,
+    fontWeight: '600',
+    fontSize: 10,
   },
   optionDescription: {
     ...TYPOGRAPHY.small,
