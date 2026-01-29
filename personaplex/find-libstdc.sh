@@ -6,13 +6,20 @@ echo "🔍 Finding libstdc++.so.6 during build..."
 # Try method 1: find in /nix/store
 LIB_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo '')
 
-# Try method 2: nix-build
+# Try method 2: nix-build (try gcc12 first, then default)
 if [ -z "$LIB_PATH" ]; then
-  echo "⚠️  Not found via find, trying nix-build..."
-  GCC_LIB=$(nix-build -E '(import <nixpkgs> {}).gcc.cc.lib' --no-out-link 2>/dev/null || echo '')
+  echo "⚠️  Not found via find, trying nix-build with gcc12..."
+  GCC_LIB=$(nix-build -E '(import <nixpkgs> {}).gcc12.cc.lib' --no-out-link 2>/dev/null || echo '')
   if [ -n "$GCC_LIB" ] && [ -d "$GCC_LIB/lib" ]; then
     LIB_PATH="$GCC_LIB/lib"
-    echo "✅ Found via nix-build: $LIB_PATH"
+    echo "✅ Found via nix-build (gcc12): $LIB_PATH"
+  else
+    echo "⚠️  gcc12 not found, trying default gcc..."
+    GCC_LIB=$(nix-build -E '(import <nixpkgs> {}).gcc.cc.lib' --no-out-link 2>/dev/null || echo '')
+    if [ -n "$GCC_LIB" ] && [ -d "$GCC_LIB/lib" ]; then
+      LIB_PATH="$GCC_LIB/lib"
+      echo "✅ Found via nix-build (default): $LIB_PATH"
+    fi
   fi
 fi
 

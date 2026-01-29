@@ -2,7 +2,7 @@
 # This helps Railway detect Python and install system dependencies
 
 [phases.setup]
-nixPkgs = ["python310", "python310Packages.pip", "python310Packages.setuptools", "opusfile", "gcc", "glibc", "stdenv.cc.cc.lib"]
+nixPkgs = ["python310", "python310Packages.pip", "python310Packages.setuptools", "opusfile", "gcc12", "glibc", "gcc12.cc.lib"]
 
 [phases.install]
 cmds = [
