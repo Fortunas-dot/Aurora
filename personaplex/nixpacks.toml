@@ -6,15 +6,16 @@ nixPkgs = ["python310", "python310Packages.pip", "python310Packages.setuptools",
 
 [phases.install]
 cmds = [
-  "pip install --upgrade pip setuptools wheel",
-  "cd moshi && pip install .",
-  "pip install accelerate"
+  "python -m venv /app/venv",
+  "source /app/venv/bin/activate && pip install --upgrade pip setuptools wheel",
+  "source /app/venv/bin/activate && cd moshi && pip install .",
+  "source /app/venv/bin/activate && pip install accelerate"
 ]
 
 [phases.build]
 cmds = []
 
 [start]
-cmd = "python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload"
+cmd = "source /app/venv/bin/activate && python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload"
 
 
