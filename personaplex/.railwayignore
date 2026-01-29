@@ -1,0 +1,11 @@
+# Ignore files not needed for deployment
+client/
+assets/
+*.md
+.git/
+.gitignore
+Dockerfile
+docker-compose.yaml
+LICENSE-MIT
+
+
