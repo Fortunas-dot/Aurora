@@ -16,7 +16,7 @@ cmds = [
 cmds = [
   "chmod +x find-libstdc.sh start-personaplex.sh",
   "bash find-libstdc.sh",
-  "cp start-personaplex.sh /app/start-personaplex.sh",
+  "test -f /app/start-personaplex.sh || cp start-personaplex.sh /app/start-personaplex.sh",
   "chmod +x /app/start-personaplex.sh"
 ]
 
