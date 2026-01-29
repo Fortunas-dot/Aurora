@@ -14,24 +14,9 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "echo '#!/bin/bash' > /app/start-personaplex.sh",
-  "echo 'set -e' >> /app/start-personaplex.sh",
-  "echo 'echo \"🔍 Looking for libstdc++.so.6...\"' >> /app/start-personaplex.sh",
-  "echo 'LIB_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo \"\")' >> /app/start-personaplex.sh",
-  "echo 'if [ -n \"$LIB_PATH\" ]; then' >> /app/start-personaplex.sh",
-  "echo '  echo \"✅ Found libstdc++.so.6 at: $LIB_PATH\"' >> /app/start-personaplex.sh",
-  "echo '  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIB_PATH' >> /app/start-personaplex.sh",
-  "echo 'else' >> /app/start-personaplex.sh",
-  "echo '  echo \"⚠️  libstdc++.so.6 not found via find, trying nix-build...\"' >> /app/start-personaplex.sh",
-  "echo '  GCC_LIB=$(nix-build -E \"(import <nixpkgs> {}).gcc.cc.lib\" --no-out-link 2>/dev/null || echo \"\")' >> /app/start-personaplex.sh",
-  "echo '  if [ -n \"$GCC_LIB\" ] && [ -d \"$GCC_LIB/lib\" ]; then' >> /app/start-personaplex.sh",
-  "echo '    echo \"✅ Found gcc lib at: $GCC_LIB/lib\"' >> /app/start-personaplex.sh",
-  "echo '    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GCC_LIB/lib' >> /app/start-personaplex.sh",
-  "echo '  fi' >> /app/start-personaplex.sh",
-  "echo 'fi' >> /app/start-personaplex.sh",
-  "echo 'echo \"📚 LD_LIBRARY_PATH: $LD_LIBRARY_PATH\"' >> /app/start-personaplex.sh",
-  "echo 'echo \"🚀 Starting PersonaPlex server...\"' >> /app/start-personaplex.sh",
-  "echo '/app/venv/bin/python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload' >> /app/start-personaplex.sh",
+  "chmod +x find-libstdc.sh start-personaplex.sh",
+  "bash find-libstdc.sh",
+  "cp start-personaplex.sh /app/start-personaplex.sh",
   "chmod +x /app/start-personaplex.sh"
 ]
 
