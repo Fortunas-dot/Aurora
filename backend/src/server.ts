@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
+import expressWs from 'express-ws';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -12,6 +13,8 @@ import messageRoutes from './routes/messages';
 import userRoutes from './routes/users';
 import notificationRoutes from './routes/notifications';
 import uploadRoutes from './routes/upload';
+import journalRoutes from './routes/journal';
+import createPersonaPlexRouter from './routes/personaplex';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -19,7 +22,7 @@ import { errorHandler } from './middleware/errorHandler';
 // Load environment variables
 dotenv.config();
 
-const app: Application = express();
+const app: Application = express() as any;
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
@@ -39,6 +42,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Enable WebSocket support (must be before routes that use WebSocket)
+const wsInstance = expressWs(app);
+console.log('✅ WebSocket support enabled');
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
@@ -48,6 +55,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/journal', journalRoutes);
+app.use('/api/personaplex', createPersonaPlexRouter());
+console.log('✅ PersonaPlex routes registered at /api/personaplex');
 
 // Error handling middleware
 app.use(errorHandler);
@@ -61,6 +71,7 @@ app.listen(PORT, () => {
 ║  Status: Running                                           ║
 ║  Port: ${PORT}                                                ║
 ║  Health: /health                                           ║
+║  PersonaPlex: /api/personaplex/ws                          ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });

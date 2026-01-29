@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,18 +7,39 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuroraCore } from '../src/components/voice/AuroraCore';
 import { WaveformVisualizer } from '../src/components/voice/WaveformVisualizer';
 import { useVoiceTherapy } from '../src/hooks/useVoiceTherapy';
+import { useVoiceTherapyPersonaPlex } from '../src/hooks/useVoiceTherapyPersonaPlex';
 import { COLORS, SPACING, TYPOGRAPHY } from '../src/constants/theme';
+
+type ModelType = 'openai' | 'personaplex';
 
 export default function VoiceTherapyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [modelType, setModelType] = useState<ModelType>('personaplex');
+
+  // Conditionally initialize hooks based on selected model
+  // Only the active hook will be initialized to avoid conflicts
+  const openaiTherapy = useVoiceTherapy({ enabled: modelType === 'openai' });
+  const personaplexTherapy = useVoiceTherapyPersonaPlex({ enabled: modelType === 'personaplex' });
+
+  // Use the selected model's state
+  const therapy = modelType === 'openai' ? openaiTherapy : personaplexTherapy;
+  
+  // Handle model switching - cleanup previous model when switching
+  const handleModelSwitch = (newModel: ModelType) => {
+    if (newModel !== modelType) {
+      // The hooks will handle cleanup automatically via useEffect cleanup
+      setModelType(newModel);
+    }
+  };
+  
   const {
     state,
     audioLevel,
     error,
     isMuted,
     toggleMute,
-  } = useVoiceTherapy();
+  } = therapy;
 
   const getStateText = () => {
     switch (state) {
@@ -60,6 +81,38 @@ export default function VoiceTherapyScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      {/* Model Selector */}
+      <View style={styles.modelSelector}>
+        <Pressable
+          style={[
+            styles.modelButton,
+            modelType === 'openai' && styles.modelButtonActive
+          ]}
+          onPress={() => handleModelSwitch('openai')}
+        >
+          <Text style={[
+            styles.modelButtonText,
+            modelType === 'openai' && styles.modelButtonTextActive
+          ]}>
+            OpenAI
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.modelButton,
+            modelType === 'personaplex' && styles.modelButtonActive
+          ]}
+          onPress={() => handleModelSwitch('personaplex')}
+        >
+          <Text style={[
+            styles.modelButtonText,
+            modelType === 'personaplex' && styles.modelButtonTextActive
+          ]}>
+            PersonaPlex 7B
+          </Text>
+        </Pressable>
+      </View>
+
       {/* Main Content */}
       <View style={styles.content}>
         {/* Aurora Core */}
@@ -79,6 +132,11 @@ export default function VoiceTherapyScreen() {
 
         {/* State Text */}
         <Text style={styles.stateText}>{getStateText()}</Text>
+        
+        {/* Model Indicator */}
+        <Text style={styles.modelIndicator}>
+          {modelType === 'openai' ? 'OpenAI Realtime' : 'NVIDIA PersonaPlex 7B'}
+        </Text>
 
         {/* Hint */}
         {state === 'listening' && !isMuted && (
@@ -203,5 +261,41 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginTop: SPACING.sm,
+  },
+  modelSelector: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.glass.background,
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  modelButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modelButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  modelButtonText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  modelButtonTextActive: {
+    color: COLORS.background,
+    fontWeight: '600',
+  },
+  modelIndicator: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
 });

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Audio } from 'expo-av';
-import { realtimeService } from '../services/realtime.service';
+import { personaplexService } from '../services/personaplex.service';
 import { audioStreamingService } from '../services/audioStreaming.service';
 import { useAuthStore } from '../store/authStore';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
@@ -8,7 +8,7 @@ import { journalService, AuroraJournalContext } from '../services/journal.servic
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
-export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) => {
+export const useVoiceTherapyPersonaPlex = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const { user } = useAuthStore();
   const [state, setState] = useState<VoiceState>('idle');
   const [audioLevel, setAudioLevel] = useState(0);
@@ -47,7 +47,7 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
     }
   }, [user]);
 
-  // Initialize Realtime API connection
+  // Initialize PersonaPlex API connection
   // Re-initialize when user changes (to update health info context)
   // Note: This hook will always initialize - use conditionally in parent component if needed
   useEffect(() => {
@@ -59,47 +59,45 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
       return;
     }
 
-    initializeRealtime();
+    initializePersonaPlex();
 
     return () => {
       cleanup();
     };
   }, [enabled, user?.healthInfo, journalContext]); // Reconnect when enabled/health info/journal changes
 
-  const initializeRealtime = useCallback(async () => {
+  const initializePersonaPlex = useCallback(async () => {
     try {
       setState('processing');
       stateRef.current = 'processing';
       setError(null);
 
-      console.log('Connecting to Realtime API...');
+      console.log('Connecting to PersonaPlex 7B API...');
 
       // Format complete context (health info + journal entries) for AI
       const completeContext = formatCompleteContextForAI(user, journalContext);
       if (completeContext) {
-        console.log('📋 Including health information and journal context in AI');
+        console.log('📋 Including health information and journal context in PersonaPlex 7B');
       }
 
-      // Connect to Realtime API
-      await realtimeService.connect({
-        healthInfoContext: completeContext, // Pass complete context to AI
+      // Connect to PersonaPlex API
+      await personaplexService.connect({
+        healthInfoContext: completeContext,
         onTranscript: (text) => {
-          console.log('Transcript:', text);
+          console.log('PersonaPlex transcript:', text);
           setTranscript(text);
         },
         onAudioChunk: (audioData) => {
-          // Audio chunks are handled internally by realtimeService
+          // Audio chunks are handled internally by personaplexService
         },
         onResponseStart: async () => {
-          console.log('AI response started - pausing recording');
+          console.log('PersonaPlex response started - pausing recording');
           setState('speaking');
           stateRef.current = 'speaking';
-          // Stop recording while AI is speaking to prevent audio conflicts
           await audioStreamingService.cancelStreaming();
         },
         onResponseEnd: async () => {
-          console.log('AI response ended');
-          // Clear audio chunks after playing
+          console.log('PersonaPlex response ended');
           if (currentSound.current) {
             await currentSound.current.unloadAsync();
             currentSound.current = null;
@@ -108,15 +106,15 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
           // Auto-restart listening after AI finishes speaking
           setTimeout(async () => {
             if (!isMutedRef.current && isConnected.current) {
-              console.log('🎤 Resuming listening after AI response');
+              console.log('🎤 Resuming listening after PersonaPlex response');
               setState('listening');
               stateRef.current = 'listening';
               await startListening();
             }
-          }, 800); // Slightly longer delay for smooth transition
+          }, 800);
         },
         onError: (err) => {
-          console.error('Realtime API error:', err);
+          console.error('PersonaPlex API error:', err);
           setError(err.message);
           setState('idle');
           stateRef.current = 'idle';
@@ -127,22 +125,21 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
       });
 
       isConnected.current = true;
-      console.log('✅ Realtime API connected and session configured!');
+      console.log('✅ PersonaPlex 7B API connected and session configured!');
 
       // Send initial greeting and start listening
       if (!hasGreeted.current) {
         hasGreeted.current = true;
-        // Small delay to ensure session is fully ready
         setTimeout(() => {
-          console.log('🎤 Starting voice session...');
-      setState('listening');
-      stateRef.current = 'listening';
+          console.log('🎤 Starting PersonaPlex voice session...');
+          setState('listening');
+          stateRef.current = 'listening';
           startListening();
         }, 500);
       }
     } catch (err) {
-      console.error('Failed to initialize Realtime API:', err);
-      setError('Kon niet verbinden met de Realtime API. Controleer je internetverbinding.');
+      console.error('Failed to initialize PersonaPlex API:', err);
+      setError('Kon niet verbinden met PersonaPlex 7B API. Controleer je internetverbinding en API configuratie.');
       setState('idle');
       stateRef.current = 'idle';
     }
@@ -157,13 +154,12 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
       setState('listening');
       stateRef.current = 'listening';
 
-      // Start audio streaming to Realtime API
-      // Note: Server-side VAD will handle speech detection automatically
+      // Start audio streaming to PersonaPlex API
       await audioStreamingService.startStreaming((level) => {
         setAudioLevel(level);
       });
 
-      console.log('Started listening and streaming to Realtime API');
+      console.log('Started listening and streaming to PersonaPlex 7B API');
     } catch (err) {
       console.error('Failed to start listening:', err);
       setError('Kan niet beginnen met luisteren. Controleer de microfoon rechten.');
@@ -181,14 +177,9 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
       setState('processing');
       stateRef.current = 'processing';
 
-      // Stop streaming and commit audio to Realtime API
-      // The Realtime API will automatically:
-      // 1. Detect the end of speech (server-side VAD)
-      // 2. Transcribe the audio
-      // 3. Generate and stream the response
       await audioStreamingService.stopStreaming();
 
-      console.log('Stopped listening, audio committed to Realtime API');
+      console.log('Stopped listening, audio committed to PersonaPlex API');
     } catch (err) {
       console.error('Failed to stop listening:', err);
       setError('Fout bij het stoppen van de opname.');
@@ -196,11 +187,9 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
   }, []);
 
   const sendTextMessage = useCallback((text: string) => {
-    // Send text message to Realtime API
-    // This can be used for the initial greeting
-    if (isConnected.current && realtimeService) {
-      console.log('Sending text message:', text);
-      realtimeService.sendText(text);
+    if (isConnected.current && personaplexService) {
+      console.log('Sending text message to PersonaPlex:', text);
+      personaplexService.sendText(text);
     }
   }, []);
 
@@ -218,7 +207,7 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
         // Unmuting - reconnect and start listening
         setIsMuted(false);
         if (!isConnected.current) {
-          await initializeRealtime();
+          await initializePersonaPlex();
         } else {
           setState('listening');
           stateRef.current = 'listening';
@@ -228,13 +217,13 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
     } catch (err) {
       console.error('Failed to toggle mute:', err);
     }
-  }, [isMuted, initializeRealtime, startListening]);
+  }, [isMuted, initializePersonaPlex, startListening]);
 
   const cleanup = useCallback(() => {
     if (audioStreamingService.getIsRecording()) {
       audioStreamingService.cancelStreaming().catch(console.error);
     }
-    realtimeService.disconnect();
+    personaplexService.disconnect();
     isConnected.current = false;
     
     if (currentSound.current) {
@@ -251,3 +240,4 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
     toggleMute,
   };
 };
+
