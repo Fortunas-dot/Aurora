@@ -5,26 +5,36 @@ echo "🔍 Loading libstdc++ path..."
 
 if [ -f /app/libstdc_path.txt ]; then
   SAVED_PATH=$(cat /app/libstdc_path.txt)
+  # Verify saved path is not gcc13
+  if [[ "$SAVED_PATH" =~ "gcc-13" ]]; then
+    echo "⚠️  Saved path is gcc13 (incompatible), ignoring and searching for gcc12..."
+    SAVED_PATH=""
+  fi
   if [ -n "$SAVED_PATH" ] && [ -f "$SAVED_PATH/libstdc++.so.6" ]; then
     echo "✅ Using saved path: $SAVED_PATH"
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SAVED_PATH
   else
-    echo "⚠️  Saved path invalid, trying runtime search..."
-    RUNTIME_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo "")
+    echo "⚠️  Saved path invalid, trying runtime search (excluding gcc13)..."
+    RUNTIME_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | grep -v "gcc-13" | head -1 | xargs dirname 2>/dev/null || echo "")
     if [ -n "$RUNTIME_PATH" ]; then
       echo "✅ Found at runtime: $RUNTIME_PATH"
       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RUNTIME_PATH
     fi
   fi
 else
-  echo "⚠️  No saved path, searching at runtime..."
-  RUNTIME_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo "")
+  echo "⚠️  No saved path, searching at runtime (excluding gcc13)..."
+  # Try gcc12 first
+  RUNTIME_PATH=$(find /nix/store -path "*gcc-12*" -name libstdc++.so.6 -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo "")
+  if [ -z "$RUNTIME_PATH" ]; then
+    # Fallback to any gcc except gcc13
+    RUNTIME_PATH=$(find /nix/store -name libstdc++.so.6 -type f 2>/dev/null | grep -v "gcc-13" | head -1 | xargs dirname 2>/dev/null || echo "")
+  fi
   if [ -n "$RUNTIME_PATH" ]; then
     echo "✅ Found at runtime: $RUNTIME_PATH"
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RUNTIME_PATH
   else
     echo "❌ libstdc++.so.6 not found! Searching for alternatives..."
-    find /nix/store -name "*stdc*" -type f 2>/dev/null | head -10
+    find /nix/store -name "*stdc*" -type f 2>/dev/null | grep -v "gcc-13" | head -10
   fi
 fi
 
