@@ -6,8 +6,8 @@ nixPkgs = ["python310", "opusfile"]
 
 [phases.install]
 cmds = [
-  "cd moshi && pip install .",
-  "pip install accelerate"
+  "cd moshi && python -m pip install .",
+  "python -m pip install accelerate"
 ]
 
 [phases.build]
