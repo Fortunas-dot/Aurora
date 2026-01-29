@@ -30,6 +30,9 @@ export class RunPodService {
 
     if (!this.apiKey || !this.podId) {
       console.warn('⚠️ RunPod API key or Pod ID not configured. Auto-start/stop disabled.');
+      console.warn('⚠️ Set RUNPOD_API_KEY and RUNPOD_POD_ID environment variables to enable auto-start.');
+    } else {
+      console.log('✅ RunPod configured (Pod ID:', this.podId.substring(0, 8) + '...)');
     }
   }
 
@@ -125,11 +128,20 @@ export class RunPodService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ RunPod API error response:', response.status, errorText);
         throw new Error(`RunPod API error: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('✅ RunPod pod start requested:', data);
+      console.log('✅ RunPod pod start requested:', JSON.stringify(data, null, 2));
+      
+      // Check for GraphQL errors
+      if (data.errors) {
+        console.error('❌ GraphQL errors:', data.errors);
+        return false;
+      }
+      
       return true;
     } catch (error) {
       console.error('❌ Error starting pod:', error);

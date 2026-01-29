@@ -21,6 +21,14 @@ export class PersonaPlexProxy {
    * Ensure pod is running before connecting
    */
   private async ensurePodRunning(): Promise<void> {
+    // Check if RunPod is configured
+    if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_POD_ID) {
+      console.warn('⚠️ RunPod not configured - skipping pod auto-start');
+      console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL:', this.personaplexUrl);
+      return; // Continue with static URL if configured
+    }
+
+    console.log('🔍 Checking RunPod pod status...');
     const isRunning = await runpodService.isPodRunning();
     
     if (!isRunning) {
@@ -28,9 +36,10 @@ export class PersonaPlexProxy {
       const started = await runpodService.startPod();
       
       if (!started) {
-        throw new Error('Failed to start RunPod pod');
+        throw new Error('Failed to start RunPod pod. Check RunPod API credentials.');
       }
 
+      console.log('⏳ Waiting for pod to be ready...');
       // Wait for pod to be ready
       const ready = await runpodService.waitForPodReady(120); // 2 minutes max
       if (!ready) {
@@ -40,8 +49,11 @@ export class PersonaPlexProxy {
       // Get updated URL (in case IP changed)
       const newUrl = await runpodService.getPodPublicUrl();
       if (newUrl) {
+        console.log('🔄 Updated PersonaPlex URL:', newUrl);
         this.personaplexUrl = newUrl;
       }
+    } else {
+      console.log('✅ Pod is already running');
     }
   }
 
@@ -86,13 +98,40 @@ export class PersonaPlexProxy {
     return new Promise((resolve, reject) => {
       console.log(`🔗 Connecting to PersonaPlex at: ${this.personaplexUrl}`);
 
+      // Store PersonaPlex WebSocket reference
+      let personaplexWs: WebSocket | null = null;
+
+      // Forward messages from client to PersonaPlex
+      // Register this handler early so we don't miss messages
+      const clientMessageHandler = (data: WebSocket.Data) => {
+        if (personaplexWs && personaplexWs.readyState === WebSocket.OPEN) {
+          console.log('📤 Forwarding client message to PersonaPlex');
+          personaplexWs.send(data);
+        } else {
+          console.warn('⚠️ PersonaPlex not ready, buffering message');
+          // Could buffer messages here if needed
+        }
+      };
+      clientWs.on('message', clientMessageHandler);
+
+      // Forward messages from PersonaPlex to client
+      const personaplexMessageHandler = (data: WebSocket.Data) => {
+        if (clientWs.readyState === WebSocket.OPEN) {
+          console.log('📥 Forwarding PersonaPlex message to client');
+          clientWs.send(data);
+        }
+      };
+
       // Connect to PersonaPlex server
-      const personaplexWs = new WebSocket(this.personaplexUrl, {
+      personaplexWs = new WebSocket(this.personaplexUrl, {
         rejectUnauthorized: this.rejectUnauthorized,
       });
 
       personaplexWs.on('open', () => {
         console.log('✅ Connected to PersonaPlex server');
+        
+        // Register message handler after connection is open
+        personaplexWs!.on('message', personaplexMessageHandler);
         
         // Send initial configuration
         // Note: Exact format depends on PersonaPlex API
@@ -104,8 +143,8 @@ export class PersonaPlexProxy {
         };
 
         try {
-          personaplexWs.send(JSON.stringify(config));
-          console.log('📤 Sent PersonaPlex configuration');
+          personaplexWs!.send(JSON.stringify(config));
+          console.log('📤 Sent PersonaPlex configuration:', JSON.stringify(config, null, 2));
           resolve();
         } catch (error) {
           console.error('❌ Error sending config:', error);
@@ -113,23 +152,10 @@ export class PersonaPlexProxy {
         }
       });
 
-      // Forward messages from client to PersonaPlex
-      clientWs.on('message', (data: WebSocket.Data) => {
-        if (personaplexWs.readyState === WebSocket.OPEN) {
-          personaplexWs.send(data);
-        }
-      });
-
-      // Forward messages from PersonaPlex to client
-      personaplexWs.on('message', (data: WebSocket.Data) => {
-        if (clientWs.readyState === WebSocket.OPEN) {
-          clientWs.send(data);
-        }
-      });
-
       // Handle errors
       personaplexWs.on('error', (error: Error) => {
         console.error('❌ PersonaPlex connection error:', error);
+        console.error('Error details:', error.message, error.stack);
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.close(1011, 'PersonaPlex connection failed');
         }
