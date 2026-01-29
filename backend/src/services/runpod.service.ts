@@ -88,13 +88,16 @@ export class RunPodService {
       });
 
       if (!response.ok) {
-        throw new Error(`RunPod API error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ RunPod API error response:', response.status, errorText);
+        // Don't throw - return null so caller can handle gracefully
+        return null;
       }
 
       const data = await response.json() as RunPodApiResponse<{ pod: RunPodPodStatus }>;
       return data.data?.pod || null;
-    } catch (error) {
-      console.error('Error getting pod status:', error);
+    } catch (error: any) {
+      console.error('Error getting pod status:', error.message || error);
       return null;
     }
   }
@@ -134,14 +137,23 @@ export class RunPodService {
       }
 
       const data = await response.json() as { data?: any; errors?: any[] };
-      console.log('✅ RunPod pod start requested:', JSON.stringify(data, null, 2));
+      console.log('📤 RunPod pod start response:', JSON.stringify(data, null, 2));
       
       // Check for GraphQL errors
-      if (data.errors) {
-        console.error('❌ GraphQL errors:', data.errors);
+      if (data.errors && data.errors.length > 0) {
+        const errorMessages = data.errors.map((e: any) => e.message).join(', ');
+        console.error('❌ GraphQL errors:', errorMessages);
+        
+        // Check if it's a GPU availability issue
+        if (errorMessages.includes('not enough free GPUs') || errorMessages.includes('GPU')) {
+          console.warn('⚠️ No free GPUs available - pod cannot start automatically');
+          console.warn('⚠️ Consider using a static PERSONAPLEX_SERVER_URL if you have a running pod');
+        }
+        
         return false;
       }
       
+      console.log('✅ RunPod pod start requested successfully');
       return true;
     } catch (error) {
       console.error('❌ Error starting pod:', error);

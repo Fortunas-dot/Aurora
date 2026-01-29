@@ -29,20 +29,40 @@ export class PersonaPlexProxy {
     }
 
     console.log('🔍 Checking RunPod pod status...');
-    const isRunning = await runpodService.isPodRunning();
+    let isRunning = false;
+    try {
+      isRunning = await runpodService.isPodRunning();
+    } catch (error: any) {
+      console.warn('⚠️ Error checking pod status:', error.message);
+      console.warn('⚠️ Will attempt to start pod anyway...');
+    }
     
     if (!isRunning) {
       console.log('🚀 Pod is stopped, starting it...');
       const started = await runpodService.startPod();
       
       if (!started) {
-        throw new Error('Failed to start RunPod pod. Check RunPod API credentials.');
+        // Check if we have a static URL configured - if so, use that as fallback
+        if (process.env.PERSONAPLEX_SERVER_URL && process.env.PERSONAPLEX_SERVER_URL !== 'wss://localhost:8998') {
+          console.warn('⚠️ Failed to start RunPod pod (possibly no free GPUs available)');
+          console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL as fallback:', process.env.PERSONAPLEX_SERVER_URL);
+          this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL;
+          return; // Continue with static URL
+        }
+        throw new Error('Failed to start RunPod pod. No free GPUs available or check RunPod API credentials.');
       }
 
       console.log('⏳ Waiting for pod to be ready...');
       // Wait for pod to be ready
       const ready = await runpodService.waitForPodReady(120); // 2 minutes max
       if (!ready) {
+        // Check if we have a static URL configured - if so, use that as fallback
+        if (process.env.PERSONAPLEX_SERVER_URL && process.env.PERSONAPLEX_SERVER_URL !== 'wss://localhost:8998') {
+          console.warn('⚠️ Pod did not become ready in time');
+          console.warn('⚠️ Using static PERSONAPLEX_SERVER_URL as fallback:', process.env.PERSONAPLEX_SERVER_URL);
+          this.personaplexUrl = process.env.PERSONAPLEX_SERVER_URL;
+          return; // Continue with static URL
+        }
         throw new Error('Pod did not become ready in time');
       }
 
