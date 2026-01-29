@@ -17,10 +17,11 @@ cmds = [
   "chmod +x find-libstdc.sh start-personaplex.sh",
   "bash find-libstdc.sh",
   "test -f /app/start-personaplex.sh || cp start-personaplex.sh /app/start-personaplex.sh",
-  "chmod +x /app/start-personaplex.sh"
+  "chmod +x /app/start-personaplex.sh",
+  "ls -la /app/start-personaplex.sh || ls -la start-personaplex.sh"
 ]
 
 [start]
-cmd = "/app/start-personaplex.sh"
+cmd = "bash /app/start-personaplex.sh"
 
 
