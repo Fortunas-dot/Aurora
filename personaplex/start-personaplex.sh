@@ -56,5 +56,10 @@ if [ -n "$LD_LIBRARY_PATH" ]; then
 fi
 
 echo "🚀 Starting PersonaPlex server..."
-/app/venv/bin/python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload
+echo "💻 Forcing CPU mode (Railway has no GPU)..."
+# Disable CUDA completely to prevent PyTorch from trying to initialize it
+export CUDA_VISIBLE_DEVICES=""
+export TORCH_DEVICE="cpu"
+# Set PyTorch to use CPU backend
+/app/venv/bin/python -m moshi.server --ssl /tmp/ssl --host 0.0.0.0 --port $PORT --cpu-offload --device cpu
 
