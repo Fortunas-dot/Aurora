@@ -14,7 +14,6 @@ import userRoutes from './routes/users';
 import notificationRoutes from './routes/notifications';
 import uploadRoutes from './routes/upload';
 import journalRoutes from './routes/journal';
-import createPersonaPlexRouter from './routes/personaplex';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -56,8 +55,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/journal', journalRoutes);
-app.use('/api/personaplex', createPersonaPlexRouter());
-console.log('✅ PersonaPlex routes registered at /api/personaplex');
 
 // Error handling middleware
 app.use(errorHandler);
@@ -71,7 +68,6 @@ app.listen(PORT, () => {
 ║  Status: Running                                           ║
 ║  Port: ${PORT}                                                ║
 ║  Health: /health                                           ║
-║  PersonaPlex: /api/personaplex/ws                          ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });

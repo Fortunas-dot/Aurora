@@ -1,6 +1,0 @@
-Dockerfile
-docker-compose.yaml
-client/
-.git/
-*.md
-!RAILWAY_DEPLOYMENT.md

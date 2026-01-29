@@ -62,7 +62,6 @@ module.exports = {
       PROXY_URL: process.env.PROXY_URL || 'wss://aurora-production.up.railway.app',
       // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
       PROXY_HOST: process.env.PROXY_HOST || null,
-      // Note: PersonaPlex now connects via backend API (no direct config needed)
     },
   },
 };
