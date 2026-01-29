@@ -1,11 +1,6 @@
-# Ignore files not needed for deployment
-client/
-assets/
-*.md
-.git/
-.gitignore
 Dockerfile
 docker-compose.yaml
-LICENSE-MIT
-
-
+client/
+.git/
+*.md
+!RAILWAY_DEPLOYMENT.md
