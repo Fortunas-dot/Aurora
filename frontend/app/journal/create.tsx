@@ -594,6 +594,9 @@ const styles = StyleSheet.create({
   },
   moodEmoji: {
     fontSize: 24,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: 28,
   },
   moodValue: {
     ...TYPOGRAPHY.caption,

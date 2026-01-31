@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton } from '../../src/components/common';
-import { AuroraCore } from '../../src/components/voice/AuroraCore';
+// import { AuroraCore } from '../../src/components/voice/AuroraCore'; // Bewaard voor later gebruik
 import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
@@ -99,7 +99,10 @@ export default function AuroraScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: (Platform.OS === 'ios' ? 120 : 100) + insets.bottom }
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -182,12 +185,7 @@ export default function AuroraScreen() {
           </View>
         )}
 
-        {/* Aurora Visualization */}
-        <View style={styles.auroraContainer}>
-          <AuroraCore state="idle" audioLevel={0} />
-        </View>
-
-        {/* Options */}
+        {/* Options - Hoe kan ik je helpen? */}
         <View style={styles.optionsContainer}>
           <Text style={styles.optionsTitle}>Hoe kan ik je helpen?</Text>
           
@@ -338,15 +336,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: SPACING.xxl,
+    paddingBottom: SPACING.xxl, // Base padding, wordt dynamisch aangepast met safe area
   },
-  auroraContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.lg,
-  },
+  // Aurora Visualization - bewaard voor later gebruik
+  // auroraContainer: {
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   paddingVertical: SPACING.lg,
+  // },
   optionsContainer: {
     paddingHorizontal: SPACING.md,
+    marginTop: SPACING.lg,
   },
   optionsTitle: {
     ...TYPOGRAPHY.h3,
@@ -479,6 +479,8 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.captionMedium,
     color: COLORS.text,
     marginTop: SPACING.xs,
+    textAlign: 'center',
+    width: '100%',
   },
 });
 

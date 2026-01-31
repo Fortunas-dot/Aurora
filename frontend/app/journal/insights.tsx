@@ -191,11 +191,13 @@ const StatCard: React.FC<{
   color?: string;
 }> = ({ icon, label, value, color = COLORS.primary }) => (
   <GlassCard style={styles.statCard} padding="md">
-    <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
-      <Ionicons name={icon} size={24} color={color} />
+    <View style={styles.statContent}>
+      <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
+        <Ionicons name={icon} size={24} color={color} />
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
   </GlassCard>
 );
 
@@ -522,7 +524,10 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+  },
+  statContent: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statIconContainer: {
     width: 48,
@@ -535,12 +540,15 @@ const styles = StyleSheet.create({
   statValue: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
+    textAlign: 'center',
+    width: '100%',
   },
   statLabel: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+    width: '100%',
   },
   section: {
     marginBottom: SPACING.xl,

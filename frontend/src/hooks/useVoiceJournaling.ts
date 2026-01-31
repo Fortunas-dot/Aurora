@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
@@ -169,7 +169,7 @@ export const useVoiceJournaling = (): VoiceJournalingResult => {
 // Helper function to transcribe audio using OpenAI Whisper
 async function transcribeAudio(audioUri: string): Promise<string> {
   try {
-    // Read audio file
+    // Check if file exists using legacy API (to avoid deprecation warning)
     const fileInfo = await FileSystem.getInfoAsync(audioUri);
     if (!fileInfo.exists) {
       throw new Error('Audio file not found');
