@@ -4,13 +4,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
-const CORE_SIZE = width * 0.7;
+const DEFAULT_CORE_SIZE = width * 0.7;
 const NUM_BLOBS = 6;
 const NUM_PARTICLES = 10;
 
 interface AuroraCoreProps {
   state: 'idle' | 'listening' | 'speaking';
   audioLevel?: number;
+  size?: number; // Optional custom size for smaller versions (e.g., tab bar)
 }
 
 // Organic blob - elongated ellipse that moves and rotates
@@ -19,6 +20,7 @@ const OrganicBlob = ({
   state,
   audioLevel,
   config,
+  coreSize,
 }: { 
   index: number; 
   state: string; 
@@ -31,6 +33,7 @@ const OrganicBlob = ({
     offsetX: number;
     offsetY: number;
   };
+  coreSize: number;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const scaleX = useRef(new Animated.Value(1)).current;
@@ -203,19 +206,23 @@ const OrganicBlob = ({
 const FloatingParticle = ({ 
   index, 
   state, 
-  audioLevel 
+  audioLevel,
+  coreSize,
+  numParticles,
 }: { 
   index: number; 
   state: string; 
   audioLevel: number;
+  coreSize: number;
+  numParticles: number;
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0.4)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  const angle = (index / NUM_PARTICLES) * Math.PI * 2;
-  const baseRadius = CORE_SIZE * 0.32;
+  const angle = (index / numParticles) * Math.PI * 2;
+  const baseRadius = coreSize * 0.32;
   const x = Math.cos(angle) * baseRadius;
   const y = Math.sin(angle) * baseRadius;
 
@@ -284,7 +291,7 @@ const FloatingParticle = ({
     }
   }, [audioLevel, state]);
 
-  const size = 5 + (index % 4) * 3;
+  const size = Math.max(2, (coreSize / DEFAULT_CORE_SIZE) * (5 + (index % 4) * 3));
 
   return (
     <Animated.View
@@ -294,8 +301,8 @@ const FloatingParticle = ({
           width: size,
           height: size,
           borderRadius: size / 2,
-          left: CORE_SIZE / 2 + x - size / 2,
-          top: CORE_SIZE / 2 + y - size / 2,
+          left: coreSize / 2 + x - size / 2,
+          top: coreSize / 2 + y - size / 2,
           opacity,
           transform: [
             { translateX },
@@ -311,7 +318,9 @@ const FloatingParticle = ({
 export const AuroraCore: React.FC<AuroraCoreProps> = ({
   state,
   audioLevel = 0,
+  size,
 }) => {
+  const CORE_SIZE = size || DEFAULT_CORE_SIZE;
   const containerScale = useRef(new Animated.Value(1)).current;
   const pulseScale = useRef(new Animated.Value(1)).current;
 
@@ -337,14 +346,21 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
   }, [audioLevel, state]);
 
   // Blob configurations - different sizes, positions, colors for organic look
-  const blobConfigs = useMemo(() => [
-    { width: CORE_SIZE * 0.7, height: CORE_SIZE * 0.55, color: '#0F172A', opacity: 0.95, offsetX: -5, offsetY: 8 },
-    { width: CORE_SIZE * 0.6, height: CORE_SIZE * 0.7, color: '#1E3A5F', opacity: 0.85, offsetX: 10, offsetY: -5 },
-    { width: CORE_SIZE * 0.55, height: CORE_SIZE * 0.48, color: COLORS.primary, opacity: 0.7, offsetX: -8, offsetY: -10 },
-    { width: CORE_SIZE * 0.5, height: CORE_SIZE * 0.58, color: '#60A5FA', opacity: 0.6, offsetX: 12, offsetY: 5 },
-    { width: CORE_SIZE * 0.42, height: CORE_SIZE * 0.38, color: '#93C5FD', opacity: 0.5, offsetX: -6, offsetY: 8 },
-    { width: CORE_SIZE * 0.32, height: CORE_SIZE * 0.35, color: '#BFDBFE', opacity: 0.7, offsetX: 3, offsetY: -3 },
-  ], []);
+  // For small sizes, reduce number of blobs and particles
+  const numBlobs = size && size < 50 ? 3 : NUM_BLOBS;
+  const numParticles = size && size < 50 ? 4 : NUM_PARTICLES;
+  
+  const blobConfigs = useMemo(() => {
+    const configs = [
+      { width: CORE_SIZE * 0.7, height: CORE_SIZE * 0.55, color: '#0F172A', opacity: 0.95, offsetX: -5, offsetY: 8 },
+      { width: CORE_SIZE * 0.6, height: CORE_SIZE * 0.7, color: '#1E3A5F', opacity: 0.85, offsetX: 10, offsetY: -5 },
+      { width: CORE_SIZE * 0.55, height: CORE_SIZE * 0.48, color: COLORS.primary, opacity: 0.7, offsetX: -8, offsetY: -10 },
+      { width: CORE_SIZE * 0.5, height: CORE_SIZE * 0.58, color: '#60A5FA', opacity: 0.6, offsetX: 12, offsetY: 5 },
+      { width: CORE_SIZE * 0.42, height: CORE_SIZE * 0.38, color: '#93C5FD', opacity: 0.5, offsetX: -6, offsetY: 8 },
+      { width: CORE_SIZE * 0.32, height: CORE_SIZE * 0.35, color: '#BFDBFE', opacity: 0.7, offsetX: 3, offsetY: -3 },
+    ];
+    return configs.slice(0, numBlobs);
+  }, [CORE_SIZE, numBlobs]);
 
   const blobs = useMemo(() => 
     blobConfigs.map((config, i) => (
@@ -354,21 +370,25 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
         state={state}
         audioLevel={audioLevel}
         config={config}
+        coreSize={CORE_SIZE}
       />
-    )), [state, audioLevel, blobConfigs]
+    )), [state, audioLevel, blobConfigs, CORE_SIZE]
   );
 
   const particles = useMemo(() =>
-    Array.from({ length: NUM_PARTICLES }, (_, i) => (
-      <FloatingParticle key={i} index={i} state={state} audioLevel={audioLevel} />
-    )), [state, audioLevel]
+    Array.from({ length: numParticles }, (_, i) => (
+      <FloatingParticle key={i} index={i} state={state} audioLevel={audioLevel} coreSize={CORE_SIZE} numParticles={numParticles} />
+    )), [state, audioLevel, numParticles, CORE_SIZE]
   );
 
   return (
       <Animated.View
         style={[
-        styles.container,
           {
+            width: CORE_SIZE,
+            height: CORE_SIZE,
+            justifyContent: 'center',
+            alignItems: 'center',
             transform: [
             { scale: Animated.multiply(containerScale, pulseScale) },
             ],
@@ -381,8 +401,12 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
       {/* Central bright core */}
       <Animated.View
         style={[
-          styles.centerCore,
           {
+            position: 'absolute',
+            width: CORE_SIZE * 0.22,
+            height: CORE_SIZE * 0.22,
+            borderRadius: CORE_SIZE * 0.11,
+            overflow: 'hidden',
             transform: [{ scale: pulseScale }],
             opacity: state === 'speaking' ? 1 : state === 'listening' ? 0.9 : 0.75,
           }
@@ -397,14 +421,19 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
       </Animated.View>
 
       {/* Inner spark */}
-      <Animated.View
-        style={[
-          styles.spark,
-          {
-            transform: [{ scale: Animated.add(pulseScale, audioLevel * 0.3) }],
-          },
-        ]}
-      />
+      {CORE_SIZE >= 50 && (
+        <Animated.View
+          style={[
+            styles.spark,
+            {
+              width: Math.max(4, CORE_SIZE * 0.03),
+              height: Math.max(4, CORE_SIZE * 0.03),
+              borderRadius: Math.max(2, CORE_SIZE * 0.015),
+              transform: [{ scale: Animated.add(pulseScale, audioLevel * 0.3) }],
+            },
+          ]}
+        />
+      )}
 
       {/* Floating particles */}
       {particles}
@@ -413,28 +442,12 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    width: CORE_SIZE,
-    height: CORE_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   blob: {
     position: 'absolute',
     overflow: 'hidden',
   },
-  centerCore: {
-    position: 'absolute',
-    width: CORE_SIZE * 0.22,
-    height: CORE_SIZE * 0.22,
-    borderRadius: CORE_SIZE * 0.11,
-    overflow: 'hidden',
-  },
   spark: {
     position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
     backgroundColor: '#FFFFFF',
     shadowColor: '#FFFFFF',
     shadowOffset: { width: 0, height: 0 },
