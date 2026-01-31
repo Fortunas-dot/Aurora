@@ -18,10 +18,6 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.aurora.app',
-      infoPlist: {
-        NSPhotoLibraryUsageDescription: 'We need access to your photo library to let you share images in posts.',
-        NSPhotoLibraryAddUsageDescription: 'We need access to save images to your photo library.',
-      },
     },
     android: {
       adaptiveIcon: {
@@ -32,30 +28,22 @@ module.exports = {
       predictiveBackGestureEnabled: false,
       softwareKeyboardLayoutMode: 'resize',
       package: 'com.aurora.app',
-      permissions: [
-        'READ_EXTERNAL_STORAGE',
-        'WRITE_EXTERNAL_STORAGE',
-        'READ_MEDIA_IMAGES',
-        'READ_MEDIA_VIDEO',
-      ],
     },
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: [
-      'expo-router',
-      'expo-secure-store',
-      [
-        'expo-image-picker',
-        {
-          photosPermission: 'The app accesses your photos to let you share them in posts.',
-          cameraPermission: 'The app accesses your camera to let you take photos for posts.',
-        },
-      ],
-    ],
+    plugins: ['expo-router', 'expo-secure-store'],
     extra: {
-      // Backend API URL (Railway)
-      API_URL: process.env.API_URL || 'https://aurora-production.up.railway.app/api',
+      // Backend API URL
+      // - For PRODUCTION: Set API_URL in .env to your Railway/Render URL (e.g., 'https://aurora-production.up.railway.app/api')
+      // - For DEVELOPMENT: Leave as localhost (or set API_HOST for physical device testing)
+      // IMPORTANT: In production builds, API_URL MUST be set to a production URL, not localhost!
+      API_URL: process.env.API_URL || (process.env.NODE_ENV === 'production' 
+        ? 'https://aurora-production.up.railway.app/api' 
+        : 'http://localhost:3000/api'),
+      // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
+      // Only used in development mode when API_URL contains localhost
+      API_HOST: process.env.API_HOST || null,
       // OpenAI API Key
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       // Railway proxy URL for OpenAI Realtime API

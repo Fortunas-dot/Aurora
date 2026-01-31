@@ -1,7 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:3000/api';
+import { getApiUrl } from '../utils/apiUrl';
 
 export interface UploadResponse {
   url: string;
@@ -14,7 +12,7 @@ class UploadService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = API_URL;
+    this.baseUrl = getApiUrl();
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {

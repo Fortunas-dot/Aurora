@@ -54,7 +54,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <View style={styles.auroraIconContainer}>
               <View style={styles.auroraCoreWrapper}>
-                <AuroraCore state="idle" audioLevel={0} size={20} />
+                <AuroraCore state="idle" audioLevel={0} size={56} />
               </View>
             </View>
           ),
@@ -105,20 +105,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   auroraIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: 'rgba(96, 165, 250, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(96, 165, 250, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -16,
+    marginTop: -20,
     overflow: 'visible',
   },
   auroraCoreWrapper: {
-    width: 20,
-    height: 20,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'visible',

@@ -113,7 +113,10 @@ export default function AuroraScreen() {
         <View style={styles.welcomeSection}>
           <Text style={styles.greeting}>{greeting}, {userName} 👋</Text>
           <GlassCard style={styles.quoteCard} padding="md" gradient>
-            <Text style={styles.quoteText}>"{dailyQuote}"</Text>
+            <View style={styles.quoteContainer}>
+              <Ionicons name="quote" size={24} color={COLORS.primary} style={styles.quoteIcon} />
+              <Text style={styles.quoteText}>{dailyQuote}</Text>
+            </View>
           </GlassCard>
         </View>
 
@@ -411,12 +414,20 @@ const styles = StyleSheet.create({
   quoteCard: {
     marginTop: SPACING.sm,
   },
+  quoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  quoteIcon: {
+    marginRight: SPACING.sm,
+    marginTop: 2,
+  },
   quoteText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
+    flex: 1,
     fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
   statsSection: {
     paddingHorizontal: SPACING.md,
@@ -470,3 +481,4 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
 });
+

@@ -280,6 +280,13 @@ export default function ProfileScreen() {
             />
             <View style={styles.menuDivider} />
             <MenuItem
+              icon="sparkles-outline"
+              title="Tab Bar Icoon"
+              subtitle="Kies een bewegend symbool"
+              onPress={() => router.push('/icon-selector')}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
               icon="help-circle-outline"
               title="Help & Support"
               onPress={() => {}}
