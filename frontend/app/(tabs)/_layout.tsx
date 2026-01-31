@@ -4,6 +4,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING } from '../../src/constants/theme';
+import { AuroraCore } from '../../src/components/voice/AuroraCore';
 
 export default function TabsLayout() {
   return (
@@ -52,7 +53,9 @@ export default function TabsLayout() {
           title: 'Aurora',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.auroraIconContainer}>
-              <Ionicons name="sparkles" size={size + 4} color={COLORS.primary} />
+              <View style={styles.auroraCoreWrapper}>
+                <AuroraCore state="idle" audioLevel={0} size={20} />
+              </View>
             </View>
           ),
         }}
@@ -111,6 +114,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -16,
+    overflow: 'visible',
+  },
+  auroraCoreWrapper: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'visible',
   },
 });
-
