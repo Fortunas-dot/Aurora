@@ -9,6 +9,10 @@ export interface IMessage extends Document {
     url: string;
     filename?: string;
   }>;
+  reactions?: Array<{
+    emoji: string;
+    users: Types.ObjectId[];
+  }>;
   readAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -35,7 +39,7 @@ const MessageSchema = new Schema<IMessage>(
     attachments: [{
       type: {
         type: String,
-        enum: ['image', 'file'],
+        enum: ['image', 'file', 'audio'],
         required: true,
       },
       url: {
@@ -45,6 +49,19 @@ const MessageSchema = new Schema<IMessage>(
       filename: {
         type: String,
       },
+      duration: {
+        type: Number,
+      },
+    }],
+    reactions: [{
+      emoji: {
+        type: String,
+        required: true,
+      },
+      users: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      }],
     }],
     readAt: {
       type: Date,

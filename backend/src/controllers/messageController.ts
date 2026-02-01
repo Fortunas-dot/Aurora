@@ -205,6 +205,140 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
 // @desc    Mark message as read
 // @route   PUT /api/messages/:id/read
 // @access  Private
+// @desc    React to a message
+// @route   POST /api/messages/:id/react
+// @access  Private
+export const reactToMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { emoji } = req.body;
+
+    if (!emoji) {
+      res.status(400).json({
+        success: false,
+        message: 'Emoji is required',
+      });
+      return;
+    }
+
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+      return;
+    }
+
+    // Check if user is part of this conversation
+    if (
+      message.sender.toString() !== req.userId &&
+      message.receiver.toString() !== req.userId
+    ) {
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized',
+      });
+      return;
+    }
+
+    // Initialize reactions array if it doesn't exist
+    if (!message.reactions) {
+      message.reactions = [];
+    }
+
+    // Find existing reaction with this emoji
+    const existingReaction = message.reactions.find(
+      (r) => r.emoji === emoji
+    );
+
+    if (existingReaction) {
+      // Toggle: if user already reacted, remove; otherwise add
+      const userIndex = existingReaction.users.findIndex(
+        (userId) => userId.toString() === req.userId
+      );
+
+      if (userIndex > -1) {
+        // Remove reaction
+        existingReaction.users.splice(userIndex, 1);
+        // Remove reaction if no users left
+        if (existingReaction.users.length === 0) {
+          message.reactions = message.reactions.filter(
+            (r) => r.emoji !== emoji
+          );
+        }
+      } else {
+        // Add reaction
+        existingReaction.users.push(new mongoose.Types.ObjectId(req.userId));
+      }
+    } else {
+      // Create new reaction
+      message.reactions.push({
+        emoji,
+        users: [new mongoose.Types.ObjectId(req.userId)],
+      });
+    }
+
+    await message.save();
+
+    // Populate users for response
+    await message.populate('reactions.users', 'username displayName avatar');
+
+    res.json({
+      success: true,
+      data: message,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error reacting to message',
+    });
+  }
+};
+
+// @desc    Search messages in a conversation
+// @route   GET /api/messages/conversation/:userId/search
+// @access  Private
+export const searchMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { q } = req.query;
+    const { userId } = req.params;
+
+    if (!q || typeof q !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Search query is required',
+      });
+      return;
+    }
+
+    const searchQuery = {
+      $or: [
+        { sender: req.userId, receiver: userId },
+        { sender: userId, receiver: req.userId },
+      ],
+      content: { $regex: q, $options: 'i' },
+    };
+
+    const messages = await Message.find(searchQuery)
+      .populate('sender', 'username displayName avatar')
+      .populate('receiver', 'username displayName avatar')
+      .populate('reactions.users', 'username displayName avatar')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({
+      success: true,
+      data: messages,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error searching messages',
+    });
+  }
+};
+
 export const markAsRead = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const message = await Message.findById(req.params.id);

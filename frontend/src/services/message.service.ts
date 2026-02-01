@@ -7,9 +7,14 @@ export interface Message {
   receiver: User;
   content: string;
   attachments?: Array<{
-    type: 'image' | 'file';
+    type: 'image' | 'file' | 'audio';
     url: string;
     filename?: string;
+    duration?: number;
+  }>;
+  reactions?: Array<{
+    emoji: string;
+    users: User[];
   }>;
   readAt?: string;
   createdAt: string;
@@ -61,6 +66,14 @@ class MessageService {
 
   async markAsRead(messageId: string): Promise<ApiResponse<Message>> {
     return apiService.put<Message>(`/messages/${messageId}/read`, {});
+  }
+
+  async reactToMessage(messageId: string, emoji: string): Promise<ApiResponse<Message>> {
+    return apiService.post<Message>(`/messages/${messageId}/react`, { emoji });
+  }
+
+  async searchMessages(userId: string, query: string): Promise<ApiResponse<Message[]>> {
+    return apiService.get<Message[]>(`/messages/conversation/${userId}/search?q=${encodeURIComponent(query)}`);
   }
 }
 

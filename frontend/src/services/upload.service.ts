@@ -97,6 +97,41 @@ class UploadService {
     }
   }
 
+  async uploadAudio(uri: string): Promise<{ success: boolean; data?: UploadResponse; message?: string }> {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'audio.m4a';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `audio/${match[1]}` : 'audio/m4a';
+
+      formData.append('file', {
+        uri,
+        name: filename,
+        type,
+      } as any);
+
+      const response = await fetch(`${this.baseUrl}/upload`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      return {
+        success: false,
+        message: error.message || 'Error uploading audio',
+      };
+    }
+  }
+
   getFullUrl(relativeUrl: string): string {
     const baseUrl = this.baseUrl.replace('/api', '');
     return `${baseUrl}${relativeUrl}`;

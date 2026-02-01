@@ -5,6 +5,8 @@ import {
   getConversation,
   sendMessage,
   markAsRead,
+  reactToMessage,
+  searchMessages,
 } from '../controllers/messageController';
 import { protect } from '../middleware/auth';
 
@@ -23,8 +25,10 @@ const messageValidation = [
 // Routes
 router.get('/conversations', protect, getConversations);
 router.get('/conversation/:userId', protect, getConversation);
+router.get('/conversation/:userId/search', protect, searchMessages);
 router.post('/', protect, messageValidation, sendMessage);
 router.put('/:id/read', protect, markAsRead);
+router.post('/:id/react', protect, body('emoji').notEmpty(), reactToMessage);
 
 export default router;
 

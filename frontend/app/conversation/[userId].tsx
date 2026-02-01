@@ -20,6 +20,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { GlassCard, GlassInput, GlassButton, Avatar, LoadingSpinner } from '../../src/components/common';
+import { EmojiPicker } from '../../src/components/chat/EmojiPicker';
+import { VoiceRecorder } from '../../src/components/chat/VoiceRecorder';
+import { VoiceMessagePlayer } from '../../src/components/chat/VoiceMessagePlayer';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { messageService, Message } from '../../src/services/message.service';
 import { uploadService } from '../../src/services/upload.service';
@@ -44,6 +47,12 @@ export default function ConversationScreen() {
   const [isOnline, setIsOnline] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -212,6 +221,58 @@ export default function ConversationScreen() {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim() || !userId) {
+      setIsSearching(false);
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await messageService.searchMessages(userId, query);
+      if (response.success && response.data) {
+        setSearchResults(response.data);
+      }
+    } catch (error) {
+      console.error('Error searching messages:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleVoiceRecordingComplete = async (uri: string, duration: number) => {
+    setIsUploading(true);
+    setShowVoiceRecorder(false);
+
+    try {
+      const uploadResult = await uploadService.uploadAudio(uri);
+      if (uploadResult.success && uploadResult.data) {
+        const attachments = [{
+          type: 'audio' as const,
+          url: uploadResult.data.url,
+          duration,
+        }];
+
+        // Send message with audio attachment
+        if (chatWebSocketService.isConnected()) {
+          chatWebSocketService.sendMessage(userId, '', attachments);
+        } else {
+          const response = await messageService.sendMessage(userId, '', attachments);
+          if (response.success && response.data) {
+            setMessages((prev) => [...prev, response.data!]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading voice message:', error);
+      Alert.alert('Fout', 'Kon spraakbericht niet verzenden');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!messageText.trim() && selectedImages.length === 0) || !userId || isSending) return;
 
@@ -327,6 +388,27 @@ export default function ConversationScreen() {
     }
   }, [isLoading, hasMore, page, loadMessages]);
 
+  const handleReactToMessage = async (messageId: string, emoji: string) => {
+    try {
+      const response = await messageService.reactToMessage(messageId, emoji);
+      if (response.success && response.data) {
+        // Update message in list
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === messageId ? response.data! : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error reacting to message:', error);
+    }
+  };
+
+  const handleLongPressMessage = (messageId: string) => {
+    setSelectedMessageId(messageId);
+    setEmojiPickerVisible(true);
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.sender._id === currentUser?._id;
     const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: nl });
@@ -336,8 +418,13 @@ export default function ConversationScreen() {
       return url.startsWith('http') ? url : `https://aurora-production.up.railway.app${url}`;
     };
 
+    const hasUserReacted = (reaction: { emoji: string; users: any[] }) => {
+      return reaction.users.some((user) => user._id === currentUser?._id);
+    };
+
     return (
-      <View
+      <Pressable
+        onLongPress={() => handleLongPressMessage(item._id)}
         style={[
           styles.messageContainer,
           isOwn ? styles.messageContainerOwn : styles.messageContainerOther,
@@ -369,6 +456,13 @@ export default function ConversationScreen() {
                       resizeMode="cover"
                     />
                   )}
+                  {attachment.type === 'audio' && (
+                    <VoiceMessagePlayer
+                      uri={imageUrl(attachment.url)}
+                      duration={attachment.duration}
+                      isOwn={isOwn}
+                    />
+                  )}
                 </View>
               ))}
             </View>
@@ -381,11 +475,32 @@ export default function ConversationScreen() {
             </Text>
           )}
           
+          {/* Reactions */}
+          {item.reactions && item.reactions.length > 0 && (
+            <View style={styles.reactionsContainer}>
+              {item.reactions.map((reaction, index) => (
+                <Pressable
+                  key={index}
+                  style={[
+                    styles.reactionButton,
+                    hasUserReacted(reaction) && styles.reactionButtonActive,
+                  ]}
+                  onPress={() => handleReactToMessage(item._id, reaction.emoji)}
+                >
+                  <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                  {reaction.users.length > 0 && (
+                    <Text style={styles.reactionCount}>{reaction.users.length}</Text>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          )}
+          
           <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
             {formattedTime}
           </Text>
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -506,19 +621,39 @@ export default function ConversationScreen() {
           </View>
         )}
 
+        {/* Voice Recorder */}
+        {showVoiceRecorder && (
+          <VoiceRecorder
+            onRecordingComplete={handleVoiceRecordingComplete}
+            onCancel={() => setShowVoiceRecorder(false)}
+          />
+        )}
+
         {/* Input */}
-        <View style={styles.inputContainer}>
-          <Pressable
-            style={styles.attachButton}
-            onPress={handlePickImage}
-            disabled={isSending || isUploading}
-          >
-            <Ionicons
-              name="image-outline"
-              size={22}
-              color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
-            />
-          </Pressable>
+        {!showVoiceRecorder && (
+          <View style={styles.inputContainer}>
+            <Pressable
+              style={styles.attachButton}
+              onPress={handlePickImage}
+              disabled={isSending || isUploading}
+            >
+              <Ionicons
+                name="image-outline"
+                size={22}
+                color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.attachButton}
+              onPress={() => setShowVoiceRecorder(true)}
+              disabled={isSending || isUploading}
+            >
+              <Ionicons
+                name="mic-outline"
+                size={22}
+                color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
+              />
+            </Pressable>
           <GlassInput
             value={messageText}
             onChangeText={handleTextChange}
@@ -547,7 +682,22 @@ export default function ConversationScreen() {
               />
             )}
           </Pressable>
-        </View>
+          </View>
+        )}
+
+        {/* Emoji Picker */}
+        <EmojiPicker
+          visible={emojiPickerVisible}
+          onClose={() => {
+            setEmojiPickerVisible(false);
+            setSelectedMessageId(null);
+          }}
+          onSelect={(emoji) => {
+            if (selectedMessageId) {
+              handleReactToMessage(selectedMessageId, emoji);
+            }
+          }}
+        />
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -764,6 +914,82 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
+  },
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  reactionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  reactionButtonActive: {
+    backgroundColor: `${COLORS.primary}20`,
+    borderColor: COLORS.primary,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+    fontSize: 11,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+  },
+  searchInputText: {
+    ...TYPOGRAPHY.body,
+  },
+  clearSearchButton: {
+    padding: SPACING.xs,
+  },
+  searchResultsContainer: {
+    maxHeight: 200,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  searchResultsTitle: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+  },
+  searchResultsList: {
+    maxHeight: 150,
+  },
+  searchResultItem: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginBottom: SPACING.xs,
+  },
+  searchResultText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  searchResultTime: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
   },
 });
 
