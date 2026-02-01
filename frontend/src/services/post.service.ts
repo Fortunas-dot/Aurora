@@ -14,6 +14,7 @@ export interface Post {
   groupId?: string;
   likes: string[];
   commentsCount: number;
+  isSaved?: boolean;
   createdAt: string;
   updatedAt: string;
 }

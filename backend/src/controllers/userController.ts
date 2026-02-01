@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import User from '../models/User';
 import Post from '../models/Post';
+import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sanitizeUser } from '../utils/helpers';
+import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get user profile
 // @route   GET /api/users/:id
@@ -22,6 +24,19 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
     // Get post count
     const postCount = await Post.countDocuments({ author: req.params.id });
 
+    // Get followers and following count
+    const followersCount = await User.countDocuments({ following: req.params.id });
+    const followingCount = user.following.length;
+
+    // Check if current user is following this user
+    let isFollowing = false;
+    if (req.userId) {
+      const currentUser = await User.findById(req.userId);
+      isFollowing = currentUser?.following.some(
+        (id) => id.toString() === req.params.id
+      ) || false;
+    }
+
     // Public profile data
     const publicProfile = {
       _id: user._id,
@@ -31,6 +46,9 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       bio: user.bio,
       createdAt: user.createdAt,
       postCount,
+      followersCount,
+      followingCount,
+      isFollowing,
       // Only show email if user opted in
       ...(user.showEmail && { email: user.email }),
     };
@@ -189,6 +207,155 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching user posts',
+    });
+  }
+};
+
+// @desc    Follow/Unfollow user
+// @route   POST /api/users/:id/follow
+// @access  Private
+export const followUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.userId!;
+
+    if (targetUserId === currentUserId) {
+      res.status(400).json({
+        success: false,
+        message: 'Cannot follow yourself',
+      });
+      return;
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    const targetUser = await User.findById(targetUserId);
+
+    if (!currentUser || !targetUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    const isFollowing = currentUser.following.some(
+      (id) => id.toString() === targetUserId
+    );
+
+    if (isFollowing) {
+      // Unfollow
+      currentUser.following = currentUser.following.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      await currentUser.save();
+
+      res.json({
+        success: true,
+        message: 'Unfollowed successfully',
+        isFollowing: false,
+      });
+    } else {
+      // Follow
+      currentUser.following.push(targetUserId as any);
+      await currentUser.save();
+
+      // Create notification
+      const notification = await Notification.create({
+        user: targetUserId,
+        type: 'follow',
+        relatedUser: currentUserId,
+        message: 'started following you',
+      });
+
+      await notification.populate('relatedUser', 'username displayName avatar');
+
+      // Send notification via WebSocket
+      await sendNotificationToUser(targetUserId, notification);
+      await sendUnreadCountUpdate(targetUserId);
+
+      res.json({
+        success: true,
+        message: 'Followed successfully',
+        isFollowing: true,
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error following/unfollowing user',
+    });
+  }
+};
+
+// @desc    Get user's followers
+// @route   GET /api/users/:id/followers
+// @access  Public
+export const getFollowers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const followers = await User.find({ following: req.params.id })
+      .select('username displayName avatar bio')
+      .skip(skip)
+      .limit(limit);
+
+    const total = await User.countDocuments({ following: req.params.id });
+
+    res.json({
+      success: true,
+      data: followers,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching followers',
+    });
+  }
+};
+
+// @desc    Get users that a user is following
+// @route   GET /api/users/:id/following
+// @access  Public
+export const getFollowing = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id).populate('following', 'username displayName avatar bio');
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const following = user.following.slice(skip, skip + limit) as any[];
+
+    res.json({
+      success: true,
+      data: following,
+      pagination: {
+        page,
+        limit,
+        total: user.following.length,
+        pages: Math.ceil(user.following.length / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching following',
     });
   }
 };

@@ -72,7 +72,7 @@ export default function SearchUsersScreen() {
   }, [debouncedQuery, searchUsers]);
 
   const handleUserPress = (userId: string) => {
-    router.push(`/conversation/${userId}`);
+    router.push(`/user/${userId}`);
   };
 
   const renderUser = ({ item }: { item: UserProfile }) => (

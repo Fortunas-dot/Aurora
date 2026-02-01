@@ -13,8 +13,10 @@ interface PostCardProps {
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
+  onSave?: () => void;
   onAuthorPress?: () => void;
   currentUserId?: string;
+  isSaved?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -23,13 +25,16 @@ export const PostCard: React.FC<PostCardProps> = ({
   onLike,
   onComment,
   onShare,
-  onAuthorPress,
-  currentUserId,
+  onSave,
+      onAuthorPress,
+      currentUserId,
+      isSaved,
 }) => {
   const [isLiked, setIsLiked] = useState(
     currentUserId ? post.likes.includes(currentUserId) : false
   );
   const [likesCount, setLikesCount] = useState(post.likes.length);
+  const [saved, setSaved] = useState(isSaved ?? post.isSaved ?? false);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -131,6 +136,23 @@ export const PostCard: React.FC<PostCardProps> = ({
             color={COLORS.textSecondary}
           />
         </Pressable>
+
+        {onSave && (
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => {
+              const newSavedState = !saved;
+              setSaved(newSavedState);
+              onSave();
+            }}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color={saved ? COLORS.primary : COLORS.textSecondary}
+            />
+          </Pressable>
+        )}
 
         <View style={styles.actionSpacer} />
 

@@ -51,9 +51,22 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     const total = await Post.countDocuments(query);
 
+    // Add isSaved status if user is authenticated
+    let postsWithSavedStatus = posts;
+    if (req.userId) {
+      const user = await User.findById(req.userId);
+      if (user && user.savedPosts) {
+        const savedPostIds = user.savedPosts.map((id) => id.toString());
+        postsWithSavedStatus = posts.map((post: any) => ({
+          ...post.toObject(),
+          isSaved: savedPostIds.includes(post._id.toString()),
+        }));
+      }
+    }
+
     res.json({
       success: true,
-      data: posts,
+      data: postsWithSavedStatus,
       pagination: {
         page,
         limit,
@@ -96,9 +109,19 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
+    // Add isSaved status if user is authenticated
+    let postWithSavedStatus: any = post.toObject();
+    if (req.userId) {
+      const user = await User.findById(req.userId);
+      if (user && user.savedPosts) {
+        const savedPostIds = user.savedPosts.map((id) => id.toString());
+        postWithSavedStatus.isSaved = savedPostIds.includes(post._id.toString());
+      }
+    }
+
     res.json({
       success: true,
-      data: post,
+      data: postWithSavedStatus,
     });
   } catch (error: any) {
     res.status(500).json({

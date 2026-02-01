@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   RefreshControl,
   Pressable,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,8 @@ export default function NotificationsScreen() {
     markAsRead,
     markAllAsRead,
   } = useNotificationStore();
+
+  const [filterType, setFilterType] = useState<'all' | 'like' | 'comment' | 'message' | 'follow' | 'group_invite' | 'group_join'>('all');
 
   useFocusEffect(
     useCallback(() => {
@@ -114,9 +117,50 @@ export default function NotificationsScreen() {
         )}
       </View>
 
+      {/* Filter Tabs */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContent}
+        >
+          {[
+            { id: 'all', label: 'Alles', icon: 'apps-outline' },
+            { id: 'like', label: 'Likes', icon: 'heart-outline' },
+            { id: 'comment', label: 'Reacties', icon: 'chatbubble-outline' },
+            { id: 'message', label: 'Berichten', icon: 'mail-outline' },
+            { id: 'follow', label: 'Volgers', icon: 'person-add-outline' },
+            { id: 'group_invite', label: 'Groepen', icon: 'people-outline' },
+          ].map((filter) => (
+            <Pressable
+              key={filter.id}
+              style={[
+                styles.filterChip,
+                filterType === filter.id && styles.filterChipActive,
+              ]}
+              onPress={() => setFilterType(filter.id as any)}
+            >
+              <Ionicons
+                name={filter.icon as any}
+                size={16}
+                color={filterType === filter.id ? COLORS.primary : COLORS.textMuted}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterType === filter.id && styles.filterChipTextActive,
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Notifications List */}
       <FlatList
-        data={notifications}
+        data={notifications.filter((n) => filterType === 'all' || n.type === filterType)}
         renderItem={({ item }) => (
           <NotificationCard
             notification={item}
@@ -255,6 +299,38 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: SPACING.lg,
+  },
+  filterContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+    paddingVertical: SPACING.sm,
+  },
+  filterContent: {
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    gap: SPACING.xs,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary + '20',
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textMuted,
+  },
+  filterChipTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });
 

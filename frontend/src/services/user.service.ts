@@ -8,6 +8,9 @@ export interface UserProfile {
   bio?: string;
   email?: string;
   postCount: number;
+  followersCount?: number;
+  followingCount?: number;
+  isFollowing?: boolean;
   createdAt: string;
   healthInfo?: {
     mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
@@ -47,6 +50,30 @@ class UserService {
     };
   }): Promise<ApiResponse<UserProfile>> {
     return apiService.put<UserProfile>('/users/profile', data);
+  }
+
+  async followUser(userId: string): Promise<ApiResponse<{ isFollowing: boolean }>> {
+    return apiService.post<{ isFollowing: boolean }>(`/users/${userId}/follow`, {});
+  }
+
+  async getFollowers(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ApiResponse<UserProfile[]>> {
+    return apiService.get<UserProfile[]>(
+      `/users/${userId}/followers?page=${page}&limit=${limit}`
+    );
+  }
+
+  async getFollowing(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<ApiResponse<UserProfile[]>> {
+    return apiService.get<UserProfile[]>(
+      `/users/${userId}/following?page=${page}&limit=${limit}`
+    );
   }
 }
 

@@ -67,12 +67,36 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
     }
 
     // Navigate based on notification type
-    if (notification.relatedPost) {
-      router.push(`/post/${notification.relatedPost._id}`);
-    } else if (notification.relatedGroup) {
-      router.push(`/group/${notification.relatedGroup._id}`);
-    } else if (notification.relatedUser) {
-      router.push(`/conversation/${notification.relatedUser._id}`);
+    switch (notification.type) {
+      case 'like':
+      case 'comment':
+        if (notification.relatedPost) {
+          router.push(`/post/${notification.relatedPost._id}`);
+        }
+        break;
+      case 'follow':
+        if (notification.relatedUser) {
+          router.push(`/user/${notification.relatedUser._id}`);
+        }
+        break;
+      case 'message':
+        if (notification.relatedUser) {
+          router.push(`/conversation/${notification.relatedUser._id}`);
+        }
+        break;
+      case 'group_invite':
+      case 'group_join':
+        if (notification.relatedGroup) {
+          router.push(`/group/${notification.relatedGroup._id}`);
+        }
+        break;
+      default:
+        // Default navigation
+        if (notification.relatedPost) {
+          router.push(`/post/${notification.relatedPost._id}`);
+        } else if (notification.relatedUser) {
+          router.push(`/user/${notification.relatedUser._id}`);
+        }
     }
 
     onPress?.();

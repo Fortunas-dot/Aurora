@@ -18,6 +18,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { postService, Post, PostType } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
+import { shareService } from '../../src/services/share.service';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -229,13 +230,38 @@ export default function FeedScreen() {
     router.push('/create-post');
   };
 
+  const handleShare = async (post: Post) => {
+    const authorName = post.author.displayName || post.author.username;
+    await shareService.sharePost(post._id, post.content, authorName);
+  };
+
+  const handleSavePost = async (postId: string) => {
+    try {
+      const response = await postService.savePost(postId);
+      if (response.success && response.data) {
+        // Update post in list
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._id === postId ? { ...p, isSaved: response.data!.isSaved } : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error saving post:', error);
+    }
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
     <PostCard
       post={item}
       onPress={() => router.push(`/post/${item._id}`)}
       onLike={() => handleLike(item._id)}
       onComment={() => router.push(`/post/${item._id}`)}
+      onShare={() => handleShare(item)}
+      onSave={() => handleSavePost(item._id)}
+      onAuthorPress={() => router.push(`/user/${item.author._id}`)}
       currentUserId={user?._id}
+      isSaved={item.isSaved}
     />
   );
 
