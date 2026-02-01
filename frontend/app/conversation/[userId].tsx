@@ -18,6 +18,7 @@ import { GlassCard, GlassInput, GlassButton, Avatar, LoadingSpinner } from '../.
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { messageService, Message } from '../../src/services/message.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 
 export default function ConversationScreen() {
   const router = useRouter();
@@ -33,7 +34,10 @@ export default function ConversationScreen() {
   const [otherUser, setOtherUser] = useState<Message['sender'] | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadMessages = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!userId || !isAuthenticated) return;
@@ -80,6 +84,89 @@ export default function ConversationScreen() {
     loadMessages(1, false);
   }, [loadMessages]);
 
+  // Setup WebSocket connection for real-time chat
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+
+    chatWebSocketService.connect({
+      onNewMessage: (message) => {
+        // Only add message if it's from the current conversation
+        if (message.sender._id === userId || message.receiver._id === userId) {
+          setMessages((prev) => {
+            // Check if message already exists
+            if (prev.some((m) => m._id === message._id)) {
+              return prev;
+            }
+            return [...prev, message];
+          });
+          
+          // Scroll to bottom
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+
+          // Mark as read if it's a received message
+          if (message.sender._id === userId) {
+            chatWebSocketService.markAsRead(message._id);
+          }
+        }
+      },
+      onMessageSent: (message) => {
+        // Update message in list if it exists (optimistic update)
+        setMessages((prev) => {
+          const index = prev.findIndex((m) => m._id === message._id);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = message;
+            return updated;
+          }
+          return [...prev, message];
+        });
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      },
+      onTypingStart: (typingUserId) => {
+        if (typingUserId === userId) {
+          setIsTyping(true);
+        }
+      },
+      onTypingStop: (typingUserId) => {
+        if (typingUserId === userId) {
+          setIsTyping(false);
+        }
+      },
+      onUserStatus: (statusUserId, online) => {
+        if (statusUserId === userId) {
+          setIsOnline(online);
+        }
+      },
+      onMessageRead: (messageId, readAt) => {
+        // Update message read status
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === messageId ? { ...msg, readAt: readAt.toISOString() } : msg
+          )
+        );
+      },
+      onConnected: () => {
+        console.log('✅ Chat WebSocket connected');
+      },
+      onDisconnected: () => {
+        console.log('❌ Chat WebSocket disconnected');
+      },
+      onError: (error) => {
+        console.error('Chat WebSocket error:', error);
+      },
+    });
+
+    return () => {
+      chatWebSocketService.disconnect();
+    };
+  }, [isAuthenticated, userId]);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     setPage(1);
@@ -91,24 +178,76 @@ export default function ConversationScreen() {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !userId || isSending) return;
 
+    const messageContent = messageText.trim();
+    setMessageText('');
+    
+    // Optimistic update - add message immediately
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`,
+      sender: currentUser!,
+      receiver: otherUser!,
+      content: messageContent,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => [...prev, tempMessage]);
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
     setIsSending(true);
-    try {
-      const response = await messageService.sendMessage(userId, messageText.trim());
-      
-      if (response.success && response.data) {
-        setMessages((prev) => [...prev, response.data!]);
-        setMessageText('');
-        
-        // Scroll to bottom
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
+    
+    // Send via WebSocket (preferred) or fallback to REST API
+    if (chatWebSocketService.isConnected()) {
+      chatWebSocketService.sendMessage(userId, messageContent);
       setIsSending(false);
+    } else {
+      // Fallback to REST API
+      try {
+        const response = await messageService.sendMessage(userId, messageContent);
+        
+        if (response.success && response.data) {
+          // Replace temp message with real message
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg._id === tempMessage._id ? response.data! : msg
+            )
+          );
+        } else {
+          // Remove temp message on error
+          setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // Remove temp message on error
+        setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
+      } finally {
+        setIsSending(false);
+      }
     }
+  };
+
+  // Handle typing indicator
+  const handleTextChange = (text: string) => {
+    setMessageText(text);
+    
+    if (text.trim() && userId && chatWebSocketService.isConnected()) {
+      chatWebSocketService.sendTypingStart(userId);
+    }
+    
+    // Clear typing indicator after 3 seconds of no typing
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    typingTimeoutRef.current = setTimeout(() => {
+      if (userId && chatWebSocketService.isConnected()) {
+        chatWebSocketService.sendTypingStop(userId);
+      }
+    }, 3000);
   };
 
   const loadMore = useCallback(() => {
@@ -209,7 +348,9 @@ export default function ConversationScreen() {
                 <Text style={styles.headerUserName}>
                   {otherUser.displayName || otherUser.username}
                 </Text>
-                <Text style={styles.headerUserStatus}>Online</Text>
+                <Text style={[styles.headerUserStatus, isOnline && styles.headerUserStatusOnline]}>
+                  {isTyping ? 'typt...' : isOnline ? 'Online' : 'Offline'}
+                </Text>
               </View>
             </View>
           )}
@@ -243,11 +384,20 @@ export default function ConversationScreen() {
           inverted={false}
         />
 
+        {/* Typing Indicator */}
+        {isTyping && (
+          <View style={styles.typingIndicator}>
+            <Text style={styles.typingText}>
+              {otherUser?.displayName || otherUser?.username} is aan het typen...
+            </Text>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputContainer}>
           <GlassInput
             value={messageText}
-            onChangeText={setMessageText}
+            onChangeText={handleTextChange}
             placeholder="Typ een bericht..."
             multiline
             style={styles.messageInput}
@@ -325,6 +475,9 @@ const styles = StyleSheet.create({
   headerUserStatus: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  headerUserStatusOnline: {
+    color: COLORS.primary,
   },
   headerSpacer: {
     width: 40,
@@ -430,6 +583,17 @@ const styles = StyleSheet.create({
   },
   authButton: {
     minWidth: 200,
+  },
+  typingIndicator: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+  },
+  typingText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
   },
 });
 

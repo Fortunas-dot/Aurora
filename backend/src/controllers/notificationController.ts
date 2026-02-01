@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
+import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
@@ -71,6 +72,9 @@ export const markAsRead = async (req: AuthRequest, res: Response): Promise<void>
     notification.read = true;
     await notification.save();
 
+    // Send unread count update via WebSocket
+    await sendUnreadCountUpdate(notification.user.toString());
+
     res.json({
       success: true,
       data: notification,
@@ -92,6 +96,9 @@ export const markAllAsRead = async (req: AuthRequest, res: Response): Promise<vo
       { user: req.userId, read: false },
       { read: true }
     );
+
+    // Send unread count update via WebSocket
+    await sendUnreadCountUpdate(req.userId!);
 
     res.json({
       success: true,

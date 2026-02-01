@@ -1,0 +1,209 @@
+import { create } from 'zustand';
+import { i18n, Language } from '../utils/i18n';
+import * as SecureStore from 'expo-secure-store';
+import { useAuthStore } from './authStore';
+import { userService } from '../services/user.service';
+
+export interface NotificationPreferences {
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  likes: boolean;
+  comments: boolean;
+  messages: boolean;
+  follows: boolean;
+  groups: boolean;
+}
+
+export interface PrivacySettings {
+  showEmail: boolean;
+  isAnonymous: boolean;
+}
+
+export interface AppSettings {
+  language: Language;
+  theme: 'dark' | 'light' | 'system';
+}
+
+interface SettingsState {
+  // App Settings
+  language: Language;
+  theme: 'dark' | 'light' | 'system';
+  
+  // Privacy Settings
+  showEmail: boolean;
+  isAnonymous: boolean;
+  
+  // Notification Preferences
+  notificationPreferences: NotificationPreferences;
+  
+  // Loading state
+  isLoading: boolean;
+  isSaving: boolean;
+  
+  // Actions
+  setLanguage: (language: Language) => Promise<void>;
+  setTheme: (theme: 'dark' | 'light' | 'system') => Promise<void>;
+  setShowEmail: (show: boolean) => Promise<void>;
+  setIsAnonymous: (anonymous: boolean) => Promise<void>;
+  setNotificationPreference: (key: keyof NotificationPreferences, value: boolean) => Promise<void>;
+  loadSettings: () => Promise<void>;
+  saveSettings: () => Promise<void>;
+}
+
+const defaultNotificationPreferences: NotificationPreferences = {
+  pushEnabled: true,
+  emailEnabled: false,
+  likes: true,
+  comments: true,
+  messages: true,
+  follows: true,
+  groups: true,
+};
+
+export const useSettingsStore = create<SettingsState>((set, get) => ({
+  // Initial state
+  language: 'nl',
+  theme: 'dark',
+  showEmail: false,
+  isAnonymous: true,
+  notificationPreferences: defaultNotificationPreferences,
+  isLoading: true,
+  isSaving: false,
+
+  // Set language
+  setLanguage: async (language: Language) => {
+    await i18n.setLanguage(language);
+    await SecureStore.setItemAsync('app_language', language);
+    set({ language });
+  },
+
+  // Set theme
+  setTheme: async (theme: 'dark' | 'light' | 'system') => {
+    await SecureStore.setItemAsync('app_theme', theme);
+    set({ theme });
+  },
+
+  // Set show email
+  setShowEmail: async (show: boolean) => {
+    set({ showEmail: show });
+    // Save to backend
+    const { user } = useAuthStore.getState();
+    if (user) {
+      try {
+        await userService.updateProfile({ showEmail: show });
+        useAuthStore.getState().updateUser({ showEmail: show });
+      } catch (error) {
+        console.error('Error updating showEmail:', error);
+      }
+    }
+  },
+
+  // Set is anonymous
+  setIsAnonymous: async (anonymous: boolean) => {
+    set({ isAnonymous: anonymous });
+    // Save to backend
+    const { user } = useAuthStore.getState();
+    if (user) {
+      try {
+        await userService.updateProfile({ isAnonymous: anonymous });
+        useAuthStore.getState().updateUser({ isAnonymous: anonymous });
+      } catch (error) {
+        console.error('Error updating isAnonymous:', error);
+      }
+    }
+  },
+
+  // Set notification preference
+  setNotificationPreference: async (key: keyof NotificationPreferences, value: boolean) => {
+    set((state) => ({
+      notificationPreferences: {
+        ...state.notificationPreferences,
+        [key]: value,
+      },
+    }));
+    
+    // Save to secure store
+    const prefs = get().notificationPreferences;
+    await SecureStore.setItemAsync('notification_preferences', JSON.stringify(prefs));
+  },
+
+  // Load settings
+  loadSettings: async () => {
+    set({ isLoading: true });
+    
+    try {
+      // Load language
+      await i18n.init();
+      const savedLanguage = await SecureStore.getItemAsync('app_language');
+      const language = (savedLanguage && (savedLanguage === 'nl' || savedLanguage === 'en'))
+        ? (savedLanguage as Language)
+        : i18n.getLanguage();
+      
+      // Set language in i18n
+      await i18n.setLanguage(language);
+      
+      // Load theme
+      const theme = (await SecureStore.getItemAsync('app_theme')) || 'dark';
+      
+      // Load notification preferences
+      const prefsJson = await SecureStore.getItemAsync('notification_preferences');
+      const notificationPreferences = prefsJson
+        ? JSON.parse(prefsJson)
+        : defaultNotificationPreferences;
+      
+      // Load privacy settings from user
+      const { user } = useAuthStore.getState();
+      const showEmail = user?.showEmail || false;
+      const isAnonymous = user?.isAnonymous ?? true;
+      
+      set({
+        language: language as Language,
+        theme: theme as 'dark' | 'light' | 'system',
+        showEmail,
+        isAnonymous,
+        notificationPreferences,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  // Save all settings
+  saveSettings: async () => {
+    set({ isSaving: true });
+    
+    try {
+      const state = get();
+      
+      // Save language
+      await SecureStore.setItemAsync('app_language', state.language);
+      
+      // Save theme
+      await SecureStore.setItemAsync('app_theme', state.theme);
+      
+      // Save notification preferences
+      await SecureStore.setItemAsync('notification_preferences', JSON.stringify(state.notificationPreferences));
+      
+      // Save privacy settings to backend
+      const { user } = useAuthStore.getState();
+      if (user) {
+        await userService.updateProfile({
+          showEmail: state.showEmail,
+          isAnonymous: state.isAnonymous,
+        });
+        useAuthStore.getState().updateUser({
+          showEmail: state.showEmail,
+          isAnonymous: state.isAnonymous,
+        });
+      }
+      
+      set({ isSaving: false });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      set({ isSaving: false });
+    }
+  },
+}));
+

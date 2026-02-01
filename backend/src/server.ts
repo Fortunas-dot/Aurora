@@ -45,6 +45,12 @@ app.get('/health', (req, res) => {
 const wsInstance = expressWs(app);
 console.log('✅ WebSocket support enabled');
 
+// WebSocket Routes (must be before regular API routes)
+import { handleNotificationWebSocket } from './controllers/notificationWebSocket';
+import { handleChatWebSocket } from './controllers/chatWebSocket';
+(wsInstance.app as any).ws('/ws/notifications', handleNotificationWebSocket);
+(wsInstance.app as any).ws('/ws/chat', handleChatWebSocket);
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);

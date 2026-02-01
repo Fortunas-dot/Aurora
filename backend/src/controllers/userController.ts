@@ -193,3 +193,54 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+// @desc    Register push notification token
+// @route   POST /api/users/push-token
+// @access  Private
+export const registerPushToken = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { token, deviceId, platform } = req.body;
+
+    if (!token || !deviceId) {
+      res.status(400).json({
+        success: false,
+        message: 'Token and deviceId are required',
+      });
+      return;
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Remove existing token for this device
+    user.pushTokens = user.pushTokens.filter(
+      (t) => t.deviceId !== deviceId
+    );
+
+    // Add new token
+    user.pushTokens.push({
+      token,
+      deviceId,
+      platform: platform || 'web',
+      createdAt: new Date(),
+    });
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Push token registered',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error registering push token',
+    });
+  }
+};
+

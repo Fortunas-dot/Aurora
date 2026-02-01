@@ -3,6 +3,7 @@ import Message from '../models/Message';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
+import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get all conversations
 // @route   GET /api/messages/conversations
@@ -175,12 +176,18 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     await message.populate('receiver', 'username displayName avatar');
 
     // Create notification
-    await Notification.create({
+    const notification = await Notification.create({
       user: receiverId,
       type: 'message',
       relatedUser: req.userId,
       message: 'sent you a message',
     });
+
+    await notification.populate('relatedUser', 'username displayName avatar');
+
+    // Send notification via WebSocket
+    await sendNotificationToUser(receiverId, notification);
+    await sendUnreadCountUpdate(receiverId);
 
     res.status(201).json({
       success: true,

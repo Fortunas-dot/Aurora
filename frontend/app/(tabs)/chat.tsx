@@ -17,6 +17,7 @@ import { GlassCard, Avatar, GlassInput, LoadingSpinner } from '../../src/compone
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { messageService, Conversation } from '../../src/services/message.service';
+import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -51,6 +52,54 @@ export default function ChatScreen() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Setup WebSocket connection for real-time conversation updates
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    chatWebSocketService.connect({
+      onNewMessage: (message) => {
+        // Reload conversations to update unread counts and last messages
+        loadConversations();
+      },
+      onConversationUpdated: (conversation) => {
+        // Update conversation in list
+        setConversations((prev) => {
+          const index = prev.findIndex((c) => c.user._id === conversation.user._id);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              lastMessage: conversation.lastMessage,
+            };
+            // Move to top
+            const [moved] = updated.splice(index, 1);
+            return [moved, ...updated];
+          } else {
+            // New conversation, add to top
+            return [conversation, ...prev];
+          }
+        });
+      },
+      onUserStatus: (userId, isOnline) => {
+        // Update online status in conversation list if needed
+        // This could be used to show online indicators
+      },
+      onConnected: () => {
+        console.log('✅ Chat WebSocket connected');
+      },
+      onDisconnected: () => {
+        console.log('❌ Chat WebSocket disconnected');
+      },
+      onError: (error) => {
+        console.error('Chat WebSocket error:', error);
+      },
+    });
+
+    return () => {
+      chatWebSocketService.disconnect();
+    };
+  }, [isAuthenticated, loadConversations]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);

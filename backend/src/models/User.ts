@@ -1,5 +1,12 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
+
+export interface PushToken {
+  token: string;
+  deviceId: string;
+  platform: 'ios' | 'android' | 'web';
+  createdAt: Date;
+}
 
 export interface IUser extends Document {
   email: string;
@@ -10,6 +17,9 @@ export interface IUser extends Document {
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;
+  following: Types.ObjectId[];
+  savedPosts: Types.ObjectId[];
+  pushTokens: PushToken[];
   healthInfo?: {
     mentalHealth?: string[];
     physicalHealth?: string[];
@@ -68,6 +78,32 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    following: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    savedPosts: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Post',
+    }],
+    pushTokens: [{
+      token: {
+        type: String,
+        required: true,
+      },
+      deviceId: {
+        type: String,
+        required: true,
+      },
+      platform: {
+        type: String,
+        enum: ['ios', 'android', 'web'],
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
     healthInfo: {
       mentalHealth: [{
         condition: {

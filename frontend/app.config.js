@@ -32,7 +32,18 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-router', 'expo-secure-store'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/icon.png',
+          color: '#60A5FA',
+          sounds: [],
+        },
+      ],
+    ],
     extra: {
       // Backend API URL
       // - For PRODUCTION: Set API_URL in .env to your Railway/Render URL (e.g., 'https://aurora-production.up.railway.app/api')

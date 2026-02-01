@@ -11,30 +11,94 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScreenContainer, GlassCard, GlassButton, LoadingSpinner, Avatar } from '../../src/components/common';
+import { GlassCard, LoadingSpinner, Avatar, Badge } from '../../src/components/common';
 import { PostCard } from '../../src/components/post/PostCard';
+import { FeedTabs, FeedTab, CategoryFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
-import { postService, Post } from '../../src/services/post.service';
+import { postService, Post, PostType } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
-
+import { useNotificationStore } from '../../src/store/notificationStore';
 
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
+  const { unreadCount, updateUnreadCount } = useNotificationStore();
   
+  // Feed state
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  
+  // Filter state
+  const [activeTab, setActiveTab] = useState<FeedTab>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  
+  // Search state
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
+  // Get postType based on active tab
+  const getPostTypeFromTab = (tab: FeedTab): PostType | undefined => {
+    switch (tab) {
+      case 'questions':
+        return 'question';
+      case 'stories':
+        return 'story';
+      default:
+        return undefined;
+    }
+  };
+
+  // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (isLoading) return;
     
     setIsLoading(true);
     try {
-      const response = await postService.getPosts(pageNum, 20);
+      let response;
+      const postType = getPostTypeFromTab(activeTab);
+      const tag = selectedCategory !== 'all' ? selectedCategory : undefined;
+
+      // Handle search mode
+      if (isSearching && searchQuery.trim().length >= 2) {
+        response = await postService.searchPosts(searchQuery, {
+          page: pageNum,
+          limit: 20,
+          postType,
+        });
+      }
+      // Handle different tabs
+      else if (activeTab === 'trending') {
+        response = await postService.getTrendingPosts({
+          page: pageNum,
+          limit: 20,
+          tag,
+          postType,
+        });
+      } else if (activeTab === 'following') {
+        response = await postService.getFollowingPosts({
+          page: pageNum,
+          limit: 20,
+          tag,
+          postType,
+        });
+      } else if (activeTab === 'saved') {
+        response = await postService.getSavedPosts(pageNum, 20);
+      } else {
+        // All, Questions, Stories tabs
+        response = await postService.getPosts({
+          page: pageNum,
+          limit: 20,
+          tag,
+          postType,
+          sortBy: sortOption,
+        });
+      }
       
       if (response.success && response.data) {
         if (append) {
@@ -43,13 +107,11 @@ export default function FeedScreen() {
           setPosts(response.data);
         }
         
-        // Check if there are more pages
         if (response.pagination) {
           setHasMore(pageNum < response.pagination.pages);
         }
       } else {
         console.error('Error loading posts:', response.message);
-        // Fallback to empty array on error
         if (!append) {
           setPosts([]);
         }
@@ -62,7 +124,26 @@ export default function FeedScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, activeTab, selectedCategory, sortOption, isSearching, searchQuery]);
+
+  // Reload posts when filters change
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    loadPosts(1, false);
+  }, [activeTab, selectedCategory, sortOption, isSearching]);
+
+  // Update unread count on mount and focus
+  useEffect(() => {
+    if (isAuthenticated) {
+      updateUnreadCount();
+      // Poll for unread count every 30 seconds
+      const interval = setInterval(() => {
+        updateUnreadCount();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, updateUnreadCount]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -72,9 +153,36 @@ export default function FeedScreen() {
     setIsRefreshing(false);
   }, [loadPosts]);
 
-  useEffect(() => {
+  const handleTabChange = (tab: FeedTab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setIsSearching(false);
+    setSearchQuery('');
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    setSortOption(sort);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setIsSearching(true);
+    setPage(1);
+    setHasMore(true);
     loadPosts(1, false);
-  }, []);
+  };
+
+  const handleSearchExpandChange = (expanded: boolean) => {
+    setIsSearchExpanded(expanded);
+    if (!expanded) {
+      setIsSearching(false);
+      setSearchQuery('');
+    }
+  };
 
   const handleLike = async (postId: string) => {
     if (!isAuthenticated) {
@@ -85,7 +193,6 @@ export default function FeedScreen() {
     try {
       const response = await postService.likePost(postId);
       if (response.success) {
-        // Update local state
         setPosts((prev) =>
           prev.map((post) => {
             if (post._id === postId) {
@@ -132,6 +239,42 @@ export default function FeedScreen() {
     />
   );
 
+  const getEmptyStateText = () => {
+    if (isSearching && searchQuery) {
+      return {
+        title: 'Geen resultaten',
+        subtitle: `Geen posts gevonden voor "${searchQuery}"`,
+      };
+    }
+    switch (activeTab) {
+      case 'following':
+        return {
+          title: 'Nog geen posts',
+          subtitle: 'Volg andere gebruikers om hun posts hier te zien',
+        };
+      case 'saved':
+        return {
+          title: 'Geen opgeslagen posts',
+          subtitle: 'Sla interessante posts op om ze hier terug te vinden',
+        };
+      case 'questions':
+        return {
+          title: 'Nog geen vragen',
+          subtitle: 'Stel de eerste vraag aan de community!',
+        };
+      case 'stories':
+        return {
+          title: 'Nog geen verhalen',
+          subtitle: 'Deel je eerste verhaal met de community!',
+        };
+      default:
+        return {
+          title: 'Nog geen posts',
+          subtitle: 'Wees de eerste om iets te delen!',
+        };
+    }
+  };
+
   const ListHeader = () => (
     <View style={styles.listHeader}>
       {/* Create Post Card */}
@@ -147,22 +290,33 @@ export default function FeedScreen() {
             onPress={handleCreatePost}
           >
             <Text style={styles.createPostPlaceholder}>
-              Deel je gedachten...
+              {activeTab === 'questions' 
+                ? 'Stel een vraag...' 
+                : activeTab === 'stories' 
+                  ? 'Deel je verhaal...' 
+                  : 'Deel je gedachten...'}
             </Text>
           </Pressable>
         </View>
       </GlassCard>
 
-      {/* Quick Tags */}
-      <View style={styles.quickTags}>
-        {['meditatie', 'angst', 'depressie', 'therapie', 'mindfulness'].map((tag) => (
-          <Pressable key={tag} style={styles.quickTag}>
-            <Text style={styles.quickTagText}>#{tag}</Text>
-          </Pressable>
-        ))}
+      {/* Filter Bar */}
+      <View style={styles.filterBar}>
+        <CategoryFilter
+          selectedCategory={selectedCategory}
+          onCategoryChange={handleCategoryChange}
+        />
+        <View style={styles.sortContainer}>
+          <SortDropdown
+            selectedSort={sortOption}
+            onSortChange={handleSortChange}
+          />
+        </View>
       </View>
     </View>
   );
+
+  const emptyState = getEmptyStateText();
 
   return (
     <LinearGradient
@@ -171,16 +325,56 @@ export default function FeedScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Aurora</Text>
-        <View style={styles.headerRight}>
-          <Pressable style={styles.headerButton}>
-            <Ionicons name="search" size={24} color={COLORS.text} />
-          </Pressable>
-          <Pressable style={styles.headerButton}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+        {isSearchExpanded ? (
+          <SearchBar
+            onSearch={handleSearch}
+            placeholder="Zoeken in posts..."
+            isExpanded={isSearchExpanded}
+            onExpandChange={handleSearchExpandChange}
+          />
+        ) : (
+          <>
+            <Text style={styles.headerTitle}>Aurora</Text>
+            <View style={styles.headerRight}>
+              <SearchBar
+                onSearch={handleSearch}
+                isExpanded={isSearchExpanded}
+                onExpandChange={handleSearchExpandChange}
+              />
+              <Pressable
+                style={styles.headerButton}
+                onPress={() => router.push('/notifications')}
+              >
+                <View style={styles.notificationButtonContainer}>
+                  <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+                  {unreadCount > 0 && <Badge count={unreadCount} size="sm" />}
+                </View>
+              </Pressable>
+            </View>
+          </>
+        )}
+      </View>
+
+      {/* Search Results Header */}
+      {isSearching && searchQuery && (
+        <View style={styles.searchResultsHeader}>
+          <Text style={styles.searchResultsText}>
+            Zoekresultaten voor "{searchQuery}"
+          </Text>
+          <Pressable onPress={() => handleSearchExpandChange(false)}>
+            <Text style={styles.clearSearchText}>Wissen</Text>
           </Pressable>
         </View>
-      </View>
+      )}
+
+      {/* Feed Tabs */}
+      {!isSearching && (
+        <FeedTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
 
       {/* Feed */}
       <FlatList
@@ -188,7 +382,7 @@ export default function FeedScreen() {
         renderItem={renderPost}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.feedContent}
-        ListHeaderComponent={ListHeader}
+        ListHeaderComponent={!isSearching ? ListHeader : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -213,11 +407,21 @@ export default function FeedScreen() {
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Nog geen posts</Text>
-              <Text style={styles.emptySubtext}>
-                Wees de eerste om iets te delen!
-              </Text>
+              <Ionicons 
+                name={
+                  activeTab === 'questions' 
+                    ? 'help-circle-outline' 
+                    : activeTab === 'stories' 
+                      ? 'book-outline' 
+                      : activeTab === 'saved'
+                        ? 'bookmark-outline'
+                        : 'chatbubbles-outline'
+                } 
+                size={48} 
+                color={COLORS.textMuted} 
+              />
+              <Text style={styles.emptyText}>{emptyState.title}</Text>
+              <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
             </View>
           )
         }
@@ -270,6 +474,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: SPACING.sm,
   },
+  notificationButtonContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  searchResultsText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+  },
+  clearSearchText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   feedContent: {
     padding: SPACING.md,
     paddingBottom: 100,
@@ -278,7 +508,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   createPostCard: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   createPostRow: {
     flexDirection: 'row',
@@ -298,23 +528,14 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
   },
-  quickTags: {
+  filterBar: {
+    marginTop: SPACING.xs,
+  },
+  sortContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  quickTag: {
-    backgroundColor: COLORS.glass.backgroundDark,
-    borderRadius: BORDER_RADIUS.full,
-    paddingVertical: SPACING.xs,
+    justifyContent: 'flex-end',
     paddingHorizontal: SPACING.md,
-    marginRight: SPACING.sm,
-    marginBottom: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-  },
-  quickTagText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.primary,
+    marginTop: SPACING.xs,
   },
   loadingContainer: {
     padding: SPACING.xxl,
@@ -337,6 +558,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
+    textAlign: 'center',
   },
   fab: {
     position: 'absolute',
@@ -358,4 +580,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

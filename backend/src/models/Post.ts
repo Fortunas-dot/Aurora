@@ -1,8 +1,11 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
+export type PostType = 'post' | 'question' | 'story';
+
 export interface IPost extends Document {
   author: Types.ObjectId;
   content: string;
+  postType: PostType;
   tags: string[];
   images?: string[];
   groupId?: Types.ObjectId;
@@ -29,6 +32,11 @@ const PostSchema = new Schema<IPost>(
       required: [true, 'Content is required'],
       maxlength: [2000, 'Content cannot exceed 2000 characters'],
       trim: true,
+    },
+    postType: {
+      type: String,
+      enum: ['post', 'question', 'story'],
+      default: 'post',
     },
     tags: [{
       type: String,
@@ -77,6 +85,8 @@ PostSchema.index({ author: 1, createdAt: -1 });
 PostSchema.index({ groupId: 1, createdAt: -1 });
 PostSchema.index({ tags: 1 });
 PostSchema.index({ createdAt: -1 });
+PostSchema.index({ postType: 1, createdAt: -1 });
+PostSchema.index({ 'likes': -1, createdAt: -1 }); // For trending
 
 export default mongoose.model<IPost>('Post', PostSchema);
 

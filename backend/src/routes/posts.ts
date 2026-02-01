@@ -8,6 +8,11 @@ import {
   deletePost,
   likePost,
   reportPost,
+  getTrendingPosts,
+  getFollowingPosts,
+  getSavedPosts,
+  savePost,
+  searchPosts,
 } from '../controllers/postController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -22,13 +27,28 @@ const postValidation = [
     .withMessage('Content cannot exceed 2000 characters'),
 ];
 
-// Routes
+// Base GET route (must be first)
 router.get('/', optionalAuth, getPosts);
+
+// Special GET routes (must be before /:id to avoid route conflicts)
+router.get('/trending', optionalAuth, getTrendingPosts);
+router.get('/following', protect, getFollowingPosts);
+router.get('/saved', protect, getSavedPosts);
+router.get('/search', optionalAuth, searchPosts);
+
+// Single post GET route (must be after special routes)
 router.get('/:id', optionalAuth, getPost);
+
+// POST routes
 router.post('/', protect, postValidation, createPost);
+
+// PUT/DELETE routes
 router.put('/:id', protect, postValidation, updatePost);
 router.delete('/:id', protect, deletePost);
+
+// POST routes with :id (must be after GET /:id)
 router.post('/:id/like', protect, likePost);
+router.post('/:id/save', protect, savePost);
 router.post('/:id/report', protect, body('reason').notEmpty(), reportPost);
 
 export default router;

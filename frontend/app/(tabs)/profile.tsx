@@ -269,14 +269,14 @@ export default function ProfileScreen() {
               icon="color-palette-outline"
               title="Thema"
               subtitle="Donker"
-              onPress={() => {}}
+              onPress={() => router.push('/settings')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="language-outline"
               title="Taal"
               subtitle="Nederlands"
-              onPress={() => {}}
+              onPress={() => router.push('/settings')}
             />
             <View style={styles.menuDivider} />
             <MenuItem

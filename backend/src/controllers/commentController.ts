@@ -3,6 +3,7 @@ import Comment from '../models/Comment';
 import Post from '../models/Post';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
+import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get comments for a post
 // @route   GET /api/comments/post/:postId
@@ -68,13 +69,20 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
 
     // Create notification if not own post
     if (post.author.toString() !== req.userId) {
-      await Notification.create({
+      const notification = await Notification.create({
         user: post.author,
         type: 'comment',
         relatedUser: req.userId,
         relatedPost: postId,
         message: 'commented on your post',
       });
+
+      await notification.populate('relatedUser', 'username displayName avatar');
+      await notification.populate('relatedPost', 'content');
+
+      // Send notification via WebSocket
+      await sendNotificationToUser(post.author.toString(), notification);
+      await sendUnreadCountUpdate(post.author.toString());
     }
 
     await comment.populate('author', 'username displayName avatar');

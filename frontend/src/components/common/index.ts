@@ -5,4 +5,5 @@ export { Avatar } from './Avatar';
 export { TagChip } from './TagChip';
 export { ScreenContainer } from './ScreenContainer';
 export { LoadingSpinner, LoadingOverlay } from './LoadingSpinner';
+export { Badge } from './Badge';
 
