@@ -43,6 +43,23 @@ const translations = {
     disabled: 'Uitgeschakeld',
     on: 'Aan',
     off: 'Uit',
+    
+    // Voice Therapy
+    'Voice Therapy': 'Voice Therapy',
+    'Listening...': 'Luisteren...',
+    'Aurora is speaking...': 'Aurora spreekt...',
+    'Processing...': 'Verwerken...',
+    'Ready to talk': 'Klaar om te praten',
+    'Transcript': 'Transcriptie',
+    'Mute': 'Dempen',
+    'Unmute': 'Unmute',
+    'How it works': 'Hoe het werkt',
+    'Speak naturally - Aurora listens in real-time': 'Spreek natuurlijk - Aurora luistert in real-time',
+    'Aurora responds with empathy and understanding': 'Aurora reageert met empathie en begrip',
+    'Your conversations are private and secure': 'Je gesprekken zijn privé en veilig',
+    'Login Required': 'Inloggen vereist',
+    'Please log in to use voice therapy': 'Log in om voice therapy te gebruiken',
+    'Login': 'Inloggen',
   },
   en: {
     // Settings
@@ -84,6 +101,23 @@ const translations = {
     disabled: 'Disabled',
     on: 'On',
     off: 'Off',
+    
+    // Voice Therapy
+    'Voice Therapy': 'Voice Therapy',
+    'Listening...': 'Listening...',
+    'Aurora is speaking...': 'Aurora is speaking...',
+    'Processing...': 'Processing...',
+    'Ready to talk': 'Ready to talk',
+    'Transcript': 'Transcript',
+    'Mute': 'Mute',
+    'Unmute': 'Unmute',
+    'How it works': 'How it works',
+    'Speak naturally - Aurora listens in real-time': 'Speak naturally - Aurora listens in real-time',
+    'Aurora responds with empathy and understanding': 'Aurora responds with empathy and understanding',
+    'Your conversations are private and secure': 'Your conversations are private and secure',
+    'Login Required': 'Login Required',
+    'Please log in to use voice therapy': 'Please log in to use voice therapy',
+    'Login': 'Login',
   },
 };
 
