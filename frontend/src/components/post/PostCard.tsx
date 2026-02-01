@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { GlassCard, Avatar, TagChip } from '../common';
+import { GlassCard, Avatar, TagChip, LazyImage } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Post } from '../../services/post.service';
 
@@ -77,20 +77,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           style={styles.imagesContainer}
           contentContainerStyle={styles.imagesContent}
         >
-          {post.images.map((imageUrl, index) => {
-            const fullUrl = imageUrl.startsWith('http') 
-              ? imageUrl 
-              : `https://aurora-production.up.railway.app${imageUrl}`;
-            
-            return (
-              <Image
-                key={index}
-                source={{ uri: fullUrl }}
-                style={styles.postImage}
-                resizeMode="cover"
-              />
-            );
-          })}
+          {post.images.map((imageUrl, index) => (
+            <LazyImage
+              key={index}
+              uri={imageUrl}
+              style={styles.postImage}
+              resizeMode="cover"
+            />
+          ))}
         </ScrollView>
       )}
 

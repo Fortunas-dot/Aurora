@@ -7,16 +7,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Image,
+  Pressable,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { GlassCard, GlassInput, GlassButton, Avatar, LoadingSpinner } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { messageService, Message } from '../../src/services/message.service';
+import { uploadService } from '../../src/services/upload.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 
@@ -36,6 +42,8 @@ export default function ConversationScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -175,11 +183,71 @@ export default function ConversationScreen() {
     setIsRefreshing(false);
   }, [loadMessages]);
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Toestemming nodig', 'We hebben toegang nodig tot je foto\'s');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        allowsMultipleSelection: true,
+      });
+
+      if (!result.canceled && result.assets) {
+        const imageUris = result.assets.map((asset) => asset.uri);
+        setSelectedImages((prev) => [...prev, ...imageUris].slice(0, 5)); // Max 5 images
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Fout', 'Kon afbeelding niet selecteren');
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !userId || isSending) return;
+    if ((!messageText.trim() && selectedImages.length === 0) || !userId || isSending) return;
+
+    setIsSending(true);
+    setIsUploading(true);
+
+    let attachments: Array<{ type: 'image'; url: string }> = [];
+
+    // Upload images if any
+    if (selectedImages.length > 0) {
+      try {
+        const uploadPromises = selectedImages.map(async (uri) => {
+          const uploadResult = await uploadService.uploadImage(uri);
+          if (uploadResult.success && uploadResult.data) {
+            return {
+              type: 'image' as const,
+              url: uploadResult.data.url,
+            };
+          }
+          return null;
+        });
+
+        const uploadedAttachments = await Promise.all(uploadPromises);
+        attachments = uploadedAttachments.filter((a) => a !== null) as Array<{ type: 'image'; url: string }>;
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        Alert.alert('Fout', 'Kon afbeeldingen niet uploaden');
+        setIsSending(false);
+        setIsUploading(false);
+        return;
+      }
+    }
 
     const messageContent = messageText.trim();
     setMessageText('');
+    setSelectedImages([]);
     
     // Optimistic update - add message immediately
     const tempMessage: Message = {
@@ -187,6 +255,7 @@ export default function ConversationScreen() {
       sender: currentUser!,
       receiver: otherUser!,
       content: messageContent,
+      attachments: attachments.length > 0 ? attachments : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -198,16 +267,16 @@ export default function ConversationScreen() {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
 
-    setIsSending(true);
+    setIsUploading(false);
     
     // Send via WebSocket (preferred) or fallback to REST API
     if (chatWebSocketService.isConnected()) {
-      chatWebSocketService.sendMessage(userId, messageContent);
+      chatWebSocketService.sendMessage(userId, messageContent, attachments);
       setIsSending(false);
     } else {
       // Fallback to REST API
       try {
-        const response = await messageService.sendMessage(userId, messageContent);
+        const response = await messageService.sendMessage(userId, messageContent, attachments);
         
         if (response.success && response.data) {
           // Replace temp message with real message
@@ -263,6 +332,10 @@ export default function ConversationScreen() {
     const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: nl });
     const showDate = false; // Could add date separators if needed
 
+    const imageUrl = (url: string) => {
+      return url.startsWith('http') ? url : `https://aurora-production.up.railway.app${url}`;
+    };
+
     return (
       <View
         style={[
@@ -284,9 +357,30 @@ export default function ConversationScreen() {
             isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
           ]}
         >
-          <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
-            {item.content}
-          </Text>
+          {/* Attachments */}
+          {item.attachments && item.attachments.length > 0 && (
+            <View style={styles.attachmentsContainer}>
+              {item.attachments.map((attachment, index) => (
+                <View key={index} style={styles.attachmentWrapper}>
+                  {attachment.type === 'image' && (
+                    <Image
+                      source={{ uri: imageUrl(attachment.url) }}
+                      style={styles.messageImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+          
+          {/* Content */}
+          {item.content && (
+            <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
+              {item.content}
+            </Text>
+          )}
+          
           <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
             {formattedTime}
           </Text>
@@ -393,8 +487,38 @@ export default function ConversationScreen() {
           </View>
         )}
 
+        {/* Selected Images Preview */}
+        {selectedImages.length > 0 && (
+          <View style={styles.imagePreviewContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {selectedImages.map((uri, index) => (
+                <View key={index} style={styles.imagePreviewWrapper}>
+                  <Image source={{ uri }} style={styles.imagePreview} />
+                  <Pressable
+                    style={styles.removeImageButton}
+                    onPress={() => handleRemoveImage(index)}
+                  >
+                    <Ionicons name="close-circle" size={24} color={COLORS.error} />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputContainer}>
+          <Pressable
+            style={styles.attachButton}
+            onPress={handlePickImage}
+            disabled={isSending || isUploading}
+          >
+            <Ionicons
+              name="image-outline"
+              size={22}
+              color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
+            />
+          </Pressable>
           <GlassInput
             value={messageText}
             onChangeText={handleTextChange}
@@ -408,18 +532,18 @@ export default function ConversationScreen() {
           <Pressable
             style={[
               styles.sendButton,
-              (!messageText.trim() || isSending) && styles.sendButtonDisabled,
+              ((!messageText.trim() && selectedImages.length === 0) || isSending || isUploading) && styles.sendButtonDisabled,
             ]}
             onPress={handleSendMessage}
-            disabled={!messageText.trim() || isSending}
+            disabled={(!messageText.trim() && selectedImages.length === 0) || isSending || isUploading}
           >
-            {isSending ? (
+            {isSending || isUploading ? (
               <LoadingSpinner size="sm" />
             ) : (
               <Ionicons
                 name="send"
                 size={20}
-                color={messageText.trim() ? COLORS.primary : COLORS.textMuted}
+                color={(messageText.trim() || selectedImages.length > 0) ? COLORS.primary : COLORS.textMuted}
               />
             )}
           </Pressable>
@@ -594,6 +718,52 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     fontStyle: 'italic',
+  },
+  attachmentsContainer: {
+    marginBottom: SPACING.xs,
+  },
+  attachmentWrapper: {
+    marginBottom: SPACING.xs,
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.xs,
+  },
+  imagePreviewContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+    backgroundColor: COLORS.background,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginRight: SPACING.sm,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+  },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
   },
 });
 

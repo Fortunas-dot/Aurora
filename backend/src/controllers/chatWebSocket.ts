@@ -117,9 +117,9 @@ export const handleChatWebSocket = (ws: AuthenticatedWebSocket, req: any): void 
  */
 const handleChatMessage = async (senderId: string, data: any): Promise<void> => {
   try {
-    const { receiverId, content } = data;
+    const { receiverId, content, attachments } = data;
 
-    if (!receiverId || !content) {
+    if (!receiverId || (!content && (!attachments || attachments.length === 0))) {
       return;
     }
 
@@ -127,7 +127,8 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
     const message = await Message.create({
       sender: senderId,
       receiver: receiverId,
-      content,
+      content: content || '',
+      attachments: attachments || [],
     });
 
     await message.populate('sender', 'username displayName avatar');

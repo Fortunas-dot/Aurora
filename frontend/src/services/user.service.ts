@@ -10,6 +10,8 @@ export interface UserProfile {
   postCount: number;
   followersCount?: number;
   followingCount?: number;
+  totalLikes?: number;
+  totalComments?: number;
   isFollowing?: boolean;
   createdAt: string;
   healthInfo?: {

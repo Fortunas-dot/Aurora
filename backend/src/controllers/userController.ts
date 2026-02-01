@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User';
 import Post from '../models/Post';
 import Notification from '../models/Notification';
@@ -28,6 +29,20 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
     const followersCount = await User.countDocuments({ following: req.params.id });
     const followingCount = user.following.length;
 
+    // Get engagement stats
+    const totalLikes = await Post.aggregate([
+      { $match: { author: new mongoose.Types.ObjectId(req.params.id) } },
+      { $project: { likesCount: { $size: '$likes' } } },
+      { $group: { _id: null, total: { $sum: '$likesCount' } } },
+    ]);
+    const totalLikesCount = totalLikes[0]?.total || 0;
+
+    const totalComments = await Post.aggregate([
+      { $match: { author: new mongoose.Types.ObjectId(req.params.id) } },
+      { $group: { _id: null, total: { $sum: '$commentsCount' } } },
+    ]);
+    const totalCommentsCount = totalComments[0]?.total || 0;
+
     // Check if current user is following this user
     let isFollowing = false;
     if (req.userId) {
@@ -48,6 +63,8 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       postCount,
       followersCount,
       followingCount,
+      totalLikes: totalLikesCount,
+      totalComments: totalCommentsCount,
       isFollowing,
       // Only show email if user opted in
       ...(user.showEmail && { email: user.email }),

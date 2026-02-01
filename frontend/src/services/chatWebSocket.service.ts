@@ -132,12 +132,13 @@ class ChatWebSocketService {
   /**
    * Send message via WebSocket
    */
-  sendMessage(receiverId: string, content: string): void {
+  sendMessage(receiverId: string, content: string, attachments?: Array<{ type: 'image' | 'file'; url: string }>): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'message',
         receiverId,
         content,
+        attachments: attachments || [],
       }));
     } else {
       console.warn('WebSocket not connected, cannot send message');

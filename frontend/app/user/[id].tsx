@@ -204,10 +204,7 @@ export default function UserProfileScreen() {
 
           {/* Stats */}
           <View style={styles.statsContainer}>
-            <Pressable
-              style={styles.statItem}
-              onPress={() => router.push(`/user/${id}/followers`)}
-            >
+            <Pressable style={styles.statItem}>
               <Text style={styles.statNumber}>{profile.postCount || 0}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </Pressable>
@@ -226,6 +223,24 @@ export default function UserProfileScreen() {
               <Text style={styles.statLabel}>Volgend</Text>
             </Pressable>
           </View>
+
+          {/* Engagement Stats */}
+          {(profile.totalLikes !== undefined || profile.totalComments !== undefined) && (
+            <View style={styles.engagementStats}>
+              <View style={styles.engagementItem}>
+                <Ionicons name="heart" size={16} color={COLORS.error} />
+                <Text style={styles.engagementText}>
+                  {profile.totalLikes || 0} likes ontvangen
+                </Text>
+              </View>
+              <View style={styles.engagementItem}>
+                <Ionicons name="chatbubble" size={16} color={COLORS.primary} />
+                <Text style={styles.engagementText}>
+                  {profile.totalComments || 0} reacties ontvangen
+                </Text>
+              </View>
+            </View>
+          )}
         </GlassCard>
 
         {/* Posts */}
@@ -355,6 +370,22 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginTop: 2,
+  },
+  engagementStats: {
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+    gap: SPACING.xs,
+  },
+  engagementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  engagementText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
   },
   postsSection: {
     marginTop: SPACING.md,

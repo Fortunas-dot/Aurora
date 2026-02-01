@@ -6,6 +6,11 @@ export interface Message {
   sender: User;
   receiver: User;
   content: string;
+  attachments?: Array<{
+    type: 'image' | 'file';
+    url: string;
+    filename?: string;
+  }>;
   readAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -40,11 +45,17 @@ class MessageService {
 
   async sendMessage(
     receiverId: string,
-    content: string
+    content: string,
+    attachments?: Array<{
+      type: 'image' | 'file';
+      url: string;
+      filename?: string;
+    }>
   ): Promise<ApiResponse<Message>> {
     return apiService.post<Message>('/messages', {
       receiverId,
       content,
+      attachments,
     });
   }
 

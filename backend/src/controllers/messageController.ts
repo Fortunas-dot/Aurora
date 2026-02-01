@@ -156,7 +156,7 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
 // @access  Private
 export const sendMessage = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { receiverId, content } = req.body;
+    const { receiverId, content, attachments } = req.body;
 
     if (receiverId === req.userId) {
       res.status(400).json({
@@ -169,7 +169,8 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     const message = await Message.create({
       sender: req.userId,
       receiver: receiverId,
-      content,
+      content: content || '',
+      attachments: attachments || [],
     });
 
     await message.populate('sender', 'username displayName avatar');
