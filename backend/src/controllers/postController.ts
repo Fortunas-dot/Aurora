@@ -63,16 +63,20 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     // #region agent log
-    logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy},hypothesisId:'B'});
+    logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy,queryString:JSON.stringify(query)},hypothesisId:'B'});
     // #endregion
 
     // First get post IDs and author IDs without populate to save original author IDs
     const postsRaw = await Post.find(query)
-      .select('_id author')
+      .select('_id author groupId')
       .sort(sortOption)
       .skip(skip)
       .limit(limit)
       .lean();
+
+    // #region agent log
+    logDebug({location:'postController.ts:75',message:'getPosts - Raw posts before populate',data:{rawPostsCount:postsRaw.length,rawPostIds:postsRaw.map((p:any)=>p._id?.toString()).slice(0,5),rawAuthorIds:postsRaw.map((p:any)=>p.author?.toString()||'null').slice(0,5),rawGroupIds:postsRaw.map((p:any)=>p.groupId?.toString()||'null').slice(0,5)},hypothesisId:'B'});
+    // #endregion
 
     // Store original author IDs before populate
     const authorIdMap = new Map<string, string>();
