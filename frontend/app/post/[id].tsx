@@ -240,6 +240,7 @@ export default function PostDetailsScreen() {
                 onLike={handleLikePost}
                 onComment={() => {}}
                 currentUserId={user?._id}
+                showFullContent={true}
               />
               <View style={styles.commentsHeader}>
                 <Text style={styles.commentsTitle}>

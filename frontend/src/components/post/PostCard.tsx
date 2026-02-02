@@ -19,6 +19,7 @@ interface PostCardProps {
   onGroupPress?: () => void;
   currentUserId?: string;
   isSaved?: boolean;
+  showFullContent?: boolean; // If true, show full content instead of just title
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -32,6 +33,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       onGroupPress,
       currentUserId,
       isSaved,
+      showFullContent = false,
 }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(
@@ -84,8 +86,31 @@ export const PostCard: React.FC<PostCardProps> = ({
         <Text style={styles.timestamp}>{formattedDate}</Text>
       </Pressable>
 
-      {/* Content */}
-      <Text style={styles.content}>{post.content}</Text>
+      {/* Title or Full Content */}
+      {showFullContent ? (
+        <>
+          {post.title && (
+            <Text style={styles.titleFull}>{post.title}</Text>
+          )}
+          <Text style={styles.content}>{post.content}</Text>
+        </>
+      ) : (
+        <>
+          {post.title ? (
+            <Pressable style={styles.titleContainer} onPress={onPress}>
+              <Text style={styles.title}>{post.title}</Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.titleArrow} />
+            </Pressable>
+          ) : (
+            <Pressable style={styles.titleContainer} onPress={onPress}>
+              <Text style={styles.contentPreview} numberOfLines={2}>
+                {post.content}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.titleArrow} />
+            </Pressable>
+          )}
+        </>
+      )}
 
       {/* Images */}
       {post.images && post.images.length > 0 && (
@@ -220,6 +245,31 @@ const styles = StyleSheet.create({
   timestamp: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  title: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    flex: 1,
+  },
+  titleFull: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.text,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  titleArrow: {
+    marginLeft: SPACING.xs,
+  },
+  contentPreview: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    flex: 1,
   },
   content: {
     ...TYPOGRAPHY.body,

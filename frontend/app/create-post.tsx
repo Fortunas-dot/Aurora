@@ -40,6 +40,7 @@ export default function CreatePostScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
 
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -134,13 +135,23 @@ export default function CreatePostScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please add a title to your post');
+      return;
+    }
+
+    if (title.trim().length < 3) {
+      Alert.alert('Error', 'Title must be at least 3 characters');
+      return;
+    }
+
     if (!content.trim()) {
-      Alert.alert('Fout', 'Voeg wat inhoud toe aan je post');
+      Alert.alert('Error', 'Please add content to your post');
       return;
     }
 
     if (content.trim().length < 10) {
-      Alert.alert('Fout', 'Je post moet minimaal 10 karakters bevatten');
+      Alert.alert('Error', 'Content must be at least 10 characters');
       return;
     }
 
@@ -164,7 +175,9 @@ export default function CreatePostScreen() {
         content.trim(),
         tags,
         groupId,
-        imageUrls.length > 0 ? imageUrls : undefined
+        imageUrls.length > 0 ? imageUrls : undefined,
+        undefined,
+        title.trim()
       );
       
       if (response.success) {
@@ -203,11 +216,11 @@ export default function CreatePostScreen() {
           >
             <Ionicons name="close" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Nieuwe post</Text>
+          <Text style={styles.headerTitle}>New Post</Text>
           <Pressable
-            style={[styles.headerIconButton, (!content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
+            style={[styles.headerIconButton, (!title.trim() || !content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
             onPress={handleSubmit}
-            disabled={isSubmitting || uploadingMedia || !content.trim()}
+            disabled={isSubmitting || uploadingMedia || !title.trim() || !content.trim()}
           >
             {(isSubmitting || uploadingMedia) ? (
               <LoadingSpinner size="sm" />
@@ -222,12 +235,25 @@ export default function CreatePostScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Title Input */}
+          <GlassCard style={styles.titleCard} padding="lg">
+            <Text style={styles.label}>Title *</Text>
+            <GlassInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Enter a title for your post..."
+              style={styles.titleInput}
+              maxLength={200}
+            />
+          </GlassCard>
+
           {/* Content Input */}
           <GlassCard style={styles.contentCard} padding="lg">
+            <Text style={styles.label}>Content *</Text>
             <GlassInput
               value={content}
               onChangeText={setContent}
-              placeholder="Deel je gedachten, ervaringen of vraag..."
+              placeholder="Share your thoughts, experiences, or ask a question..."
               multiline
               numberOfLines={8}
               style={styles.contentInput}
@@ -277,9 +303,9 @@ export default function CreatePostScreen() {
 
           {/* Tags Section */}
           <GlassCard style={styles.tagsCard} padding="lg">
-            <Text style={styles.sectionTitle}>Tags (optioneel)</Text>
+            <Text style={styles.sectionTitle}>Tags (optional)</Text>
             <Text style={styles.sectionSubtitle}>
-              Voeg tags toe om je post beter vindbaar te maken
+              Add tags to make your post more discoverable
             </Text>
 
             {/* Current Tags */}
@@ -306,7 +332,7 @@ export default function CreatePostScreen() {
                 <GlassInput
                   value={tagInput}
                   onChangeText={setTagInput}
-                  placeholder="Voeg een tag toe..."
+                  placeholder="Add a tag..."
                   style={styles.tagInput}
                   onSubmitEditing={() => handleAddTag(tagInput)}
                   returnKeyType="done"
@@ -386,6 +412,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xxl,
+  },
+  titleCard: {
+    marginBottom: SPACING.md,
+  },
+  label: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    marginLeft: SPACING.xs,
+  },
+  titleInput: {
+    marginTop: SPACING.xs,
   },
   contentCard: {
     marginBottom: SPACING.md,

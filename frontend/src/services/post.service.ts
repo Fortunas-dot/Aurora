@@ -8,6 +8,7 @@ export type SortOption = 'newest' | 'popular' | 'discussed';
 export interface Post {
   _id: string;
   author: User;
+  title?: string;
   content: string;
   postType: PostType;
   tags: string[];
@@ -106,9 +107,11 @@ class PostService {
     tags?: string[],
     groupId?: string,
     images?: string[],
-    postType?: PostType
+    postType?: PostType,
+    title?: string
   ): Promise<ApiResponse<Post>> {
     return apiService.post<Post>('/posts', {
+      title,
       content,
       tags,
       groupId,
@@ -120,9 +123,11 @@ class PostService {
   async updatePost(
     id: string,
     content: string,
-    tags?: string[]
+    tags?: string[],
+    title?: string
   ): Promise<ApiResponse<Post>> {
     return apiService.put<Post>(`/posts/${id}`, {
+      title,
       content,
       tags,
     });
