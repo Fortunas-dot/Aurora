@@ -66,6 +66,22 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy},hypothesisId:'B'});
     // #endregion
 
+    // First get posts without populate to save original author IDs
+    const postsRaw = await Post.find(query)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Store original author IDs before populate
+    const authorIdMap = new Map<string, string>();
+    postsRaw.forEach((post: any) => {
+      if (post._id && post.author) {
+        authorIdMap.set(post._id.toString(), post.author.toString());
+      }
+    });
+
+    // Now get posts with populate
     const posts = await Post.find(query)
       .populate('author', 'username displayName avatar')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
@@ -89,12 +105,8 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     }).map((post: any) => {
       // If author is null (populate failed), create a fallback author
       if (!post.author || !post.author._id) {
-        // Get the original author ID from the post document
-        // After populate fails, the author field contains the ObjectId string
-        const postDoc = post._doc || post;
-        const originalAuthorId = (postDoc.author && typeof postDoc.author === 'object' && postDoc.author.toString)
-          ? postDoc.author.toString()
-          : (typeof post.author === 'string' ? post.author : '000000000000000000000000');
+        // Get the original author ID from the map we saved earlier
+        const originalAuthorId = authorIdMap.get(post._id.toString()) || '000000000000000000000000';
         return {
           ...post.toObject(),
           author: {
