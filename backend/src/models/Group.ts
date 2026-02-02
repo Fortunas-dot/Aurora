@@ -8,6 +8,7 @@ export interface IGroup extends Document {
   admins: Types.ObjectId[];
   isPrivate: boolean;
   avatar?: string;
+  country?: string; // Country code or 'global'
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,11 @@ const GroupSchema = new Schema<IGroup>(
     avatar: {
       type: String,
       default: null,
+    },
+    country: {
+      type: String,
+      default: 'global',
+      enum: ['global', 'NL', 'BE', 'DE', 'FR', 'GB', 'US', 'CA', 'AU', 'ES', 'IT', 'PT', 'PL', 'SE', 'NO', 'DK', 'FI', 'IE', 'AT', 'CH', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'LU', 'MT', 'CY'],
     },
   },
   {

@@ -12,6 +12,7 @@ export interface Group {
   isAdmin?: boolean;
   admins?: User[];
   members?: User[];
+  country?: string;
   createdAt: string;
 }
 
@@ -37,13 +38,15 @@ class GroupService {
     name: string,
     description: string,
     tags?: string[],
-    isPrivate?: boolean
+    isPrivate?: boolean,
+    country?: string
   ): Promise<ApiResponse<Group>> {
     return apiService.post<Group>('/groups', {
       name,
       description,
       tags,
       isPrivate,
+      country,
     });
   }
 

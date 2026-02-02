@@ -9,6 +9,8 @@ import {
   Alert,
   Pressable,
   Switch,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import { GlassCard, GlassInput, GlassButton, TagChip, LoadingSpinner } from '../
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { groupService } from '../src/services/group.service';
 import { useAuthStore } from '../src/store/authStore';
+import { COUNTRIES, getCountryName, Country } from '../src/constants/countries';
 
 const SUGGESTED_TAGS = [
   'angst',
@@ -42,6 +45,8 @@ export default function CreateGroupScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [country, setCountry] = useState<string>('global');
+  const [showCountryModal, setShowCountryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
@@ -70,12 +75,12 @@ export default function CreateGroupScreen() {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('Fout', 'Groepsnaam is verplicht');
+      Alert.alert('Error', 'Group name is required');
       return;
     }
 
     if (name.trim().length < 3) {
-      Alert.alert('Fout', 'Groepsnaam moet minimaal 3 karakters bevatten');
+      Alert.alert('Error', 'Group name must be at least 3 characters');
       return;
     }
 
@@ -85,17 +90,18 @@ export default function CreateGroupScreen() {
         name.trim(),
         description.trim(),
         tags,
-        isPrivate
+        isPrivate,
+        country
       );
       
       if (response.success && response.data) {
         router.back();
       } else {
-        Alert.alert('Fout', response.message || 'Kon groep niet aanmaken');
+        Alert.alert('Error', response.message || 'Could not create group');
       }
     } catch (error: any) {
       console.error('Error creating group:', error);
-      Alert.alert('Fout', 'Er ging iets mis bij het aanmaken van de groep');
+      Alert.alert('Error', 'Something went wrong while creating the group');
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +129,7 @@ export default function CreateGroupScreen() {
           >
             <Ionicons name="close" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Nieuwe groep</Text>
+          <Text style={styles.headerTitle}>New Group</Text>
           <Pressable
             style={[styles.headerIconButton, (!name.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
             onPress={handleSubmit}
@@ -144,11 +150,11 @@ export default function CreateGroupScreen() {
         >
           {/* Name Input */}
           <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.label}>Groepsnaam *</Text>
+            <Text style={styles.label}>Group Name *</Text>
             <GlassInput
               value={name}
               onChangeText={setName}
-              placeholder="Bijv. Angst & Paniek Support"
+              placeholder="e.g. Anxiety & Panic Support"
               style={styles.input}
               maxLength={100}
             />
@@ -156,11 +162,11 @@ export default function CreateGroupScreen() {
 
           {/* Description Input */}
           <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.label}>Beschrijving</Text>
+            <Text style={styles.label}>Description</Text>
             <GlassInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Beschrijf wat deze groep doet..."
+              placeholder="Describe what this group does..."
               multiline
               numberOfLines={4}
               style={styles.input}
@@ -169,13 +175,33 @@ export default function CreateGroupScreen() {
             />
           </GlassCard>
 
+          {/* Country Selection */}
+          <GlassCard style={styles.inputCard} padding="lg">
+            <Text style={styles.label}>Location</Text>
+            <Text style={styles.sectionSubtitle}>
+              Select a country or choose Global for worldwide groups
+            </Text>
+            <Pressable
+              style={styles.countrySelector}
+              onPress={() => setShowCountryModal(true)}
+            >
+              <View style={styles.countrySelectorContent}>
+                <Ionicons name="globe-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.countrySelectorText}>
+                  {getCountryName(country)}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </Pressable>
+          </GlassCard>
+
           {/* Privacy Toggle */}
           <GlassCard style={styles.inputCard} padding="lg">
             <View style={styles.privacyRow}>
               <View style={styles.privacyInfo}>
-                <Text style={styles.label}>Privé groep</Text>
+                <Text style={styles.label}>Private group</Text>
                 <Text style={styles.privacyDescription}>
-                  Alleen leden kunnen de groep zien en posts bekijken
+                  Only members can see the group and view posts
                 </Text>
               </View>
               <Switch
@@ -189,9 +215,9 @@ export default function CreateGroupScreen() {
 
           {/* Tags Section */}
           <GlassCard style={styles.tagsCard} padding="lg">
-            <Text style={styles.label}>Tags (optioneel)</Text>
+            <Text style={styles.label}>Tags (optional)</Text>
             <Text style={styles.sectionSubtitle}>
-              Voeg tags toe om je groep beter vindbaar te maken
+              Add tags to make your group more discoverable
             </Text>
 
             {/* Current Tags */}
@@ -218,7 +244,7 @@ export default function CreateGroupScreen() {
                 <GlassInput
                   value={tagInput}
                   onChangeText={setTagInput}
-                  placeholder="Voeg een tag toe..."
+                  placeholder="Add a tag..."
                   style={styles.tagInput}
                   onSubmitEditing={() => handleAddTag(tagInput)}
                   returnKeyType="done"
@@ -239,7 +265,7 @@ export default function CreateGroupScreen() {
 
             {/* Suggested Tags */}
             <View style={styles.suggestedTags}>
-              <Text style={styles.suggestedTagsTitle}>Suggesties:</Text>
+              <Text style={styles.suggestedTagsTitle}>Suggestions:</Text>
               <View style={styles.suggestedTagsList}>
                 {SUGGESTED_TAGS.filter((tag) => !tags.includes(tag)).map((tag) => (
                   <Pressable
@@ -255,6 +281,57 @@ export default function CreateGroupScreen() {
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Country Selection Modal */}
+      <Modal
+        visible={showCountryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCountryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingTop: insets.top + SPACING.md }]}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Location</Text>
+              <Pressable
+                style={styles.modalCloseButton}
+                onPress={() => setShowCountryModal(false)}
+              >
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </Pressable>
+            </View>
+
+            {/* Countries List */}
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.countryItem}
+                  onPress={() => {
+                    setCountry(item.code);
+                    setShowCountryModal(false);
+                  }}
+                >
+                  <View style={styles.countryItemContent}>
+                    <Ionicons
+                      name={item.code === 'global' ? 'globe-outline' : 'flag-outline'}
+                      size={20}
+                      color={item.code === 'global' ? COLORS.primary : COLORS.textMuted}
+                    />
+                    <Text style={styles.countryItemText}>{item.name}</Text>
+                  </View>
+                  {country === item.code && (
+                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                  )}
+                </Pressable>
+              )}
+              contentContainerStyle={styles.modalListContent}
+            />
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -398,6 +475,84 @@ const styles = StyleSheet.create({
   suggestedTagText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
+  },
+  countrySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginTop: SPACING.sm,
+  },
+  countrySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  countrySelectorText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    maxHeight: '80%',
+    paddingBottom: SPACING.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalListContent: {
+    padding: SPACING.md,
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginBottom: SPACING.sm,
+  },
+  countryItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  countryItemText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
   },
 });
 

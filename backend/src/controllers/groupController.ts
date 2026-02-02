@@ -134,13 +134,14 @@ export const getGroup = async (req: AuthRequest, res: Response): Promise<void> =
 // @access  Private
 export const createGroup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, description, tags, isPrivate } = req.body;
+    const { name, description, tags, isPrivate, country } = req.body;
 
     const group = await Group.create({
       name,
       description,
       tags: tags || [],
       isPrivate: isPrivate || false,
+      country: country || 'global',
       members: [req.userId],
       admins: [req.userId],
     });
