@@ -350,25 +350,6 @@ export default function FeedScreen() {
         </GlassCard>
       )}
 
-      {/* Create Post Card */}
-      <GlassCard style={styles.createPostCard} padding="md">
-        <View style={styles.createPostRow}>
-          <Avatar
-            uri={user?.avatar}
-            name={user?.displayName || user?.username || 'Gast'}
-            size="md"
-          />
-          <Pressable
-            style={styles.createPostInput}
-            onPress={handleCreatePost}
-          >
-            <Text style={styles.createPostPlaceholder}>
-              Share your thoughts...
-            </Text>
-          </Pressable>
-        </View>
-      </GlassCard>
-
       {/* Filter Bar */}
       <View style={styles.filterBar}>
         <CommunityFilter
@@ -611,27 +592,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.small,
     color: COLORS.text,
     flex: 1,
-  },
-  createPostCard: {
-    marginBottom: SPACING.sm,
-  },
-  createPostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  createPostInput: {
-    flex: 1,
-    backgroundColor: COLORS.glass.backgroundDark,
-    borderRadius: BORDER_RADIUS.full,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    marginLeft: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-  },
-  createPostPlaceholder: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
   },
   filterBar: {
     marginTop: SPACING.xs,
