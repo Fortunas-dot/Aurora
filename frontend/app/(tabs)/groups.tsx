@@ -16,6 +16,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { groupService, Group } from '../../src/services/group.service';
 import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { COUNTRIES, getCountryName } from '../../src/constants/countries';
 
 type TabType = 'groups' | 'buddies';
 
@@ -30,6 +31,7 @@ export default function GroupsScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null); // null = all, 'global' = global only, country code = specific country
   
   // Buddies state
   const [buddies, setBuddies] = useState<UserProfile[]>([]);
@@ -43,10 +45,10 @@ export default function GroupsScreen() {
   const [hasMore, setHasMore] = useState(true);
 
   // Load groups
-  const loadGroups = useCallback(async (pageNum: number = 1, append: boolean = false, search?: string) => {
+  const loadGroups = useCallback(async (pageNum: number = 1, append: boolean = false, search?: string, country?: string | null) => {
     setIsLoading(true);
     try {
-      const response = await groupService.getGroups(pageNum, 20, search || undefined);
+      const response = await groupService.getGroups(pageNum, 20, search || undefined, undefined, country || undefined);
       
       if (response.success) {
         const groupsData = response.data || [];
@@ -125,21 +127,21 @@ export default function GroupsScreen() {
 
   useEffect(() => {
     if (activeTab === 'groups') {
-      loadGroups(1, false);
+      loadGroups(1, false, groupSearchQuery, selectedCountry);
     } else if (activeTab === 'buddies') {
       loadBuddies();
     }
-  }, [activeTab, loadGroups, loadBuddies]);
+  }, [activeTab, selectedCountry, loadGroups, loadBuddies, groupSearchQuery]);
 
   // Search effect for groups
   useEffect(() => {
     if (activeTab === 'groups') {
       const timeoutId = setTimeout(() => {
-        loadGroups(1, false, groupSearchQuery);
+        loadGroups(1, false, groupSearchQuery, selectedCountry);
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [groupSearchQuery, activeTab, loadGroups]);
+  }, [groupSearchQuery, selectedCountry, activeTab, loadGroups]);
 
   // Search effect for buddies
   useEffect(() => {
@@ -157,13 +159,13 @@ export default function GroupsScreen() {
     setHasMore(true);
     
     if (activeTab === 'groups') {
-      await loadGroups(1, false, groupSearchQuery);
+      await loadGroups(1, false, groupSearchQuery, selectedCountry);
     } else {
       await loadBuddies();
     }
     
     setIsRefreshing(false);
-  }, [activeTab, loadGroups, loadBuddies, groupSearchQuery]);
+  }, [activeTab, loadGroups, loadBuddies, groupSearchQuery, selectedCountry]);
 
   const handleJoinGroup = async (groupId: string) => {
     if (!isAuthenticated) {
@@ -238,9 +240,9 @@ export default function GroupsScreen() {
     if (activeTab === 'groups' && !isLoading && hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
-      loadGroups(nextPage, true);
+      loadGroups(nextPage, true, groupSearchQuery, selectedCountry);
     }
-  }, [activeTab, isLoading, hasMore, page, loadGroups]);
+  }, [activeTab, isLoading, hasMore, page, groupSearchQuery, selectedCountry, loadGroups]);
 
   const filteredGroups = groups.filter((group) => {
     const matchesFilter = selectedFilter === 'all' || group.isMember;
@@ -265,11 +267,17 @@ export default function GroupsScreen() {
           <Text style={styles.groupName}>{item.name}</Text>
           <View style={styles.groupMeta}>
             <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
-            <Text style={styles.groupMetaText}>{item.memberCount} leden</Text>
+            <Text style={styles.groupMetaText}>{item.memberCount} members</Text>
+            {item.country && (
+              <>
+                <Ionicons name="globe-outline" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
+                <Text style={styles.groupMetaText}>{getCountryName(item.country)}</Text>
+              </>
+            )}
             {item.isPrivate && (
               <>
                 <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
-                <Text style={styles.groupMetaText}>Privé</Text>
+                <Text style={styles.groupMetaText}>Private</Text>
               </>
             )}
           </View>
@@ -288,7 +296,7 @@ export default function GroupsScreen() {
 
       <View style={styles.groupFooter}>
         <GlassButton
-          title={item.isMember ? 'Lid' : 'Word lid'}
+          title={item.isMember ? 'Joined' : 'Join'}
           onPress={() => handleJoinGroup(item._id)}
           variant={item.isMember ? 'default' : 'primary'}
           size="sm"
@@ -340,7 +348,7 @@ export default function GroupsScreen() {
               )}
               {!isInBuddiesList && (
                 <GlassButton
-                  title={isFollowing ? 'Volgt' : 'Volgen'}
+                  title={isFollowing ? 'Following' : 'Follow'}
                   onPress={() => handleFollowUser(item._id)}
                   variant={isFollowing ? 'default' : 'primary'}
                   size="sm"
@@ -361,7 +369,7 @@ export default function GroupsScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Groepen / Buddies</Text>
+        <Text style={styles.headerTitle}>Groups / Buddies</Text>
         <Pressable
           style={styles.headerButton}
           onPress={() => {
@@ -388,7 +396,7 @@ export default function GroupsScreen() {
             color={activeTab === 'groups' ? COLORS.primary : COLORS.textMuted}
           />
           <Text style={[styles.tabText, activeTab === 'groups' && styles.tabTextActive]}>
-            Groepen
+            Groups
           </Text>
         </Pressable>
         <Pressable
@@ -411,7 +419,7 @@ export default function GroupsScreen() {
         <GlassInput
           value={activeTab === 'groups' ? groupSearchQuery : buddySearchQuery}
           onChangeText={activeTab === 'groups' ? setGroupSearchQuery : setBuddySearchQuery}
-          placeholder={activeTab === 'groups' ? 'Zoek groepen...' : 'Zoek gebruikers...'}
+          placeholder={activeTab === 'groups' ? 'Search groups...' : 'Search users...'}
           style={styles.searchInput}
         />
       </View>
@@ -426,7 +434,7 @@ export default function GroupsScreen() {
               onPress={() => setSelectedFilter('all')}
             >
               <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
-                Alle groepen
+                All Groups
               </Text>
             </Pressable>
             <Pressable
@@ -434,9 +442,46 @@ export default function GroupsScreen() {
               onPress={() => setSelectedFilter('joined')}
             >
               <Text style={[styles.filterTabText, selectedFilter === 'joined' && styles.filterTabTextActive]}>
-                Mijn groepen
+                My Groups
               </Text>
             </Pressable>
+          </View>
+
+          {/* Country Filter */}
+          <View style={styles.countryFilterContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.countryFilterScroll}
+            >
+              <Pressable
+                style={[styles.countryFilterChip, selectedCountry === null && styles.countryFilterChipActive]}
+                onPress={() => setSelectedCountry(null)}
+              >
+                <Text style={[styles.countryFilterText, selectedCountry === null && styles.countryFilterTextActive]}>
+                  All Countries
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.countryFilterChip, selectedCountry === 'global' && styles.countryFilterChipActive]}
+                onPress={() => setSelectedCountry('global')}
+              >
+                <Text style={[styles.countryFilterText, selectedCountry === 'global' && styles.countryFilterTextActive]}>
+                  Global
+                </Text>
+              </Pressable>
+              {COUNTRIES.filter(c => c.code !== 'global').map((country) => (
+                <Pressable
+                  key={country.code}
+                  style={[styles.countryFilterChip, selectedCountry === country.code && styles.countryFilterChipActive]}
+                  onPress={() => setSelectedCountry(country.code)}
+                >
+                  <Text style={[styles.countryFilterText, selectedCountry === country.code && styles.countryFilterTextActive]}>
+                    {country.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
 
           {/* Groups List */}
@@ -470,13 +515,13 @@ export default function GroupsScreen() {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyText}>Geen groepen gevonden</Text>
+                  <Text style={styles.emptyText}>No groups found</Text>
                   {isAuthenticated && (
                     <Pressable
                       style={styles.createGroupButton}
                       onPress={() => router.push('/create-group')}
                     >
-                      <Text style={styles.createGroupButtonText}>Maak een groep</Text>
+                      <Text style={styles.createGroupButtonText}>Create a group</Text>
                     </Pressable>
                   )}
                 </View>
@@ -518,10 +563,10 @@ export default function GroupsScreen() {
                 <Ionicons name="person-outline" size={48} color={COLORS.textMuted} />
                 <Text style={styles.emptyText}>
                   {buddySearchQuery.trim()
-                    ? 'Geen gebruikers gevonden'
+                    ? 'No users found'
                     : isAuthenticated
-                    ? 'Je volgt nog niemand. Zoek naar gebruikers om te volgen!'
-                    : 'Log in om buddies te zien'}
+                    ? 'You are not following anyone yet. Search for users to follow!'
+                    : 'Log in to see buddies'}
                 </Text>
                 {!isAuthenticated && (
                   <Pressable
@@ -605,8 +650,38 @@ const styles = StyleSheet.create({
   filterTabs: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
     gap: SPACING.sm,
+  },
+  countryFilterContainer: {
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  countryFilterScroll: {
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  countryFilterChip: {
+    paddingVertical: SPACING.xs + 2,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  countryFilterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  countryFilterText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  countryFilterTextActive: {
+    color: COLORS.white,
+    fontWeight: '600',
   },
   filterTab: {
     paddingVertical: SPACING.sm,

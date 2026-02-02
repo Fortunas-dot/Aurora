@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { GlassCard, Avatar, TagChip, LazyImage } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Post } from '../../services/post.service';
@@ -57,8 +57,20 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
-    locale: nl,
+    locale: enUS,
   });
+
+  // Get first sentence from content
+  const getFirstSentence = (text: string): string => {
+    if (!text) return '';
+    // Find first sentence ending (. ! ?) or take first 100 characters
+    const sentenceMatch = text.match(/^[^.!?]+[.!?]/);
+    if (sentenceMatch) {
+      return sentenceMatch[0].trim();
+    }
+    // If no sentence ending found, take first 100 characters
+    return text.substring(0, 100).trim() + (text.length > 100 ? '...' : '');
+  };
 
   return (
     <GlassCard style={styles.container} onPress={onPress} padding={0}>
@@ -98,7 +110,14 @@ export const PostCard: React.FC<PostCardProps> = ({
         <>
           {post.title ? (
             <Pressable style={styles.titleContainer} onPress={onPress}>
-              <Text style={styles.title}>{post.title}</Text>
+              <View style={styles.titleContentContainer}>
+                <Text style={styles.title}>{post.title}</Text>
+                {post.content && (
+                  <Text style={styles.contentPreview} numberOfLines={2}>
+                    {getFirstSentence(post.content)}
+                  </Text>
+                )}
+              </View>
               <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.titleArrow} />
             </Pressable>
           ) : (
@@ -252,10 +271,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
   },
+  titleContentContainer: {
+    flex: 1,
+  },
   title: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    flex: 1,
+    marginBottom: SPACING.xs,
   },
   titleFull: {
     ...TYPOGRAPHY.h2,
@@ -268,8 +290,9 @@ const styles = StyleSheet.create({
   },
   contentPreview: {
     ...TYPOGRAPHY.body,
-    color: COLORS.text,
-    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
   content: {
     ...TYPOGRAPHY.body,

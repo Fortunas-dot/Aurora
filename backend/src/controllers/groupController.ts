@@ -14,6 +14,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     const skip = (page - 1) * limit;
     const search = req.query.search as string;
     const tag = req.query.tag as string;
+    const country = req.query.country as string;
 
     const query: any = {};
 
@@ -41,6 +42,16 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
 
     if (tag) {
       andConditions.push({ tags: tag.toLowerCase() });
+    }
+
+    if (country) {
+      if (country.toLowerCase() === 'global') {
+        andConditions.push({ country: 'global' });
+      } else {
+        // Normalize country code to uppercase (as stored in database)
+        const normalizedCountry = country.toUpperCase();
+        andConditions.push({ country: normalizedCountry });
+      }
     }
 
     if (andConditions.length > 1) {

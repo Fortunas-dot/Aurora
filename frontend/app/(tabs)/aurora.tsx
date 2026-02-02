@@ -10,28 +10,28 @@ import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
 
-// Dagelijkse quotes - geselecteerd op basis van dag van het jaar
+// Daily quotes - selected based on day of the year
 const DAILY_QUOTES = [
-  "Je bent sterker dan je denkt. Elke dag is een nieuwe kans om te groeien.",
-  "Het is oké om niet oké te zijn. Je gevoelens zijn geldig en belangrijk.",
-  "Kleine stappen leiden tot grote veranderingen. Wees trots op je vooruitgang.",
-  "Je bent niet alleen in je reis. Er zijn mensen die om je geven.",
-  "Zelfzorg is geen egoïsme, het is noodzakelijk. Neem de tijd voor jezelf.",
-  "Elke uitdaging die je overwint maakt je sterker. Blijf doorgaan.",
-  "Je verdient geluk en vrede. Laat niemand je anders laten geloven.",
-  "Het is nooit te laat om een nieuwe start te maken. Vandaag is een perfect moment.",
-  "Je bent waardevol, precies zoals je bent. Je hoeft niet perfect te zijn.",
-  "Vergeet niet: je hebt al zoveel moeilijke momenten doorstaan. Je kunt dit ook.",
-  "Adem in, adem uit. Je bent precies waar je moet zijn op dit moment.",
-  "Je reis is uniek. Vergelijk jezelf niet met anderen - je bent op je eigen pad.",
-  "Het is oké om hulp te vragen. Sterk zijn betekent niet alles alleen doen.",
-  "Elke dag dat je opstaat en doorgaat is een overwinning. Vier die momenten.",
-  "Je gedachten zijn niet altijd waar. Je bent meer dan je angsten.",
-  "Zelfliefde is een reis, geen bestemming. Wees geduldig met jezelf.",
-  "Je verdient rust, vrede en geluk. Laat niets je dat afnemen.",
-  "Elke stap vooruit, hoe klein ook, is vooruitgang. Blijf bewegen.",
-  "Je bent genoeg, precies zoals je bent. Je hoeft niets te bewijzen.",
-  "Vergeet niet: deze moeilijke momenten zijn tijdelijk. Betere dagen komen eraan.",
+  "You are stronger than you think. Every day is a new chance to grow.",
+  "It's okay to not be okay. Your feelings are valid and important.",
+  "Small steps lead to big changes. Be proud of your progress.",
+  "You are not alone in your journey. There are people who care about you.",
+  "Self-care is not selfish, it's necessary. Take time for yourself.",
+  "Every challenge you overcome makes you stronger. Keep going.",
+  "You deserve happiness and peace. Don't let anyone tell you otherwise.",
+  "It's never too late to make a fresh start. Today is a perfect moment.",
+  "You are valuable, exactly as you are. You don't need to be perfect.",
+  "Remember: you've already survived so many difficult moments. You can do this too.",
+  "Breathe in, breathe out. You are exactly where you need to be right now.",
+  "Your journey is unique. Don't compare yourself to others - you're on your own path.",
+  "It's okay to ask for help. Being strong doesn't mean doing everything alone.",
+  "Every day you get up and keep going is a victory. Celebrate those moments.",
+  "Your thoughts are not always true. You are more than your fears.",
+  "Self-love is a journey, not a destination. Be patient with yourself.",
+  "You deserve rest, peace, and happiness. Don't let anything take that away.",
+  "Every step forward, no matter how small, is progress. Keep moving.",
+  "You are enough, exactly as you are. You don't need to prove anything.",
+  "Remember: these difficult moments are temporary. Better days are coming.",
 ];
 
 const getDailyQuote = (): string => {
@@ -42,9 +42,9 @@ const getDailyQuote = (): string => {
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Goedemorgen';
-  if (hour < 18) return 'Goedemiddag';
-  return 'Goedenavond';
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 };
 
 export default function AuroraScreen() {
@@ -85,7 +85,7 @@ export default function AuroraScreen() {
 
   const dailyQuote = getDailyQuote();
   const greeting = getGreeting();
-  const userName = user?.displayName || user?.username || 'Vriend';
+  const userName = user?.displayName || user?.username || 'Friend';
 
   return (
     <LinearGradient
@@ -126,13 +126,13 @@ export default function AuroraScreen() {
         {/* Quick Stats */}
         {isAuthenticated && insights && insights.totalEntries > 0 && (
           <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Jouw voortgang</Text>
+            <Text style={styles.sectionTitle}>Your Progress</Text>
             <View style={styles.statsGrid}>
               <GlassCard style={styles.statCard} padding="md">
                 <View style={styles.statContent}>
                   <Ionicons name="flame" size={24} color={COLORS.warning} />
                   <Text style={styles.statValue}>{insights.streakDays}</Text>
-                  <Text style={styles.statLabel}>dagen streak</Text>
+                  <Text style={styles.statLabel}>day streak</Text>
                 </View>
               </GlassCard>
               
@@ -150,7 +150,7 @@ export default function AuroraScreen() {
                   <Text style={styles.statValue}>
                     {insights.averageMood ? insights.averageMood.toFixed(1) : '-'}
                   </Text>
-                  <Text style={styles.statLabel}>gem. stemming</Text>
+                  <Text style={styles.statLabel}>avg. mood</Text>
                 </View>
               </GlassCard>
             </View>
@@ -160,7 +160,7 @@ export default function AuroraScreen() {
         {/* Quick Actions */}
         {isAuthenticated && (
           <View style={styles.quickActionsSection}>
-            <Text style={styles.sectionTitle}>Snelle acties</Text>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
@@ -168,7 +168,7 @@ export default function AuroraScreen() {
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-                  <Text style={styles.quickActionText}>Snelle entry</Text>
+                  <Text style={styles.quickActionText}>Quick Entry</Text>
                 </GlassCard>
               </Pressable>
               
@@ -185,9 +185,9 @@ export default function AuroraScreen() {
           </View>
         )}
 
-        {/* Options - Hoe kan ik je helpen? */}
+        {/* Options - How can I help you? */}
         <View style={styles.optionsContainer}>
-          <Text style={styles.optionsTitle}>Hoe kan ik je helpen?</Text>
+          <Text style={styles.optionsTitle}>How can I help you?</Text>
           
           <GlassCard
             style={styles.optionCard}
@@ -207,11 +207,11 @@ export default function AuroraScreen() {
                 <View style={styles.optionTitleRow}>
                   <Text style={styles.optionTitle}>Voice Support</Text>
                   <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Binnenkort</Text>
+                    <Text style={styles.comingSoonText}>Coming Soon</Text>
                   </View>
                 </View>
                 <Text style={styles.optionDescription}>
-                  Praat met Aurora via spraak in een veilige omgeving
+                  Talk with Aurora via voice in a safe environment
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
@@ -235,7 +235,7 @@ export default function AuroraScreen() {
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Text Chat</Text>
                 <Text style={styles.optionDescription}>
-                  Chat met Aurora via tekst op je eigen tempo
+                  Chat with Aurora via text at your own pace
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
@@ -257,9 +257,9 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Dagboek</Text>
+                <Text style={styles.optionTitle}>Journal</Text>
                 <Text style={styles.optionDescription}>
-                  Schrijf je gedachten op met AI-begeleiding
+                  Write your thoughts with AI guidance
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
@@ -283,7 +283,7 @@ export default function AuroraScreen() {
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Insights</Text>
                 <Text style={styles.optionDescription}>
-                  Bekijk patronen en inzichten uit je journal
+                  View patterns and insights from your journal
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
@@ -307,7 +307,31 @@ export default function AuroraScreen() {
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Health Check</Text>
                 <Text style={styles.optionDescription}>
-                  Beheer je gezondheidsinformatie
+                  Manage your health information
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+            </View>
+          </GlassCard>
+
+          <GlassCard
+            style={styles.optionCard}
+            onPress={() => router.push('/sounds')}
+            padding="lg"
+          >
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <LinearGradient
+                  colors={['rgba(139, 92, 246, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+                  style={styles.optionIconGradient}
+                >
+                  <Ionicons name="musical-notes" size={28} color={COLORS.secondary} />
+                </LinearGradient>
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
+                <Text style={styles.optionDescription}>
+                  Mix ambient sounds for focus, sleep, and relaxation
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />

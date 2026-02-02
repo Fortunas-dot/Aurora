@@ -191,9 +191,9 @@ export default function PostDetailsScreen() {
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
-          <Text style={styles.errorText}>Post niet gevonden</Text>
+          <Text style={styles.errorText}>Post not found</Text>
           <GlassButton
-            title="Terug"
+            title="Back"
             onPress={() => router.back()}
             variant="primary"
             style={styles.backButton}
@@ -213,7 +213,7 @@ export default function PostDetailsScreen() {
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <GlassButton
-            title="Terug"
+            title="Back"
             onPress={() => router.back()}
             variant="text"
             size="small"
@@ -244,7 +244,7 @@ export default function PostDetailsScreen() {
               />
               <View style={styles.commentsHeader}>
                 <Text style={styles.commentsTitle}>
-                  {post.commentsCount} {post.commentsCount === 1 ? 'reactie' : 'reacties'}
+                  {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
                 </Text>
               </View>
             </>
@@ -270,9 +270,9 @@ export default function PostDetailsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyComments}>
               <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyCommentsText}>Nog geen reacties</Text>
+              <Text style={styles.emptyCommentsText}>No comments yet</Text>
               <Text style={styles.emptyCommentsSubtext}>
-                Wees de eerste om te reageren!
+                Be the first to comment!
               </Text>
             </View>
           }
@@ -284,13 +284,13 @@ export default function PostDetailsScreen() {
             <GlassInput
               value={commentText}
               onChangeText={setCommentText}
-              placeholder="Schrijf een reactie..."
+              placeholder="Write a comment..."
               multiline
               style={styles.commentInput}
               inputStyle={styles.commentInputText}
             />
             <GlassButton
-              title="Plaatsen"
+              title="Post"
               onPress={handleSubmitComment}
               variant="primary"
               size="small"
@@ -304,7 +304,7 @@ export default function PostDetailsScreen() {
         {!isAuthenticated && (
           <View style={styles.authPrompt}>
             <GlassButton
-              title="Log in om te reageren"
+              title="Log in to comment"
               onPress={() => router.push('/(auth)/login')}
               variant="outline"
               style={styles.authButton}
@@ -391,6 +391,7 @@ const styles = StyleSheet.create({
   },
   commentInputContainer: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
     padding: SPACING.md,
     paddingBottom: SPACING.md,
     borderTopWidth: 1,
@@ -400,16 +401,20 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    maxHeight: 100,
+    maxHeight: 60,
+    minHeight: 44,
   },
   commentInputText: {
-    maxHeight: 100,
+    maxHeight: 60,
+    minHeight: 44,
     textAlignVertical: 'top',
     ...TYPOGRAPHY.body,
     color: COLORS.text,
+    fontSize: 14,
   },
   submitCommentButton: {
-    minWidth: 100,
+    minWidth: 80,
+    height: 44,
     alignSelf: 'flex-end',
   },
   authPrompt: {
