@@ -66,8 +66,9 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy},hypothesisId:'B'});
     // #endregion
 
-    // First get posts without populate to save original author IDs
+    // First get post IDs and author IDs without populate to save original author IDs
     const postsRaw = await Post.find(query)
+      .select('_id author')
       .sort(sortOption)
       .skip(skip)
       .limit(limit)
