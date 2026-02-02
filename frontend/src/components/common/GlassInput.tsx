@@ -95,6 +95,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
           onBlur={() => setIsFocused(false)}
           style={[
             styles.input,
+            !multiline && styles.inputSingleLine,
             multiline && styles.inputMultiline,
             icon && styles.inputWithIcon,
             (rightIcon || showPasswordToggle) && styles.inputWithRightIcon,
@@ -159,6 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.glass.border,
     minHeight: 52,
+    paddingVertical: 0,
   },
   containerFocused: {
     backgroundColor: COLORS.glass.background,
@@ -178,12 +180,18 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     paddingHorizontal: SPACING.md,
+  },
+  inputSingleLine: {
     paddingVertical: SPACING.md,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    height: 52,
   },
   inputMultiline: {
     minHeight: 100,
     textAlignVertical: 'top',
     paddingTop: SPACING.md,
+    paddingVertical: SPACING.md,
   },
   inputWithIcon: {
     paddingLeft: SPACING.sm,
