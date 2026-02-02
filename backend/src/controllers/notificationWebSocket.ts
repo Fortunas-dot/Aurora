@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { WebSocket } from 'ws';
 import Notification from '../models/Notification';
 
 interface AuthenticatedWebSocket extends WebSocket {

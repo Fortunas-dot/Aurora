@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { WebSocket } from 'ws';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
