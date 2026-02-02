@@ -122,16 +122,15 @@ const translations = {
 };
 
 class I18n {
-  private currentLanguage: Language = 'nl';
+  private currentLanguage: Language = 'en';
 
   async init(): Promise<void> {
     const savedLanguage = await SecureStore.getItemAsync('app_language');
     if (savedLanguage && (savedLanguage === 'nl' || savedLanguage === 'en')) {
       this.currentLanguage = savedLanguage as Language;
     } else {
-      // Try to detect from device locale
-      // For now, default to Dutch
-      this.currentLanguage = 'nl';
+      // Default to English
+      this.currentLanguage = 'en';
     }
   }
 

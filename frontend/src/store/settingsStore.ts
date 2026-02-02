@@ -62,7 +62,7 @@ const defaultNotificationPreferences: NotificationPreferences = {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Initial state
-  language: 'nl',
+  language: 'en',
   theme: 'dark',
   showEmail: false,
   isAnonymous: true,

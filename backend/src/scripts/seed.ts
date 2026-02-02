@@ -136,38 +136,38 @@ const sampleUsers = [
 
 const sampleGroups = [
   {
-    name: 'Depressie Support',
-    description: 'Een veilige ruimte voor mensen die te maken hebben met depressie. Deel je ervaringen, tips en steun elkaar.',
-    tags: ['depressie', 'support', 'mental-health'],
+    name: 'Depression Support',
+    description: 'A safe space for people dealing with depression. Share your experiences, tips and support each other.',
+    tags: ['depression', 'support', 'mental-health'],
     isPrivate: false,
   },
   {
-    name: 'Angst & Paniek',
-    description: 'Voor iedereen die worstelt met angst en paniekaanvallen. Samen staan we sterker.',
-    tags: ['angst', 'paniek', 'anxiety'],
+    name: 'Anxiety & Panic',
+    description: 'For everyone struggling with anxiety and panic attacks. Together we are stronger.',
+    tags: ['anxiety', 'panic', 'support'],
     isPrivate: false,
   },
   {
-    name: 'Zelfzorg & Mindfulness',
-    description: 'Tips, tricks en inspiratie voor zelfzorg en mindfulness. Neem de tijd voor jezelf.',
-    tags: ['zelfzorg', 'mindfulness', 'wellness'],
+    name: 'Self-Care & Mindfulness',
+    description: 'Tips, tricks and inspiration for self-care and mindfulness. Take time for yourself.',
+    tags: ['self-care', 'mindfulness', 'wellness'],
     isPrivate: false,
   },
   {
     name: 'Bipolar Support',
-    description: 'Een community voor mensen met bipolaire stoornis. Ervaringen delen en elkaar ondersteunen.',
+    description: 'A community for people with bipolar disorder. Share experiences and support each other.',
     tags: ['bipolar', 'support', 'mental-health'],
     isPrivate: true,
   },
   {
     name: 'ADHD Community',
-    description: 'Voor mensen met ADHD. Tips, strategieën en begrip van gelijkgestemden.',
+    description: 'For people with ADHD. Tips, strategies and understanding from like-minded people.',
     tags: ['adhd', 'neurodiversity', 'support'],
     isPrivate: false,
   },
   {
     name: 'Trauma Healing',
-    description: 'Een veilige ruimte voor trauma healing en herstel. Professionele begeleiding en peer support.',
+    description: 'A safe space for trauma healing and recovery. Professional guidance and peer support.',
     tags: ['trauma', 'healing', 'ptsd'],
     isPrivate: true,
   },
@@ -175,84 +175,84 @@ const sampleGroups = [
 
 const samplePosts = [
   {
-    content: 'Vandaag was een moeilijke dag, maar ik ben trots op mezelf dat ik er doorheen ben gekomen. Kleine stappen zijn ook stappen vooruit! 💪',
+    content: 'Today was a difficult day, but I\'m proud of myself for getting through it. Small steps are still steps forward! 💪',
     postType: 'post' as const,
-    tags: ['depressie', 'zelfzorg', 'motivatie'],
+    tags: ['depression', 'self-care', 'motivation'],
   },
   {
-    content: 'Heeft iemand tips voor het omgaan met paniekaanvallen? Ik heb er de laatste tijd veel last van.',
+    content: 'Does anyone have tips for dealing with panic attacks? I\'ve been struggling with them a lot lately.',
     postType: 'question' as const,
-    tags: ['angst', 'paniek', 'vraag'],
+    tags: ['anxiety', 'panic', 'question'],
   },
   {
-    content: 'Mijn verhaal met depressie begon 3 jaar geleden. Het was een lange weg, maar ik ben er sterker uitgekomen. Als je dit leest: je bent niet alleen. Er is hoop. 🌟',
+    content: 'My story with depression began 3 years ago. It was a long journey, but I came out stronger. If you\'re reading this: you are not alone. There is hope. 🌟',
     postType: 'story' as const,
-    tags: ['depressie', 'verhaal', 'hoop'],
+    tags: ['depression', 'story', 'hope'],
   },
   {
-    content: 'Wat zijn jullie favoriete mindfulness oefeningen? Ik ben op zoek naar nieuwe manieren om te ontspannen.',
+    content: 'What are your favorite mindfulness exercises? I\'m looking for new ways to relax.',
     postType: 'question' as const,
-    tags: ['mindfulness', 'zelfzorg', 'vraag'],
+    tags: ['mindfulness', 'self-care', 'question'],
   },
   {
-    content: 'Vandaag heb ik voor het eerst in weken weer een goede dag gehad. Ik voel me hoopvol. 🌈',
+    content: 'Today I had a good day for the first time in weeks. I feel hopeful. 🌈',
     postType: 'post' as const,
-    tags: ['hoop', 'positief', 'vooruitgang'],
+    tags: ['hope', 'positive', 'progress'],
   },
   {
-    content: 'Hoe ga je om met sociale angst? Ik vind het moeilijk om naar sociale evenementen te gaan.',
+    content: 'How do you deal with social anxiety? I find it difficult to go to social events.',
     postType: 'question' as const,
-    tags: ['angst', 'sociaal', 'vraag'],
+    tags: ['anxiety', 'social', 'question'],
   },
   {
-    content: 'Mijn reis met ADHD heeft me geleerd dat anders zijn oké is. Neurodiversity is een kracht, geen zwakte. 🧠✨',
+    content: 'My journey with ADHD has taught me that being different is okay. Neurodiversity is a strength, not a weakness. 🧠✨',
     postType: 'story' as const,
-    tags: ['adhd', 'neurodiversity', 'acceptatie'],
+    tags: ['adhd', 'neurodiversity', 'acceptance'],
   },
   {
-    content: 'Zelfzorg tip van de dag: neem een warm bad, zet je favoriete muziek op en lees een goed boek. Je verdient het! 🛁📚',
+    content: 'Self-care tip of the day: take a warm bath, put on your favorite music and read a good book. You deserve it! 🛁📚',
     postType: 'post' as const,
-    tags: ['zelfzorg', 'tip', 'wellness'],
+    tags: ['self-care', 'tip', 'wellness'],
   },
   {
-    content: 'Heeft iemand ervaring met medicatie voor angst? Ik overweeg het, maar ben onzeker.',
+    content: 'Does anyone have experience with medication for anxiety? I\'m considering it, but I\'m uncertain.',
     postType: 'question' as const,
-    tags: ['angst', 'medicatie', 'vraag'],
+    tags: ['anxiety', 'medication', 'question'],
   },
   {
-    content: 'Vandaag was ik trots op mezelf omdat ik "nee" durfde te zeggen tegen iets wat me te veel stress gaf. Grenzen stellen is belangrijk! 💪',
+    content: 'Today I was proud of myself for saying "no" to something that was giving me too much stress. Setting boundaries is important! 💪',
     postType: 'post' as const,
-    tags: ['grenzen', 'zelfzorg', 'assertiviteit'],
+    tags: ['boundaries', 'self-care', 'assertiveness'],
   },
   {
-    content: 'Mijn verhaal met eetstoornissen en herstel. Het was een lange weg, maar ik ben er. Als je hier mee worstelt: er is hulp beschikbaar. ❤️',
+    content: 'My story with eating disorders and recovery. It was a long journey, but I\'m here. If you\'re struggling with this: help is available. ❤️',
     postType: 'story' as const,
-    tags: ['eetstoornis', 'herstel', 'hoop'],
+    tags: ['eating-disorder', 'recovery', 'hope'],
   },
   {
-    content: 'Wat doen jullie om met stress om te gaan? Ik zoek nieuwe strategieën.',
+    content: 'What do you do to cope with stress? I\'m looking for new strategies.',
     postType: 'question' as const,
-    tags: ['stress', 'coping', 'vraag'],
+    tags: ['stress', 'coping', 'question'],
   },
 ];
 
 const sampleComments = [
-  'Je bent zo sterk! Blijf doorgaan 💪',
-  'Ik herken me hier zo in. Bedankt voor het delen.',
-  'Probeer ademhalingsoefeningen, die helpen mij altijd.',
-  'Je bent niet alleen. We staan er samen voor.',
-  'Wat een mooie vooruitgang! Trots op je 🌟',
-  'Dankjewel voor deze tip, ik ga het proberen.',
-  'Ik heb hetzelfde meegemaakt. Als je wilt praten, ik luister.',
-  'Wat een inspirerend verhaal! Dit geeft me hoop.',
+  'You are so strong! Keep going 💪',
+  'I relate to this so much. Thanks for sharing.',
+  'Try breathing exercises, they always help me.',
+  'You are not alone. We are in this together.',
+  'What beautiful progress! Proud of you 🌟',
+  'Thank you for this tip, I\'m going to try it.',
+  'I\'ve been through the same. If you want to talk, I\'m here to listen.',
+  'What an inspiring story! This gives me hope.',
 ];
 
 const sampleJournalPrompts = [
-  'Hoe voel je je vandaag?',
-  'Wat zijn drie dingen waar je dankbaar voor bent?',
-  'Wat heeft je vandaag een glimlach gegeven?',
-  'Hoe kun je vandaag voor jezelf zorgen?',
-  'Wat zijn je doelen voor deze week?',
+  'How are you feeling today?',
+  'What are three things you are grateful for?',
+  'What made you smile today?',
+  'How can you take care of yourself today?',
+  'What are your goals for this week?',
 ];
 
 async function seedDatabase() {
@@ -376,7 +376,7 @@ async function seedDatabase() {
         
         const entry = await JournalEntry.create({
           author: user._id,
-          content: `Vandaag voel ik me ${['goed', 'oké', 'moeilijk', 'hopeful', 'angstig'][Math.floor(Math.random() * 5)]}. ${sampleJournalPrompts[Math.floor(Math.random() * sampleJournalPrompts.length)]} Ik ben dankbaar voor de steun die ik krijg.`,
+          content: `Today I feel ${['good', 'okay', 'difficult', 'hopeful', 'anxious'][Math.floor(Math.random() * 5)]}. ${sampleJournalPrompts[Math.floor(Math.random() * sampleJournalPrompts.length)]} I am grateful for the support I receive.`,
           mood: Math.floor(Math.random() * 5) + 5,
           symptoms: [
             {
@@ -384,11 +384,11 @@ async function seedDatabase() {
               severity: ['mild', 'moderate', 'severe'][Math.floor(Math.random() * 3)] as any,
             },
           ],
-          tags: ['dagelijks', 'reflectie'],
+          tags: ['daily', 'reflection'],
           aiInsights: {
             sentiment: ['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)] as any,
-            themes: ['zelfzorg', 'gratitude', 'uitdagingen'],
-            therapeuticFeedback: 'Je doet het goed door je gevoelens te delen. Blijf doorgaan met reflecteren.',
+            themes: ['self-care', 'gratitude', 'challenges'],
+            therapeuticFeedback: 'You are doing well by sharing your feelings. Keep reflecting.',
           },
           isPrivate: true,
           createdAt,
@@ -404,10 +404,10 @@ async function seedDatabase() {
       const receiver = createdUsers[i + 1];
       
       const messages = [
-        'Hey! Hoe gaat het met je?',
-        'Goed! En met jou?',
-        'Ook goed, dankjewel voor het vragen 😊',
-        'Geen probleem! Als je ooit wilt praten, ik ben er.',
+        'Hey! How are you doing?',
+        'Good! And you?',
+        'Also good, thanks for asking 😊',
+        'No problem! If you ever want to talk, I\'m here.',
       ];
       
       for (let j = 0; j < messages.length; j++) {
