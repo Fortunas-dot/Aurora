@@ -15,8 +15,11 @@ const logDebug = (data: any) => {
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
-    const logLine = JSON.stringify({...data, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1'}) + '\n';
+    const logData = {...data, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1'};
+    const logLine = JSON.stringify(logData) + '\n';
     fs.appendFileSync(DEBUG_LOG_PATH, logLine, 'utf8');
+    // Also log to console for Railway visibility
+    console.log('[DEBUG]', JSON.stringify(logData));
   } catch (e) {
     console.error('Debug log error:', e);
   }
@@ -935,6 +938,39 @@ export const savePost = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(500).json({
       success: false,
       message: error.message || 'Error saving post',
+    });
+  }
+};
+
+// @desc    Get debug logs
+// @route   GET /api/posts/debug/logs
+// @access  Public (for debugging)
+export const getDebugLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (fs.existsSync(DEBUG_LOG_PATH)) {
+      const logs = fs.readFileSync(DEBUG_LOG_PATH, 'utf8');
+      const logLines = logs.trim().split('\n').filter(line => line.trim()).map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      res.json({
+        success: true,
+        data: logLines,
+      });
+    } else {
+      res.json({
+        success: true,
+        data: [],
+        message: 'No logs found',
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error reading logs',
     });
   }
 };
