@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,19 @@ import {
   Alert,
   Pressable,
   Image,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { GlassCard, GlassInput, GlassButton, TagChip, LoadingSpinner } from '../src/components/common';
+import { GlassCard, GlassInput, GlassButton, TagChip, LoadingSpinner, Avatar } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { postService } from '../src/services/post.service';
 import { uploadService } from '../src/services/upload.service';
+import { groupService, Group } from '../src/services/group.service';
 import { useAuthStore } from '../src/store/authStore';
 
 const SUGGESTED_TAGS = [
@@ -36,7 +39,7 @@ const SUGGESTED_TAGS = [
 
 export default function CreatePostScreen() {
   const router = useRouter();
-  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { groupId: initialGroupId } = useLocalSearchParams<{ groupId?: string }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
 
@@ -47,6 +50,12 @@ export default function CreatePostScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [media, setMedia] = useState<{ uri: string; type: 'image' | 'video' }[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  
+  // Group selection state
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
 
   React.useEffect(() => {
     if (!isAuthenticated) {
@@ -54,10 +63,47 @@ export default function CreatePostScreen() {
     }
   }, [isAuthenticated, router]);
 
+  // Load groups and set initial group if provided
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadGroups();
+      if (initialGroupId) {
+        loadInitialGroup(initialGroupId);
+      }
+    }
+  }, [isAuthenticated, initialGroupId]);
+
+  const loadGroups = async () => {
+    setIsLoadingGroups(true);
+    try {
+      const response = await groupService.getGroups(1, 100);
+      if (response.success && response.data) {
+        // Filter to show only groups where user is a member (required to post)
+        const userGroups = response.data.filter((group) => group.isMember);
+        setAvailableGroups(userGroups);
+      }
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  };
+
+  const loadInitialGroup = async (groupId: string) => {
+    try {
+      const response = await groupService.getGroup(groupId);
+      if (response.success && response.data) {
+        setSelectedGroup(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading initial group:', error);
+    }
+  };
+
   const requestMediaPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Toestemming nodig', 'We hebben toegang nodig tot je foto\'s en video\'s');
+      Alert.alert('Permission needed', 'We need access to your photos and videos');
       return false;
     }
     return true;
@@ -84,7 +130,7 @@ export default function CreatePostScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fout', 'Kon afbeelding niet selecteren');
+      Alert.alert('Error', 'Could not select image');
     }
   };
 
@@ -108,7 +154,7 @@ export default function CreatePostScreen() {
       }
     } catch (error) {
       console.error('Error picking video:', error);
-      Alert.alert('Fout', 'Kon video niet selecteren');
+      Alert.alert('Error', 'Could not select video');
     }
   };
 
@@ -174,7 +220,7 @@ export default function CreatePostScreen() {
       const response = await postService.createPost(
         content.trim(),
         tags,
-        groupId,
+        selectedGroup?._id,
         imageUrls.length > 0 ? imageUrls : undefined,
         undefined,
         title.trim()
@@ -183,11 +229,11 @@ export default function CreatePostScreen() {
       if (response.success) {
         router.back();
       } else {
-        Alert.alert('Fout', response.message || 'Kon post niet aanmaken');
+        Alert.alert('Error', response.message || 'Could not create post');
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
-      Alert.alert('Fout', 'Er ging iets mis bij het aanmaken van je post');
+      Alert.alert('Error', 'Something went wrong while creating your post');
     } finally {
       setIsSubmitting(false);
       setUploadingMedia(false);
@@ -288,7 +334,7 @@ export default function CreatePostScreen() {
             <View style={styles.mediaActions}>
               <Pressable style={styles.mediaButton} onPress={handlePickImage}>
                 <Ionicons name="image-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.mediaButtonText}>Foto</Text>
+                <Text style={styles.mediaButtonText}>Photo</Text>
               </Pressable>
               <Pressable style={styles.mediaButton} onPress={handlePickVideo}>
                 <Ionicons name="videocam-outline" size={20} color={COLORS.primary} />
@@ -299,6 +345,46 @@ export default function CreatePostScreen() {
                 {content.length} / 2000
               </Text>
             </View>
+          </GlassCard>
+
+          {/* Community/Group Selection */}
+          <GlassCard style={styles.groupCard} padding="lg">
+            <Text style={styles.sectionTitle}>Community (optional)</Text>
+            <Text style={styles.sectionSubtitle}>
+              Post in a specific community or leave empty for general feed
+            </Text>
+
+            {selectedGroup ? (
+              <View style={styles.selectedGroupContainer}>
+                <View style={styles.selectedGroupInfo}>
+                  <View style={styles.selectedGroupIcon}>
+                    <Ionicons name="people" size={20} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.selectedGroupDetails}>
+                    <Text style={styles.selectedGroupName}>{selectedGroup.name}</Text>
+                    {selectedGroup.description && (
+                      <Text style={styles.selectedGroupDescription} numberOfLines={1}>
+                        {selectedGroup.description}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Pressable
+                  style={styles.removeGroupButton}
+                  onPress={() => setSelectedGroup(null)}
+                >
+                  <Ionicons name="close-circle" size={24} color={COLORS.error} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.selectGroupButton}
+                onPress={() => setShowGroupModal(true)}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.selectGroupButtonText}>Select a community</Text>
+              </Pressable>
+            )}
           </GlassCard>
 
           {/* Tags Section */}
@@ -369,6 +455,86 @@ export default function CreatePostScreen() {
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Group Selection Modal */}
+      <Modal
+        visible={showGroupModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowGroupModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingTop: insets.top + SPACING.md }]}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Community</Text>
+              <Pressable
+                style={styles.modalCloseButton}
+                onPress={() => setShowGroupModal(false)}
+              >
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </Pressable>
+            </View>
+
+            {/* Groups List */}
+            {isLoadingGroups ? (
+              <View style={styles.modalLoadingContainer}>
+                <LoadingSpinner size="lg" />
+              </View>
+            ) : (
+              <FlatList
+                data={availableGroups}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.groupItem}
+                    onPress={() => {
+                      setSelectedGroup(item);
+                      setShowGroupModal(false);
+                    }}
+                  >
+                    <View style={styles.groupItemIcon}>
+                      <Ionicons name="people" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.groupItemInfo}>
+                      <View style={styles.groupItemHeader}>
+                        <Text style={styles.groupItemName}>{item.name}</Text>
+                        {item.isPrivate && (
+                          <Ionicons name="lock-closed" size={16} color={COLORS.textMuted} />
+                        )}
+                      </View>
+                      {item.description && (
+                        <Text style={styles.groupItemDescription} numberOfLines={2}>
+                          {item.description}
+                        </Text>
+                      )}
+                      <View style={styles.groupItemMeta}>
+                        <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
+                        <Text style={styles.groupItemMetaText}>
+                          {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
+                        </Text>
+                      </View>
+                    </View>
+                    {selectedGroup?._id === item._id && (
+                      <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                    )}
+                  </Pressable>
+                )}
+                contentContainerStyle={styles.modalListContent}
+                ListEmptyComponent={
+                  <View style={styles.modalEmptyContainer}>
+                    <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                    <Text style={styles.modalEmptyText}>No communities available</Text>
+                    <Text style={styles.modalEmptySubtext}>
+                      Join a community to post there
+                    </Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -496,6 +662,175 @@ const styles = StyleSheet.create({
   charCount: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  groupCard: {
+    marginBottom: SPACING.md,
+  },
+  selectedGroupContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginTop: SPACING.sm,
+  },
+  selectedGroupInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  selectedGroupIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
+  },
+  selectedGroupDetails: {
+    flex: 1,
+  },
+  selectedGroupName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs / 2,
+  },
+  selectedGroupDescription: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  removeGroupButton: {
+    marginLeft: SPACING.sm,
+  },
+  selectGroupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    borderStyle: 'dashed',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  selectGroupButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    maxHeight: '80%',
+    paddingBottom: SPACING.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalLoadingContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalListContent: {
+    padding: SPACING.md,
+  },
+  groupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginBottom: SPACING.sm,
+  },
+  groupItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  groupItemInfo: {
+    flex: 1,
+  },
+  groupItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs / 2,
+  },
+  groupItemName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  groupItemDescription: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs / 2,
+  },
+  groupItemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs / 2,
+  },
+  groupItemMetaText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  modalEmptyContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalEmptyText: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+  },
+  modalEmptySubtext: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
   },
   tagsCard: {
     marginBottom: SPACING.md,
