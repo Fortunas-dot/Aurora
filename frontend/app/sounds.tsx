@@ -6,83 +6,180 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  FlatList,
   Slider,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
-import { GlassCard, GlassButton, LoadingSpinner } from '../src/components/common';
+import { BlurView } from 'expo-blur';
+import { GlassCard, GlassButton } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 
-// Sound categories and sounds
-export interface Sound {
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Scene-based sounds inspired by Headspace
+export interface SoundScene {
   id: string;
   name: string;
-  category: string;
+  description: string;
+  category: 'focus' | 'sleep' | 'meditation';
   icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  // For now, we'll use placeholder URLs. In production, you'd host these audio files
-  audioUrl?: string;
+  gradient: string[];
+  sounds: {
+    id: string;
+    name: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    audioUrl?: string;
+  }[];
+  duration?: number; // in minutes
 }
 
-export const SOUND_CATEGORIES = [
+export const SOUND_SCENES: SoundScene[] = [
+  // Focus Scenes
   {
-    id: 'nature',
-    name: 'Nature',
-    icon: 'leaf-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.accent,
+    id: 'rainy-day',
+    name: 'Rainy Day',
+    description: 'Gentle rain for deep focus',
+    category: 'focus',
+    icon: 'rainy',
+    gradient: ['#1E3A5F', '#2C5282', '#2D3748'],
+    sounds: [
+      { id: 'rain', name: 'Rain', icon: 'rainy' },
+      { id: 'thunder', name: 'Thunder', icon: 'flash' },
+    ],
   },
   {
-    id: 'urban',
-    name: 'Urban',
-    icon: 'business-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.primary,
+    id: 'coffee-shop',
+    name: 'Coffee Shop',
+    description: 'Ambient café sounds',
+    category: 'focus',
+    icon: 'cafe',
+    gradient: ['#78350F', '#92400E', '#451A03'],
+    sounds: [
+      { id: 'coffee', name: 'Coffee Shop', icon: 'cafe' },
+      { id: 'conversation', name: 'Conversation', icon: 'chatbubbles' },
+    ],
   },
   {
-    id: 'abstract',
-    name: 'Abstract',
-    icon: 'infinite-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.secondary,
+    id: 'library',
+    name: 'Library',
+    description: 'Quiet study atmosphere',
+    category: 'focus',
+    icon: 'library',
+    gradient: ['#1E293B', '#334155', '#0F172A'],
+    sounds: [
+      { id: 'pages', name: 'Pages', icon: 'document-text' },
+      { id: 'silence', name: 'Silence', icon: 'volume-mute' },
+    ],
   },
   {
-    id: 'water',
-    name: 'Water',
-    icon: 'water-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.primary,
+    id: 'forest',
+    name: 'Forest',
+    description: 'Nature sounds for concentration',
+    category: 'focus',
+    icon: 'leaf',
+    gradient: ['#14532D', '#166534', '#052E16'],
+    sounds: [
+      { id: 'birds', name: 'Birds', icon: 'bird' },
+      { id: 'wind', name: 'Wind', icon: 'cloud' },
+      { id: 'leaves', name: 'Leaves', icon: 'leaf' },
+    ],
   },
-];
-
-export const SOUNDS: Sound[] = [
-  // Nature
-  { id: 'rain', name: 'Rain', category: 'nature', icon: 'rainy-outline', color: COLORS.primary },
-  { id: 'forest', name: 'Forest', category: 'nature', icon: 'leaf-outline', color: COLORS.accent },
-  { id: 'birds', name: 'Birds', category: 'nature', icon: 'bird-outline', color: COLORS.accent },
-  { id: 'wind', name: 'Wind', category: 'nature', icon: 'cloud-outline', color: COLORS.primary },
-  { id: 'thunder', name: 'Thunder', category: 'nature', icon: 'flash-outline', color: COLORS.warning },
-  
-  // Urban
-  { id: 'coffee', name: 'Coffee Shop', category: 'urban', icon: 'cafe-outline', color: COLORS.warning },
-  { id: 'city', name: 'City', category: 'urban', icon: 'business-outline', color: COLORS.primary },
-  { id: 'train', name: 'Train', category: 'urban', icon: 'train-outline', color: COLORS.secondary },
-  { id: 'library', name: 'Library', category: 'urban', icon: 'library-outline', color: COLORS.primary },
-  
-  // Water
-  { id: 'ocean', name: 'Ocean', category: 'water', icon: 'water-outline', color: COLORS.primary },
-  { id: 'river', name: 'River', category: 'water', icon: 'water-outline', color: COLORS.accent },
-  { id: 'waterfall', name: 'Waterfall', category: 'water', icon: 'water-outline', color: COLORS.accent },
-  { id: 'waves', name: 'Waves', category: 'water', icon: 'water-outline', color: COLORS.primary },
-  
-  // Abstract
-  { id: 'pink', name: 'Pink Noise', category: 'abstract', icon: 'radio-outline', color: COLORS.secondary },
-  { id: 'brown', name: 'Brown Noise', category: 'abstract', icon: 'radio-outline', color: COLORS.warning },
-  { id: 'white', name: 'White Noise', category: 'abstract', icon: 'radio-outline', color: COLORS.primary },
+  // Sleep Scenes
+  {
+    id: 'ocean-waves',
+    name: 'Ocean Waves',
+    description: 'Calming waves for sleep',
+    category: 'sleep',
+    icon: 'water',
+    gradient: ['#0C4A6E', '#075985', '#082F49'],
+    sounds: [
+      { id: 'waves', name: 'Waves', icon: 'water' },
+      { id: 'seagulls', name: 'Seagulls', icon: 'bird' },
+    ],
+  },
+  {
+    id: 'campfire',
+    name: 'Campfire',
+    description: 'Crackling fire for relaxation',
+    category: 'sleep',
+    icon: 'flame',
+    gradient: ['#7C2D12', '#9A3412', '#431407'],
+    sounds: [
+      { id: 'fire', name: 'Fire', icon: 'flame' },
+      { id: 'crackling', name: 'Crackling', icon: 'radio' },
+    ],
+  },
+  {
+    id: 'night-rain',
+    name: 'Night Rain',
+    description: 'Soothing rain for bedtime',
+    category: 'sleep',
+    icon: 'moon',
+    gradient: ['#1E1B4B', '#312E81', '#1E1B4B'],
+    sounds: [
+      { id: 'rain', name: 'Rain', icon: 'rainy' },
+      { id: 'wind', name: 'Wind', icon: 'cloud' },
+    ],
+  },
+  {
+    id: 'white-noise',
+    name: 'White Noise',
+    description: 'Consistent sound for deep sleep',
+    category: 'sleep',
+    icon: 'radio',
+    gradient: ['#374151', '#4B5563', '#1F2937'],
+    sounds: [
+      { id: 'white', name: 'White Noise', icon: 'radio' },
+      { id: 'pink', name: 'Pink Noise', icon: 'radio' },
+      { id: 'brown', name: 'Brown Noise', icon: 'radio' },
+    ],
+  },
+  // Meditation Scenes
+  {
+    id: 'temple',
+    name: 'Temple',
+    description: 'Peaceful temple ambiance',
+    category: 'meditation',
+    icon: 'flower',
+    gradient: ['#581C87', '#6B21A8', '#3B0764'],
+    sounds: [
+      { id: 'bells', name: 'Bells', icon: 'notifications' },
+      { id: 'chanting', name: 'Chanting', icon: 'musical-notes' },
+    ],
+  },
+  {
+    id: 'waterfall',
+    name: 'Waterfall',
+    description: 'Flowing water for mindfulness',
+    category: 'meditation',
+    icon: 'water',
+    gradient: ['#0E7490', '#0891B2', '#164E63'],
+    sounds: [
+      { id: 'waterfall', name: 'Waterfall', icon: 'water' },
+      { id: 'stream', name: 'Stream', icon: 'water' },
+    ],
+  },
+  {
+    id: 'zen-garden',
+    name: 'Zen Garden',
+    description: 'Serene garden sounds',
+    category: 'meditation',
+    icon: 'leaf',
+    gradient: ['#166534', '#15803D', '#14532D'],
+    sounds: [
+      { id: 'wind-chimes', name: 'Wind Chimes', icon: 'notifications' },
+      { id: 'nature', name: 'Nature', icon: 'leaf' },
+    ],
+  },
 ];
 
 interface PlayingSound {
-  sound: Sound;
+  sceneId: string;
+  soundId: string;
   audio: Audio.Sound;
   volume: number;
   isPlaying: boolean;
@@ -91,11 +188,12 @@ interface PlayingSound {
 export default function SoundsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'focus' | 'sleep' | 'meditation' | 'all'>('all');
   const [playingSounds, setPlayingSounds] = useState<Map<string, PlayingSound>>(new Map());
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [showTimerModal, setShowTimerModal] = useState(false);
+  const [expandedScene, setExpandedScene] = useState<string | null>(null);
 
   // Configure audio mode on mount
   useEffect(() => {
@@ -140,8 +238,9 @@ export default function SoundsScreen() {
     return () => clearInterval(interval);
   }, [timerMinutes, timerSeconds]);
 
-  const toggleSound = useCallback(async (sound: Sound) => {
-    const existing = playingSounds.get(sound.id);
+  const toggleSound = useCallback(async (sceneId: string, soundId: string) => {
+    const key = `${sceneId}-${soundId}`;
+    const existing = playingSounds.get(key);
 
     if (existing) {
       // Sound is playing - stop it
@@ -150,7 +249,7 @@ export default function SoundsScreen() {
         await existing.audio.unloadAsync();
         setPlayingSounds((prev) => {
           const newMap = new Map(prev);
-          newMap.delete(sound.id);
+          newMap.delete(key);
           return newMap;
         });
       } catch (error) {
@@ -159,13 +258,9 @@ export default function SoundsScreen() {
     } else {
       // Sound is not playing - start it
       try {
-        // For now, we'll use a placeholder. In production, you'd load actual audio files
-        // You can use local files or hosted URLs
+        // Placeholder audio - replace with actual audio files in production
         const { sound: audioSound } = await Audio.Sound.createAsync(
-          // Placeholder - replace with actual audio file URL or require()
-          // For example: require('../../assets/sounds/rain.mp3')
-          // Or: { uri: 'https://your-cdn.com/sounds/rain.mp3' }
-          { uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' }, // Placeholder
+          { uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
           {
             shouldPlay: true,
             isLooping: true,
@@ -175,8 +270,9 @@ export default function SoundsScreen() {
 
         setPlayingSounds((prev) => {
           const newMap = new Map(prev);
-          newMap.set(sound.id, {
-            sound,
+          newMap.set(key, {
+            sceneId,
+            soundId,
             audio: audioSound,
             volume: 0.5,
             isPlaying: true,
@@ -185,22 +281,20 @@ export default function SoundsScreen() {
         });
       } catch (error) {
         console.error('Error playing sound:', error);
-        // For now, just show that it would play
-        // In production, handle the error properly
       }
     }
   }, [playingSounds]);
 
-  const updateVolume = useCallback(async (soundId: string, volume: number) => {
-    const playing = playingSounds.get(soundId);
+  const updateVolume = useCallback(async (key: string, volume: number) => {
+    const playing = playingSounds.get(key);
     if (playing) {
       try {
         await playing.audio.setVolumeAsync(volume);
         setPlayingSounds((prev) => {
           const newMap = new Map(prev);
-          const existing = newMap.get(soundId);
+          const existing = newMap.get(key);
           if (existing) {
-            newMap.set(soundId, { ...existing, volume });
+            newMap.set(key, { ...existing, volume });
           }
           return newMap;
         });
@@ -234,11 +328,12 @@ export default function SoundsScreen() {
     setShowTimerModal(false);
   };
 
-  const filteredSounds = selectedCategory
-    ? SOUNDS.filter((s) => s.category === selectedCategory)
-    : SOUNDS;
+  const filteredScenes = selectedCategory === 'all'
+    ? SOUND_SCENES
+    : SOUND_SCENES.filter((s) => s.category === selectedCategory);
 
   const playingSoundsList = Array.from(playingSounds.values());
+  const hasPlayingSounds = playingSoundsList.length > 0;
 
   return (
     <LinearGradient
@@ -250,7 +345,7 @@ export default function SoundsScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Sounds & Noises</Text>
+        <Text style={styles.headerTitle}>Sounds & Scenes</Text>
         <Pressable style={styles.timerButton} onPress={() => setShowTimerModal(true)}>
           <Ionicons name="timer-outline" size={24} color={COLORS.primary} />
         </Pressable>
@@ -267,118 +362,197 @@ export default function SoundsScreen() {
         </View>
       )}
 
-      {/* Currently Playing */}
-      {playingSoundsList.length > 0 && (
+      {/* Category Filter */}
+      <View style={styles.categoriesSection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
+          <Pressable
+            style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('all')}
+          >
+            <Text style={[styles.categoryChipText, selectedCategory === 'all' && styles.categoryChipTextActive]}>
+              All
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.categoryChip, selectedCategory === 'focus' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('focus')}
+          >
+            <Ionicons
+              name="bulb-outline"
+              size={18}
+              color={selectedCategory === 'focus' ? COLORS.white : COLORS.textMuted}
+              style={styles.categoryIcon}
+            />
+            <Text style={[styles.categoryChipText, selectedCategory === 'focus' && styles.categoryChipTextActive]}>
+              Focus
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.categoryChip, selectedCategory === 'sleep' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('sleep')}
+          >
+            <Ionicons
+              name="moon-outline"
+              size={18}
+              color={selectedCategory === 'sleep' ? COLORS.white : COLORS.textMuted}
+              style={styles.categoryIcon}
+            />
+            <Text style={[styles.categoryChipText, selectedCategory === 'sleep' && styles.categoryChipTextActive]}>
+              Sleep
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.categoryChip, selectedCategory === 'meditation' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('meditation')}
+          >
+            <Ionicons
+              name="flower-outline"
+              size={18}
+              color={selectedCategory === 'meditation' ? COLORS.white : COLORS.textMuted}
+              style={styles.categoryIcon}
+            />
+            <Text style={[styles.categoryChipText, selectedCategory === 'meditation' && styles.categoryChipTextActive]}>
+              Meditation
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+
+      {/* Currently Playing - Compact View */}
+      {hasPlayingSounds && (
         <View style={styles.playingSection}>
-          <Text style={styles.sectionTitle}>Currently Playing</Text>
+          <View style={styles.playingHeader}>
+            <Text style={styles.playingTitle}>Now Playing</Text>
+            <Pressable onPress={stopAllSounds} style={styles.stopAllButton}>
+              <Ionicons name="stop-circle-outline" size={20} color={COLORS.error} />
+              <Text style={styles.stopAllText}>Stop All</Text>
+            </Pressable>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playingScroll}>
-            {playingSoundsList.map((playing) => (
-              <GlassCard key={playing.sound.id} style={styles.playingCard} padding="md">
-                <View style={styles.playingCardContent}>
-                  <Pressable
-                    style={[styles.soundIcon, { backgroundColor: `${playing.sound.color}20` }]}
-                    onPress={() => toggleSound(playing.sound)}
-                  >
-                    <Ionicons name={playing.sound.icon} size={24} color={playing.sound.color} />
-                  </Pressable>
-                  <Text style={styles.playingSoundName} numberOfLines={1}>
-                    {playing.sound.name}
-                  </Text>
-                  <Slider
-                    style={styles.volumeSlider}
-                    minimumValue={0}
-                    maximumValue={1}
-                    value={playing.volume}
-                    onValueChange={(value) => updateVolume(playing.sound.id, value)}
-                    minimumTrackTintColor={playing.sound.color}
-                    maximumTrackTintColor={COLORS.glass.border}
-                    thumbTintColor={playing.sound.color}
-                  />
-                </View>
-              </GlassCard>
-            ))}
+            {playingSoundsList.map((playing) => {
+              const scene = SOUND_SCENES.find((s) => s.id === playing.sceneId);
+              const sound = scene?.sounds.find((s) => s.id === playing.soundId);
+              if (!scene || !sound) return null;
+              
+              const key = `${playing.sceneId}-${playing.soundId}`;
+              return (
+                <GlassCard key={key} style={styles.playingCard} padding="sm">
+                  <View style={styles.playingCardContent}>
+                    <Pressable
+                      style={[styles.playingIcon, { backgroundColor: `${COLORS.primary}20` }]}
+                      onPress={() => toggleSound(playing.sceneId, playing.soundId)}
+                    >
+                      <Ionicons name={sound.icon} size={20} color={COLORS.primary} />
+                    </Pressable>
+                    <Text style={styles.playingSoundName} numberOfLines={1}>
+                      {sound.name}
+                    </Text>
+                    <Slider
+                      style={styles.volumeSlider}
+                      minimumValue={0}
+                      maximumValue={1}
+                      value={playing.volume}
+                      onValueChange={(value) => updateVolume(key, value)}
+                      minimumTrackTintColor={COLORS.primary}
+                      maximumTrackTintColor={COLORS.glass.border}
+                      thumbTintColor={COLORS.primary}
+                    />
+                  </View>
+                </GlassCard>
+              );
+            })}
           </ScrollView>
         </View>
       )}
 
-      {/* Categories */}
-      <View style={styles.categoriesSection}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-          <Pressable
-            style={[styles.categoryChip, !selectedCategory && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory(null)}
-          >
-            <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>
-              All
-            </Text>
-          </Pressable>
-          {SOUND_CATEGORIES.map((category) => (
-            <Pressable
-              key={category.id}
-              style={[styles.categoryChip, selectedCategory === category.id && styles.categoryChipActive]}
-              onPress={() => setSelectedCategory(category.id)}
-            >
-              <Ionicons
-                name={category.icon}
-                size={18}
-                color={selectedCategory === category.id ? COLORS.white : COLORS.textMuted}
-                style={styles.categoryIcon}
-              />
-              <Text style={[styles.categoryChipText, selectedCategory === category.id && styles.categoryChipTextActive]}>
-                {category.name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Sounds Grid */}
+      {/* Scenes Grid */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.soundsGrid}>
-          {filteredSounds.map((sound) => {
-            const isPlaying = playingSounds.has(sound.id);
-            return (
-              <Pressable
-                key={sound.id}
-                style={styles.soundCard}
-                onPress={() => toggleSound(sound)}
-              >
-                <GlassCard
-                  style={[styles.soundCardInner, isPlaying && styles.soundCardPlaying]}
-                  padding="lg"
-                >
-                  <View style={[styles.soundIconLarge, { backgroundColor: `${sound.color}20` }]}>
-                    <Ionicons name={sound.icon} size={32} color={sound.color} />
-                  </View>
-                  <Text style={styles.soundName}>{sound.name}</Text>
-                  {isPlaying && (
-                    <View style={styles.playingIndicator}>
-                      <Ionicons name="pause" size={16} color={sound.color} />
-                    </View>
-                  )}
-                </GlassCard>
-              </Pressable>
-            );
-          })}
-        </View>
-      </ScrollView>
+        {filteredScenes.map((scene) => {
+          const scenePlayingSounds = Array.from(playingSounds.values()).filter(
+            (p) => p.sceneId === scene.id
+          );
+          const isSceneActive = scenePlayingSounds.length > 0;
+          const isExpanded = expandedScene === scene.id;
 
-      {/* Stop All Button */}
-      {playingSoundsList.length > 0 && (
-        <View style={[styles.stopAllContainer, { paddingBottom: insets.bottom + SPACING.md }]}>
-          <GlassButton
-            title="Stop All"
-            onPress={stopAllSounds}
-            variant="secondary"
-            icon={<Ionicons name="stop" size={20} color={COLORS.text} />}
-          />
-        </View>
-      )}
+          return (
+            <Pressable
+              key={scene.id}
+              style={styles.sceneCard}
+              onPress={() => setExpandedScene(isExpanded ? null : scene.id)}
+            >
+              <LinearGradient
+                colors={scene.gradient}
+                style={styles.sceneCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <BlurView intensity={20} style={styles.sceneCardBlur}>
+                  <View style={styles.sceneCardContent}>
+                    <View style={styles.sceneHeader}>
+                      <View style={[styles.sceneIcon, { backgroundColor: `${COLORS.white}20` }]}>
+                        <Ionicons name={scene.icon} size={32} color={COLORS.white} />
+                      </View>
+                      <View style={styles.sceneInfo}>
+                        <Text style={styles.sceneName}>{scene.name}</Text>
+                        <Text style={styles.sceneDescription}>{scene.description}</Text>
+                      </View>
+                      {isSceneActive && (
+                        <View style={styles.activeIndicator}>
+                          <View style={styles.activeDot} />
+                        </View>
+                      )}
+                    </View>
+
+                    {isExpanded && (
+                      <View style={styles.soundsList}>
+                        {scene.sounds.map((sound) => {
+                          const key = `${scene.id}-${sound.id}`;
+                          const isPlaying = playingSounds.has(key);
+                          const playing = playingSounds.get(key);
+
+                          return (
+                            <View key={sound.id} style={styles.soundItem}>
+                              <Pressable
+                                style={[styles.soundItemButton, isPlaying && styles.soundItemButtonActive]}
+                                onPress={() => toggleSound(scene.id, sound.id)}
+                              >
+                                <Ionicons
+                                  name={isPlaying ? 'pause' : 'play'}
+                                  size={20}
+                                  color={isPlaying ? COLORS.white : COLORS.text}
+                                />
+                                <Text style={[styles.soundItemName, isPlaying && styles.soundItemNameActive]}>
+                                  {sound.name}
+                                </Text>
+                              </Pressable>
+                              {isPlaying && playing && (
+                                <Slider
+                                  style={styles.soundVolumeSlider}
+                                  minimumValue={0}
+                                  maximumValue={1}
+                                  value={playing.volume}
+                                  onValueChange={(value) => updateVolume(key, value)}
+                                  minimumTrackTintColor={COLORS.white}
+                                  maximumTrackTintColor={COLORS.glass.border}
+                                  thumbTintColor={COLORS.white}
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                </BlurView>
+              </LinearGradient>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* Timer Modal */}
       <Modal
@@ -474,53 +648,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
-  playingSection: {
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.glass.border,
-  },
-  sectionTitle: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.text,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  playingScroll: {
-    paddingHorizontal: SPACING.md,
-  },
-  playingCard: {
-    marginRight: SPACING.sm,
-    minWidth: 120,
-  },
-  playingCardContent: {
-    alignItems: 'center',
-  },
-  soundIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  soundIconLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  playingSoundName: {
-    ...TYPOGRAPHY.captionMedium,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
-  },
-  volumeSlider: {
-    width: '100%',
-    height: 20,
-  },
   categoriesSection: {
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
@@ -555,6 +682,59 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '600',
   },
+  playingSection: {
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  playingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  playingTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  stopAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  stopAllText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.error,
+  },
+  playingScroll: {
+    paddingHorizontal: SPACING.md,
+  },
+  playingCard: {
+    marginRight: SPACING.sm,
+    minWidth: 120,
+  },
+  playingCardContent: {
+    alignItems: 'center',
+  },
+  playingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  playingSoundName: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+    textAlign: 'center',
+  },
+  volumeSlider: {
+    width: '100%',
+    height: 20,
+  },
   scrollView: {
     flex: 1,
   },
@@ -562,41 +742,92 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     paddingBottom: 100,
   },
-  soundsGrid: {
+  sceneCard: {
+    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    height: 140,
+  },
+  sceneCardGradient: {
+    flex: 1,
+  },
+  sceneCardBlur: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  sceneCardContent: {
+    flex: 1,
+    padding: SPACING.md,
+    justifyContent: 'space-between',
+  },
+  sceneHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  soundCard: {
-    width: '47%',
-  },
-  soundCardInner: {
     alignItems: 'center',
-    minHeight: 140,
   },
-  soundCardPlaying: {
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+  sceneIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
   },
-  soundName: {
+  sceneInfo: {
+    flex: 1,
+  },
+  sceneName: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.white,
+    marginBottom: SPACING.xs / 2,
+  },
+  sceneDescription: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+  },
+  activeIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.white,
+  },
+  soundsList: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  soundItem: {
+    marginBottom: SPACING.xs,
+  },
+  soundItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    gap: SPACING.sm,
+  },
+  soundItemButtonActive: {
+    backgroundColor: `${COLORS.white}30`,
+  },
+  soundItemName: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    textAlign: 'center',
   },
-  playingIndicator: {
-    position: 'absolute',
-    top: SPACING.xs,
-    right: SPACING.xs,
+  soundItemNameActive: {
+    color: COLORS.white,
+    fontWeight: '600',
   },
-  stopAllContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: SPACING.md,
-    backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.glass.border,
+  soundVolumeSlider: {
+    marginTop: SPACING.xs,
+    height: 20,
   },
   modalOverlay: {
     flex: 1,
@@ -644,4 +875,3 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
 });
-
