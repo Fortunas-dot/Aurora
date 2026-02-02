@@ -91,6 +91,10 @@ export default function FeedScreen() {
         });
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:94',message:'loadPosts - API response received',data:{success:response.success,dataCount:response.data?.length||0,activeTab,selectedCategory,sortOption,responsePostIds:response.data?.map((p:Post)=>p._id).slice(0,5)||[],pagination:response.pagination},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
       if (response.success && response.data) {
         // Filter out posts with invalid IDs
         const validPosts = response.data.filter((post: Post) => {
@@ -100,11 +104,19 @@ export default function FeedScreen() {
           return /^[0-9a-fA-F]{24}$/.test(postId);
         });
         
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:101',message:'loadPosts - After frontend ID validation',data:{validPostsCount:validPosts.length,filteredOut:response.data.length-validPosts.length,validPostIds:validPosts.map((p:Post)=>p._id).slice(0,5)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
         if (append) {
           setPosts((prev) => [...prev, ...validPosts]);
         } else {
           setPosts(validPosts);
         }
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:107',message:'loadPosts - Posts set in state',data:{postsSetCount:append?'appended':validPosts.length,finalPostIds:validPosts.map((p:Post)=>p._id).slice(0,5),hasMore:response.pagination?pageNum<response.pagination.pages:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         
         if (response.pagination) {
           setHasMore(pageNum < response.pagination.pages);

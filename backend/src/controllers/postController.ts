@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import Post from '../models/Post';
 import User from '../models/User';
 import Group from '../models/Group';
@@ -6,11 +8,26 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
+const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
+const logDebug = (data: any) => {
+  try {
+    const logDir = path.dirname(DEBUG_LOG_PATH);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logLine = JSON.stringify({...data, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1'}) + '\n';
+    fs.appendFileSync(DEBUG_LOG_PATH, logLine, 'utf8');
+  } catch (e) {
+    console.error('Debug log error:', e);
+  }
+};
+
 // @desc    Get all posts (feed)
 // @route   GET /api/posts
 // @access  Public
 export const getPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    console.log('[DEBUG] getPosts called');
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -42,6 +59,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       sortOption = { commentsCount: -1, createdAt: -1 };
     }
 
+    // #region agent log
+    logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy},hypothesisId:'B'});
+    // #endregion
+
     const posts = await Post.find(query)
       .populate('author', 'username displayName avatar')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
@@ -51,6 +72,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     const total = await Post.countDocuments(query);
 
+    // #region agent log
+    logDebug({location:'postController.ts:52',message:'getPosts - Posts found from DB',data:{postsCount:posts.length,total,postsWithAuthor:posts.filter((p:any)=>p.author).length,postsWithoutAuthor:posts.filter((p:any)=>!p.author).length,postIds:posts.map((p:any)=>p._id?.toString()).slice(0,5),authorIds:posts.map((p:any)=>p.author?._id?.toString()||'null').slice(0,5)},hypothesisId:'A'});
+    // #endregion
+
     // Filter out posts with invalid IDs or missing author
     const validPosts = posts.filter((post: any) => {
       if (!post || !post._id) return false;
@@ -59,6 +84,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       if (!post.author || !post.author._id) return false;
       return true;
     });
+
+    // #region agent log
+    logDebug({location:'postController.ts:61',message:'getPosts - After validation filter',data:{validPostsCount:validPosts.length,filteredOut:posts.length-validPosts.length,validPostIds:validPosts.map((p:any)=>p._id?.toString()).slice(0,5)},hypothesisId:'A'});
+    // #endregion
 
     // Add isSaved status and format group info if user is authenticated
     let postsWithSavedStatus = validPosts;
@@ -124,6 +153,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
         };
       });
     }
+
+    // #region agent log
+    logDebug({location:'postController.ts:140',message:'getPosts - Sending response',data:{responsePostsCount:postsWithSavedStatus.length,responsePostIds:postsWithSavedStatus.map((p:any)=>p._id?.toString()).slice(0,5),pagination:{page,limit,total,pages:Math.ceil(total/limit)}},hypothesisId:'E'});
+    // #endregion
 
     res.json({
       success: true,
