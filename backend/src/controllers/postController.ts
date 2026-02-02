@@ -68,48 +68,63 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       const user = await User.findById(req.userId);
       if (user && user.savedPosts) {
         const savedPostIds = user.savedPosts.map((id) => id.toString());
-        postsWithSavedStatus = validPosts.map((post: any) => ({
-          ...post.toObject(),
-          isSaved: savedPostIds.includes(post._id.toString()),
-          group: post.groupId ? {
-            _id: post.groupId._id,
-            name: post.groupId.name,
-            description: post.groupId.description,
-            tags: post.groupId.tags,
-            memberCount: post.groupId.memberCount,
-            isPrivate: post.groupId.isPrivate,
-            avatar: post.groupId.avatar,
-          } : undefined,
-        }));
+        postsWithSavedStatus = validPosts.map((post: any) => {
+          const groupIdObj = post.groupId as any;
+          const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+            _id: groupIdObj._id,
+            name: groupIdObj.name,
+            description: groupIdObj.description,
+            tags: groupIdObj.tags,
+            memberCount: groupIdObj.memberCount,
+            isPrivate: groupIdObj.isPrivate,
+            avatar: groupIdObj.avatar,
+          } : undefined;
+          
+          return {
+            ...post.toObject(),
+            isSaved: savedPostIds.includes(post._id.toString()),
+            group,
+          };
+        });
       } else {
-        postsWithSavedStatus = validPosts.map((post: any) => ({
-          ...post.toObject(),
-          isSaved: false,
-          group: post.groupId ? {
-            _id: post.groupId._id,
-            name: post.groupId.name,
-            description: post.groupId.description,
-            tags: post.groupId.tags,
-            memberCount: post.groupId.memberCount,
-            isPrivate: post.groupId.isPrivate,
-            avatar: post.groupId.avatar,
-          } : undefined,
-        }));
+        postsWithSavedStatus = validPosts.map((post: any) => {
+          const groupIdObj = post.groupId as any;
+          const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+            _id: groupIdObj._id,
+            name: groupIdObj.name,
+            description: groupIdObj.description,
+            tags: groupIdObj.tags,
+            memberCount: groupIdObj.memberCount,
+            isPrivate: groupIdObj.isPrivate,
+            avatar: groupIdObj.avatar,
+          } : undefined;
+          
+          return {
+            ...post.toObject(),
+            isSaved: false,
+            group,
+          };
+        });
       }
     } else {
-      postsWithSavedStatus = validPosts.map((post: any) => ({
-        ...post.toObject(),
-        isSaved: false,
-        group: post.groupId ? {
-          _id: post.groupId._id,
-          name: post.groupId.name,
-          description: post.groupId.description,
-          tags: post.groupId.tags,
-          memberCount: post.groupId.memberCount,
-          isPrivate: post.groupId.isPrivate,
-          avatar: post.groupId.avatar,
-        } : undefined,
-      }));
+      postsWithSavedStatus = validPosts.map((post: any) => {
+        const groupIdObj = post.groupId as any;
+        const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+          _id: groupIdObj._id,
+          name: groupIdObj.name,
+          description: groupIdObj.description,
+          tags: groupIdObj.tags,
+          memberCount: groupIdObj.memberCount,
+          isPrivate: groupIdObj.isPrivate,
+          avatar: groupIdObj.avatar,
+        } : undefined;
+        
+        return {
+          ...post.toObject(),
+          isSaved: false,
+          group,
+        };
+      });
     }
 
     res.json({
@@ -180,14 +195,17 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 
     // Add isSaved status and format group info if user is authenticated
     let postWithSavedStatus: any = post.toObject();
-    postWithSavedStatus.group = post.groupId ? {
-      _id: post.groupId._id,
-      name: post.groupId.name,
-      description: post.groupId.description,
-      tags: post.groupId.tags,
-      memberCount: post.groupId.memberCount,
-      isPrivate: post.groupId.isPrivate,
-      avatar: post.groupId.avatar,
+    
+    // Check if groupId is populated (object) or just an ObjectId
+    const groupIdObj = post.groupId as any;
+    postWithSavedStatus.group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+      _id: groupIdObj._id,
+      name: groupIdObj.name,
+      description: groupIdObj.description,
+      tags: groupIdObj.tags,
+      memberCount: groupIdObj.memberCount,
+      isPrivate: groupIdObj.isPrivate,
+      avatar: groupIdObj.avatar,
     } : undefined;
     
     if (req.userId) {
@@ -505,24 +523,29 @@ export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise
     });
 
     // Format group info
-    const postsWithGroup = validPosts.map((post: any) => ({
-      ...post,
-      author: {
-        _id: post.author._id,
-        username: post.author.username,
-        displayName: post.author.displayName,
-        avatar: post.author.avatar,
-      },
-      group: post.groupId && post.groupId._id ? {
-        _id: post.groupId._id,
-        name: post.groupId.name,
-        description: post.groupId.description,
-        tags: post.groupId.tags,
-        memberCount: post.groupId.memberCount,
-        isPrivate: post.groupId.isPrivate,
-        avatar: post.groupId.avatar,
-      } : undefined,
-    }));
+    const postsWithGroup = validPosts.map((post: any) => {
+      const groupIdObj = post.groupId as any;
+      const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+        _id: groupIdObj._id,
+        name: groupIdObj.name,
+        description: groupIdObj.description,
+        tags: groupIdObj.tags,
+        memberCount: groupIdObj.memberCount,
+        isPrivate: groupIdObj.isPrivate,
+        avatar: groupIdObj.avatar,
+      } : undefined;
+      
+      return {
+        ...post,
+        author: {
+          _id: post.author._id,
+          username: post.author.username,
+          displayName: post.author.displayName,
+          avatar: post.author.avatar,
+        },
+        group,
+      };
+    });
 
     res.json({
       success: true,
@@ -597,18 +620,23 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
     });
 
     // Format group info
-    const postsWithGroup = validPosts.map((post: any) => ({
-      ...post.toObject(),
-      group: post.groupId ? {
-        _id: post.groupId._id,
-        name: post.groupId.name,
-        description: post.groupId.description,
-        tags: post.groupId.tags,
-        memberCount: post.groupId.memberCount,
-        isPrivate: post.groupId.isPrivate,
-        avatar: post.groupId.avatar,
-      } : undefined,
-    }));
+    const postsWithGroup = validPosts.map((post: any) => {
+      const groupIdObj = post.groupId as any;
+      const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+        _id: groupIdObj._id,
+        name: groupIdObj.name,
+        description: groupIdObj.description,
+        tags: groupIdObj.tags,
+        memberCount: groupIdObj.memberCount,
+        isPrivate: groupIdObj.isPrivate,
+        avatar: groupIdObj.avatar,
+      } : undefined;
+      
+      return {
+        ...post.toObject(),
+        group,
+      };
+    });
 
     res.json({
       success: true,
@@ -709,33 +737,43 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
     let postsWithSavedStatus = validPosts;
     if (user.savedPosts) {
       const savedPostIds = user.savedPosts.map((id) => id.toString());
-      postsWithSavedStatus = validPosts.map((post: any) => ({
-        ...post.toObject(),
-        isSaved: savedPostIds.includes(post._id.toString()),
-        group: post.groupId ? {
-          _id: post.groupId._id,
-          name: post.groupId.name,
-          description: post.groupId.description,
-          tags: post.groupId.tags,
-          memberCount: post.groupId.memberCount,
-          isPrivate: post.groupId.isPrivate,
-          avatar: post.groupId.avatar,
-        } : undefined,
-      }));
+      postsWithSavedStatus = validPosts.map((post: any) => {
+        const groupIdObj = post.groupId as any;
+        const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+          _id: groupIdObj._id,
+          name: groupIdObj.name,
+          description: groupIdObj.description,
+          tags: groupIdObj.tags,
+          memberCount: groupIdObj.memberCount,
+          isPrivate: groupIdObj.isPrivate,
+          avatar: groupIdObj.avatar,
+        } : undefined;
+        
+        return {
+          ...post.toObject(),
+          isSaved: savedPostIds.includes(post._id.toString()),
+          group,
+        };
+      });
     } else {
-      postsWithSavedStatus = validPosts.map((post: any) => ({
-        ...post.toObject(),
-        isSaved: false,
-        group: post.groupId ? {
-          _id: post.groupId._id,
-          name: post.groupId.name,
-          description: post.groupId.description,
-          tags: post.groupId.tags,
-          memberCount: post.groupId.memberCount,
-          isPrivate: post.groupId.isPrivate,
-          avatar: post.groupId.avatar,
-        } : undefined,
-      }));
+      postsWithSavedStatus = validPosts.map((post: any) => {
+        const groupIdObj = post.groupId as any;
+        const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+          _id: groupIdObj._id,
+          name: groupIdObj.name,
+          description: groupIdObj.description,
+          tags: groupIdObj.tags,
+          memberCount: groupIdObj.memberCount,
+          isPrivate: groupIdObj.isPrivate,
+          avatar: groupIdObj.avatar,
+        } : undefined;
+        
+        return {
+          ...post.toObject(),
+          isSaved: false,
+          group,
+        };
+      });
     }
 
     res.json({
