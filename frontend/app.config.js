@@ -4,6 +4,7 @@ module.exports = {
   expo: {
     name: 'Aurora',
     slug: 'aurora',
+    owner: 'pawbuddies',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -45,6 +46,10 @@ module.exports = {
       ],
     ],
     extra: {
+      // Expo Project ID for push notifications and EAS
+      eas: {
+        projectId: '170cce1d-c8a7-4a75-a7f7-e4c1b9567ded',
+      },
       // Backend API URL
       // - For PRODUCTION: Set API_URL in .env to your Railway/Render URL (e.g., 'https://aurora-production.up.railway.app/api')
       // - For DEVELOPMENT: Leave as localhost (or set API_HOST for physical device testing)

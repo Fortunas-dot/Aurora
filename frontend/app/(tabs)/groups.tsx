@@ -14,27 +14,39 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, GlassInput, Avatar, TagChip, LoadingSpinner } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { groupService, Group } from '../../src/services/group.service';
+import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
+
+type TabType = 'groups' | 'buddies';
 
 export default function GroupsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user: currentUser } = useAuthStore();
   
+  const [activeTab, setActiveTab] = useState<TabType>('groups');
+  
+  // Groups state
   const [groups, setGroups] = useState<Group[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
+  
+  // Buddies state
+  const [buddies, setBuddies] = useState<UserProfile[]>([]);
+  const [buddySearchQuery, setBuddySearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  // Load groups
   const loadGroups = useCallback(async (pageNum: number = 1, append: boolean = false, search?: string) => {
     setIsLoading(true);
     try {
       const response = await groupService.getGroups(pageNum, 20, search || undefined);
-      
-      console.log('Groups API Response:', response);
       
       if (response.success) {
         const groupsData = response.data || [];
@@ -51,7 +63,6 @@ export default function GroupsScreen() {
           setHasMore(false);
         }
       } else {
-        console.error('Groups API Error:', response.message);
         if (!append) {
           setGroups([]);
         }
@@ -68,27 +79,91 @@ export default function GroupsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadGroups(1, false);
-  }, []);
+  // Load buddies (following users)
+  const loadBuddies = useCallback(async () => {
+    if (!isAuthenticated || !currentUser?._id) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await userService.getFollowing(currentUser._id, 1, 100);
+      
+      if (response.success && response.data) {
+        setBuddies(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading buddies:', error);
+      setBuddies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, currentUser?._id]);
 
-  // Search effect - debounce search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadGroups(1, false, searchQuery);
-    }, 500);
+  // Search users
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const response = await userService.searchUsers(query, 1, 20);
+      
+      if (response.success && response.data) {
+        // Filter out current user
+        const filtered = response.data.filter(user => user._id !== currentUser?._id);
+        setSearchResults(filtered);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [currentUser?._id]);
 
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  useEffect(() => {
+    if (activeTab === 'groups') {
+      loadGroups(1, false);
+    } else if (activeTab === 'buddies') {
+      loadBuddies();
+    }
+  }, [activeTab, loadGroups, loadBuddies]);
+
+  // Search effect for groups
+  useEffect(() => {
+    if (activeTab === 'groups') {
+      const timeoutId = setTimeout(() => {
+        loadGroups(1, false, groupSearchQuery);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [groupSearchQuery, activeTab, loadGroups]);
+
+  // Search effect for buddies
+  useEffect(() => {
+    if (activeTab === 'buddies') {
+      const timeoutId = setTimeout(() => {
+        searchUsers(buddySearchQuery);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [buddySearchQuery, activeTab, searchUsers]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadGroups(1, false, searchQuery);
+    
+    if (activeTab === 'groups') {
+      await loadGroups(1, false, groupSearchQuery);
+    } else {
+      await loadBuddies();
+    }
+    
     setIsRefreshing(false);
-  }, [loadGroups, searchQuery]);
+  }, [activeTab, loadGroups, loadBuddies, groupSearchQuery]);
 
   const handleJoinGroup = async (groupId: string) => {
     if (!isAuthenticated) {
@@ -128,19 +203,53 @@ export default function GroupsScreen() {
     }
   };
 
+  const handleFollowUser = async (userId: string) => {
+    if (!isAuthenticated) {
+      router.push('/(auth)/login');
+      return;
+    }
+
+    try {
+      const response = await userService.followUser(userId);
+      if (response.success) {
+        // Update search results
+        setSearchResults((prev) =>
+          prev.map((user) =>
+            user._id === userId
+              ? { ...user, isFollowing: response.data?.isFollowing }
+              : user
+          )
+        );
+        // Reload buddies if now following
+        if (response.data?.isFollowing) {
+          loadBuddies();
+        }
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
+  };
+
+  const handleMessageUser = (userId: string) => {
+    router.push(`/conversation/${userId}`);
+  };
+
   const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
+    if (activeTab === 'groups' && !isLoading && hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
       loadGroups(nextPage, true);
     }
-  }, [isLoading, hasMore, page, loadGroups]);
+  }, [activeTab, isLoading, hasMore, page, loadGroups]);
 
   const filteredGroups = groups.filter((group) => {
     const matchesFilter = selectedFilter === 'all' || group.isMember;
     return matchesFilter;
   });
 
+  const displayBuddies = buddySearchQuery.trim() ? searchResults : buddies;
+
+  // Render Group Card
   const renderGroup = ({ item }: { item: Group }) => (
     <GlassCard style={styles.groupCard} padding={0} onPress={() => router.push(`/group/${item._id}`)}>
       <View style={styles.groupHeader}>
@@ -196,6 +305,55 @@ export default function GroupsScreen() {
     </GlassCard>
   );
 
+  // Render Buddy Card
+  const renderBuddy = ({ item }: { item: UserProfile }) => {
+    const isFollowing = item.isFollowing ?? false;
+    const isInBuddiesList = buddies.some(b => b._id === item._id);
+    
+    return (
+      <GlassCard style={styles.buddyCard} padding="md">
+        <View style={styles.buddyHeader}>
+          <Pressable onPress={() => router.push(`/user/${item._id}`)}>
+            <Avatar
+              uri={item.avatar}
+              name={item.displayName || item.username}
+              size={48}
+            />
+          </Pressable>
+          <View style={styles.buddyInfo}>
+            <Pressable onPress={() => router.push(`/user/${item._id}`)}>
+              <Text style={styles.buddyName}>{item.displayName || item.username}</Text>
+              {item.bio && (
+                <Text style={styles.buddyBio} numberOfLines={1}>
+                  {item.bio}
+                </Text>
+              )}
+            </Pressable>
+            <View style={styles.buddyActions}>
+              {isInBuddiesList && (
+                <Pressable
+                  style={styles.messageButton}
+                  onPress={() => handleMessageUser(item._id)}
+                >
+                  <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
+                </Pressable>
+              )}
+              {!isInBuddiesList && (
+                <GlassButton
+                  title={isFollowing ? 'Volgt' : 'Volgen'}
+                  onPress={() => handleFollowUser(item._id)}
+                  variant={isFollowing ? 'default' : 'primary'}
+                  size="sm"
+                  style={styles.followButton}
+                />
+              )}
+            </View>
+          </View>
+        </View>
+      </GlassCard>
+    );
+  };
+
   return (
     <LinearGradient
       colors={COLORS.backgroundGradient}
@@ -203,95 +361,181 @@ export default function GroupsScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Groepen</Text>
+        <Text style={styles.headerTitle}>Groepen / Buddies</Text>
         <Pressable
           style={styles.headerButton}
           onPress={() => {
             if (!isAuthenticated) {
               router.push('/(auth)/login');
-            } else {
+            } else if (activeTab === 'groups') {
               router.push('/create-group');
             }
           }}
         >
-          <Ionicons name="add" size={24} color={COLORS.text} />
+          <Ionicons name={activeTab === 'groups' ? 'add' : 'search'} size={24} color={COLORS.text} />
+        </Pressable>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <Pressable
+          style={[styles.tab, activeTab === 'groups' && styles.tabActive]}
+          onPress={() => setActiveTab('groups')}
+        >
+          <Ionicons
+            name="people"
+            size={20}
+            color={activeTab === 'groups' ? COLORS.primary : COLORS.textMuted}
+          />
+          <Text style={[styles.tabText, activeTab === 'groups' && styles.tabTextActive]}>
+            Groepen
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, activeTab === 'buddies' && styles.tabActive]}
+          onPress={() => setActiveTab('buddies')}
+        >
+          <Ionicons
+            name="person"
+            size={20}
+            color={activeTab === 'buddies' ? COLORS.primary : COLORS.textMuted}
+          />
+          <Text style={[styles.tabText, activeTab === 'buddies' && styles.tabTextActive]}>
+            Buddies
+          </Text>
         </Pressable>
       </View>
 
       {/* Search */}
       <View style={styles.searchContainer}>
         <GlassInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Zoek groepen..."
+          value={activeTab === 'groups' ? groupSearchQuery : buddySearchQuery}
+          onChangeText={activeTab === 'groups' ? setGroupSearchQuery : setBuddySearchQuery}
+          placeholder={activeTab === 'groups' ? 'Zoek groepen...' : 'Zoek gebruikers...'}
           style={styles.searchInput}
         />
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterTabs}>
-        <Pressable
-          style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
-          onPress={() => setSelectedFilter('all')}
-        >
-          <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
-            Alle groepen
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.filterTab, selectedFilter === 'joined' && styles.filterTabActive]}
-          onPress={() => setSelectedFilter('joined')}
-        >
-          <Text style={[styles.filterTabText, selectedFilter === 'joined' && styles.filterTabTextActive]}>
-            Mijn groepen
-          </Text>
-        </Pressable>
-      </View>
+      {/* Groups Tab Content */}
+      {activeTab === 'groups' && (
+        <>
+          {/* Filter Tabs */}
+          <View style={styles.filterTabs}>
+            <Pressable
+              style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
+              onPress={() => setSelectedFilter('all')}
+            >
+              <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
+                Alle groepen
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterTab, selectedFilter === 'joined' && styles.filterTabActive]}
+              onPress={() => setSelectedFilter('joined')}
+            >
+              <Text style={[styles.filterTabText, selectedFilter === 'joined' && styles.filterTabTextActive]}>
+                Mijn groepen
+              </Text>
+            </Pressable>
+          </View>
 
-      {/* Groups List */}
-      <FlatList
-        data={filteredGroups}
-        renderItem={renderGroup}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
+          {/* Groups List */}
+          <FlatList
+            data={filteredGroups}
+            renderItem={renderGroup}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={COLORS.primary}
+              />
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isLoading && groups.length > 0 ? (
+                <View style={styles.loadingFooter}>
+                  <LoadingSpinner size="md" />
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <LoadingSpinner size="lg" />
+                </View>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyText}>Geen groepen gevonden</Text>
+                  {isAuthenticated && (
+                    <Pressable
+                      style={styles.createGroupButton}
+                      onPress={() => router.push('/create-group')}
+                    >
+                      <Text style={styles.createGroupButtonText}>Maak een groep</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )
+            }
           />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          isLoading && groups.length > 0 ? (
-            <View style={styles.loadingFooter}>
-              <LoadingSpinner size="md" />
-            </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.loadingContainer}>
-              <LoadingSpinner size="lg" />
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Geen groepen gevonden</Text>
-              {isAuthenticated && (
-                <Pressable
-                  style={styles.createGroupButton}
-                  onPress={() => router.push('/create-group')}
-                >
-                  <Text style={styles.createGroupButtonText}>Maak een groep</Text>
-                </Pressable>
-              )}
-            </View>
-          )
-        }
-      />
+        </>
+      )}
+
+      {/* Buddies Tab Content */}
+      {activeTab === 'buddies' && (
+        <FlatList
+          data={displayBuddies}
+          renderItem={renderBuddy}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={COLORS.primary}
+            />
+          }
+          ListFooterComponent={
+            isSearching ? (
+              <View style={styles.loadingFooter}>
+                <LoadingSpinner size="md" />
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={styles.loadingContainer}>
+                <LoadingSpinner size="lg" />
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="person-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.emptyText}>
+                  {buddySearchQuery.trim()
+                    ? 'Geen gebruikers gevonden'
+                    : isAuthenticated
+                    ? 'Je volgt nog niemand. Zoek naar gebruikers om te volgen!'
+                    : 'Log in om buddies te zien'}
+                </Text>
+                {!isAuthenticated && (
+                  <Pressable
+                    style={styles.createGroupButton}
+                    onPress={() => router.push('/(auth)/login')}
+                  >
+                    <Text style={styles.createGroupButtonText}>Log in</Text>
+                  </Pressable>
+                )}
+              </View>
+            )
+          }
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -320,6 +564,37 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    gap: SPACING.xs,
+  },
+  tabActive: {
+    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(96, 165, 250, 0.4)',
+  },
+  tabText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   searchContainer: {
     paddingHorizontal: SPACING.md,
@@ -412,6 +687,48 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'flex-start',
   },
+  buddyCard: {
+    marginBottom: SPACING.md,
+  },
+  buddyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buddyInfo: {
+    flex: 1,
+    marginLeft: SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  buddyName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  buddyBio: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  buddyActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  messageButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  followButton: {
+    minWidth: 80,
+  },
   loadingContainer: {
     padding: SPACING.xxl,
     alignItems: 'center',
@@ -429,6 +746,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.md,
     marginBottom: SPACING.lg,
+    textAlign: 'center',
   },
   createGroupButton: {
     paddingVertical: SPACING.md,
@@ -443,4 +761,3 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 });
-

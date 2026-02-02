@@ -16,6 +16,7 @@ import { PostCard } from '../../src/components/post/PostCard';
 import { FeedTabs, FeedTab, CategoryFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { postService, Post } from '../../src/services/post.service';
+import { therapistService } from '../../src/services/therapist.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 
@@ -41,6 +42,10 @@ export default function FeedScreen() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Online therapists state
+  const [onlineTherapistsCount, setOnlineTherapistsCount] = useState<number | null>(null);
+  const [onlineTherapistsMessage, setOnlineTherapistsMessage] = useState<string>('');
 
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
@@ -144,6 +149,26 @@ export default function FeedScreen() {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, updateUnreadCount]);
+
+  // Load online therapists count
+  useEffect(() => {
+    const loadOnlineTherapists = async () => {
+      try {
+        const response = await therapistService.getOnlineCount();
+        if (response.success && response.data) {
+          setOnlineTherapistsCount(response.data.count);
+          setOnlineTherapistsMessage(response.data.message);
+        }
+      } catch (error) {
+        console.error('Error loading online therapists count:', error);
+      }
+    };
+    
+    loadOnlineTherapists();
+    // Refresh every hour to get updated count
+    const interval = setInterval(loadOnlineTherapists, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -298,6 +323,21 @@ export default function FeedScreen() {
 
   const ListHeader = () => (
     <View style={styles.listHeader}>
+      {/* Online Therapists Banner */}
+      {onlineTherapistsCount !== null && onlineTherapistsCount > 0 && (
+        <GlassCard style={styles.therapistsBanner} padding="md">
+          <View style={styles.therapistsBannerContent}>
+            <View style={styles.therapistsBannerLeft}>
+              <View style={styles.onlineIndicator} />
+              <Text style={styles.therapistsBannerText}>
+                {onlineTherapistsMessage}
+              </Text>
+            </View>
+            <Ionicons name="medical-outline" size={20} color={COLORS.primary} />
+          </View>
+        </GlassCard>
+      )}
+
       {/* Create Post Card */}
       <GlassCard style={styles.createPostCard} padding="md">
         <View style={styles.createPostRow}>
@@ -531,6 +571,33 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     marginBottom: SPACING.md,
+  },
+  therapistsBanner: {
+    marginBottom: SPACING.sm,
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+  },
+  therapistsBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  therapistsBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  onlineIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.success,
+    marginRight: SPACING.sm,
+  },
+  therapistsBannerText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.text,
+    flex: 1,
   },
   createPostCard: {
     marginBottom: SPACING.sm,

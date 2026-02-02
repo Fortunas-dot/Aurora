@@ -365,13 +365,17 @@ export default function JournalScreen() {
           </View>
 
           {entries.length === 0 ? (
-            <GlassCard style={styles.emptyCard} padding="lg">
-              <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyTitle}>Nog geen entries</Text>
-              <Text style={styles.emptyText}>
-                Begin met schrijven om je gedachten en gevoelens te verkennen
-              </Text>
-            </GlassCard>
+            <View style={styles.emptyContainer}>
+              <GlassCard style={styles.emptyCard} padding="lg">
+                <View style={styles.emptyContent}>
+                  <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyTitle}>Nog geen entries</Text>
+                  <Text style={styles.emptyText} numberOfLines={0}>
+                    Begin met schrijven om je gedachten en gevoelens te verkennen
+                  </Text>
+                </View>
+              </GlassCard>
+            </View>
           ) : (
             entries.map((entry, index) => (
               <EntryCard
@@ -718,10 +722,23 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 11,
   },
+  emptyContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
   emptyCard: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xxl,
+    minHeight: 200,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   emptyTitle: {
     ...TYPOGRAPHY.h3,
@@ -729,11 +746,16 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
     textAlign: 'center',
+    width: '100%',
   },
   emptyText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     textAlign: 'center',
+    width: '100%',
+    paddingHorizontal: SPACING.md,
+    lineHeight: 22,
+    flexShrink: 1,
   },
   fab: {
     position: 'absolute',

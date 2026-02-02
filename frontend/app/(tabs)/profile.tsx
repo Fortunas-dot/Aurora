@@ -291,6 +291,13 @@ export default function ProfileScreen() {
               title="Help & Support"
               onPress={() => router.push('/help-support')}
             />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="bulb-outline"
+              title="Ideeën indienen"
+              subtitle="Deel je ideeën voor de app"
+              onPress={() => router.push('/ideas')}
+            />
           </GlassCard>
         </View>
 
