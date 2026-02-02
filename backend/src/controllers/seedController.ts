@@ -173,61 +173,73 @@ const sampleGroups = [
 
 const samplePosts = [
   {
+    title: 'Small Steps Forward',
     content: 'Today was a difficult day, but I\'m proud of myself for getting through it. Small steps are still steps forward! 💪',
     postType: 'post' as const,
     tags: ['depression', 'self-care', 'motivation'],
   },
   {
+    title: 'Tips for Panic Attacks?',
     content: 'Does anyone have tips for dealing with panic attacks? I\'ve been struggling with them a lot lately.',
     postType: 'question' as const,
     tags: ['anxiety', 'panic', 'question'],
   },
   {
+    title: 'My Depression Journey',
     content: 'My story with depression began 3 years ago. It was a long journey, but I came out stronger. If you\'re reading this: you are not alone. There is hope. 🌟',
     postType: 'story' as const,
     tags: ['depression', 'story', 'hope'],
   },
   {
+    title: 'Favorite Mindfulness Exercises?',
     content: 'What are your favorite mindfulness exercises? I\'m looking for new ways to relax.',
     postType: 'question' as const,
     tags: ['mindfulness', 'self-care', 'question'],
   },
   {
+    title: 'A Good Day',
     content: 'Today I had a good day for the first time in weeks. I feel hopeful. 🌈',
     postType: 'post' as const,
     tags: ['hope', 'positive', 'progress'],
   },
   {
+    title: 'Dealing with Social Anxiety',
     content: 'How do you deal with social anxiety? I find it difficult to go to social events.',
     postType: 'question' as const,
     tags: ['anxiety', 'social', 'question'],
   },
   {
+    title: 'ADHD and Neurodiversity',
     content: 'My journey with ADHD has taught me that being different is okay. Neurodiversity is a strength, not a weakness. 🧠✨',
     postType: 'story' as const,
     tags: ['adhd', 'neurodiversity', 'acceptance'],
   },
   {
+    title: 'Self-Care Tip of the Day',
     content: 'Self-care tip of the day: take a warm bath, put on your favorite music and read a good book. You deserve it! 🛁📚',
     postType: 'post' as const,
     tags: ['self-care', 'tip', 'wellness'],
   },
   {
+    title: 'Anxiety Medication Experience?',
     content: 'Does anyone have experience with medication for anxiety? I\'m considering it, but I\'m uncertain.',
     postType: 'question' as const,
     tags: ['anxiety', 'medication', 'question'],
   },
   {
+    title: 'Setting Boundaries',
     content: 'Today I was proud of myself for saying "no" to something that was giving me too much stress. Setting boundaries is important! 💪',
     postType: 'post' as const,
     tags: ['boundaries', 'self-care', 'assertiveness'],
   },
   {
+    title: 'Eating Disorder Recovery Story',
     content: 'My story with eating disorders and recovery. It was a long journey, but I\'m here. If you\'re struggling with this: help is available. ❤️',
     postType: 'story' as const,
     tags: ['eating-disorder', 'recovery', 'hope'],
   },
   {
+    title: 'Coping with Stress',
     content: 'What do you do to cope with stress? I\'m looking for new strategies.',
     postType: 'question' as const,
     tags: ['stress', 'coping', 'question'],
