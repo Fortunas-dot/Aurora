@@ -27,10 +27,8 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     
     if (groupId) {
       query.groupId = groupId;
-    } else {
-      // Public feed - no group posts
-      query.groupId = null;
     }
+    // If no groupId specified, show all posts (both with and without groups)
 
     if (postType && ['post', 'question', 'story'].includes(postType)) {
       query.postType = postType;
