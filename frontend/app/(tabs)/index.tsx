@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, LoadingSpinner, Avatar, Badge } from '../../src/components/common';
 import { PostCard } from '../../src/components/post/PostCard';
-import { FeedTabs, FeedTab, CategoryFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
+import { FeedTabs, FeedTab, CommunityFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { postService, Post } from '../../src/services/post.service';
 import { therapistService } from '../../src/services/therapist.service';
@@ -35,7 +35,7 @@ export default function FeedScreen() {
   
   // Filter state
   const [activeTab, setActiveTab] = useState<FeedTab>(isAuthenticated ? 'home' : 'all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   
   // Search state
@@ -54,7 +54,7 @@ export default function FeedScreen() {
     setIsLoading(true);
     try {
       let response;
-      const tag = selectedCategory !== 'all' ? selectedCategory : undefined;
+      const groupId = selectedCommunity || undefined;
 
       // Handle search mode
       if (isSearching && searchQuery.trim().length >= 2) {
@@ -69,7 +69,7 @@ export default function FeedScreen() {
         response = await postService.getJoinedGroupsPosts({
           page: pageNum,
           limit: 20,
-          tag,
+          groupId,
           sortBy: sortOption,
         });
       } else if (activeTab === 'popular') {
@@ -77,7 +77,7 @@ export default function FeedScreen() {
         response = await postService.getTrendingPosts({
           page: pageNum,
           limit: 20,
-          tag,
+          groupId,
         });
       } else if (activeTab === 'saved') {
         response = await postService.getSavedPosts(pageNum, 20);
@@ -86,7 +86,7 @@ export default function FeedScreen() {
         response = await postService.getPosts({
           page: pageNum,
           limit: 20,
-          tag,
+          groupId,
           sortBy: sortOption,
         });
       }
@@ -141,14 +141,14 @@ export default function FeedScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, activeTab, selectedCategory, sortOption, isSearching, searchQuery, isAuthenticated]);
+  }, [isLoading, activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated]);
 
   // Reload posts when filters change
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     loadPosts(1, false);
-  }, [activeTab, selectedCategory, sortOption, isSearching]);
+  }, [activeTab, selectedCommunity, sortOption, isSearching]);
 
   // Update unread count on mount and focus
   useEffect(() => {
@@ -197,8 +197,8 @@ export default function FeedScreen() {
     setSearchQuery('');
   };
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
+  const handleCommunityChange = (communityId: string | null) => {
+    setSelectedCommunity(communityId);
   };
 
   const handleSortChange = (sort: SortOption) => {
@@ -305,30 +305,30 @@ export default function FeedScreen() {
   const getEmptyStateText = () => {
     if (isSearching && searchQuery) {
       return {
-        title: 'Geen resultaten',
-        subtitle: `Geen posts gevonden voor "${searchQuery}"`,
+        title: 'No results',
+        subtitle: `No posts found for "${searchQuery}"`,
       };
     }
     switch (activeTab) {
       case 'home':
         return {
-          title: 'Nog geen posts',
-          subtitle: 'Join communities/groepen om posts te zien in je Home feed',
+          title: 'No posts yet',
+          subtitle: 'Join communities to see posts in your Home feed',
         };
       case 'popular':
         return {
-          title: 'Nog geen trending posts',
-          subtitle: 'Er zijn nog geen populaire posts',
+          title: 'No trending posts',
+          subtitle: 'There are no popular posts yet',
         };
       case 'saved':
         return {
-          title: 'Geen opgeslagen posts',
-          subtitle: 'Sla interessante posts op om ze hier terug te vinden',
+          title: 'No saved posts',
+          subtitle: 'Save interesting posts to find them here',
         };
       default:
         return {
-          title: 'Nog geen posts',
-          subtitle: 'Wees de eerste om iets te delen!',
+          title: 'No posts yet',
+          subtitle: 'Be the first to share something!',
         };
     }
   };
@@ -363,7 +363,7 @@ export default function FeedScreen() {
             onPress={handleCreatePost}
           >
             <Text style={styles.createPostPlaceholder}>
-              Deel je gedachten...
+              Share your thoughts...
             </Text>
           </Pressable>
         </View>
@@ -371,9 +371,10 @@ export default function FeedScreen() {
 
       {/* Filter Bar */}
       <View style={styles.filterBar}>
-        <CategoryFilter
-          selectedCategory={selectedCategory}
-          onCategoryChange={handleCategoryChange}
+        <CommunityFilter
+          selectedCommunity={selectedCommunity}
+          onCommunityChange={handleCommunityChange}
+          isAuthenticated={isAuthenticated}
         />
         <View style={styles.sortContainer}>
           <SortDropdown
@@ -397,7 +398,7 @@ export default function FeedScreen() {
         {isSearchExpanded ? (
           <SearchBar
             onSearch={handleSearch}
-            placeholder="Zoeken in posts..."
+            placeholder="Search posts..."
             isExpanded={isSearchExpanded}
             onExpandChange={handleSearchExpandChange}
           />
@@ -428,10 +429,10 @@ export default function FeedScreen() {
       {isSearching && searchQuery && (
         <View style={styles.searchResultsHeader}>
           <Text style={styles.searchResultsText}>
-            Zoekresultaten voor "{searchQuery}"
+            Search results for "{searchQuery}"
           </Text>
           <Pressable onPress={() => handleSearchExpandChange(false)}>
-            <Text style={styles.clearSearchText}>Wissen</Text>
+            <Text style={styles.clearSearchText}>Clear</Text>
           </Pressable>
         </View>
       )}
@@ -496,7 +497,7 @@ export default function FeedScreen() {
                   style={styles.browseGroupsButton}
                   onPress={() => router.push('/(tabs)/groups')}
                 >
-                  <Text style={styles.browseGroupsButtonText}>Blader door groepen</Text>
+                  <Text style={styles.browseGroupsButtonText}>Browse communities</Text>
                 </Pressable>
               )}
             </View>

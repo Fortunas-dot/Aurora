@@ -54,9 +54,10 @@ class PostService {
   }
 
   async getTrendingPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
-    const { page = 1, limit = 20, tag, postType } = params;
+    const { page = 1, limit = 20, tag, groupId, postType } = params;
     let endpoint = `/posts/trending?page=${page}&limit=${limit}`;
     if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
+    if (groupId) endpoint += `&groupId=${groupId}`;
     if (postType) endpoint += `&postType=${postType}`;
     
     return apiService.get<Post[]>(endpoint);
@@ -73,9 +74,10 @@ class PostService {
 
   // Get posts from joined groups (Reddit-style Home feed)
   async getJoinedGroupsPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
-    const { page = 1, limit = 20, tag, postType, sortBy } = params;
+    const { page = 1, limit = 20, tag, groupId, postType, sortBy } = params;
     let endpoint = `/posts/joined-groups?page=${page}&limit=${limit}`;
     if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
+    if (groupId) endpoint += `&groupId=${groupId}`;
     if (postType) endpoint += `&postType=${postType}`;
     if (sortBy) endpoint += `&sortBy=${sortBy}`;
     

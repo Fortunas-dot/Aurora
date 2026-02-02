@@ -547,9 +547,17 @@ export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
     const tag = req.query.tag as string;
+    const groupId = req.query.groupId as string;
     const postType = req.query.postType as string;
 
-    const query: any = { groupId: null };
+    const query: any = {};
+    
+    // If groupId is provided, filter by that group, otherwise show posts without groups
+    if (groupId) {
+      query.groupId = groupId;
+    } else {
+      query.groupId = null;
+    }
     
     if (tag) {
       query.tags = tag.toLowerCase();
@@ -750,6 +758,7 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
     const tag = req.query.tag as string;
+    const groupId = req.query.groupId as string;
     const sortBy = req.query.sortBy as string || 'newest';
 
     // Get the current user
@@ -758,6 +767,118 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
       res.status(404).json({
         success: false,
         message: 'User not found',
+      });
+      return;
+    }
+
+    // If specific groupId is provided, use it directly (after verifying user is a member)
+    if (groupId) {
+      const group = await Group.findById(groupId);
+      if (!group) {
+        res.status(404).json({
+          success: false,
+          message: 'Group not found',
+        });
+        return;
+      }
+      
+      // Check if user is a member
+      const isMember = group.members.some((m: any) => m.toString() === req.userId);
+      if (!isMember) {
+        res.status(403).json({
+          success: false,
+          message: 'You are not a member of this group',
+        });
+        return;
+      }
+
+      // Build query for posts from specific group
+      const query: any = {
+        groupId: groupId,
+      };
+      
+      if (tag) {
+        query.tags = tag.toLowerCase();
+      }
+
+      // Determine sort order
+      let sortOption: any = { createdAt: -1 }; // default: newest
+      if (sortBy === 'popular') {
+        sortOption = { likes: -1, createdAt: -1 };
+      } else if (sortBy === 'discussed') {
+        sortOption = { commentsCount: -1, createdAt: -1 };
+      }
+
+      const posts = await Post.find(query)
+        .populate('author', 'username displayName avatar')
+        .populate('groupId', 'name description tags memberCount isPrivate avatar')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit);
+
+      const total = await Post.countDocuments(query);
+
+      // Filter out posts with invalid IDs or missing author
+      const validPosts = posts.filter((post: any) => {
+        if (!post || !post._id) return false;
+        const postId = post._id.toString();
+        if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+        if (!post.author || !post.author._id) return false;
+        return true;
+      });
+
+      // Add isSaved status
+      let postsWithSavedStatus = validPosts;
+      if (user.savedPosts) {
+        const savedPostIds = user.savedPosts.map((id) => id.toString());
+        postsWithSavedStatus = validPosts.map((post: any) => {
+          const groupIdObj = post.groupId as any;
+          const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+            _id: groupIdObj._id,
+            name: groupIdObj.name,
+            description: groupIdObj.description,
+            tags: groupIdObj.tags,
+            memberCount: groupIdObj.memberCount,
+            isPrivate: groupIdObj.isPrivate,
+            avatar: groupIdObj.avatar,
+          } : undefined;
+          
+          return {
+            ...post.toObject(),
+            isSaved: savedPostIds.includes(post._id.toString()),
+            group,
+          };
+        });
+      } else {
+        postsWithSavedStatus = validPosts.map((post: any) => {
+          const groupIdObj = post.groupId as any;
+          const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+            _id: groupIdObj._id,
+            name: groupIdObj.name,
+            description: groupIdObj.description,
+            tags: groupIdObj.tags,
+            memberCount: groupIdObj.memberCount,
+            isPrivate: groupIdObj.isPrivate,
+            avatar: groupIdObj.avatar,
+          } : undefined;
+          
+          return {
+            ...post.toObject(),
+            isSaved: false,
+            group,
+          };
+        });
+      }
+
+      res.json({
+        success: true,
+        data: postsWithSavedStatus,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
       });
       return;
     }
