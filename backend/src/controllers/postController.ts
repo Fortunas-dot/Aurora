@@ -79,13 +79,29 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:52',message:'getPosts - Posts found from DB',data:{postsCount:posts.length,total,postsWithAuthor:posts.filter((p:any)=>p.author).length,postsWithoutAuthor:posts.filter((p:any)=>!p.author).length,postIds:posts.map((p:any)=>p._id?.toString()).slice(0,5),authorIds:posts.map((p:any)=>p.author?._id?.toString()||'null').slice(0,5)},hypothesisId:'A'});
     // #endregion
 
-    // Filter out posts with invalid IDs or missing author
+    // Filter out posts with invalid IDs
+    // Note: We allow posts with null authors (they will get a fallback author)
     const validPosts = posts.filter((post: any) => {
       if (!post || !post._id) return false;
       const postId = post._id.toString();
       if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
-      if (!post.author || !post.author._id) return false;
       return true;
+    }).map((post: any) => {
+      // If author is null (populate failed), create a fallback author
+      if (!post.author || !post.author._id) {
+        // Use the original author ID from the post if available, otherwise use a placeholder
+        const originalAuthorId = post.author ? post.author.toString() : '000000000000000000000000';
+        return {
+          ...post.toObject(),
+          author: {
+            _id: originalAuthorId,
+            username: 'deleted_user',
+            displayName: 'Deleted User',
+            avatar: undefined,
+          },
+        };
+      }
+      return post;
     });
 
     // #region agent log
