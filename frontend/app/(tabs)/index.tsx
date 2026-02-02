@@ -34,7 +34,7 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(true);
   
   // Filter state
-  const [activeTab, setActiveTab] = useState<FeedTab>(isAuthenticated ? 'home' : 'all');
+  const [activeTab, setActiveTab] = useState<FeedTab>('all');
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   
@@ -63,30 +63,18 @@ export default function FeedScreen() {
           limit: 20,
         });
       }
-      // Handle different tabs (Reddit-style)
-      else if (activeTab === 'home') {
-        // Home: Posts from joined groups
-        response = await postService.getJoinedGroupsPosts({
-          page: pageNum,
-          limit: 20,
-          groupId,
-          sortBy: sortOption,
-        });
-      } else if (activeTab === 'popular') {
-        // Popular: Trending posts
-        response = await postService.getTrendingPosts({
-          page: pageNum,
-          limit: 20,
-          groupId,
-        });
-      } else if (activeTab === 'saved') {
+      // Handle different tabs (Post type filters)
+      else if (activeTab === 'saved') {
+        // Saved: User's saved posts
         response = await postService.getSavedPosts(pageNum, 20);
       } else {
-        // All: All posts
+        // All, Post, Question, Story: Filter by post type
+        const postType = activeTab === 'all' ? undefined : activeTab;
         response = await postService.getPosts({
           page: pageNum,
           limit: 20,
           groupId,
+          postType,
           sortBy: sortOption,
         });
       }
@@ -460,27 +448,21 @@ export default function FeedScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons 
                 name={
-                  activeTab === 'home'
-                    ? 'home-outline'
-                    : activeTab === 'popular'
-                      ? 'trending-up-outline'
-                      : activeTab === 'saved'
-                        ? 'bookmark-outline'
-                        : 'chatbubbles-outline'
+                  activeTab === 'saved'
+                    ? 'bookmark-outline'
+                    : activeTab === 'post'
+                      ? 'chatbubbles-outline'
+                      : activeTab === 'question'
+                        ? 'help-circle-outline'
+                        : activeTab === 'story'
+                          ? 'book-outline'
+                          : 'apps-outline'
                 } 
                 size={48} 
                 color={COLORS.textMuted} 
               />
               <Text style={styles.emptyText}>{emptyState.title}</Text>
               <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
-              {activeTab === 'home' && isAuthenticated && (
-                <Pressable
-                  style={styles.browseGroupsButton}
-                  onPress={() => router.push('/(tabs)/groups')}
-                >
-                  <Text style={styles.browseGroupsButtonText}>Browse communities</Text>
-                </Pressable>
-              )}
             </View>
           )
         }

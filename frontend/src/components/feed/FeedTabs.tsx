@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 
-export type FeedTab = 'home' | 'popular' | 'all' | 'saved';
+export type FeedTab = 'all' | 'post' | 'question' | 'story' | 'saved';
 
 interface TabConfig {
   id: FeedTab;
@@ -20,10 +20,11 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: 'home', label: 'Home', labelEn: 'Home', icon: 'home-outline' },
-  { id: 'popular', label: 'Populair', labelEn: 'Popular', icon: 'trending-up-outline' },
-  { id: 'all', label: 'Alles', labelEn: 'All', icon: 'apps-outline' },
-  { id: 'saved', label: 'Opgeslagen', labelEn: 'Saved', icon: 'bookmark-outline' },
+  { id: 'all', label: 'All', labelEn: 'All', icon: 'apps-outline' },
+  { id: 'post', label: 'Posts', labelEn: 'Posts', icon: 'chatbubbles-outline' },
+  { id: 'question', label: 'Questions', labelEn: 'Questions', icon: 'help-circle-outline' },
+  { id: 'story', label: 'Stories', labelEn: 'Stories', icon: 'book-outline' },
+  { id: 'saved', label: 'Saved', labelEn: 'Saved', icon: 'bookmark-outline' },
 ];
 
 interface FeedTabsProps {
@@ -38,8 +39,8 @@ export const FeedTabs: React.FC<FeedTabsProps> = ({
   isAuthenticated = false,
 }) => {
   const filteredTabs = TABS.filter((tab) => {
-    // Hide "home" and "saved" tabs for non-authenticated users
-    if (!isAuthenticated && (tab.id === 'home' || tab.id === 'saved')) {
+    // Hide "saved" tab for non-authenticated users
+    if (!isAuthenticated && tab.id === 'saved') {
       return false;
     }
     return true;
