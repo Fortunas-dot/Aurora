@@ -129,7 +129,7 @@ export default function SettingsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+      <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+      <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="lg" />
           <Text style={styles.loadingText}>{t.loading}</Text>
@@ -163,7 +163,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+    <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>

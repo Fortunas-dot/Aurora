@@ -306,14 +306,11 @@ export class RealtimeService {
 
         case 'error':
           console.error('❌ Realtime API error:', message.error);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'realtime.service.ts:error',message:'API Error received',data:{error:message.error,fullMessage:message,timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C,E'})}).catch(()=>{});
-          // #endregion
           const errorMsg = message.error?.message || 'Unknown error';
           
           // Check for authentication error
           if (errorMsg.includes('authentication') || errorMsg.includes('bearer') || errorMsg.includes('Missing')) {
-            const authError = 'Authenticatie fout. Controleer je API key.';
+            const authError = 'Authentication error. Please check your API key.';
             if (this.callbacks.onError) {
               this.callbacks.onError(new Error(authError));
             }

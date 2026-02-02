@@ -4,7 +4,7 @@ import { ViewStyle, TextStyle } from 'react-native';
 export const COLORS = {
   // Background - Deep dark with subtle gradient
   background: '#0A0E1A',
-  backgroundGradient: ['#0A0E1A', '#151B2E', '#1A2238'],
+  backgroundGradient: ['#0A0E1A', '#151B2E', '#1A2238'] as readonly [string, string, string],
   surface: '#141824',
   surfaceLight: '#1E2536',
 

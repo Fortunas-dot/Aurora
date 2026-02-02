@@ -45,7 +45,7 @@ export default function TextChatScreen() {
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Laden...</Text>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </LinearGradient>
     );
