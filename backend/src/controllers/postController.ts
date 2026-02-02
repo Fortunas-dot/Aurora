@@ -49,6 +49,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       query.groupId = groupId;
     }
     // If no groupId specified, show all posts (both with and without groups)
+    // This ensures posts with groupId are also shown in the "All" tab
 
     if (postType && ['post', 'question', 'story'].includes(postType)) {
       query.postType = postType;
