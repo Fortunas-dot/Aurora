@@ -93,7 +93,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     const total = await Post.countDocuments(query);
 
     // #region agent log
-    logDebug({location:'postController.ts:52',message:'getPosts - Posts found from DB',data:{postsCount:posts.length,total,postsWithAuthor:posts.filter((p:any)=>p.author).length,postsWithoutAuthor:posts.filter((p:any)=>!p.author).length,postIds:posts.map((p:any)=>p._id?.toString()).slice(0,5),authorIds:posts.map((p:any)=>p.author?._id?.toString()||'null').slice(0,5)},hypothesisId:'A'});
+    logDebug({location:'postController.ts:52',message:'getPosts - Posts found from DB',data:{postsCount:posts.length,total,postsWithAuthor:posts.filter((p:any)=>p.author).length,postsWithoutAuthor:posts.filter((p:any)=>!p.author).length,postIds:posts.map((p:any)=>p._id?.toString()).slice(0,5),authorIds:posts.map((p:any)=>p.author?._id?.toString()||'null').slice(0,5),authorUsernames:posts.map((p:any)=>p.author?.username||'null').slice(0,5)},hypothesisId:'A'});
     // #endregion
 
     // Filter out posts with invalid IDs
