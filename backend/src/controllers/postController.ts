@@ -233,10 +233,11 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 // @access  Private
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, tags, groupId, images, postType } = req.body;
+    const { title, content, tags, groupId, images, postType } = req.body;
 
     const post = await Post.create({
       author: req.userId,
+      title: title?.trim() || undefined,
       content,
       postType: postType || 'post',
       tags: tags || [],
@@ -263,7 +264,7 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Private
 export const updatePost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, tags } = req.body;
+    const { title, content, tags } = req.body;
 
     let post = await Post.findById(req.params.id);
 
@@ -284,9 +285,14 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    const updateData: any = { content, tags };
+    if (title !== undefined) {
+      updateData.title = title?.trim() || undefined;
+    }
+
     post = await Post.findByIdAndUpdate(
       req.params.id,
-      { content, tags },
+      updateData,
       { new: true, runValidators: true }
     ).populate('author', 'username displayName avatar');
 

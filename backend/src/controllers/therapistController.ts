@@ -21,8 +21,8 @@ export const getOnlineTherapistsCount = async (req: AuthRequest, res: Response):
       data: {
         count,
         message: count === 1 
-          ? 'Er is 1 A.I. mentale gezondheid companion online die vragen kan beantwoorden'
-          : `Er zijn ${count} A.I. mentale gezondheid companions online die vragen kunnen beantwoorden`,
+          ? 'Er is 1 persoon online die vragen kan beantwoorden'
+          : `Er zijn ${count} mensen online die vragen kunnen beantwoorden`,
       },
     });
   } catch (error: any) {

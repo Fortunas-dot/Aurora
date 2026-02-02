@@ -4,6 +4,7 @@ export type PostType = 'post' | 'question' | 'story';
 
 export interface IPost extends Document {
   author: Types.ObjectId;
+  title?: string;
   content: string;
   postType: PostType;
   tags: string[];
@@ -26,6 +27,11 @@ const PostSchema = new Schema<IPost>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    title: {
+      type: String,
+      maxlength: [200, 'Title cannot exceed 200 characters'],
+      trim: true,
     },
     content: {
       type: String,

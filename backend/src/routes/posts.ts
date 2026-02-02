@@ -21,6 +21,10 @@ const router = Router();
 
 // Validation
 const postValidation = [
+  body('title')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Title cannot exceed 200 characters'),
   body('content')
     .notEmpty()
     .withMessage('Content is required')
