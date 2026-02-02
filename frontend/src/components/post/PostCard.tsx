@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -15,6 +16,7 @@ interface PostCardProps {
   onShare?: () => void;
   onSave?: () => void;
   onAuthorPress?: () => void;
+  onGroupPress?: () => void;
   currentUserId?: string;
   isSaved?: boolean;
 }
@@ -27,9 +29,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   onShare,
   onSave,
       onAuthorPress,
+      onGroupPress,
       currentUserId,
       isSaved,
 }) => {
+  const router = useRouter();
   const [isLiked, setIsLiked] = useState(
     currentUserId ? post.likes.includes(currentUserId) : false
   );
@@ -42,6 +46,13 @@ export const PostCard: React.FC<PostCardProps> = ({
     onLike?.();
   };
 
+  const handleGroupPress = () => {
+    if (post.groupId) {
+      router.push(`/group/${post.groupId}`);
+    }
+    onGroupPress?.();
+  };
+
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
     locale: nl,
@@ -49,6 +60,14 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <GlassCard style={styles.container} onPress={onPress} padding={0}>
+      {/* Group Badge (Reddit-style) */}
+      {post.group && (
+        <Pressable style={styles.groupBadge} onPress={handleGroupPress}>
+          <Ionicons name="people" size={14} color={COLORS.primary} />
+          <Text style={styles.groupName}>r/{post.group.name}</Text>
+        </Pressable>
+      )}
+
       {/* Header */}
       <Pressable style={styles.header} onPress={onAuthorPress}>
         <Avatar
@@ -166,10 +185,24 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
+  groupBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  groupName: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
+    paddingTop: SPACING.xs,
     paddingBottom: SPACING.sm,
   },
   headerInfo: {

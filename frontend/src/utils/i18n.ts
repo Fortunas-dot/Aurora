@@ -44,8 +44,8 @@ const translations = {
     on: 'Aan',
     off: 'Uit',
     
-    // Voice Therapy
-    'Voice Therapy': 'Voice Therapy',
+    // Voice Support
+    'Voice Therapy': 'Voice Support',
     'Listening...': 'Luisteren...',
     'Aurora is speaking...': 'Aurora spreekt...',
     'Processing...': 'Verwerken...',
@@ -58,7 +58,7 @@ const translations = {
     'Aurora responds with empathy and understanding': 'Aurora reageert met empathie en begrip',
     'Your conversations are private and secure': 'Je gesprekken zijn privé en veilig',
     'Login Required': 'Inloggen vereist',
-    'Please log in to use voice therapy': 'Log in om voice therapy te gebruiken',
+    'Please log in to use voice therapy': 'Log in om voice support te gebruiken',
     'Login': 'Inloggen',
   },
   en: {
@@ -102,8 +102,8 @@ const translations = {
     on: 'On',
     off: 'Off',
     
-    // Voice Therapy
-    'Voice Therapy': 'Voice Therapy',
+    // Voice Support
+    'Voice Therapy': 'Voice Support',
     'Listening...': 'Listening...',
     'Aurora is speaking...': 'Aurora is speaking...',
     'Processing...': 'Processing...',
@@ -116,7 +116,7 @@ const translations = {
     'Aurora responds with empathy and understanding': 'Aurora responds with empathy and understanding',
     'Your conversations are private and secure': 'Your conversations are private and secure',
     'Login Required': 'Login Required',
-    'Please log in to use voice therapy': 'Please log in to use voice therapy',
+    'Please log in to use voice therapy': 'Please log in to use voice support',
     'Login': 'Login',
   },
 };

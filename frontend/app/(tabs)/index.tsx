@@ -15,10 +15,9 @@ import { GlassCard, LoadingSpinner, Avatar, Badge } from '../../src/components/c
 import { PostCard } from '../../src/components/post/PostCard';
 import { FeedTabs, FeedTab, CategoryFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
-import { postService, Post, PostType } from '../../src/services/post.service';
+import { postService, Post } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
-import { shareService } from '../../src/services/share.service';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -34,7 +33,7 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(true);
   
   // Filter state
-  const [activeTab, setActiveTab] = useState<FeedTab>('all');
+  const [activeTab, setActiveTab] = useState<FeedTab>(isAuthenticated ? 'home' : 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   
@@ -43,18 +42,6 @@ export default function FeedScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Get postType based on active tab
-  const getPostTypeFromTab = (tab: FeedTab): PostType | undefined => {
-    switch (tab) {
-      case 'questions':
-        return 'question';
-      case 'stories':
-        return 'story';
-      default:
-        return undefined;
-    }
-  };
-
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (isLoading) return;
@@ -62,7 +49,6 @@ export default function FeedScreen() {
     setIsLoading(true);
     try {
       let response;
-      const postType = getPostTypeFromTab(activeTab);
       const tag = selectedCategory !== 'all' ? selectedCategory : undefined;
 
       // Handle search mode
@@ -70,62 +56,75 @@ export default function FeedScreen() {
         response = await postService.searchPosts(searchQuery, {
           page: pageNum,
           limit: 20,
-          postType,
         });
       }
-      // Handle different tabs
-      else if (activeTab === 'trending') {
+      // Handle different tabs (Reddit-style)
+      else if (activeTab === 'home') {
+        // Home: Posts from joined groups
+        response = await postService.getJoinedGroupsPosts({
+          page: pageNum,
+          limit: 20,
+          tag,
+          sortBy: sortOption,
+        });
+      } else if (activeTab === 'popular') {
+        // Popular: Trending posts
         response = await postService.getTrendingPosts({
           page: pageNum,
           limit: 20,
           tag,
-          postType,
-        });
-      } else if (activeTab === 'following') {
-        response = await postService.getFollowingPosts({
-          page: pageNum,
-          limit: 20,
-          tag,
-          postType,
         });
       } else if (activeTab === 'saved') {
         response = await postService.getSavedPosts(pageNum, 20);
       } else {
-        // All, Questions, Stories tabs
+        // All: All posts
         response = await postService.getPosts({
           page: pageNum,
           limit: 20,
           tag,
-          postType,
           sortBy: sortOption,
         });
       }
       
       if (response.success && response.data) {
+        // Filter out posts with invalid IDs
+        const validPosts = response.data.filter((post: Post) => {
+          if (!post || !post._id) return false;
+          // Check if post ID is a valid MongoDB ObjectId format (24 hex characters)
+          const postId = post._id.toString();
+          return /^[0-9a-fA-F]{24}$/.test(postId);
+        });
+        
         if (append) {
-          setPosts((prev) => [...prev, ...response.data!]);
+          setPosts((prev) => [...prev, ...validPosts]);
         } else {
-          setPosts(response.data);
+          setPosts(validPosts);
         }
         
         if (response.pagination) {
           setHasMore(pageNum < response.pagination.pages);
         }
       } else {
-        console.error('Error loading posts:', response.message);
+        // Only log non-404 errors (404 means no posts found, which is normal)
+        if (response.message && !response.message.includes('not found') && !response.message.includes('Invalid post ID format')) {
+          console.error('Error loading posts:', response.message);
+        }
         if (!append) {
           setPosts([]);
         }
       }
-    } catch (error) {
-      console.error('Error loading posts:', error);
+    } catch (error: any) {
+      // Only log if it's not a 404 or invalid ID format error
+      if (error.message && !error.message.includes('not found') && !error.message.includes('Invalid post ID format')) {
+        console.error('Error loading posts:', error);
+      }
       if (!append) {
         setPosts([]);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, activeTab, selectedCategory, sortOption, isSearching, searchQuery]);
+  }, [isLoading, activeTab, selectedCategory, sortOption, isSearching, searchQuery, isAuthenticated]);
 
   // Reload posts when filters change
   useEffect(() => {
@@ -231,8 +230,8 @@ export default function FeedScreen() {
   };
 
   const handleShare = async (post: Post) => {
-    const authorName = post.author.displayName || post.author.username;
-    await shareService.sharePost(post._id, post.content, authorName);
+    // Share functionality - can be implemented later with expo-sharing or native share
+    console.log('Share post:', post._id);
   };
 
   const handleSavePost = async (postId: string) => {
@@ -260,6 +259,7 @@ export default function FeedScreen() {
       onShare={() => handleShare(item)}
       onSave={() => handleSavePost(item._id)}
       onAuthorPress={() => router.push(`/user/${item.author._id}`)}
+      onGroupPress={() => item.groupId && router.push(`/group/${item.groupId}`)}
       currentUserId={user?._id}
       isSaved={item.isSaved}
     />
@@ -273,25 +273,20 @@ export default function FeedScreen() {
       };
     }
     switch (activeTab) {
-      case 'following':
+      case 'home':
         return {
           title: 'Nog geen posts',
-          subtitle: 'Volg andere gebruikers om hun posts hier te zien',
+          subtitle: 'Join communities/groepen om posts te zien in je Home feed',
+        };
+      case 'popular':
+        return {
+          title: 'Nog geen trending posts',
+          subtitle: 'Er zijn nog geen populaire posts',
         };
       case 'saved':
         return {
           title: 'Geen opgeslagen posts',
           subtitle: 'Sla interessante posts op om ze hier terug te vinden',
-        };
-      case 'questions':
-        return {
-          title: 'Nog geen vragen',
-          subtitle: 'Stel de eerste vraag aan de community!',
-        };
-      case 'stories':
-        return {
-          title: 'Nog geen verhalen',
-          subtitle: 'Deel je eerste verhaal met de community!',
         };
       default:
         return {
@@ -316,11 +311,7 @@ export default function FeedScreen() {
             onPress={handleCreatePost}
           >
             <Text style={styles.createPostPlaceholder}>
-              {activeTab === 'questions' 
-                ? 'Stel een vraag...' 
-                : activeTab === 'stories' 
-                  ? 'Deel je verhaal...' 
-                  : 'Deel je gedachten...'}
+              Deel je gedachten...
             </Text>
           </Pressable>
         </View>
@@ -405,10 +396,10 @@ export default function FeedScreen() {
       {/* Feed */}
       <FlatList
         data={posts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.feedContent}
-        ListHeaderComponent={!isSearching ? ListHeader : undefined}
+      renderItem={renderPost}
+      keyExtractor={(item) => item._id}
+      contentContainerStyle={styles.feedContent}
+      ListHeaderComponent={!isSearching ? ListHeader : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -435,10 +426,10 @@ export default function FeedScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons 
                 name={
-                  activeTab === 'questions' 
-                    ? 'help-circle-outline' 
-                    : activeTab === 'stories' 
-                      ? 'book-outline' 
+                  activeTab === 'home'
+                    ? 'home-outline'
+                    : activeTab === 'popular'
+                      ? 'trending-up-outline'
                       : activeTab === 'saved'
                         ? 'bookmark-outline'
                         : 'chatbubbles-outline'
@@ -448,6 +439,14 @@ export default function FeedScreen() {
               />
               <Text style={styles.emptyText}>{emptyState.title}</Text>
               <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
+              {activeTab === 'home' && isAuthenticated && (
+                <Pressable
+                  style={styles.browseGroupsButton}
+                  onPress={() => router.push('/(tabs)/groups')}
+                >
+                  <Text style={styles.browseGroupsButtonText}>Blader door groepen</Text>
+                </Pressable>
+              )}
             </View>
           )
         }
@@ -585,6 +584,19 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+  },
+  browseGroupsButton: {
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+  },
+  browseGroupsButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
   },
   fab: {
     position: 'absolute',

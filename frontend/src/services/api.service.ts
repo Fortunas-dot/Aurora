@@ -43,7 +43,10 @@ class ApiService {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('API GET Error:', response.status, errorData);
+        // Only log non-404 errors to reduce noise
+        if (response.status !== 404) {
+          console.error('API GET Error:', response.status, errorData);
+        }
         return {
           success: false,
           message: errorData.message || `HTTP ${response.status}`,

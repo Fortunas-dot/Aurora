@@ -1,7 +1,7 @@
 {
   "name": "aurora-backend",
   "version": "1.0.0",
-  "description": "Aurora Therapy AI Backend API",
+  "description": "Aurora A.I. Mental Health Support Companion Backend API",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",

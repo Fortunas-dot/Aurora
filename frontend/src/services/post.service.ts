@@ -1,5 +1,6 @@
 import { apiService, ApiResponse } from './api.service';
 import { User } from './auth.service';
+import { Group } from './group.service';
 
 export type PostType = 'post' | 'question' | 'story';
 export type SortOption = 'newest' | 'popular' | 'discussed';
@@ -12,6 +13,7 @@ export interface Post {
   tags: string[];
   images?: string[];
   groupId?: string;
+  group?: Group; // Group/community information
   likes: string[];
   commentsCount: number;
   isSaved?: boolean;
@@ -64,6 +66,17 @@ class PostService {
     let endpoint = `/posts/following?page=${page}&limit=${limit}`;
     if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
     if (postType) endpoint += `&postType=${postType}`;
+    
+    return apiService.get<Post[]>(endpoint);
+  }
+
+  // Get posts from joined groups (Reddit-style Home feed)
+  async getJoinedGroupsPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
+    const { page = 1, limit = 20, tag, postType, sortBy } = params;
+    let endpoint = `/posts/joined-groups?page=${page}&limit=${limit}`;
+    if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
+    if (postType) endpoint += `&postType=${postType}`;
+    if (sortBy) endpoint += `&sortBy=${sortBy}`;
     
     return apiService.get<Post[]>(endpoint);
   }

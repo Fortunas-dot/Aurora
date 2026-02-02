@@ -205,7 +205,7 @@ export default function AuroraScreen() {
               </View>
               <View style={styles.optionText}>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionTitle}>Voice Therapy</Text>
+                  <Text style={styles.optionTitle}>Voice Support</Text>
                   <View style={styles.comingSoonBadge}>
                     <Text style={styles.comingSoonText}>Binnenkort</Text>
                   </View>

@@ -120,7 +120,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
         </View>
       )}
 
-      {/* Therapeutic Feedback */}
+      {/* Mental Health Support Feedback */}
       {insights.therapeuticFeedback && (
         <View style={styles.insightSection}>
           <Text style={styles.insightLabel}>Feedback</Text>

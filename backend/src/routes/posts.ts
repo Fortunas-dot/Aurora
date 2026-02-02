@@ -10,6 +10,7 @@ import {
   reportPost,
   getTrendingPosts,
   getFollowingPosts,
+  getJoinedGroupsPosts,
   getSavedPosts,
   savePost,
   searchPosts,
@@ -33,6 +34,7 @@ router.get('/', optionalAuth, getPosts);
 // Special GET routes (must be before /:id to avoid route conflicts)
 router.get('/trending', optionalAuth, getTrendingPosts);
 router.get('/following', protect, getFollowingPosts);
+router.get('/joined-groups', protect, getJoinedGroupsPosts);
 router.get('/saved', protect, getSavedPosts);
 router.get('/search', optionalAuth, searchPosts);
 

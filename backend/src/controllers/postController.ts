@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import Post from '../models/Post';
 import User from '../models/User';
+import Group from '../models/Group';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
@@ -45,23 +46,70 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     const posts = await Post.find(query)
       .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sortOption)
       .skip(skip)
       .limit(limit);
 
     const total = await Post.countDocuments(query);
 
-    // Add isSaved status if user is authenticated
-    let postsWithSavedStatus = posts;
+    // Filter out posts with invalid IDs or missing author
+    const validPosts = posts.filter((post: any) => {
+      if (!post || !post._id) return false;
+      const postId = post._id.toString();
+      if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      if (!post.author || !post.author._id) return false;
+      return true;
+    });
+
+    // Add isSaved status and format group info if user is authenticated
+    let postsWithSavedStatus = validPosts;
     if (req.userId) {
       const user = await User.findById(req.userId);
       if (user && user.savedPosts) {
         const savedPostIds = user.savedPosts.map((id) => id.toString());
-        postsWithSavedStatus = posts.map((post: any) => ({
+        postsWithSavedStatus = validPosts.map((post: any) => ({
           ...post.toObject(),
           isSaved: savedPostIds.includes(post._id.toString()),
+          group: post.groupId ? {
+            _id: post.groupId._id,
+            name: post.groupId.name,
+            description: post.groupId.description,
+            tags: post.groupId.tags,
+            memberCount: post.groupId.memberCount,
+            isPrivate: post.groupId.isPrivate,
+            avatar: post.groupId.avatar,
+          } : undefined,
+        }));
+      } else {
+        postsWithSavedStatus = validPosts.map((post: any) => ({
+          ...post.toObject(),
+          isSaved: false,
+          group: post.groupId ? {
+            _id: post.groupId._id,
+            name: post.groupId.name,
+            description: post.groupId.description,
+            tags: post.groupId.tags,
+            memberCount: post.groupId.memberCount,
+            isPrivate: post.groupId.isPrivate,
+            avatar: post.groupId.avatar,
+          } : undefined,
         }));
       }
+    } else {
+      postsWithSavedStatus = validPosts.map((post: any) => ({
+        ...post.toObject(),
+        isSaved: false,
+        group: post.groupId ? {
+          _id: post.groupId._id,
+          name: post.groupId.name,
+          description: post.groupId.description,
+          tags: post.groupId.tags,
+          memberCount: post.groupId.memberCount,
+          isPrivate: post.groupId.isPrivate,
+          avatar: post.groupId.avatar,
+        } : undefined,
+      }));
     }
 
     res.json({
@@ -89,17 +137,38 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
   try {
     const { id } = req.params;
     
-    // Validate ObjectId format (24 hex characters)
-    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+    // Check if id is undefined or empty
+    if (!id || id.trim() === '') {
       res.status(400).json({
         success: false,
-        message: 'Invalid post ID format',
+        message: 'Post ID is required',
+      });
+      return;
+    }
+    
+    // Check if id matches special routes (should not happen, but safety check)
+    const specialRoutes = ['trending', 'following', 'joined-groups', 'saved', 'search'];
+    if (specialRoutes.includes(id.toLowerCase())) {
+      res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+      return;
+    }
+    
+    // Validate ObjectId format (24 hex characters)
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      // Silently return 404 instead of 400 to avoid confusing errors
+      res.status(404).json({
+        success: false,
+        message: 'Post not found',
       });
       return;
     }
 
     const post = await Post.findById(id)
-      .populate('author', 'username displayName avatar');
+      .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar');
 
     if (!post) {
       res.status(404).json({
@@ -109,8 +178,18 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // Add isSaved status if user is authenticated
+    // Add isSaved status and format group info if user is authenticated
     let postWithSavedStatus: any = post.toObject();
+    postWithSavedStatus.group = post.groupId ? {
+      _id: post.groupId._id,
+      name: post.groupId.name,
+      description: post.groupId.description,
+      tags: post.groupId.tags,
+      memberCount: post.groupId.memberCount,
+      isPrivate: post.groupId.isPrivate,
+      avatar: post.groupId.avatar,
+    } : undefined;
+    
     if (req.userId) {
       const user = await User.findById(req.userId);
       if (user && user.savedPosts) {
@@ -401,14 +480,53 @@ export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise
           pipeline: [{ $project: { username: 1, displayName: 1, avatar: 1 } }]
         }
       },
-      { $unwind: '$author' }
+      { $unwind: '$author' },
+      {
+        $lookup: {
+          from: 'groups',
+          localField: 'groupId',
+          foreignField: '_id',
+          as: 'groupId',
+          pipeline: [{ $project: { name: 1, description: 1, tags: 1, memberCount: 1, isPrivate: 1, avatar: 1 } }]
+        }
+      },
+      { $unwind: { path: '$groupId', preserveNullAndEmptyArrays: true } }
     ]);
 
     const total = await Post.countDocuments(query);
 
+    // Filter out posts with invalid IDs or missing author
+    const validPosts = posts.filter((post: any) => {
+      if (!post || !post._id) return false;
+      const postId = post._id.toString();
+      if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      if (!post.author || !post.author._id) return false;
+      return true;
+    });
+
+    // Format group info
+    const postsWithGroup = validPosts.map((post: any) => ({
+      ...post,
+      author: {
+        _id: post.author._id,
+        username: post.author.username,
+        displayName: post.author.displayName,
+        avatar: post.author.avatar,
+      },
+      group: post.groupId && post.groupId._id ? {
+        _id: post.groupId._id,
+        name: post.groupId.name,
+        description: post.groupId.description,
+        tags: post.groupId.tags,
+        memberCount: post.groupId.memberCount,
+        isPrivate: post.groupId.isPrivate,
+        avatar: post.groupId.avatar,
+      } : undefined,
+    }));
+
     res.json({
       success: true,
-      data: posts,
+      data: postsWithGroup,
       pagination: {
         page,
         limit,
@@ -462,15 +580,39 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
 
     const posts = await Post.find(query)
       .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
     const total = await Post.countDocuments(query);
 
+    // Filter out posts with invalid IDs or missing author
+    const validPosts = posts.filter((post: any) => {
+      if (!post || !post._id) return false;
+      const postId = post._id.toString();
+      if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      if (!post.author || !post.author._id) return false;
+      return true;
+    });
+
+    // Format group info
+    const postsWithGroup = validPosts.map((post: any) => ({
+      ...post.toObject(),
+      group: post.groupId ? {
+        _id: post.groupId._id,
+        name: post.groupId.name,
+        description: post.groupId.description,
+        tags: post.groupId.tags,
+        memberCount: post.groupId.memberCount,
+        isPrivate: post.groupId.isPrivate,
+        avatar: post.groupId.avatar,
+      } : undefined,
+    }));
+
     res.json({
       success: true,
-      data: posts,
+      data: postsWithGroup,
       pagination: {
         page,
         limit,
@@ -482,6 +624,134 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching following posts',
+    });
+  }
+};
+
+// @desc    Get posts from joined groups (Reddit-style Home feed)
+// @route   GET /api/posts/joined-groups
+// @access  Private
+export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+    const tag = req.query.tag as string;
+    const sortBy = req.query.sortBy as string || 'newest';
+
+    // Get the current user
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Find all groups where user is a member
+    const joinedGroups = await Group.find({
+      members: req.userId,
+    }).select('_id');
+
+    const joinedGroupIds = joinedGroups.map((g) => g._id);
+
+    if (joinedGroupIds.length === 0) {
+      res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0,
+        },
+      });
+      return;
+    }
+
+    // Build query for posts from joined groups
+    const query: any = {
+      groupId: { $in: joinedGroupIds },
+    };
+    
+    if (tag) {
+      query.tags = tag.toLowerCase();
+    }
+
+    // Determine sort order
+    let sortOption: any = { createdAt: -1 }; // default: newest
+    if (sortBy === 'popular') {
+      sortOption = { likes: -1, createdAt: -1 };
+    } else if (sortBy === 'discussed') {
+      sortOption = { commentsCount: -1, createdAt: -1 };
+    }
+
+    const posts = await Post.find(query)
+      .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar')
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Post.countDocuments(query);
+
+    // Filter out posts with invalid IDs or missing author
+    const validPosts = posts.filter((post: any) => {
+      if (!post || !post._id) return false;
+      const postId = post._id.toString();
+      if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      if (!post.author || !post.author._id) return false;
+      return true;
+    });
+
+    // Add isSaved status
+    let postsWithSavedStatus = validPosts;
+    if (user.savedPosts) {
+      const savedPostIds = user.savedPosts.map((id) => id.toString());
+      postsWithSavedStatus = validPosts.map((post: any) => ({
+        ...post.toObject(),
+        isSaved: savedPostIds.includes(post._id.toString()),
+        group: post.groupId ? {
+          _id: post.groupId._id,
+          name: post.groupId.name,
+          description: post.groupId.description,
+          tags: post.groupId.tags,
+          memberCount: post.groupId.memberCount,
+          isPrivate: post.groupId.isPrivate,
+          avatar: post.groupId.avatar,
+        } : undefined,
+      }));
+    } else {
+      postsWithSavedStatus = validPosts.map((post: any) => ({
+        ...post.toObject(),
+        isSaved: false,
+        group: post.groupId ? {
+          _id: post.groupId._id,
+          name: post.groupId.name,
+          description: post.groupId.description,
+          tags: post.groupId.tags,
+          memberCount: post.groupId.memberCount,
+          isPrivate: post.groupId.isPrivate,
+          avatar: post.groupId.avatar,
+        } : undefined,
+      }));
+    }
+
+    res.json({
+      success: true,
+      data: postsWithSavedStatus,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching joined groups posts',
     });
   }
 };

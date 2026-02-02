@@ -289,7 +289,7 @@ export default function ProfileScreen() {
             <MenuItem
               icon="help-circle-outline"
               title="Help & Support"
-              onPress={() => {}}
+              onPress={() => router.push('/help-support')}
             />
           </GlassCard>
         </View>

@@ -201,18 +201,39 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
       groupId: null, // Only public posts
     })
       .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Post.countDocuments({ 
-      author: req.params.id,
-      groupId: null,
+    // Filter out posts with invalid IDs or missing author
+    const validPosts = posts.filter((post: any) => {
+      if (!post || !post._id) return false;
+      const postId = post._id.toString();
+      if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      if (!post.author || !post.author._id) return false;
+      return true;
     });
+
+    // Format group info
+    const postsWithGroup = validPosts.map((post: any) => ({
+      ...post.toObject(),
+      group: post.groupId ? {
+        _id: post.groupId._id,
+        name: post.groupId.name,
+        description: post.groupId.description,
+        tags: post.groupId.tags,
+        memberCount: post.groupId.memberCount,
+        isPrivate: post.groupId.isPrivate,
+        avatar: post.groupId.avatar,
+      } : undefined,
+    }));
+
+    const total = validPosts.length;
 
     res.json({
       success: true,
-      data: posts,
+      data: postsWithGroup,
       pagination: {
         page,
         limit,
