@@ -270,6 +270,88 @@ export default function SettingsScreen() {
               onValueChange={setIsAnonymous}
             />
           </GlassCard>
+          
+          {/* Account Data & Privacy */}
+          <GlassCard padding={0} style={styles.menuCard}>
+            <Text style={styles.subsectionTitle}>{t.accountData}</Text>
+            <MenuItem
+              icon="download-outline"
+              title={t.exportData}
+              subtitle={t.exportDataDesc}
+              onPress={() => {
+                Alert.alert(
+                  t.exportData,
+                  'This feature will be available soon. You will be able to download all your account data in a JSON format.',
+                  [{ text: t.cancel, style: 'cancel' }]
+                );
+              }}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="trash-outline"
+              title={t.deleteAccount}
+              subtitle={t.deleteAccountDesc}
+              onPress={() => {
+                Alert.alert(
+                  t.deleteAccount,
+                  'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data, posts, comments, and messages.',
+                  [
+                    { text: t.cancel, style: 'cancel' },
+                    {
+                      text: t.deleteAccount,
+                      style: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          'Confirm Deletion',
+                          'This will permanently delete your account. Type DELETE to confirm.',
+                          [
+                            { text: t.cancel, style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => {
+                                // TODO: Implement account deletion
+                                Alert.alert('Account deletion', 'Account deletion feature will be implemented soon.');
+                              },
+                            },
+                          ]
+                        );
+                      },
+                    },
+                  ]
+                );
+              }}
+            />
+          </GlassCard>
+
+          {/* Privacy Policy & Terms */}
+          <GlassCard padding={0} style={styles.menuCard}>
+            <MenuItem
+              icon="document-text-outline"
+              title={t.privacyPolicy}
+              subtitle="Read our privacy policy"
+              onPress={() => {
+                Alert.alert(
+                  t.privacyPolicy,
+                  'Privacy policy will be available soon. This will contain information about how we collect, use, and protect your data.',
+                  [{ text: t.cancel, style: 'cancel' }]
+                );
+              }}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="document-outline"
+              title={t.termsOfService}
+              subtitle="Read our terms of service"
+              onPress={() => {
+                Alert.alert(
+                  t.termsOfService,
+                  'Terms of service will be available soon. This will contain the terms and conditions for using Aurora.',
+                  [{ text: t.cancel, style: 'cancel' }]
+                );
+              }}
+            />
+          </GlassCard>
         </View>
 
         {/* Notification Preferences */}
@@ -439,7 +521,7 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.md + 40 + SPACING.md,
   },
   subsectionTitle: {
-    ...TYPOGRAPHY.bodySmall,
+    ...TYPOGRAPHY.captionMedium,
     color: COLORS.textSecondary,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
@@ -469,6 +551,9 @@ const styles = StyleSheet.create({
   },
   authButton: {
     minWidth: 200,
+  },
+  menuCard: {
+    marginTop: SPACING.md,
   },
 });
 
