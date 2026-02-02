@@ -45,11 +45,13 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       query.tags = tag.toLowerCase();
     }
     
-    if (groupId) {
+    // CRITICAL FIX: Only filter by groupId if explicitly provided
+    // If no groupId specified, DO NOT add any groupId filter - show ALL posts
+    if (groupId && groupId !== 'null' && groupId !== '') {
       query.groupId = groupId;
     }
-    // If no groupId specified, show all posts (both with and without groups)
-    // This ensures posts with groupId are also shown in the "All" tab
+    // Explicitly ensure we don't filter by groupId when not specified
+    // This is critical - the old code had: else { query.groupId = null; } which was wrong
 
     if (postType && ['post', 'question', 'story'].includes(postType)) {
       query.postType = postType;
