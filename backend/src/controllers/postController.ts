@@ -89,10 +89,13 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     }).map((post: any) => {
       // If author is null (populate failed), create a fallback author
       if (!post.author || !post.author._id) {
-        // Use the original author ID from the post if available, otherwise use a placeholder
-        const originalAuthorId = post.author ? post.author.toString() : '000000000000000000000000';
+        // Get the original author ID from the post document (before populate)
+        const postObj = post.toObject();
+        const originalAuthorId = postObj.author && typeof postObj.author === 'object' && postObj.author._id 
+          ? postObj.author._id.toString() 
+          : (typeof post.author === 'string' ? post.author : '000000000000000000000000');
         return {
-          ...post.toObject(),
+          ...postObj,
           author: {
             _id: originalAuthorId,
             username: 'deleted_user',
