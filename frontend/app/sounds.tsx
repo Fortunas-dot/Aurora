@@ -6,14 +6,14 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  Slider,
   Dimensions,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio } from 'expo-av';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { BlurView } from 'expo-blur';
 import { GlassCard, GlassButton } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
@@ -25,7 +25,7 @@ export interface SoundScene {
   id: string;
   name: string;
   description: string;
-  category: 'focus' | 'sleep' | 'meditation';
+  category: 'focus' | 'sleep' | 'meditate' | 'breath';
   icon: keyof typeof Ionicons.glyphMap;
   gradient: string[];
   sounds: {
@@ -45,7 +45,7 @@ export const SOUND_SCENES: SoundScene[] = [
     description: 'Gentle rain for deep focus',
     category: 'focus',
     icon: 'rainy',
-    gradient: ['#1E3A5F', '#2C5282', '#2D3748'],
+    gradient: ['#1E3A5F', '#2C5282', '#1E293B'],
     sounds: [
       { id: 'rain', name: 'Rain', icon: 'rainy' },
       { id: 'thunder', name: 'Thunder', icon: 'flash' },
@@ -57,7 +57,7 @@ export const SOUND_SCENES: SoundScene[] = [
     description: 'Ambient café sounds',
     category: 'focus',
     icon: 'cafe',
-    gradient: ['#78350F', '#92400E', '#451A03'],
+    gradient: ['#78350F', '#92400E', '#5C2D0A'],
     sounds: [
       { id: 'coffee', name: 'Coffee Shop', icon: 'cafe' },
       { id: 'conversation', name: 'Conversation', icon: 'chatbubbles' },
@@ -81,7 +81,7 @@ export const SOUND_SCENES: SoundScene[] = [
     description: 'Nature sounds for concentration',
     category: 'focus',
     icon: 'leaf',
-    gradient: ['#14532D', '#166534', '#052E16'],
+    gradient: ['#14532D', '#166534', '#0A3D1F'],
     sounds: [
       { id: 'birds', name: 'Birds', icon: 'bird' },
       { id: 'wind', name: 'Wind', icon: 'cloud' },
@@ -107,7 +107,7 @@ export const SOUND_SCENES: SoundScene[] = [
     description: 'Crackling fire for relaxation',
     category: 'sleep',
     icon: 'flame',
-    gradient: ['#7C2D12', '#9A3412', '#431407'],
+    gradient: ['#7C2D12', '#9A3412', '#5C1F0A'],
     sounds: [
       { id: 'fire', name: 'Fire', icon: 'flame' },
       { id: 'crackling', name: 'Crackling', icon: 'radio' },
@@ -119,7 +119,7 @@ export const SOUND_SCENES: SoundScene[] = [
     description: 'Soothing rain for bedtime',
     category: 'sleep',
     icon: 'moon',
-    gradient: ['#1E1B4B', '#312E81', '#1E1B4B'],
+    gradient: ['#1E1B4B', '#312E81', '#0F0A2E'],
     sounds: [
       { id: 'rain', name: 'Rain', icon: 'rainy' },
       { id: 'wind', name: 'Wind', icon: 'cloud' },
@@ -138,12 +138,12 @@ export const SOUND_SCENES: SoundScene[] = [
       { id: 'brown', name: 'Brown Noise', icon: 'radio' },
     ],
   },
-  // Meditation Scenes
+  // Meditate Scenes
   {
     id: 'temple',
     name: 'Temple',
     description: 'Peaceful temple ambiance',
-    category: 'meditation',
+    category: 'meditate',
     icon: 'flower',
     gradient: ['#581C87', '#6B21A8', '#3B0764'],
     sounds: [
@@ -155,7 +155,7 @@ export const SOUND_SCENES: SoundScene[] = [
     id: 'waterfall',
     name: 'Waterfall',
     description: 'Flowing water for mindfulness',
-    category: 'meditation',
+    category: 'meditate',
     icon: 'water',
     gradient: ['#0E7490', '#0891B2', '#164E63'],
     sounds: [
@@ -167,12 +167,73 @@ export const SOUND_SCENES: SoundScene[] = [
     id: 'zen-garden',
     name: 'Zen Garden',
     description: 'Serene garden sounds',
-    category: 'meditation',
+    category: 'meditate',
     icon: 'leaf',
-    gradient: ['#166534', '#15803D', '#14532D'],
+    gradient: ['#166534', '#15803D', '#0F4A1F'],
     sounds: [
       { id: 'wind-chimes', name: 'Wind Chimes', icon: 'notifications' },
       { id: 'nature', name: 'Nature', icon: 'leaf' },
+    ],
+  },
+  {
+    id: 'crystal',
+    name: 'Crystal',
+    description: 'Harmonious crystal tones',
+    category: 'meditate',
+    icon: 'diamond',
+    gradient: ['#7C3AED', '#8B5CF6', '#5B21B6'],
+    sounds: [
+      { id: 'crystal', name: 'Crystal', icon: 'diamond' },
+      { id: 'singing-bowl', name: 'Singing Bowl', icon: 'radio' },
+    ],
+  },
+  // Breath Scenes
+  {
+    id: 'ocean-breath',
+    name: 'Ocean Breath',
+    description: 'Rhythmic waves for breathing',
+    category: 'breath',
+    icon: 'water',
+    gradient: ['#0891B2', '#06B6D4', '#0E7490'],
+    sounds: [
+      { id: 'waves', name: 'Waves', icon: 'water' },
+      { id: 'tide', name: 'Tide', icon: 'water' },
+    ],
+  },
+  {
+    id: 'forest-breath',
+    name: 'Forest Breath',
+    description: 'Nature rhythm for breathing',
+    category: 'breath',
+    icon: 'leaf',
+    gradient: ['#059669', '#10B981', '#047857'],
+    sounds: [
+      { id: 'wind', name: 'Wind', icon: 'cloud' },
+      { id: 'leaves', name: 'Leaves', icon: 'leaf' },
+    ],
+  },
+  {
+    id: 'desert',
+    name: 'Desert',
+    description: 'Calm desert breeze',
+    category: 'breath',
+    icon: 'sunny',
+    gradient: ['#D97706', '#F59E0B', '#B45309'],
+    sounds: [
+      { id: 'wind', name: 'Wind', icon: 'cloud' },
+      { id: 'sand', name: 'Sand', icon: 'radio' },
+    ],
+  },
+  {
+    id: 'mountain',
+    name: 'Mountain',
+    description: 'Fresh mountain air',
+    category: 'breath',
+    icon: 'mountain',
+    gradient: ['#475569', '#64748B', '#334155'],
+    sounds: [
+      { id: 'wind', name: 'Wind', icon: 'cloud' },
+      { id: 'birds', name: 'Birds', icon: 'bird' },
     ],
   },
 ];
@@ -188,7 +249,7 @@ interface PlayingSound {
 export default function SoundsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [selectedCategory, setSelectedCategory] = useState<'focus' | 'sleep' | 'meditation' | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'focus' | 'sleep' | 'meditate' | 'breath' | 'all'>('all');
   const [playingSounds, setPlayingSounds] = useState<Map<string, PlayingSound>>(new Map());
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -201,8 +262,8 @@ export default function SoundsScreen() {
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
-      interruptionModeIOS: Audio.InterruptionModeIOS.DoNotMix,
-      interruptionModeAndroid: Audio.InterruptionModeAndroid.DoNotMix,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
       shouldDuckAndroid: false,
     });
 
@@ -374,17 +435,17 @@ export default function SoundsScreen() {
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.categoryChip, selectedCategory === 'focus' && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory('focus')}
+            style={[styles.categoryChip, selectedCategory === 'meditate' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('meditate')}
           >
             <Ionicons
-              name="bulb-outline"
+              name="flower-outline"
               size={18}
-              color={selectedCategory === 'focus' ? COLORS.white : COLORS.textMuted}
+              color={selectedCategory === 'meditate' ? COLORS.white : COLORS.textMuted}
               style={styles.categoryIcon}
             />
-            <Text style={[styles.categoryChipText, selectedCategory === 'focus' && styles.categoryChipTextActive]}>
-              Focus
+            <Text style={[styles.categoryChipText, selectedCategory === 'meditate' && styles.categoryChipTextActive]}>
+              Meditate
             </Text>
           </Pressable>
           <Pressable
@@ -402,17 +463,31 @@ export default function SoundsScreen() {
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.categoryChip, selectedCategory === 'meditation' && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory('meditation')}
+            style={[styles.categoryChip, selectedCategory === 'breath' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('breath')}
           >
             <Ionicons
-              name="flower-outline"
+              name="pulse-outline"
               size={18}
-              color={selectedCategory === 'meditation' ? COLORS.white : COLORS.textMuted}
+              color={selectedCategory === 'breath' ? COLORS.white : COLORS.textMuted}
               style={styles.categoryIcon}
             />
-            <Text style={[styles.categoryChipText, selectedCategory === 'meditation' && styles.categoryChipTextActive]}>
-              Meditation
+            <Text style={[styles.categoryChipText, selectedCategory === 'breath' && styles.categoryChipTextActive]}>
+              Breath
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.categoryChip, selectedCategory === 'focus' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('focus')}
+          >
+            <Ionicons
+              name="bulb-outline"
+              size={18}
+              color={selectedCategory === 'focus' ? COLORS.white : COLORS.textMuted}
+              style={styles.categoryIcon}
+            />
+            <Text style={[styles.categoryChipText, selectedCategory === 'focus' && styles.categoryChipTextActive]}>
+              Focus
             </Text>
           </Pressable>
         </ScrollView>
