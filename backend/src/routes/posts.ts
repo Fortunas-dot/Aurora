@@ -15,6 +15,7 @@ import {
   savePost,
   searchPosts,
   getDebugLogs,
+  testQuery,
 } from '../controllers/postController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -43,6 +44,7 @@ router.get('/joined-groups', protect, getJoinedGroupsPosts);
 router.get('/saved', protect, getSavedPosts);
 router.get('/search', optionalAuth, searchPosts);
 router.get('/debug/logs', getDebugLogs);
+router.get('/debug/test-query', testQuery);
 
 // Single post GET route (must be after special routes)
 router.get('/:id', optionalAuth, getPost);

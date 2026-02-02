@@ -980,6 +980,59 @@ export const savePost = async (req: AuthRequest, res: Response): Promise<void> =
   }
 };
 
+// @desc    Test endpoint to see what query is executed
+// @route   GET /api/posts/debug/test-query
+// @access  Public (for debugging)
+export const testQuery = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const tag = req.query.tag as string;
+    const groupId = req.query.groupId as string;
+    const postType = req.query.postType as string;
+    const sortBy = req.query.sortBy as string || 'newest';
+
+    const query: any = {};
+    
+    if (tag) {
+      query.tags = tag.toLowerCase();
+    }
+    
+    if (groupId) {
+      query.groupId = groupId;
+    }
+    // If no groupId specified, show all posts (both with and without groups)
+
+    if (postType && ['post', 'question', 'story'].includes(postType)) {
+      query.postType = postType;
+    }
+
+    // Test the query directly
+    const totalAll = await Post.countDocuments({});
+    const totalWithQuery = await Post.countDocuments(query);
+    const postsRaw = await Post.find(query).select('_id author groupId').lean().limit(5);
+    
+    res.json({
+      success: true,
+      data: {
+        query,
+        totalAllPosts: totalAll,
+        totalWithQuery,
+        samplePosts: postsRaw.map((p: any) => ({
+          _id: p._id?.toString(),
+          author: p.author?.toString(),
+          groupId: p.groupId?.toString() || 'null',
+        })),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error testing query',
+    });
+  }
+};
+
 // @desc    Get debug logs
 // @route   GET /api/posts/debug/logs
 // @access  Public (for debugging)
