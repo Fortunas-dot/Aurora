@@ -67,6 +67,11 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy,queryString:JSON.stringify(query)},hypothesisId:'B'});
     // #endregion
 
+    // CRITICAL DEBUG: Log the exact query being executed
+    console.log('[CRITICAL] getPosts query:', JSON.stringify(query, null, 2));
+    console.log('[CRITICAL] groupId param:', groupId);
+    console.log('[CRITICAL] query.groupId value:', query.groupId);
+
     // First get post IDs and author IDs without populate to save original author IDs
     const postsRaw = await Post.find(query)
       .select('_id author groupId')
