@@ -16,6 +16,7 @@ import uploadRoutes from './routes/upload';
 import journalRoutes from './routes/journal';
 import ideaRoutes from './routes/ideas';
 import therapistRoutes from './routes/therapists';
+import seedRoutes from './routes/seed';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -65,6 +66,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/ideas', ideaRoutes);
 app.use('/api/therapists', therapistRoutes);
+app.use('/api/seed', seedRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
