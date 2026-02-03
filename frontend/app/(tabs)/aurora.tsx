@@ -191,35 +191,6 @@ export default function AuroraScreen() {
           
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/voice')}
-            padding="lg"
-          >
-            <View style={styles.optionContent}>
-              <View style={styles.optionIconContainer}>
-                <LinearGradient
-                  colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
-                  style={styles.optionIconGradient}
-                >
-                  <Ionicons name="mic" size={28} color={COLORS.primary} />
-                </LinearGradient>
-              </View>
-              <View style={styles.optionText}>
-                <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionTitle}>Voice Support</Text>
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
-                  </View>
-                </View>
-                <Text style={styles.optionDescription}>
-                  Talk with Aurora via voice in a safe environment
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
-            </View>
-          </GlassCard>
-
-          <GlassCard
-            style={styles.optionCard}
             onPress={() => router.push('/text-chat')}
             padding="lg"
           >
@@ -316,7 +287,33 @@ export default function AuroraScreen() {
 
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/sounds')}
+            padding="lg"
+          >
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <LinearGradient
+                  colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+                  style={styles.optionIconGradient}
+                >
+                  <Ionicons name="mic" size={28} color={COLORS.primary} />
+                </LinearGradient>
+              </View>
+              <View style={styles.optionText}>
+                <View style={styles.optionTitleRow}>
+                  <Text style={styles.optionTitle}>Voice Chat</Text>
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  </View>
+                </View>
+                <Text style={styles.optionDescription}>
+                  Talk with Aurora via voice in a safe environment
+                </Text>
+              </View>
+            </View>
+          </GlassCard>
+
+          <GlassCard
+            style={styles.optionCard}
             padding="lg"
           >
             <View style={styles.optionContent}>
@@ -329,12 +326,16 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
+                <View style={styles.optionTitleRow}>
+                  <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  </View>
+                </View>
                 <Text style={styles.optionDescription}>
                   Mix ambient sounds for focus, sleep, and relaxation
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
             </View>
           </GlassCard>
         </View>

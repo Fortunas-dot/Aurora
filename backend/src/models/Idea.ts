@@ -66,3 +66,4 @@ IdeaSchema.index({ upvotes: -1, downvotes: 1 });
 
 export default mongoose.model<IIdea>('Idea', IdeaSchema);
 
+

@@ -102,8 +102,8 @@ export default function RegisterScreen() {
                 <Ionicons name="person-add" size={36} color={COLORS.primary} />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>Account Aanmaken</Text>
-            <Text style={styles.subtitle}>Word lid van de Aurora community</Text>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join the Aurora community</Text>
           </View>
 
           {/* Register Form */}
@@ -122,8 +122,8 @@ export default function RegisterScreen() {
             <GlassInput
               value={username}
               onChangeText={setUsername}
-              placeholder="Gebruikersnaam"
-              label="Gebruikersnaam"
+              placeholder="Username"
+              label="Username"
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={30}
@@ -133,8 +133,8 @@ export default function RegisterScreen() {
             <GlassInput
               value={password}
               onChangeText={setPassword}
-              placeholder="Wachtwoord"
-              label="Wachtwoord"
+              placeholder="Password"
+              label="Password"
               secureTextEntry
               icon="lock-closed-outline"
             />
@@ -142,8 +142,8 @@ export default function RegisterScreen() {
             <GlassInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Bevestig wachtwoord"
-              label="Bevestig wachtwoord"
+              placeholder="Confirm password"
+              label="Confirm password"
               secureTextEntry
               icon="lock-closed-outline"
             />
@@ -159,12 +159,12 @@ export default function RegisterScreen() {
             <View style={styles.privacyNote}>
               <Ionicons name="shield-checkmark" size={16} color={COLORS.success} />
               <Text style={styles.privacyText}>
-                Je privacy is belangrijk. Je kunt altijd anoniem blijven.
+                Your privacy is important. You can always stay anonymous.
               </Text>
             </View>
 
             <GlassButton
-              title="Registreren"
+              title="Register"
               onPress={handleRegister}
               variant="primary"
               size="lg"
@@ -176,15 +176,15 @@ export default function RegisterScreen() {
 
           {/* Login Link */}
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Heb je al een account? </Text>
+            <Text style={styles.loginText}>Already have an account? </Text>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.loginLink}>Inloggen</Text>
+              <Text style={styles.loginLink}>Log in</Text>
             </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={isLoading} message="Account aanmaken..." />
+      <LoadingOverlay visible={isLoading} message="Creating account..." />
     </LinearGradient>
   );
 }

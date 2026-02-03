@@ -17,6 +17,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { groupService, Group } from '../../src/services/group.service';
 import { postService, Post } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { getCountryName } from '../../src/constants/countries';
 
 export default function GroupDetailScreen() {
   const router = useRouter();
@@ -171,9 +172,9 @@ export default function GroupDetailScreen() {
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
-          <Text style={styles.errorText}>Groep niet gevonden</Text>
+          <Text style={styles.errorText}>Group not found</Text>
           <GlassButton
-            title="Terug"
+            title="Back"
             onPress={() => router.back()}
             variant="primary"
             style={styles.backButton}
@@ -193,7 +194,7 @@ export default function GroupDetailScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Groep</Text>
+        <Text style={styles.headerTitle}>Group</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -226,7 +227,13 @@ export default function GroupDetailScreen() {
                   </View>
                   <View style={styles.groupMeta}>
                     <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.groupMetaText}>{group.memberCount} leden</Text>
+                    <Text style={styles.groupMetaText}>{group.memberCount} members</Text>
+                    {group.country && (
+                      <>
+                        <Ionicons name="globe-outline" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
+                        <Text style={styles.groupMetaText}>{getCountryName(group.country)}</Text>
+                      </>
+                    )}
                   </View>
                 </View>
               </View>
@@ -245,7 +252,7 @@ export default function GroupDetailScreen() {
 
               <View style={styles.groupActions}>
                 <GlassButton
-                  title={group.isMember ? 'Lid' : 'Word lid'}
+                  title={group.isMember ? 'Joined' : 'Join'}
                   onPress={handleJoinLeave}
                   variant={group.isMember ? 'outline' : 'primary'}
                   isLoading={isJoining}
@@ -258,7 +265,7 @@ export default function GroupDetailScreen() {
                     onPress={() => router.push(`/create-post?groupId=${group._id}`)}
                   >
                     <Ionicons name="add-circle" size={24} color={COLORS.primary} />
-                    <Text style={styles.createPostButtonText}>Nieuwe post</Text>
+                    <Text style={styles.createPostButtonText}>New post</Text>
                   </Pressable>
                 )}
               </View>
@@ -293,11 +300,11 @@ export default function GroupDetailScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Nog geen posts</Text>
+            <Text style={styles.emptyText}>No posts yet</Text>
             <Text style={styles.emptySubtext}>
               {group.isMember
-                ? 'Wees de eerste om iets te delen!'
-                : 'Word lid om posts te zien'}
+                ? 'Be the first to share something!'
+                : 'Join to see posts'}
             </Text>
           </View>
         }

@@ -8,3 +8,4 @@ router.get('/online-count', optionalAuth, getOnlineTherapistsCount);
 
 export default router;
 
+

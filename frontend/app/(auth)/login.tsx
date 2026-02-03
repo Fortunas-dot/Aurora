@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
+import { AuroraCore } from '../../src/components/voice/AuroraCore';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,17 +58,10 @@ export default function LoginScreen() {
           {/* Logo/Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="sparkles" size={40} color={COLORS.primary} />
-              </LinearGradient>
+              <AuroraCore state="idle" audioLevel={0} size={120} />
             </View>
-            <Text style={styles.title}>Welkom Terug</Text>
-            <Text style={styles.subtitle}>Log in om verder te gaan met Aurora</Text>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Log in to continue with Aurora</Text>
           </View>
 
           {/* Login Form */}
@@ -86,8 +80,8 @@ export default function LoginScreen() {
             <GlassInput
               value={password}
               onChangeText={setPassword}
-              placeholder="Wachtwoord"
-              label="Wachtwoord"
+              placeholder="Password"
+              label="Password"
               secureTextEntry
               icon="lock-closed-outline"
             />
@@ -100,7 +94,7 @@ export default function LoginScreen() {
             )}
 
             <GlassButton
-              title="Inloggen"
+              title="Log in"
               onPress={handleLogin}
               variant="primary"
               size="lg"
@@ -110,28 +104,28 @@ export default function LoginScreen() {
             />
 
             <Pressable style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Wachtwoord vergeten?</Text>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
             </Pressable>
           </GlassCard>
 
           {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Nog geen account? </Text>
+            <Text style={styles.registerText}>Don't have an account? </Text>
             <Pressable onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.registerLink}>Registreren</Text>
+              <Text style={styles.registerLink}>Register</Text>
             </Pressable>
           </View>
 
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>of</Text>
+            <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {/* Continue as Guest */}
           <GlassButton
-            title="Doorgaan als gast"
+            title="Continue as guest"
             onPress={() => router.replace('/(tabs)')}
             variant="ghost"
             icon={<Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={{ marginRight: SPACING.sm }} />}
@@ -140,7 +134,7 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={isLoading} message="Inloggen..." />
+      <LoadingOverlay visible={isLoading} message="Logging in..." />
     </LinearGradient>
   );
 }
@@ -163,15 +157,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: SPACING.lg,
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
   },
   title: {
     ...TYPOGRAPHY.h1,

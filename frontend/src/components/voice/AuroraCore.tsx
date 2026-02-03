@@ -46,10 +46,10 @@ const OrganicBlob = ({
   useEffect(() => {
     // Optimize durations for smaller sizes (smoother animations)
     const isSmall = coreSize < 100;
-    const baseDuration = isSmall ? 2000 + index * 300 : 3000 + index * 600;
-    const delay = isSmall ? index * 150 : index * 300;
+    const baseDuration = isSmall ? 4000 + index * 500 : 6000 + index * 800;
+    const delay = isSmall ? index * 200 : index * 400;
 
-    // Organic squishing animation (scaleX vs scaleY) - smoother easing
+    // Organic squishing animation (scaleX vs scaleY) - smoother easing with inOut
     Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
@@ -57,13 +57,13 @@ const OrganicBlob = ({
           Animated.timing(scaleX, {
             toValue: 1.15,
             duration: baseDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1), // Smoother bezier curve
+            easing: Easing.inOut(Easing.ease), // Much smoother easing
             useNativeDriver: true,
           }),
           Animated.timing(scaleY, {
             toValue: 0.9,
             duration: baseDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ]),
@@ -71,47 +71,47 @@ const OrganicBlob = ({
           Animated.timing(scaleX, {
             toValue: 0.9,
             duration: baseDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(scaleY, {
             toValue: 1.15,
             duration: baseDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ]),
       ])
     ).start();
 
-    // Rotation - faster for small sizes
+    // Rotation - slower and smoother for small sizes
     const rotationSpeed = isSmall 
-      ? (state === 'speaking' ? 4000 : state === 'listening' ? 6000 : 12000)
-      : (state === 'speaking' ? 6000 : state === 'listening' ? 10000 : 18000);
+      ? (state === 'speaking' ? 8000 : state === 'listening' ? 12000 : 24000)
+      : (state === 'speaking' ? 12000 : state === 'listening' ? 20000 : 36000);
     Animated.loop(
       Animated.timing(rotation, {
         toValue: index % 2 === 0 ? 1 : -1,
-        duration: rotationSpeed + index * (isSmall ? 1000 : 2000),
+        duration: rotationSpeed + index * (isSmall ? 2000 : 4000),
         easing: Easing.linear,
         useNativeDriver: true,
       })
     ).start();
 
-    // Floating drift - reduced for small sizes
+    // Floating drift - smoother and slower for small sizes
     const driftAmount = isSmall ? 6 + index * 1.5 : 12 + index * 3;
-    const driftDuration = isSmall ? 1800 + index * 200 : 2500 + index * 400;
+    const driftDuration = isSmall ? 3600 + index * 400 : 5000 + index * 800;
     Animated.loop(
       Animated.sequence([
         Animated.timing(translateX, {
           toValue: config.offsetX + driftAmount * Math.sin(index * 0.7),
           duration: driftDuration,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(translateX, {
           toValue: config.offsetX - driftAmount * Math.sin(index * 0.7),
           duration: driftDuration,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
@@ -122,51 +122,53 @@ const OrganicBlob = ({
         Animated.timing(translateY, {
           toValue: config.offsetY + driftAmount * Math.cos(index * 0.5),
           duration: driftDuration * 1.1,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(translateY, {
           toValue: config.offsetY - driftAmount * Math.cos(index * 0.5),
           duration: driftDuration * 1.1,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    // Breathing scale - smoother
-    const breathDuration = isSmall ? 1600 + index * 200 : 2200 + index * 400;
+    // Breathing scale - much smoother
+    const breathDuration = isSmall ? 3200 + index * 400 : 4400 + index * 800;
     Animated.loop(
       Animated.sequence([
         Animated.timing(scale, {
           toValue: 1.08,
           duration: breathDuration,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(scale, {
           toValue: 0.94,
           duration: breathDuration,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     ).start();
   }, [state, coreSize]);
 
-  // Audio reactive
+  // Audio reactive - smoother transitions
   useEffect(() => {
     if (state === 'speaking' || state === 'listening') {
       const boost = audioLevel * 0.3;
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: Math.min(1, config.opacity + boost),
-          duration: 80,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(scale, {
           toValue: 1 + audioLevel * 0.15,
-          duration: 80,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
       ]).start();
@@ -234,7 +236,7 @@ const FloatingParticle = ({
 
   useEffect(() => {
     const isSmall = coreSize < 100;
-    const duration = isSmall ? 1200 + Math.random() * 800 : 1800 + Math.random() * 1500;
+    const duration = isSmall ? 2400 + Math.random() * 1600 : 3600 + Math.random() * 3000;
     const amplitude = isSmall ? 8 + Math.random() * 5 : 15 + Math.random() * 10;
     
     Animated.loop(
@@ -243,13 +245,13 @@ const FloatingParticle = ({
           Animated.timing(translateX, {
             toValue: amplitude * Math.sin(angle * 2 + index),
             duration: duration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1), // Smoother bezier
+            easing: Easing.inOut(Easing.ease), // Much smoother
             useNativeDriver: true,
           }),
           Animated.timing(translateX, {
             toValue: -amplitude * Math.sin(angle * 2 + index),
             duration: duration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ]),
@@ -257,32 +259,32 @@ const FloatingParticle = ({
           Animated.timing(translateY, {
             toValue: amplitude * Math.cos(angle * 3 + index),
             duration: duration * 1.1,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(translateY, {
             toValue: -amplitude * Math.cos(angle * 3 + index),
             duration: duration * 1.1,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ]),
         ])
       ).start();
 
-      const opacityDuration = isSmall ? 700 + index * 50 : 1000 + index * 80;
+      const opacityDuration = isSmall ? 1400 + index * 100 : 2000 + index * 160;
       Animated.loop(
         Animated.sequence([
           Animated.timing(opacity, {
             toValue: 0.9,
             duration: opacityDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
             toValue: 0.15,
             duration: opacityDuration,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ])
@@ -293,7 +295,8 @@ const FloatingParticle = ({
     if (state === 'speaking' || state === 'listening') {
       Animated.timing(scale, {
         toValue: 1 + audioLevel * 1.2,
-        duration: 60,
+        duration: 120,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }).start();
     }
@@ -337,8 +340,8 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
 
     Animated.spring(containerScale, {
         toValue: targetScale,
-      tension: 40,
-      friction: 7,
+      tension: 30, // Lower tension = smoother
+      friction: 10, // Higher friction = smoother
         useNativeDriver: true,
       }).start();
   }, [state]);
@@ -347,7 +350,8 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
     if (state === 'speaking' || state === 'listening') {
       Animated.timing(pulseScale, {
         toValue: 1 + audioLevel * 0.12,
-        duration: 60,
+        duration: 120,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }).start();
     }

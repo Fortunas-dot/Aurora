@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../../constants/theme';
@@ -159,8 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    minHeight: 52,
-    paddingVertical: 0,
+    height: 52,
   },
   containerFocused: {
     backgroundColor: COLORS.glass.background,
@@ -177,15 +177,19 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...TYPOGRAPHY.body,
     color: COLORS.text,
     paddingHorizontal: SPACING.md,
+    fontSize: 16,
+    fontWeight: '400' as const,
   },
   inputSingleLine: {
-    paddingVertical: SPACING.md,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
     height: 52,
+    paddingTop: Platform.OS === 'android' ? 18 : 16,
+    paddingBottom: Platform.OS === 'android' ? 18 : 16,
+    textAlignVertical: Platform.OS === 'android' ? 'top' : 'center',
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 16 : 20,
+    fontSize: 16,
   },
   inputMultiline: {
     minHeight: 100,
