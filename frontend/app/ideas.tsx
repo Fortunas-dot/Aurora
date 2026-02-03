@@ -372,6 +372,21 @@ export default function IdeasScreen() {
         </View>
       </View>
 
+      {/* Info Banner */}
+      <View style={styles.infoBannerContainer}>
+        <GlassCard style={styles.infoBanner} padding="md" gradient>
+          <View style={styles.infoBannerContent}>
+            <Ionicons name="eye" size={24} color={COLORS.primary} />
+            <View style={styles.infoBannerText}>
+              <Text style={styles.infoBannerTitle}>Your Voice Matters</Text>
+              <Text style={styles.infoBannerDescription}>
+                We watch this page 24/7 and listen to our users. You decide what we'll add next to Aurora.
+              </Text>
+            </View>
+          </View>
+        </GlassCard>
+      </View>
+
       {/* Ideas List */}
       <FlatList
         data={ideas}
@@ -707,6 +722,33 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: SPACING.md,
+  },
+  infoBannerContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  infoBanner: {
+    marginBottom: 0,
+  },
+  infoBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+  },
+  infoBannerText: {
+    flex: 1,
+  },
+  infoBannerTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  infoBannerDescription: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
   modalOverlay: {
     position: 'absolute',

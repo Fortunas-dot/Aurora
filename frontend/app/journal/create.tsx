@@ -596,7 +596,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'center',
     textAlignVertical: 'center',
-    lineHeight: 28,
+    lineHeight: 24,
+    includeFontPadding: false,
   },
   moodValue: {
     ...TYPOGRAPHY.caption,

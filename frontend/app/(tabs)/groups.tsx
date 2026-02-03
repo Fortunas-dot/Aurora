@@ -330,8 +330,11 @@ export default function GroupsScreen() {
             />
           </Pressable>
           <View style={styles.buddyInfo}>
-            <Pressable onPress={() => router.push(`/user/${item._id}`)}>
-              <Text style={styles.buddyName}>{item.displayName || item.username}</Text>
+            <Pressable 
+              onPress={() => router.push(`/user/${item._id}`)}
+              style={styles.buddyInfoText}
+            >
+              <Text style={styles.buddyName} numberOfLines={1}>{item.displayName || item.username}</Text>
               {item.bio && (
                 <Text style={styles.buddyBio} numberOfLines={1}>
                   {item.bio}
@@ -776,6 +779,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minWidth: 0,
+  },
+  buddyInfoText: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: SPACING.sm,
   },
   buddyName: {
     ...TYPOGRAPHY.bodyMedium,
@@ -791,6 +800,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
+    flexShrink: 0,
   },
   messageButton: {
     width: 36,
@@ -804,6 +814,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     minWidth: 80,
+    flexShrink: 0,
   },
   loadingContainer: {
     padding: SPACING.xxl,

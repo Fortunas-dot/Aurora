@@ -1,4 +1,4 @@
-import { ViewStyle, TextStyle } from 'react-native';
+import { ViewStyle, TextStyle, Platform } from 'react-native';
 
 // Dark theme with glass effect colors
 export const COLORS = {
@@ -83,45 +83,66 @@ export const SPACING = {
   xxl: 48,
 };
 
+// SF Pro font family - iOS uses SF Pro, Android uses Roboto as fallback
+const FONT_FAMILY = Platform.select({
+  ios: 'SF Pro Display', // For headings
+  android: 'Roboto',
+  default: 'System',
+});
+
+const FONT_FAMILY_TEXT = Platform.select({
+  ios: 'SF Pro Text', // For body text
+  android: 'Roboto',
+  default: 'System',
+});
+
 export const TYPOGRAPHY = {
   h1: {
+    fontFamily: FONT_FAMILY,
     fontSize: 32,
     fontWeight: '700' as const,
     lineHeight: 40,
     letterSpacing: -0.5,
   },
   h2: {
+    fontFamily: FONT_FAMILY,
     fontSize: 24,
     fontWeight: '600' as const,
     lineHeight: 32,
     letterSpacing: -0.3,
   },
   h3: {
+    fontFamily: FONT_FAMILY,
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 28,
   },
   body: {
+    fontFamily: FONT_FAMILY_TEXT,
     fontSize: 16,
     fontWeight: '400' as const,
     lineHeight: 24,
   },
   bodyMedium: {
+    fontFamily: FONT_FAMILY_TEXT,
     fontSize: 16,
     fontWeight: '500' as const,
     lineHeight: 24,
   },
   caption: {
+    fontFamily: FONT_FAMILY_TEXT,
     fontSize: 12,
     fontWeight: '400' as const,
     lineHeight: 16,
   },
   captionMedium: {
+    fontFamily: FONT_FAMILY_TEXT,
     fontSize: 12,
     fontWeight: '500' as const,
     lineHeight: 16,
   },
   small: {
+    fontFamily: FONT_FAMILY_TEXT,
     fontSize: 14,
     fontWeight: '400' as const,
     lineHeight: 20,

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform, Animated, Dimensions, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,8 @@ import { GlassCard, GlassButton } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
+
+const { width, height } = Dimensions.get('window');
 
 // Daily quotes - selected based on day of the year
 const DAILY_QUOTES = [
@@ -47,6 +49,108 @@ const getGreeting = (): string => {
   return 'Good evening';
 };
 
+// Animated star component
+const AnimatedStar = ({ index }: { index: number }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const initialX = Math.random() * 100;
+  const initialY = Math.random() * 100;
+  const speed = 20 + Math.random() * 30; // Different speeds for each star
+  const direction = Math.random() * Math.PI * 2; // Random direction
+  const distance = 30 + Math.random() * 50; // How far the star moves
+
+  useEffect(() => {
+    const duration = 3000 + Math.random() * 4000; // 3-7 seconds
+
+    // Create a looping animation
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.cos(direction) * distance,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: Math.sin(direction) * distance,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(opacity, {
+              toValue: 0.1,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0.3 + Math.random() * 0.4,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 0.5,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.star,
+        {
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+    />
+  );
+};
+
 export default function AuroraScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -54,6 +158,11 @@ export default function AuroraScreen() {
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Aurora background animation
+  const auroraAnim1 = useRef(new Animated.Value(0)).current;
+  const auroraAnim2 = useRef(new Animated.Value(0)).current;
+  const auroraAnim3 = useRef(new Animated.Value(0)).current;
 
   const loadInsights = useCallback(async () => {
     if (!isAuthenticated) {
@@ -78,6 +187,33 @@ export default function AuroraScreen() {
     loadInsights();
   }, [loadInsights]);
 
+  // Animate aurora background
+  useEffect(() => {
+    const createAuroraAnimation = (animValue: Animated.Value, duration: number, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: duration,
+            delay: delay,
+            useNativeDriver: false,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: duration,
+            useNativeDriver: false,
+          }),
+        ])
+      );
+    };
+
+    Animated.parallel([
+      createAuroraAnimation(auroraAnim1, 8000, 0),
+      createAuroraAnimation(auroraAnim2, 10000, 2000),
+      createAuroraAnimation(auroraAnim3, 12000, 4000),
+    ]).start();
+  }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadInsights();
@@ -87,11 +223,95 @@ export default function AuroraScreen() {
   const greeting = getGreeting();
   const userName = user?.displayName || user?.username || 'Friend';
 
+  // Interpolate aurora positions
+  const aurora1X = auroraAnim1.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-20%', '20%'],
+  });
+  const aurora1Y = auroraAnim1.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-10%', '10%'],
+  });
+  const aurora2X = auroraAnim2.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['10%', '-10%'],
+  });
+  const aurora2Y = auroraAnim2.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-15%', '15%'],
+  });
+  const aurora3X = auroraAnim3.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-15%', '15%'],
+  });
+  const aurora3Y = auroraAnim3.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['10%', '-10%'],
+  });
+
   return (
-    <LinearGradient
-      colors={COLORS.backgroundGradient}
-      style={styles.container}
-    >
+    <View style={styles.container}>
+      {/* Base gradient */}
+      <LinearGradient
+        colors={['#0A0E1A', '#0F1625', '#151B2E', '#1A2238']}
+        style={StyleSheet.absoluteFill}
+      />
+      
+      {/* Aurora layers */}
+      <Animated.View
+        style={[
+          styles.auroraLayer,
+          {
+            transform: [{ translateX: aurora1X }, { translateY: aurora1Y }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['rgba(96, 165, 250, 0.15)', 'rgba(167, 139, 250, 0.12)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      
+      <Animated.View
+        style={[
+          styles.auroraLayer,
+          {
+            transform: [{ translateX: aurora2X }, { translateY: aurora2Y }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['transparent', 'rgba(94, 234, 212, 0.1)', 'rgba(139, 92, 246, 0.15)', 'transparent']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      
+      <Animated.View
+        style={[
+          styles.auroraLayer,
+          {
+            transform: [{ translateX: aurora3X }, { translateY: aurora3Y }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['rgba(167, 139, 250, 0.1)', 'transparent', 'rgba(96, 165, 250, 0.12)', 'rgba(94, 234, 212, 0.08)']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      
+      {/* Star field effect */}
+      <View style={styles.starField}>
+        {Array.from({ length: 50 }).map((_, i) => (
+          <AnimatedStar key={i} index={i} />
+        ))}
+      </View>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Text style={styles.headerTitle}>Aurora AI</Text>
@@ -181,6 +401,16 @@ export default function AuroraScreen() {
                   <Text style={styles.quickActionText}>Insights</Text>
                 </GlassCard>
               </Pressable>
+              
+              <Pressable
+                style={styles.quickActionButton}
+                onPress={() => router.push('/ideas')}
+              >
+                <GlassCard style={styles.quickActionCard} padding="md">
+                  <Ionicons name="bulb" size={28} color={COLORS.warning} />
+                  <Text style={styles.quickActionText}>Submit Idea</Text>
+                </GlassCard>
+              </Pressable>
             </View>
           </View>
         )}
@@ -204,7 +434,7 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Text Chat</Text>
+                <Text style={styles.optionTitle}>Chat with Aurora</Text>
                 <Text style={styles.optionDescription}>
                   Chat with Aurora via text at your own pace
                 </Text>
@@ -299,15 +529,15 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Voice Sessions</Text>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionTitle}>Voice Chat</Text>
+                  <Text style={styles.optionDescription}>
+                    Talk with Aurora via voice in a safe environment
+                  </Text>
                   <View style={styles.comingSoonBadge}>
                     <Text style={styles.comingSoonText}>Coming Soon</Text>
                   </View>
                 </View>
-                <Text style={styles.optionDescription}>
-                  Talk with Aurora via voice in a safe environment
-                </Text>
               </View>
             </View>
           </GlassCard>
@@ -326,27 +556,51 @@ export default function AuroraScreen() {
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
+                  <Text style={styles.optionDescription}>
+                    Mix ambient sounds for focus, sleep, and relaxation
+                  </Text>
                   <View style={styles.comingSoonBadge}>
                     <Text style={styles.comingSoonText}>Coming Soon</Text>
                   </View>
                 </View>
-                <Text style={styles.optionDescription}>
-                  Mix ambient sounds for focus, sleep, and relaxation
-                </Text>
               </View>
             </View>
           </GlassCard>
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+  },
+  auroraLayer: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: height * 1.5,
+    top: -height * 0.25,
+    left: -width * 0.25,
+    borderRadius: width,
+    opacity: 0.6,
+  },
+  starField: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
   },
   header: {
     alignItems: 'center',
@@ -399,32 +653,37 @@ const styles = StyleSheet.create({
   optionText: {
     flex: 1,
     marginLeft: SPACING.md,
-  },
-  optionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: 2,
+    minWidth: 0,
   },
   optionTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
+    marginBottom: 4,
+  },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  optionDescription: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    flex: 1,
+    flexShrink: 1,
   },
   comingSoonBadge: {
     backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
     borderRadius: 8,
+    flexShrink: 0,
   },
   comingSoonText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.background,
     fontWeight: '600',
     fontSize: 10,
-  },
-  optionDescription: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
   },
   welcomeSection: {
     paddingHorizontal: SPACING.md,
@@ -490,10 +749,12 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.sm,
   },
   quickActionButton: {
     flex: 1,
+    minWidth: '30%',
   },
   quickActionCard: {
     alignItems: 'center',
