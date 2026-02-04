@@ -94,6 +94,7 @@ export default function CreateGroupScreen() {
   const [showCoverImageModal, setShowCoverImageModal] = useState(false);
   const [healthCondition, setHealthCondition] = useState<string | null>(null);
   const [showHealthConditionModal, setShowHealthConditionModal] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState('');
 
   React.useEffect(() => {
     if (!isAuthenticated) {
@@ -570,15 +571,32 @@ export default function CreateGroupScreen() {
               <Text style={styles.modalTitle}>Select Location</Text>
               <Pressable
                 style={styles.modalCloseButton}
-                onPress={() => setShowCountryModal(false)}
+                onPress={() => {
+                  setShowCountryModal(false);
+                  setCountrySearchQuery('');
+                }}
               >
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </Pressable>
             </View>
 
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
+              <GlassInput
+                placeholder="Search countries..."
+                value={countrySearchQuery}
+                onChangeText={setCountrySearchQuery}
+                style={styles.searchInput}
+                icon="search"
+              />
+            </View>
+
             {/* Countries List */}
             <FlatList
-              data={COUNTRIES}
+              data={COUNTRIES.filter((country) =>
+                country.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
+              )}
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
                 <Pressable
@@ -889,6 +907,13 @@ const styles = StyleSheet.create({
   countryItemText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
+  },
+  searchContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  searchInput: {
+    marginBottom: 0,
   },
   avatarContainer: {
     width: 120,

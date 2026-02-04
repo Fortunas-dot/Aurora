@@ -87,6 +87,7 @@ export default function GroupSettingsScreen() {
   const [showCoverImageModal, setShowCoverImageModal] = useState(false);
   const [healthCondition, setHealthCondition] = useState<string | null>(null);
   const [showHealthConditionModal, setShowHealthConditionModal] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -431,12 +432,27 @@ export default function GroupSettingsScreen() {
           <GlassCard style={styles.modalCard} padding="lg">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Country</Text>
-              <Pressable onPress={() => setShowCountryModal(false)}>
+              <Pressable onPress={() => {
+                setShowCountryModal(false);
+                setCountrySearchQuery('');
+              }}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </Pressable>
             </View>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <GlassInput
+                placeholder="Search countries..."
+                value={countrySearchQuery}
+                onChangeText={setCountrySearchQuery}
+                style={styles.searchInput}
+                icon="search"
+              />
+            </View>
             <FlatList
-              data={[{ code: 'global', name: 'Global' }, ...COUNTRIES]}
+              data={[{ code: 'global', name: 'Global' }, ...COUNTRIES].filter((country) =>
+                country.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
+              )}
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
                 <Pressable
@@ -705,5 +721,12 @@ const styles = StyleSheet.create({
   modalItemText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text,
+  },
+  searchContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  searchInput: {
+    marginBottom: 0,
   },
 });

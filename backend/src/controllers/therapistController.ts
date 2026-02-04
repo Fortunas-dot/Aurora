@@ -21,8 +21,8 @@ export const getOnlineTherapistsCount = async (req: AuthRequest, res: Response):
       data: {
         count,
         message: count === 1 
-          ? 'Er is 1 erkende therapeut online die vragen kan beantwoorden onder posts'
-          : `Er zijn ${count} erkende therapeuten online die vragen kunnen beantwoorden onder posts`,
+          ? 'There is 1 certified therapist online who can answer questions under posts'
+          : `There are ${count} certified therapists online who can answer questions under posts`,
       },
     });
   } catch (error: any) {

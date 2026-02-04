@@ -280,7 +280,7 @@ export default function PostDetailsScreen() {
 
         {/* Comment Input */}
         {isAuthenticated && (
-          <View style={styles.commentInputContainer}>
+          <View style={[styles.commentInputContainer, { paddingBottom: SPACING.md + insets.bottom }]}>
             <GlassInput
               value={commentText}
               onChangeText={setCommentText}
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   commentInputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     padding: SPACING.md,
     paddingBottom: SPACING.md,
     borderTopWidth: 1,
@@ -401,21 +401,24 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    maxHeight: 60,
-    minHeight: 44,
+    maxHeight: 100,
+    minHeight: 40,
+    marginBottom: 0,
   },
   commentInputText: {
-    maxHeight: 60,
-    minHeight: 44,
-    textAlignVertical: 'top',
+    maxHeight: 100,
+    minHeight: 40,
+    textAlignVertical: 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     fontSize: 14,
   },
   submitCommentButton: {
-    minWidth: 80,
-    height: 44,
-    alignSelf: 'flex-end',
+    minWidth: 70,
+    height: 40,
+    alignSelf: 'center',
   },
   authPrompt: {
     padding: SPACING.md,
