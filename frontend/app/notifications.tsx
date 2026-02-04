@@ -86,14 +86,14 @@ export default function NotificationsScreen() {
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Notificaties</Text>
+          <Text style={styles.headerTitle}>Notifications</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="notifications-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>Log in om notificaties te zien</Text>
+          <Text style={styles.emptyText}>Log in to see notifications</Text>
           <GlassButton
-            title="Inloggen"
+            title="Log in"
             onPress={() => router.push('/(auth)/login')}
             style={styles.loginButton}
           />
@@ -112,7 +112,7 @@ export default function NotificationsScreen() {
         <Text style={styles.headerTitle}>Notificaties</Text>
         {unreadCount > 0 && (
           <Pressable style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-            <Text style={styles.markAllText}>Alles gelezen</Text>
+            <Text style={styles.markAllText}>Mark all read</Text>
           </Pressable>
         )}
       </View>
@@ -125,12 +125,12 @@ export default function NotificationsScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {[
-            { id: 'all', label: 'Alles', icon: 'apps-outline' },
+            { id: 'all', label: 'All', icon: 'apps-outline' },
             { id: 'like', label: 'Likes', icon: 'heart-outline' },
-            { id: 'comment', label: 'Reacties', icon: 'chatbubble-outline' },
-            { id: 'message', label: 'Berichten', icon: 'mail-outline' },
-            { id: 'follow', label: 'Volgers', icon: 'person-add-outline' },
-            { id: 'group_invite', label: 'Groepen', icon: 'people-outline' },
+            { id: 'comment', label: 'Comments', icon: 'chatbubble-outline' },
+            { id: 'message', label: 'Messages', icon: 'mail-outline' },
+            { id: 'follow', label: 'Follows', icon: 'person-add-outline' },
+            { id: 'group_invite', label: 'Groups', icon: 'people-outline' },
           ].map((filter) => (
             <Pressable
               key={filter.id}
@@ -183,7 +183,7 @@ export default function NotificationsScreen() {
           unreadCount > 0 ? (
             <View style={styles.unreadHeader}>
               <Text style={styles.unreadHeaderText}>
-                {unreadCount} {unreadCount === 1 ? 'ongelezen notificatie' : 'ongelezen notificaties'}
+                {unreadCount} {unreadCount === 1 ? 'unread notification' : 'unread notifications'}
               </Text>
             </View>
           ) : null
@@ -203,9 +203,9 @@ export default function NotificationsScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="notifications-outline" size={64} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Geen notificaties</Text>
+              <Text style={styles.emptyText}>No notifications</Text>
               <Text style={styles.emptySubtext}>
-                Je krijgt hier meldingen wanneer iemand je post leuk vindt, reageert of je volgt.
+                You'll get notifications here when someone likes your post, comments, or follows you.
               </Text>
             </View>
           )

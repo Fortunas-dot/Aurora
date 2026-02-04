@@ -122,9 +122,9 @@ export default function HelpSupportScreen() {
 
             <View style={styles.divider} />
 
-            <Text style={styles.formLabel}>Onderwerp</Text>
+            <Text style={styles.formLabel}>Subject</Text>
             <GlassInput
-              placeholder="Bijv. Vraag over account"
+              placeholder="E.g. Question about account"
               value={subject}
               onChangeText={setSubject}
               style={styles.input}

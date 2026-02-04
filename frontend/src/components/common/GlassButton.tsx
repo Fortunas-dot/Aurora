@@ -7,6 +7,7 @@ import {
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY, SHADOWS } from '../../constants/theme';
 
@@ -17,7 +18,8 @@ interface GlassButtonProps {
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
-  icon?: React.ReactNode;
+  isLoading?: boolean; // Alias for loading
+  icon?: React.ReactNode | keyof typeof Ionicons.glyphMap;
   iconPosition?: 'left' | 'right';
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -31,12 +33,15 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   size = 'md',
   disabled = false,
   loading = false,
+  isLoading,
   icon,
   iconPosition = 'left',
   style,
   textStyle,
   fullWidth = false,
 }) => {
+  const isActuallyLoading = loading || isLoading;
+  
   const getSizeStyle = (): { container: ViewStyle; text: TextStyle } => {
     switch (size) {
       case 'sm':
@@ -107,10 +112,21 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   const sizeStyle = getSizeStyle();
   const variantStyle = getVariantStyle();
 
+  // Convert icon string to Ionicons component if needed
+  const renderIcon = () => {
+    if (!icon) return null;
+    
+    if (typeof icon === 'string') {
+      return <Ionicons name={icon} size={20} color={variantStyle.text.color} />;
+    }
+    
+    return icon;
+  };
+
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={disabled || isActuallyLoading}
       style={({ pressed }) => [
         styles.container,
         sizeStyle.container,
@@ -130,11 +146,11 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         />
       )}
       
-      {loading ? (
+      {isActuallyLoading ? (
         <ActivityIndicator color={variantStyle.text.color} size="small" />
       ) : (
         <>
-          {icon && iconPosition === 'left' && icon}
+          {icon && iconPosition === 'left' && renderIcon()}
           <Text
             style={[
               styles.text,
@@ -147,7 +163,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
           >
             {title}
           </Text>
-          {icon && iconPosition === 'right' && icon}
+          {icon && iconPosition === 'right' && renderIcon()}
         </>
       )}
     </Pressable>

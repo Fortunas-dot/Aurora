@@ -84,7 +84,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
 
       {/* Sentiment */}
       <View style={styles.insightRow}>
-        <Text style={styles.insightLabel}>Stemming</Text>
+        <Text style={styles.insightLabel}>Mood</Text>
         <View style={styles.sentimentBadge}>
           <Text style={styles.sentimentEmoji}>{sentimentEmoji[insights.sentiment]}</Text>
           <Text style={styles.sentimentText}>{sentimentLabel[insights.sentiment]}</Text>
@@ -94,7 +94,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
       {/* Themes */}
       {insights.themes && insights.themes.length > 0 && (
         <View style={styles.insightSection}>
-          <Text style={styles.insightLabel}>Thema's</Text>
+          <Text style={styles.insightLabel}>Themes</Text>
           <View style={styles.themesContainer}>
             {insights.themes.map((theme, index) => (
               <View key={index} style={styles.themeTag}>

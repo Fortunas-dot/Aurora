@@ -83,18 +83,20 @@ export const SPACING = {
   xxl: 48,
 };
 
-// SF Pro font family - iOS uses SF Pro, Android uses Roboto as fallback
-const FONT_FAMILY = Platform.select({
-  ios: 'SF Pro Display', // For headings
-  android: 'Roboto',
-  default: 'System',
-});
+import { getFontFamily } from '../utils/fontHelper';
 
-const FONT_FAMILY_TEXT = Platform.select({
-  ios: 'SF Pro Text', // For body text
-  android: 'Roboto',
-  default: 'System',
-});
+// Get font family from settings store (will be updated dynamically)
+// Default to system fonts
+const getDefaultFontFamily = () => {
+  return Platform.select({
+    ios: 'System',
+    android: 'Roboto',
+    default: 'System',
+  }) || 'System';
+};
+
+const FONT_FAMILY = getDefaultFontFamily();
+const FONT_FAMILY_TEXT = getDefaultFontFamily();
 
 export const TYPOGRAPHY = {
   h1: {

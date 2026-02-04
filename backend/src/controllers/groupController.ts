@@ -145,7 +145,7 @@ export const getGroup = async (req: AuthRequest, res: Response): Promise<void> =
 // @access  Private
 export const createGroup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, description, tags, isPrivate, country } = req.body;
+    const { name, description, tags, isPrivate, country, avatar, coverImage, healthCondition } = req.body;
 
     const group = await Group.create({
       name,
@@ -153,6 +153,9 @@ export const createGroup = async (req: AuthRequest, res: Response): Promise<void
       tags: tags || [],
       isPrivate: isPrivate || false,
       country: country || 'global',
+      avatar: avatar || null,
+      coverImage: coverImage || null,
+      healthCondition: healthCondition || null,
       members: [req.userId],
       admins: [req.userId],
     });
@@ -280,6 +283,64 @@ export const leaveGroup = async (req: AuthRequest, res: Response): Promise<void>
     res.status(500).json({
       success: false,
       message: error.message || 'Error leaving group',
+    });
+  }
+};
+
+// @desc    Update group (admin only)
+// @route   PUT /api/groups/:id
+// @access  Private (Admin only)
+export const updateGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const group = await Group.findById(req.params.id);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if user is admin
+    const isAdmin = group.admins.some((a) => a.toString() === req.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Only admins can update group settings',
+      });
+      return;
+    }
+
+    const { name, description, tags, isPrivate, country, avatar, coverImage, healthCondition } = req.body;
+
+    // Update fields
+    if (name !== undefined) group.name = name;
+    if (description !== undefined) group.description = description;
+    if (tags !== undefined) group.tags = tags;
+    if (isPrivate !== undefined) group.isPrivate = isPrivate;
+    if (country !== undefined) group.country = country;
+    if (avatar !== undefined) group.avatar = avatar;
+    if (coverImage !== undefined) group.coverImage = coverImage;
+    if (healthCondition !== undefined) group.healthCondition = healthCondition;
+
+    await group.save();
+    await group.populate('admins', 'username displayName avatar');
+
+    res.json({
+      success: true,
+      message: 'Group updated successfully',
+      data: {
+        ...group.toObject(),
+        memberCount: group.members.length,
+        isMember: group.members.some((m: any) => m.toString() === req.userId),
+        isAdmin: true,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error updating group',
     });
   }
 };

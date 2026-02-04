@@ -8,7 +8,9 @@ export interface IGroup extends Document {
   admins: Types.ObjectId[];
   isPrivate: boolean;
   avatar?: string;
+  coverImage?: string; // Hero/cover image for the group
   country?: string; // Country code or 'global'
+  healthCondition?: string; // Health condition the group focuses on
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,10 +49,19 @@ const GroupSchema = new Schema<IGroup>(
       type: String,
       default: null,
     },
+    coverImage: {
+      type: String,
+      default: null,
+    },
     country: {
       type: String,
       default: 'global',
       enum: ['global', 'NL', 'BE', 'DE', 'FR', 'GB', 'US', 'CA', 'AU', 'ES', 'IT', 'PT', 'PL', 'SE', 'NO', 'DK', 'FI', 'IE', 'AT', 'CH', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'LU', 'MT', 'CY'],
+    },
+    healthCondition: {
+      type: String,
+      default: null,
+      trim: true,
     },
   },
   {

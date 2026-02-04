@@ -578,6 +578,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+    overflow: 'hidden',
   },
   auroraLayer: {
     position: 'absolute',
@@ -587,6 +588,7 @@ const styles = StyleSheet.create({
     left: -width * 0.25,
     borderRadius: width,
     opacity: 0.6,
+    overflow: 'hidden',
   },
   starField: {
     position: 'absolute',

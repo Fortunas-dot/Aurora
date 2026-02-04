@@ -129,7 +129,7 @@ export default function UserProfileScreen() {
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Profiel</Text>
+          <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.emptyContainer}>

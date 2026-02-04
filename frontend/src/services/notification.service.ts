@@ -38,9 +38,30 @@ class NotificationService {
     page: number = 1,
     limit: number = 20
   ): Promise<ApiResponse<{ data: Notification[]; unreadCount: number; pagination: any }>> {
-    return apiService.get<{ data: Notification[]; unreadCount: number; pagination: any }>(
+    const response = await apiService.get<any>(
       `/notifications?page=${page}&limit=${limit}`
     );
+    
+    // Transform backend response to expected format
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: {
+          data: Array.isArray(response.data) ? response.data : [],
+          unreadCount: response.unreadCount || 0,
+          pagination: response.pagination || { page, limit, total: 0, pages: 1 },
+        },
+      };
+    }
+    
+    return {
+      ...response,
+      data: {
+        data: [],
+        unreadCount: 0,
+        pagination: { page, limit, total: 0, pages: 1 },
+      },
+    };
   }
 
   async markAsRead(notificationId: string): Promise<ApiResponse<Notification>> {

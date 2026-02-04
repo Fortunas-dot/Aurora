@@ -65,6 +65,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
       <View
         style={[
           styles.container,
+          multiline && styles.containerMultiline,
           isFocused && styles.containerFocused,
           error && styles.containerError,
           !editable && styles.containerDisabled,
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    height: 52,
+    minHeight: 52,
   },
   containerFocused: {
     backgroundColor: COLORS.glass.background,
@@ -172,8 +173,13 @@ const styles = StyleSheet.create({
   containerDisabled: {
     opacity: 0.5,
   },
+  containerMultiline: {
+    alignItems: 'flex-start',
+    paddingTop: SPACING.sm,
+  },
   icon: {
     marginLeft: SPACING.md,
+    alignSelf: 'center',
   },
   input: {
     flex: 1,
@@ -184,17 +190,18 @@ const styles = StyleSheet.create({
   },
   inputSingleLine: {
     height: 52,
-    paddingTop: Platform.OS === 'android' ? 18 : 16,
-    paddingBottom: Platform.OS === 'android' ? 18 : 16,
-    textAlignVertical: Platform.OS === 'android' ? 'top' : 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: 'center',
     includeFontPadding: false,
-    lineHeight: Platform.OS === 'android' ? 16 : 20,
+    lineHeight: Platform.OS === 'android' ? 20 : 20,
     fontSize: 16,
   },
   inputMultiline: {
     minHeight: 100,
     textAlignVertical: 'top',
     paddingTop: SPACING.md,
+    paddingBottom: SPACING.md,
     paddingVertical: SPACING.md,
   },
   inputWithIcon: {

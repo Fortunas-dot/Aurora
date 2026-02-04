@@ -135,7 +135,7 @@ export default function IdeasScreen() {
     }
 
     if (!title.trim() || !description.trim()) {
-      Alert.alert('Fout', 'Vul een titel en beschrijving in');
+      Alert.alert('Error', 'Please enter a title and description');
       return;
     }
 
@@ -463,7 +463,7 @@ export default function IdeasScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Beschrijving *</Text>
+                <Text style={styles.label}>Description *</Text>
                 <GlassInput
                   value={description}
                   onChangeText={setDescription}

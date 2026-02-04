@@ -316,11 +316,13 @@ export default function JournalInsightsScreen() {
 
         {!insights || insights.totalEntries === 0 ? (
           <GlassCard style={styles.emptyCard} padding="xl">
-            <Ionicons name="analytics-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>Nog geen data</Text>
-            <Text style={styles.emptyText}>
-              Schrijf meer dagboekentries om inzichten te ontdekken over je stemming en patronen.
-            </Text>
+            <View style={styles.emptyContent}>
+              <Ionicons name="analytics-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>Nog geen data</Text>
+              <Text style={styles.emptyText}>
+                Schrijf meer dagboekentries om inzichten te ontdekken over je stemming en patronen.
+              </Text>
+            </View>
           </GlassCard>
         ) : (
           <>
@@ -349,11 +351,11 @@ export default function JournalInsightsScreen() {
             {/* Mood Trend */}
             {insights.moodTrend && insights.moodTrend.length > 1 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Stemmingsverloop</Text>
+                <Text style={styles.sectionTitle}>Mood Trend</Text>
                 <GlassCard style={styles.chartCard} padding="lg">
                   <View style={styles.chartHeader}>
                     <Text style={styles.chartSubtitle}>
-                      Gemiddeld: {insights.averageMood}/10 ({getMoodDescription(insights.averageMood || 5)})
+                      Average: {insights.averageMood}/10 ({getMoodDescription(insights.averageMood || 5)})
                     </Text>
                   </View>
                   <MoodTrendChart data={insights.moodTrend} />
@@ -364,7 +366,7 @@ export default function JournalInsightsScreen() {
             {/* Top Themes */}
             {insights.topThemes && insights.topThemes.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Veelvoorkomende thema's</Text>
+                <Text style={styles.sectionTitle}>Common themes</Text>
                 <GlassCard style={styles.listCard} padding="lg">
                   {insights.topThemes.map((item, index) => (
                     <InsightItem
@@ -381,12 +383,12 @@ export default function JournalInsightsScreen() {
             {/* Common Patterns */}
             {insights.commonPatterns && insights.commonPatterns.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Gedetecteerde patronen</Text>
+                <Text style={styles.sectionTitle}>Detected Patterns</Text>
                 <GlassCard style={styles.listCard} padding="lg">
                   <View style={styles.patternWarning}>
                     <Ionicons name="information-circle" size={18} color={COLORS.warning} />
                     <Text style={styles.patternWarningText}>
-                      Aurora detecteert gedachtepatronen om je bewustzijn te vergroten
+                      Aurora detects thought patterns to increase your awareness
                     </Text>
                   </View>
                   {insights.commonPatterns.map((item, index) => (
@@ -404,7 +406,7 @@ export default function JournalInsightsScreen() {
             {/* Symptom Frequency */}
             {insights.symptomFrequency && Object.keys(insights.symptomFrequency).length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Symptoom frequentie</Text>
+                <Text style={styles.sectionTitle}>Symptom Frequency</Text>
                 <GlassCard style={styles.listCard} padding="lg">
                   {Object.entries(insights.symptomFrequency).map(([symptom, data]) => (
                     <InsightItem
@@ -423,14 +425,14 @@ export default function JournalInsightsScreen() {
               <GlassCard style={styles.tipCard} padding="lg">
                 <View style={styles.tipHeader}>
                   <Ionicons name="bulb" size={24} color={COLORS.warning} />
-                  <Text style={styles.tipTitle}>Tip van Aurora</Text>
+                  <Text style={styles.tipTitle}>Aurora's Tip</Text>
                 </View>
                 <Text style={styles.tipText}>
                   {insights.averageMood && insights.averageMood < 5
-                    ? 'Je stemming lijkt lager dan gemiddeld. Overweeg om met Aurora te praten over hoe je je voelt, of probeer een dankbaarheids-oefening.'
+                    ? 'Your mood seems lower than average. Consider talking to Aurora about how you feel, or try a gratitude exercise.'
                     : insights.streakDays >= 7
-                    ? `Geweldig! Je hebt ${insights.streakDays} dagen op rij geschreven. Consistentie helpt bij zelfbewustzijn.`
-                    : 'Probeer dagelijks te schrijven voor de beste inzichten. Zelfs een korte reflectie helpt.'}
+                    ? `Great! You've written for ${insights.streakDays} days in a row. Consistency helps with self-awareness.`
+                    : 'Try writing daily for the best insights. Even a short reflection helps.'}
                 </Text>
               </GlassCard>
             </View>
@@ -504,13 +506,20 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: SPACING.xxl,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   emptyTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
   emptyText: {
     ...TYPOGRAPHY.body,

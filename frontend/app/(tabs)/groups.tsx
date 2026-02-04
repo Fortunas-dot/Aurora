@@ -257,12 +257,16 @@ export default function GroupsScreen() {
     <GlassCard style={styles.groupCard} padding={0} onPress={() => router.push(`/group/${item._id}`)}>
       <View style={styles.groupHeader}>
         <View style={styles.groupAvatar}>
-          <LinearGradient
-            colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
-            style={styles.groupAvatarGradient}
-          >
-            <Ionicons name="people" size={24} color={COLORS.primary} />
-          </LinearGradient>
+          {item.avatar ? (
+            <Image source={{ uri: item.avatar }} style={styles.groupAvatarImage} />
+          ) : (
+            <LinearGradient
+              colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+              style={styles.groupAvatarGradient}
+            >
+              <Ionicons name="people" size={24} color={COLORS.primary} />
+            </LinearGradient>
+          )}
         </View>
         <View style={styles.groupInfo}>
           <Text style={styles.groupName}>{item.name}</Text>
@@ -730,6 +734,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  groupAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   groupInfo: {
     flex: 1,

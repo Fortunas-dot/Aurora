@@ -68,7 +68,7 @@ export default function ProfileScreen() {
         style={styles.container}
       >
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={styles.headerTitle}>Profiel</Text>
+          <Text style={styles.headerTitle}>Profile</Text>
         </View>
         
         <View style={styles.authPrompt}>
@@ -80,20 +80,20 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={48} color={COLORS.primary} />
             </LinearGradient>
           </View>
-          <Text style={styles.authPromptTitle}>Welkom, Gast</Text>
+          <Text style={styles.authPromptTitle}>Welcome, Guest</Text>
           <Text style={styles.authPromptText}>
-            Log in of maak een account aan om alle functies te gebruiken
+            Log in or create an account to use all features
           </Text>
           
           <View style={styles.authButtons}>
             <GlassButton
-              title="Inloggen"
+              title="Log in"
               onPress={() => router.push('/(auth)/login')}
               variant="primary"
               style={styles.authButton}
             />
             <GlassButton
-              title="Registreren"
+              title="Register"
               onPress={() => router.push('/(auth)/register')}
               variant="outline"
               style={styles.authButton}
@@ -115,7 +115,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={styles.headerTitle}>Profiel</Text>
+          <Text style={styles.headerTitle}>Profile</Text>
           <Pressable style={styles.headerButton}>
             <Ionicons name="settings-outline" size={24} color={COLORS.text} />
           </Pressable>
@@ -148,7 +148,7 @@ export default function ProfileScreen() {
               <View style={styles.healthInfoSection}>
                 {(user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) && (
                   <View style={styles.healthCategory}>
-                    <Text style={styles.healthCategoryLabel}>Mentale gezondheid</Text>
+                    <Text style={styles.healthCategoryLabel}>Mental health</Text>
                     <View style={styles.healthTags}>
                       {user.healthInfo.mentalHealth.slice(0, 3).map((item, index) => {
                         const condition = typeof item === 'string' ? item : item.condition;
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
                 )}
                 {(user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) && (
                   <View style={styles.healthCategory}>
-                    <Text style={styles.healthCategoryLabel}>Fysieke gezondheid</Text>
+                    <Text style={styles.healthCategoryLabel}>Physical health</Text>
                     <View style={styles.healthTags}>
                       {user.healthInfo.physicalHealth.slice(0, 3).map((item, index) => {
                         const condition = typeof item === 'string' ? item : item.condition;
@@ -223,7 +223,7 @@ export default function ProfileScreen() {
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>42</Text>
-                <Text style={styles.statLabel}>Groepen</Text>
+                <Text style={styles.statLabel}>Groups</Text>
               </View>
             </View>
           </GlassCard>
@@ -235,28 +235,28 @@ export default function ProfileScreen() {
           <GlassCard padding={0}>
             <MenuItem
               icon="person-outline"
-              title="Bewerk profiel"
-              subtitle="Naam, bio, foto"
+              title="Edit profile"
+              subtitle="Name, bio, photo"
               onPress={() => router.push('/edit-profile')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="heart-outline"
-              title="Gezondheidsinformatie"
-              subtitle="Mentale & fysieke gezondheid"
+              title="Health Information"
+              subtitle="Mental & physical health"
               onPress={() => router.push('/health-info')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="shield-checkmark-outline"
               title="Privacy"
-              subtitle="Anonimiteit instellingen"
+              subtitle="Anonymity settings"
               onPress={() => {}}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="notifications-outline"
-              title="Notificaties"
+              title="Notifications"
               onPress={() => {}}
             />
           </GlassCard>
@@ -267,15 +267,15 @@ export default function ProfileScreen() {
           <GlassCard padding={0}>
             <MenuItem
               icon="color-palette-outline"
-              title="Thema"
+              title="Theme"
               subtitle="Donker"
               onPress={() => router.push('/settings')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
-              icon="language-outline"
-              title="Taal"
-              subtitle="Nederlands"
+              icon="settings-outline"
+              title="Settings"
+              subtitle="App settings"
               onPress={() => router.push('/settings')}
             />
             <View style={styles.menuDivider} />

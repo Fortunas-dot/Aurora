@@ -103,11 +103,11 @@ export default function EditProfileScreen() {
         setUser(response.data);
         router.back();
       } else {
-        Alert.alert('Fout', response.message || 'Kon profiel niet bijwerken');
+        Alert.alert('Error', response.message || 'Could not update profile');
       }
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      Alert.alert('Fout', 'Er ging iets mis bij het bijwerken van je profiel');
+      Alert.alert('Error', 'Something went wrong while updating your profile');
     } finally {
       setIsSubmitting(false);
       setIsUploadingAvatar(false);
@@ -136,7 +136,7 @@ export default function EditProfileScreen() {
           >
             <Ionicons name="close" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Bewerk profiel</Text>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
           <Pressable
             style={[styles.headerIconButton, isSubmitting && styles.headerIconButtonDisabled]}
             onPress={handleSubmit}
@@ -157,7 +157,7 @@ export default function EditProfileScreen() {
         >
           {/* Avatar Section */}
           <GlassCard style={styles.avatarCard} padding="lg">
-            <Text style={styles.label}>Profielfoto</Text>
+            <Text style={styles.label}>Profile Photo</Text>
             <View style={styles.avatarSection}>
               <Avatar
                 uri={avatarUri || undefined}
@@ -174,7 +174,7 @@ export default function EditProfileScreen() {
                 ) : (
                   <>
                     <Ionicons name="camera" size={20} color={COLORS.primary} />
-                    <Text style={styles.changeAvatarText}>Wijzigen</Text>
+                    <Text style={styles.changeAvatarText}>Change</Text>
                   </>
                 )}
               </Pressable>
@@ -183,7 +183,7 @@ export default function EditProfileScreen() {
 
           {/* Display Name */}
           <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.label}>Weergavenaam</Text>
+            <Text style={styles.label}>Display Name</Text>
             <GlassInput
               value={displayName}
               onChangeText={setDisplayName}
@@ -199,7 +199,7 @@ export default function EditProfileScreen() {
             <GlassInput
               value={bio}
               onChangeText={setBio}
-              placeholder="Vertel iets over jezelf..."
+              placeholder="Tell us about yourself..."
               multiline
               numberOfLines={4}
               style={styles.input}
@@ -211,13 +211,13 @@ export default function EditProfileScreen() {
 
           {/* Privacy Settings */}
           <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.sectionTitle}>Privacy instellingen</Text>
+            <Text style={styles.sectionTitle}>Privacy Settings</Text>
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Anoniem profiel</Text>
+                <Text style={styles.settingLabel}>Anonymous Profile</Text>
                 <Text style={styles.settingDescription}>
-                  Je gebruikersnaam wordt verborgen voor anderen
+                  Your username will be hidden from others
                 </Text>
               </View>
               <Switch
@@ -232,9 +232,9 @@ export default function EditProfileScreen() {
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>E-mailadres tonen</Text>
+                <Text style={styles.settingLabel}>Show Email</Text>
                 <Text style={styles.settingDescription}>
-                  Laat anderen je e-mailadres zien op je profiel
+                  Let others see your email address on your profile
                 </Text>
               </View>
               <Switch

@@ -4,9 +4,9 @@ import { AuroraJournalContext } from '../services/journal.service';
 type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
 const SEVERITY_LABELS: Record<SeverityLevel, string> = {
-  mild: 'licht',
-  moderate: 'matig',
-  severe: 'ernstig',
+  mild: 'mild',
+  moderate: 'moderate',
+  severe: 'severe',
 };
 
 /**
@@ -27,9 +27,9 @@ export const formatHealthInfoForAI = (user: User | null): string => {
         ? `${item.condition} (${item.type})`
         : item.condition;
       const severity = SEVERITY_LABELS[item.severity];
-      return `- ${conditionText} (ernst: ${severity})`;
+      return `- ${conditionText} (severity: ${severity})`;
     }).join('\n');
-    parts.push(`Mentale gezondheid:\n${mentalConditions}`);
+    parts.push(`Mental Health:\n${mentalConditions}`);
   }
 
   // Physical health conditions
@@ -39,26 +39,26 @@ export const formatHealthInfoForAI = (user: User | null): string => {
         ? `${item.condition} (${item.type})`
         : item.condition;
       const severity = SEVERITY_LABELS[item.severity];
-      return `- ${conditionText} (ernst: ${severity})`;
+      return `- ${conditionText} (severity: ${severity})`;
     }).join('\n');
-    parts.push(`Fysieke gezondheid:\n${physicalConditions}`);
+    parts.push(`Physical Health:\n${physicalConditions}`);
   }
 
   // Medications
   if (medications && medications.length > 0) {
-    parts.push(`Medicatie: ${medications.join(', ')}`);
+    parts.push(`Medications: ${medications.join(', ')}`);
   }
 
   // Therapies
   if (therapies && therapies.length > 0) {
-    parts.push(`Therapieën: ${therapies.join(', ')}`);
+    parts.push(`Therapies: ${therapies.join(', ')}`);
   }
 
   if (parts.length === 0) {
     return '';
   }
 
-  return `\n\nGezondheidsinformatie van de gebruiker:\n${parts.join('\n\n')}\n\nGebruik deze informatie om context te geven aan je gesprekken. Wees empathisch en begripvol over deze condities. Verwijs er alleen naar als het relevant is voor het gesprek.`;
+  return `\n\nUser Health Information:\n${parts.join('\n\n')}\n\nUse this information to provide context to your conversations. Be empathetic and understanding about these conditions. Only refer to them if relevant to the conversation.`;
 };
 
 /**
@@ -70,14 +70,14 @@ export const formatJournalContextForAI = (entries: AuroraJournalContext[]): stri
   }
 
   const sentimentLabels: Record<string, string> = {
-    positive: 'positief',
-    neutral: 'neutraal',
-    negative: 'negatief',
-    mixed: 'gemengd',
+    positive: 'positive',
+    neutral: 'neutral',
+    negative: 'negative',
+    mixed: 'mixed',
   };
 
   const entrySummaries = entries.map((entry) => {
-    const date = new Date(entry.date).toLocaleDateString('nl-NL', {
+    const date = new Date(entry.date).toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -85,15 +85,15 @@ export const formatJournalContextForAI = (entries: AuroraJournalContext[]): stri
     const sentiment = entry.sentiment ? sentimentLabels[entry.sentiment] : '';
     const themes = entry.themes.length > 0 ? entry.themes.join(', ') : '';
     
-    let summary = `- ${date}: Stemming ${entry.mood}/10`;
+    let summary = `- ${date}: Mood ${entry.mood}/10`;
     if (sentiment) summary += ` (${sentiment})`;
-    if (themes) summary += `. Thema's: ${themes}`;
+    if (themes) summary += `. Themes: ${themes}`;
     summary += `\n  "${entry.summary}"`;
     
     return summary;
   }).join('\n\n');
 
-  return `\n\nRecente dagboekentries van de gebruiker:\n${entrySummaries}\n\nJe kunt naar deze entries verwijzen als dat relevant is voor het gesprek. Bijvoorbeeld: "Ik zag in je dagboek dat je vorige week schreef over..." Wees subtiel en empathisch wanneer je verwijst naar persoonlijke reflecties.`;
+  return `\n\nRecent journal entries from the user:\n${entrySummaries}\n\nYou can refer to these entries if relevant to the conversation. For example: "I saw in your journal that you wrote last week about..." Be subtle and empathetic when referring to personal reflections.`;
 };
 
 /**

@@ -66,7 +66,7 @@ export default function TextChatScreen() {
         </Pressable>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Aurora AI</Text>
-          <Text style={styles.headerSubtitle}>Mentale gezondheid chat</Text>
+          <Text style={styles.headerSubtitle}>Mental health chat</Text>
         </View>
         <Pressable style={styles.menuButton}>
           <Ionicons name="ellipsis-vertical" size={20} color={COLORS.text} />

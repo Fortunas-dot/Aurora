@@ -37,17 +37,27 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (response.success && response.data) {
         const { data: notifications, unreadCount, pagination } = response.data;
         
+        // Safely handle undefined values
+        const safeNotifications = notifications || [];
+        const safeUnreadCount = unreadCount || 0;
+        const safePagination = pagination || { pages: 1 };
+        
         set((state) => ({
-          notifications: append ? [...state.notifications, ...notifications] : notifications,
-          unreadCount: unreadCount || 0,
+          notifications: append ? [...(state.notifications || []), ...safeNotifications] : safeNotifications,
+          unreadCount: safeUnreadCount,
           page: pageNum,
-          hasMore: pageNum < pagination.pages,
+          hasMore: pagination ? pageNum < pagination.pages : false,
         }));
+      } else {
+        // If response is not successful, reset to empty state
+        if (!append) {
+          set({ notifications: [], unreadCount: 0, hasMore: false });
+        }
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
       if (!append) {
-        set({ notifications: [] });
+        set({ notifications: [], unreadCount: 0, hasMore: false });
       }
     } finally {
       set({ isLoading: false });

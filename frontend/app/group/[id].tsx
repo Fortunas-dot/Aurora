@@ -6,6 +6,9 @@ import {
   FlatList,
   RefreshControl,
   Pressable,
+  Image,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +21,7 @@ import { groupService, Group } from '../../src/services/group.service';
 import { postService, Post } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { getCountryName } from '../../src/constants/countries';
+
 
 export default function GroupDetailScreen() {
   const router = useRouter();
@@ -32,6 +36,7 @@ export default function GroupDetailScreen() {
   const [isJoining, setIsJoining] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  // Facebook design is now the only design
 
   const loadGroup = useCallback(async () => {
     if (!id) return;
@@ -73,6 +78,7 @@ export default function GroupDetailScreen() {
     await Promise.all([loadGroup(), loadPosts(1, false)]);
     setIsLoading(false);
   }, [loadGroup, loadPosts]);
+
 
   useEffect(() => {
     loadData();
@@ -120,6 +126,56 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleGroupSettings = () => {
+    if (!group) return;
+
+    const options: Array<{ text: string; style?: 'default' | 'destructive' | 'cancel'; onPress: () => void }> = [];
+    
+    if (group.isMember) {
+      options.push({
+        text: 'Leave Group',
+        style: 'destructive' as const,
+        onPress: () => {
+          Alert.alert(
+            'Leave Group',
+            `Are you sure you want to leave "${group.name}"?`,
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Leave',
+                style: 'destructive',
+                onPress: handleJoinLeave,
+              },
+            ]
+          );
+        },
+      });
+    }
+
+    if (group.isAdmin) {
+      options.push({
+        text: 'Group Settings',
+        onPress: () => {
+          router.push(`/group/${group._id}/settings`);
+        },
+      });
+    }
+
+    if (options.length === 0) return;
+
+    Alert.alert(
+      'Group Options',
+      '',
+      [
+        ...options,
+        { text: 'Cancel', style: 'cancel' as const, onPress: () => {} },
+      ]
+    );
+  };
+
   const handleLikePost = async (postId: string) => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
@@ -157,6 +213,27 @@ export default function GroupDetailScreen() {
     }
   }, [isLoading, hasMore, page, loadPosts]);
 
+  // Get gradient colors from cover image option
+  const getGradientColors = (coverImage: string): string[] => {
+    const optionId = coverImage.replace('gradient:', '');
+    const gradients: { [key: string]: string[] } = {
+      blue: ['rgba(24, 119, 242, 0.8)', 'rgba(66, 103, 178, 0.8)'],
+      purple: ['rgba(139, 92, 246, 0.8)', 'rgba(167, 139, 250, 0.8)'],
+      teal: ['rgba(20, 184, 166, 0.8)', 'rgba(94, 234, 212, 0.8)'],
+      pink: ['rgba(236, 72, 153, 0.8)', 'rgba(244, 114, 182, 0.8)'],
+      orange: ['rgba(249, 115, 22, 0.8)', 'rgba(251, 146, 60, 0.8)'],
+      green: ['rgba(34, 197, 94, 0.8)', 'rgba(74, 222, 128, 0.8)'],
+    };
+    return gradients[optionId] || ['rgba(24, 119, 242, 0.4)', 'rgba(66, 103, 178, 0.4)'];
+  };
+
+  // Render Facebook-style header
+  const renderGroupHeader = () => {
+    if (!group) return null;
+    return renderFacebookHeader();
+  };
+
+  // Early return if group is not loaded yet
   if (isLoading && !group) {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
@@ -184,20 +261,96 @@ export default function GroupDetailScreen() {
     );
   }
 
+
+  const renderFacebookHeader = () => (
+    <>
+      <View style={styles.facebookCoverSection}>
+        {group.coverImage ? (
+          group.coverImage.startsWith('gradient:') ? (
+            <LinearGradient
+              colors={getGradientColors(group.coverImage)}
+              style={styles.facebookCoverGradient}
+            />
+          ) : (
+            <Image source={{ uri: group.coverImage }} style={styles.facebookCoverImage} />
+          )
+        ) : (
+          <LinearGradient
+            colors={['rgba(24, 119, 242, 0.4)', 'rgba(66, 103, 178, 0.4)']}
+            style={styles.facebookCoverGradient}
+          />
+        )}
+        {/* Header overlays the cover image */}
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+          </Pressable>
+          <View style={styles.headerSpacer} />
+          {group.isMember && (
+            <Pressable
+              style={styles.headerSettingsButton}
+              onPress={handleGroupSettings}
+            >
+              <Ionicons name="settings" size={22} color={COLORS.white} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+      <View style={styles.facebookHeaderCard}>
+        <View style={styles.facebookProfileSection}>
+          <View style={styles.facebookAvatarContainer}>
+            <View style={styles.facebookAvatar}>
+              {group.avatar ? (
+                <Image source={{ uri: group.avatar }} style={styles.facebookAvatarImage} />
+              ) : (
+                <LinearGradient
+                  colors={['rgba(24, 119, 242, 0.3)', 'rgba(66, 103, 178, 0.3)']}
+                  style={styles.facebookAvatarGradient}
+                >
+                  <Ionicons name="people" size={36} color={COLORS.primary} />
+                </LinearGradient>
+              )}
+            </View>
+          </View>
+          <View style={styles.facebookInfo}>
+            <View style={styles.facebookTitleRow}>
+              <Text style={styles.facebookGroupName}>{group.name}</Text>
+              <View style={styles.facebookStatsInline}>
+                <Text style={styles.facebookStatText}>{group.memberCount} members</Text>
+                {group.country && (
+                  <Text style={styles.facebookStatText}> • {getCountryName(group.country)}</Text>
+                )}
+                {group.healthCondition && (
+                  <Text style={styles.facebookStatText}> • {group.healthCondition}</Text>
+                )}
+              </View>
+              {group.isPrivate && (
+                <View style={styles.privateBadge}>
+                  <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} />
+                </View>
+              )}
+              {group.isAdmin && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={14} color={COLORS.primary} />
+                  <Text style={styles.adminBadgeText}>Admin</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+        {group.description && (
+          <Text style={styles.facebookDescription}>{group.description}</Text>
+        )}
+      </View>
+    </>
+  );
+
+
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Group</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
       <FlatList
         data={posts}
         renderItem={({ item }) => (
@@ -212,74 +365,27 @@ export default function GroupDetailScreen() {
         keyExtractor={(item) => item._id}
         ListHeaderComponent={
           <>
-            {/* Group Info */}
-            <GlassCard style={styles.groupCard} padding="lg">
-              <View style={styles.groupHeader}>
-                <View style={styles.groupAvatar}>
-                  <Ionicons name="people" size={32} color={COLORS.primary} />
-                </View>
-                <View style={styles.groupInfo}>
-                  <View style={styles.groupTitleRow}>
-                    <Text style={styles.groupName}>{group.name}</Text>
-                    {group.isPrivate && (
-                      <Ionicons name="lock-closed" size={18} color={COLORS.textMuted} />
-                    )}
-                  </View>
-                  <View style={styles.groupMeta}>
-                    <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.groupMetaText}>{group.memberCount} members</Text>
-                    {group.country && (
-                      <>
-                        <Ionicons name="globe-outline" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
-                        <Text style={styles.groupMetaText}>{getCountryName(group.country)}</Text>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </View>
-
-              {group.description && (
-                <Text style={styles.groupDescription}>{group.description}</Text>
-              )}
-
-              {group.tags.length > 0 && (
-                <View style={styles.groupTags}>
-                  {group.tags.map((tag, index) => (
-                    <TagChip key={index} label={tag} size="sm" />
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.groupActions}>
-                <GlassButton
-                  title={group.isMember ? 'Joined' : 'Join'}
-                  onPress={handleJoinLeave}
-                  variant={group.isMember ? 'outline' : 'primary'}
-                  isLoading={isJoining}
-                  disabled={isJoining}
-                  style={styles.joinButton}
-                />
-                {group.isMember && (
-                  <Pressable
-                    style={styles.createPostButton}
-                    onPress={() => router.push(`/create-post?groupId=${group._id}`)}
-                  >
-                    <Ionicons name="add-circle" size={24} color={COLORS.primary} />
-                    <Text style={styles.createPostButtonText}>New post</Text>
-                  </Pressable>
-                )}
-              </View>
-            </GlassCard>
-
+            {renderGroupHeader()}
             {/* Posts Header */}
             <View style={styles.postsHeader}>
               <Text style={styles.postsTitle}>
                 {posts.length} {posts.length === 1 ? 'post' : 'posts'}
               </Text>
+              {group?.isMember && (
+                <Pressable
+                  style={styles.sortButton}
+                  onPress={() => {
+                    // TODO: Add sort options
+                    console.log('Sort posts');
+                  }}
+                >
+                  <Ionicons name="swap-vertical" size={18} color={COLORS.textMuted} />
+                </Pressable>
+              )}
             </View>
           </>
         }
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingTop: 0 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -302,13 +408,30 @@ export default function GroupDetailScreen() {
             <Ionicons name="document-text-outline" size={48} color={COLORS.textMuted} />
             <Text style={styles.emptyText}>No posts yet</Text>
             <Text style={styles.emptySubtext}>
-              {group.isMember
+              {group?.isMember
                 ? 'Be the first to share something!'
                 : 'Join to see posts'}
             </Text>
           </View>
         }
       />
+
+      {/* FAB for Create Post */}
+      {group?.isMember && (
+        <Pressable 
+          style={[styles.fab, { bottom: insets.bottom || SPACING.md }]} 
+          onPress={() => router.push(`/create-post?groupId=${group._id}`)}
+        >
+          <LinearGradient
+            colors={['rgba(96, 165, 250, 0.9)', 'rgba(167, 139, 250, 0.9)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <Ionicons name="add" size={28} color={COLORS.white} />
+          </LinearGradient>
+        </Pressable>
+      )}
     </LinearGradient>
   );
 }
@@ -335,21 +458,24 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.glass.border,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.glass.background,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -361,91 +487,25 @@ const styles = StyleSheet.create({
     width: 40,
   },
   listContent: {
-    padding: SPACING.md,
     paddingBottom: 100,
-  },
-  groupCard: {
-    marginBottom: SPACING.md,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  groupAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.glass.backgroundLight,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  groupInfo: {
-    flex: 1,
-    marginLeft: SPACING.md,
-  },
-  groupTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  groupName: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.text,
-  },
-  groupMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: SPACING.xs,
-  },
-  groupMetaText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginLeft: SPACING.xs,
-  },
-  groupDescription: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.md,
-  },
-  groupTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
-  },
-  groupActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    alignItems: 'center',
-  },
-  joinButton: {
-    flex: 1,
-  },
-  createPostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-    gap: SPACING.xs,
-  },
-  createPostButtonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primary,
+    paddingTop: 0,
   },
   postsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
   },
   postsTitle: {
-    ...TYPOGRAPHY.bodyMedium,
+    ...TYPOGRAPHY.h3,
     color: COLORS.text,
+    fontWeight: '600',
+  },
+  sortButton: {
+    padding: SPACING.xs,
   },
   loadingFooter: {
     padding: SPACING.md,
@@ -465,6 +525,166 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+  },
+  // Facebook Design Styles
+  facebookCoverSection: {
+    height: 120,
+    width: '100%',
+    position: 'relative',
+  },
+  facebookCoverImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  facebookCoverGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  facebookHeaderCard: {
+    marginTop: -20,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    padding: SPACING.md,
+    zIndex: 10,
+  },
+  facebookProfileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  facebookAvatarContainer: {
+    marginTop: 0,
+  },
+  facebookAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: COLORS.background,
+    overflow: 'hidden',
+  },
+  facebookAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  facebookAvatarGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  facebookInfo: {
+    flex: 1,
+    marginLeft: SPACING.md,
+    marginBottom: 0,
+  },
+  facebookTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginBottom: 2,
+  },
+  facebookGroupName: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.text,
+    fontWeight: '700',
+    fontSize: 20,
+    marginRight: SPACING.sm,
+  },
+  facebookStatsInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    gap: 4,
+  },
+  adminBadgeText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  facebookStats: {
+    flexDirection: 'row',
+    marginTop: 2,
+  },
+  facebookStatText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 13,
+  },
+  facebookDescription: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.xs,
+    lineHeight: 18,
+    fontSize: 14,
+  },
+  facebookActions: {
+    flexDirection: 'row',
+    marginTop: SPACING.xs,
+  },
+  facebookJoinButtonCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    gap: SPACING.xs,
+    alignSelf: 'flex-start',
+  },
+  facebookJoinButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerSettingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: SPACING.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

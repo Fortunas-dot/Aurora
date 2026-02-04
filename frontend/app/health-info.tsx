@@ -234,25 +234,25 @@ const PHYSICAL_HEALTH_CONDITIONS: ConditionWithTypes[] = [
 ];
 
 const MEDICATION_OPTIONS = [
-  'Antidepressiva',
-  'Angstremmers',
-  'Slaapmedicatie',
-  'Pijnstillers',
-  'ADHD medicatie',
-  'Stemmingsstabilisatoren',
-  'Anders',
+  'Antidepressants',
+  'Anxiety medication',
+  'Sleep medication',
+  'Painkillers',
+  'ADHD medication',
+  'Mood stabilizers',
+  'Other',
 ];
 
 const THERAPY_OPTIONS = [
-  'Cognitieve gedragstherapie',
+  'Cognitive Behavioral Therapy',
   'EMDR',
-  'Groepstherapie',
-  'Individuele therapie',
+  'Group therapy',
+  'Individual therapy',
   'Mindfulness',
-  'Yoga therapie',
-  'Kunsttherapie',
-  'Muziektherapie',
-  'Anders',
+  'Yoga therapy',
+  'Art therapy',
+  'Music therapy',
+  'Other',
 ];
 
 interface SeverityBadgeProps {
@@ -772,7 +772,7 @@ export default function HealthInfoScreen() {
         >
           <Ionicons name="close" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Gezondheidsinformatie</Text>
+        <Text style={styles.headerTitle}>Health Information</Text>
         <Pressable
           style={[styles.headerIconButton, isSubmitting && styles.headerIconButtonDisabled]}
           onPress={handleSubmit}
@@ -792,11 +792,11 @@ export default function HealthInfoScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.description}>
-          Deel informatie over je mentale en fysieke gezondheid. Selecteer een conditie en kies direct de ernst met de knoppen eronder.
+          Share information about your mental and physical health. Select a condition and choose the severity with the buttons below.
         </Text>
 
         <CategorySection
-          title="Mentale gezondheid"
+          title="Mental Health"
           icon="heart-outline"
           conditions={MENTAL_HEALTH_CONDITIONS}
           selected={healthInfo.mentalHealth || []}
@@ -808,7 +808,7 @@ export default function HealthInfoScreen() {
         />
 
         <CategorySection
-          title="Fysieke gezondheid"
+          title="Physical Health"
           icon="body-outline"
           conditions={PHYSICAL_HEALTH_CONDITIONS}
           selected={healthInfo.physicalHealth || []}
@@ -824,7 +824,7 @@ export default function HealthInfoScreen() {
             <View style={[styles.categoryIconContainer, { backgroundColor: `${COLORS.info}20` }]}>
               <Ionicons name="medical-outline" size={24} color={COLORS.info} />
             </View>
-            <Text style={styles.categoryTitle}>Medicatie</Text>
+            <Text style={styles.categoryTitle}>Medications</Text>
           </View>
 
           {healthInfo.medications && healthInfo.medications.length > 0 && (
@@ -861,7 +861,7 @@ export default function HealthInfoScreen() {
             <View style={[styles.categoryIconContainer, { backgroundColor: `${COLORS.success}20` }]}>
               <Ionicons name="fitness-outline" size={24} color={COLORS.success} />
             </View>
-            <Text style={styles.categoryTitle}>Therapieën</Text>
+            <Text style={styles.categoryTitle}>Therapies</Text>
           </View>
 
           {healthInfo.therapies && healthInfo.therapies.length > 0 && (

@@ -22,12 +22,14 @@ export interface PrivacySettings {
 export interface AppSettings {
   language: Language;
   theme: 'dark' | 'light' | 'system';
+  fontFamily?: string;
 }
 
 interface SettingsState {
   // App Settings
   language: Language;
   theme: 'dark' | 'light' | 'system';
+  fontFamily: string;
   
   // Privacy Settings
   showEmail: boolean;
@@ -43,6 +45,7 @@ interface SettingsState {
   // Actions
   setLanguage: (language: Language) => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<void>;
+  setFontFamily: (fontFamily: string) => Promise<void>;
   setShowEmail: (show: boolean) => Promise<void>;
   setIsAnonymous: (anonymous: boolean) => Promise<void>;
   setNotificationPreference: (key: keyof NotificationPreferences, value: boolean) => Promise<void>;
@@ -64,6 +67,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Initial state
   language: 'en',
   theme: 'dark',
+  fontFamily: 'system',
   showEmail: false,
   isAnonymous: true,
   notificationPreferences: defaultNotificationPreferences,
@@ -81,6 +85,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setTheme: async (theme: 'dark' | 'light' | 'system') => {
     await SecureStore.setItemAsync('app_theme', theme);
     set({ theme });
+  },
+
+  // Set font family
+  setFontFamily: async (fontFamily: string) => {
+    await SecureStore.setItemAsync('app_font_family', fontFamily);
+    set({ fontFamily });
   },
 
   // Set show email
@@ -145,6 +155,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Load theme
       const theme = (await SecureStore.getItemAsync('app_theme')) || 'dark';
       
+      // Load font family
+      const fontFamily = (await SecureStore.getItemAsync('app_font_family')) || 'system';
+      
       // Load notification preferences
       const prefsJson = await SecureStore.getItemAsync('notification_preferences');
       const notificationPreferences = prefsJson
@@ -159,6 +172,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({
         language: language as Language,
         theme: theme as 'dark' | 'light' | 'system',
+        fontFamily: fontFamily as string,
         showEmail,
         isAnonymous,
         notificationPreferences,
@@ -182,6 +196,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       
       // Save theme
       await SecureStore.setItemAsync('app_theme', state.theme);
+      
+      // Save font family
+      await SecureStore.setItemAsync('app_font_family', state.fontFamily);
       
       // Save notification preferences
       await SecureStore.setItemAsync('notification_preferences', JSON.stringify(state.notificationPreferences));

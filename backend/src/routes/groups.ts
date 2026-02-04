@@ -7,6 +7,7 @@ import {
   joinGroup,
   leaveGroup,
   getGroupPosts,
+  updateGroup,
 } from '../controllers/groupController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -27,6 +28,7 @@ router.get('/:id', optionalAuth, getGroup);
 router.post('/', protect, groupValidation, createGroup);
 router.post('/:id/join', protect, joinGroup);
 router.post('/:id/leave', protect, leaveGroup);
+router.put('/:id', protect, groupValidation, updateGroup);
 router.get('/:id/posts', optionalAuth, getGroupPosts);
 
 export default router;

@@ -13,6 +13,9 @@ export interface Group {
   admins?: User[];
   members?: User[];
   country?: string;
+  avatar?: string;
+  coverImage?: string;
+  healthCondition?: string;
   createdAt: string;
 }
 
@@ -41,7 +44,10 @@ class GroupService {
     description: string,
     tags?: string[],
     isPrivate?: boolean,
-    country?: string
+    country?: string,
+    avatar?: string,
+    coverImage?: string,
+    healthCondition?: string
   ): Promise<ApiResponse<Group>> {
     return apiService.post<Group>('/groups', {
       name,
@@ -49,6 +55,9 @@ class GroupService {
       tags,
       isPrivate,
       country,
+      avatar,
+      coverImage,
+      healthCondition,
     });
   }
 
@@ -58,6 +67,22 @@ class GroupService {
 
   async leaveGroup(id: string): Promise<ApiResponse<{ memberCount: number; isMember: boolean }>> {
     return apiService.post(`/groups/${id}/leave`, {});
+  }
+
+  async updateGroup(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      tags?: string[];
+      isPrivate?: boolean;
+      country?: string;
+      avatar?: string;
+      coverImage?: string;
+      healthCondition?: string;
+    }
+  ): Promise<ApiResponse<Group>> {
+    return apiService.put<Group>(`/groups/${id}`, data);
   }
 
   async getGroupPosts(

@@ -52,7 +52,9 @@ const MoodSelector: React.FC<{
             ]}
             onPress={() => onChange(mood.value)}
           >
-            <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+            <View style={styles.moodEmojiContainer}>
+              <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+            </View>
             {value === mood.value && (
               <Text style={styles.moodValue}>{mood.label}</Text>
             )}
@@ -587,10 +589,16 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: SPACING.xs,
   },
   moodItemSelected: {
     backgroundColor: 'rgba(96, 165, 250, 0.2)',
     borderColor: COLORS.primary,
+  },
+  moodEmojiContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 28,
   },
   moodEmoji: {
     fontSize: 24,

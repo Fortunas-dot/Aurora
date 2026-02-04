@@ -89,6 +89,7 @@ export default function SettingsScreen() {
   const {
     language,
     theme,
+    fontFamily,
     showEmail,
     isAnonymous,
     notificationPreferences,
@@ -96,6 +97,7 @@ export default function SettingsScreen() {
     isSaving,
     setLanguage,
     setTheme,
+    setFontFamily,
     setShowEmail,
     setIsAnonymous,
     setNotificationPreference,
@@ -216,6 +218,20 @@ export default function SettingsScreen() {
             />
             <View style={styles.menuDivider} />
             <MenuItem
+              icon="text-outline"
+              title="Font"
+              subtitle={fontFamily === 'system' ? 'System Default' : fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
+              onPress={() => router.push('/font-settings')}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="layers-outline"
+              title="Group Page Design"
+              subtitle="Choose group page style"
+              onPress={() => router.push('/group-design-preview')}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
               icon="color-palette-outline"
               title={t.theme}
               subtitle={
@@ -225,22 +241,46 @@ export default function SettingsScreen() {
                   ? t.light
                   : t.system
               }
-              onPress={() => {
+              onPress={async () => {
                 Alert.alert(
                   t.theme,
                   'Choose theme',
                   [
                     {
                       text: t.dark,
-                      onPress: () => setTheme('dark'),
+                      onPress: async () => {
+                        try {
+                          await setTheme('dark');
+                          await saveSettings();
+                          Alert.alert(t.success, 'Theme changed to dark. The app will use dark mode.');
+                        } catch (error) {
+                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
+                        }
+                      },
                     },
                     {
                       text: t.light,
-                      onPress: () => setTheme('light'),
+                      onPress: async () => {
+                        try {
+                          await setTheme('light');
+                          await saveSettings();
+                          Alert.alert(t.success, 'Theme changed to light. Note: Light theme is not yet fully implemented.');
+                        } catch (error) {
+                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
+                        }
+                      },
                     },
                     {
                       text: t.system,
-                      onPress: () => setTheme('system'),
+                      onPress: async () => {
+                        try {
+                          await setTheme('system');
+                          await saveSettings();
+                          Alert.alert(t.success, 'Theme changed to system. The app will follow your device theme.');
+                        } catch (error) {
+                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
+                        }
+                      },
                     },
                     { text: t.cancel, style: 'cancel' },
                   ]
@@ -330,26 +370,14 @@ export default function SettingsScreen() {
               icon="document-text-outline"
               title={t.privacyPolicy}
               subtitle="Read our privacy policy"
-              onPress={() => {
-                Alert.alert(
-                  t.privacyPolicy,
-                  'Privacy policy will be available soon. This will contain information about how we collect, use, and protect your data.',
-                  [{ text: t.cancel, style: 'cancel' }]
-                );
-              }}
+              onPress={() => router.push('/privacy-policy')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="document-outline"
               title={t.termsOfService}
               subtitle="Read our terms of service"
-              onPress={() => {
-                Alert.alert(
-                  t.termsOfService,
-                  'Terms of service will be available soon. This will contain the terms and conditions for using Aurora.',
-                  [{ text: t.cancel, style: 'cancel' }]
-                );
-              }}
+              onPress={() => router.push('/terms-of-service')}
             />
           </GlassCard>
         </View>
