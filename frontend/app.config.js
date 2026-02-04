@@ -19,6 +19,17 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.auroracommune.app',
+      config: {
+        facebookAppId: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        facebookDisplayName: 'Aurora',
+      },
+      infoPlist: {
+        FacebookAppID: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        FacebookDisplayName: 'Aurora',
+        // Client Token is optional - only add if you have it
+        ...(process.env.FACEBOOK_CLIENT_TOKEN && { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN }),
+        LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
+      },
     },
     android: {
       adaptiveIcon: {
@@ -29,6 +40,11 @@ module.exports = {
       predictiveBackGestureEnabled: false,
       softwareKeyboardLayoutMode: 'resize',
       package: 'com.auroracommune.app',
+      config: {
+        facebookAppId: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        facebookDisplayName: 'Aurora',
+      },
+      permissions: [],
     },
     web: {
       favicon: './assets/favicon.png',
@@ -44,6 +60,22 @@ module.exports = {
           sounds: [],
         },
       ],
+        [
+        'react-native-fbsdk-next',
+        (() => {
+          const config = {
+            appID: process.env.FACEBOOK_APP_ID || '1261010692592854',
+            displayName: 'Aurora',
+            scheme: process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1261010692592854',
+          };
+          // Client Token is optional - only add if you have it
+          if (process.env.FACEBOOK_CLIENT_TOKEN) {
+            config.clientToken = process.env.FACEBOOK_CLIENT_TOKEN;
+          }
+          return config;
+        })(),
+      ],
+      'posthog-react-native',
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
@@ -67,6 +99,9 @@ module.exports = {
       PROXY_URL: process.env.PROXY_URL || 'wss://aurora-production.up.railway.app',
       // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
       PROXY_HOST: process.env.PROXY_HOST || null,
+      // PostHog Analytics
+      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || null,
+      POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
     },
   },
 };

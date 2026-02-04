@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, logout } from '../controllers/authController';
+import { register, login, getMe, logout, facebookAuth } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -26,6 +26,7 @@ const loginValidation = [
 // Routes
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
+router.post('/facebook', facebookAuth);
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
 

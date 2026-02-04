@@ -17,6 +17,7 @@ export interface IUser extends Document {
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;
+  facebookId?: string;
   following: Types.ObjectId[];
   savedPosts: Types.ObjectId[];
   pushTokens: PushToken[];
@@ -43,7 +44,7 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: false, // Made optional - will be validated in pre-save hook
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
@@ -77,6 +78,12 @@ const UserSchema = new Schema<IUser>(
     showEmail: {
       type: Boolean,
       default: false,
+    },
+    facebookId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
     following: [{
       type: Schema.Types.ObjectId,
@@ -152,9 +159,17 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Hash password before saving
+// Validate password before saving (required unless Facebook user)
+UserSchema.pre('validate', function (next) {
+  if (!this.facebookId && !this.password) {
+    this.invalidate('password', 'Password is required for non-Facebook users');
+  }
+  next();
+});
+
+// Hash password before saving (skip if password is not modified or user is from Facebook)
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || this.facebookId || !this.password) {
     return next();
   }
   

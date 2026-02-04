@@ -135,6 +135,98 @@ export const logout = async (req: AuthRequest, res: Response): Promise<void> => 
   });
 };
 
+// @desc    Login/Register with Facebook
+// @route   POST /api/auth/facebook
+// @access  Public
+export const facebookAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { accessToken, email, name, facebookId, picture } = req.body;
+
+    if (!accessToken) {
+      res.status(400).json({
+        success: false,
+        message: 'Facebook access token is required',
+      });
+      return;
+    }
+
+    // Try to find existing user by email or Facebook ID
+    let user = await User.findOne({
+      $or: [
+        { email: email?.toLowerCase() },
+        { 'facebookId': facebookId },
+      ],
+    });
+
+    if (user) {
+      // User exists, update Facebook ID if not set
+      if (!user.facebookId && facebookId) {
+        user.facebookId = facebookId;
+        await user.save();
+      }
+
+      // Update avatar if provided and user doesn't have one
+      if (picture?.data?.url && !user.avatar) {
+        user.avatar = picture.data.url;
+        await user.save();
+      }
+    } else {
+      // Create new user
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: 'Email is required for Facebook registration',
+        });
+        return;
+      }
+
+      // Generate username from email or name
+      const baseUsername = name?.toLowerCase().replace(/\s+/g, '_') || email.split('@')[0];
+      let username = baseUsername;
+      let counter = 1;
+
+      // Ensure unique username
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}_${counter}`;
+        counter++;
+      }
+
+      // Create user without password (Facebook users don't need password)
+      const userData: any = {
+        email: email.toLowerCase(),
+        username,
+        displayName: name || username,
+        avatar: picture?.data?.url,
+        facebookId,
+        isAnonymous: false,
+      };
+      
+      // Only add password if not a Facebook user (shouldn't happen, but safety check)
+      if (!facebookId) {
+        userData.password = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+      }
+      
+      user = await User.create(userData);
+    }
+
+    // Generate token
+    const token = generateToken(user._id.toString());
+
+    res.json({
+      success: true,
+      data: {
+        user: sanitizeUser(user),
+        token,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error during Facebook authentication',
+    });
+  }
+};
+
 
 
 

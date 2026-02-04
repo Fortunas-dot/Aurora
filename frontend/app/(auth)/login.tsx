@@ -12,7 +12,7 @@ import { AuroraCore } from '../../src/components/voice/AuroraCore';
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, loginWithFacebook, isLoading, error, clearError } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +32,16 @@ export default function LoginScreen() {
     }
 
     const success = await login(email.trim(), password);
+    if (success) {
+      router.replace('/(tabs)');
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setValidationError('');
+    clearError();
+    
+    const success = await loginWithFacebook();
     if (success) {
       router.replace('/(tabs)');
     }
@@ -122,6 +132,16 @@ export default function LoginScreen() {
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
+
+          {/* Facebook Login Button */}
+          <GlassButton
+            title="Continue with Facebook"
+            onPress={handleFacebookLogin}
+            variant="secondary"
+            icon={<Ionicons name="logo-facebook" size={20} color="#1877F2" style={{ marginRight: SPACING.sm }} />}
+            style={styles.facebookButton}
+            loading={isLoading}
+          />
 
           {/* Continue as Guest */}
           <GlassButton
@@ -228,6 +248,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     paddingHorizontal: SPACING.md,
+  },
+  facebookButton: {
+    marginBottom: SPACING.md,
   },
   guestButton: {
     alignSelf: 'center',

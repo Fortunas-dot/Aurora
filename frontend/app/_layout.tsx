@@ -10,6 +10,7 @@ import { useNotificationStore } from '../src/store/notificationStore';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { pushNotificationService } from '../src/services/pushNotification.service';
 import { notificationWebSocketService } from '../src/services/notificationWebSocket.service';
+import { posthogService } from '../src/services/posthog.service';
 
 function LoadingScreen() {
   return (
@@ -30,6 +31,8 @@ export default function RootLayout() {
   useEffect(() => {
     checkAuth();
     loadSettings();
+    // Initialize PostHog
+    posthogService.initialize();
   }, []);
 
   // Initialize push notifications
@@ -58,6 +61,19 @@ export default function RootLayout() {
       };
     }
   }, [isAuthenticated, user, updateUnreadCount]);
+
+  // Identify user in PostHog when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      posthogService.identify(user._id, {
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+      });
+    } else if (!isAuthenticated) {
+      posthogService.reset();
+    }
+  }, [isAuthenticated, user]);
 
   // Setup WebSocket connection for real-time notifications
   useEffect(() => {

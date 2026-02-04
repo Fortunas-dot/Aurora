@@ -84,6 +84,22 @@ class AuthService {
     const token = await this.getToken();
     return !!token;
   }
+
+  async loginWithFacebook(accessToken: string, userInfo: any): Promise<ApiResponse<AuthResponse>> {
+    const response = await apiService.post<AuthResponse>('/auth/facebook', {
+      accessToken,
+      email: userInfo.email,
+      name: userInfo.name,
+      facebookId: userInfo.id,
+      picture: userInfo.picture,
+    });
+
+    if (response.success && response.data?.token) {
+      await this.saveToken(response.data.token);
+    }
+
+    return response;
+  }
 }
 
 export const authService = new AuthService();
