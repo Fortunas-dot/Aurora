@@ -7,6 +7,10 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Image,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +36,9 @@ export default function GroupsScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null); // null = all, 'global' = global only, country code = specific country
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null); // null = all, country code = specific country
+  const [countrySearchQuery, setCountrySearchQuery] = useState('');
+  const [showCountrySearch, setShowCountrySearch] = useState(false);
   
   // Buddies state
   const [buddies, setBuddies] = useState<UserProfile[]>([]);
@@ -253,7 +259,7 @@ export default function GroupsScreen() {
   const displayBuddies = buddySearchQuery.trim() ? searchResults : buddies;
 
   // Render Group Card
-  const renderGroup = ({ item }: { item: Group }) => (
+  const renderGroup = useCallback(({ item }: { item: Group }) => (
     <GlassCard style={styles.groupCard} padding={0} onPress={() => router.push(`/group/${item._id}`)}>
       <View style={styles.groupHeader}>
         <View style={styles.groupAvatar}>
@@ -316,10 +322,10 @@ export default function GroupsScreen() {
         />
       </View>
     </GlassCard>
-  );
+  ), [router, handleJoinGroup]);
 
   // Render Buddy Card
-  const renderBuddy = ({ item }: { item: UserProfile }) => {
+  const renderBuddy = useCallback(({ item }: { item: UserProfile }) => {
     const isFollowing = item.isFollowing ?? false;
     const isInBuddiesList = buddies.some(b => b._id === item._id);
     
@@ -368,7 +374,7 @@ export default function GroupsScreen() {
         </View>
       </GlassCard>
     );
-  };
+  }, [router, buddies, handleFollowUser, handleMessageUser]);
 
   return (
     <LinearGradient
@@ -457,39 +463,128 @@ export default function GroupsScreen() {
 
           {/* Country Filter */}
           <View style={styles.countryFilterContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.countryFilterScroll}
-            >
-              <Pressable
-                style={[styles.countryFilterChip, selectedCountry === null && styles.countryFilterChipActive]}
-                onPress={() => setSelectedCountry(null)}
+            <View style={styles.countryFilterHeader}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.countryFilterScroll}
+                removeClippedSubviews={true}
+                scrollEventThrottle={16}
+                decelerationRate="fast"
               >
-                <Text style={[styles.countryFilterText, selectedCountry === null && styles.countryFilterTextActive]}>
-                  All Countries
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.countryFilterChip, selectedCountry === 'global' && styles.countryFilterChipActive]}
-                onPress={() => setSelectedCountry('global')}
-              >
-                <Text style={[styles.countryFilterText, selectedCountry === 'global' && styles.countryFilterTextActive]}>
-                  Global
-                </Text>
-              </Pressable>
-              {COUNTRIES.filter(c => c.code !== 'global').map((country) => (
                 <Pressable
-                  key={country.code}
-                  style={[styles.countryFilterChip, selectedCountry === country.code && styles.countryFilterChipActive]}
-                  onPress={() => setSelectedCountry(country.code)}
+                  style={[styles.countryFilterChip, selectedCountry === null && styles.countryFilterChipActive]}
+                  onPress={() => {
+                    setSelectedCountry(null);
+                    setCountrySearchQuery('');
+                    setShowCountrySearch(false);
+                  }}
                 >
-                  <Text style={[styles.countryFilterText, selectedCountry === country.code && styles.countryFilterTextActive]}>
-                    {country.name}
+                  <Text style={[styles.countryFilterText, selectedCountry === null && styles.countryFilterTextActive]}>
+                    All Countries
                   </Text>
                 </Pressable>
-              ))}
-            </ScrollView>
+                <Pressable
+                  style={[styles.countryFilterChip, styles.countryFilterChipSearch, showCountrySearch && styles.countryFilterChipSearchActive]}
+                  onPress={() => {
+                    setShowCountrySearch(!showCountrySearch);
+                    if (!showCountrySearch) {
+                      setCountrySearchQuery('');
+                    }
+                  }}
+                >
+                  <Ionicons name="search" size={16} color={showCountrySearch ? COLORS.white : COLORS.primary} />
+                  <Text style={[styles.countryFilterText, { color: showCountrySearch ? COLORS.white : COLORS.primary, marginLeft: SPACING.xs }]}>
+                    Search Country
+                  </Text>
+                </Pressable>
+                {!showCountrySearch && COUNTRIES.filter(c => c.code !== 'global').slice(0, 5).map((country) => (
+                  <Pressable
+                    key={country.code}
+                    style={[styles.countryFilterChip, selectedCountry === country.code && styles.countryFilterChipActive]}
+                    onPress={() => setSelectedCountry(country.code)}
+                  >
+                    <Text style={[styles.countryFilterText, selectedCountry === country.code && styles.countryFilterTextActive]}>
+                      {country.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Country Search Input and Results */}
+            {showCountrySearch && (
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={insets.top + 100}
+              >
+                <View style={styles.countrySearchContainer}>
+                  <GlassInput
+                    value={countrySearchQuery}
+                    onChangeText={setCountrySearchQuery}
+                    placeholder="Search for a country..."
+                    icon="search"
+                    style={styles.countrySearchInput}
+                    autoFocus={true}
+                  />
+                  
+                  {countrySearchQuery.trim() && (
+                    <View style={styles.countryResultsContainer}>
+                      <FlatList
+                        data={COUNTRIES.filter((country) => {
+                          if (country.code === 'global') return false;
+                          const query = countrySearchQuery.toLowerCase();
+                          return (
+                            country.name.toLowerCase().includes(query) ||
+                            country.code.toLowerCase().includes(query)
+                          );
+                        })}
+                        keyExtractor={(item) => item.code}
+                        renderItem={({ item }) => (
+                          <Pressable
+                            style={[
+                              styles.countryResultItem,
+                              selectedCountry === item.code && styles.countryResultItemActive,
+                            ]}
+                            onPress={() => {
+                              setSelectedCountry(item.code);
+                              setCountrySearchQuery('');
+                              setShowCountrySearch(false);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.countryResultText,
+                                selectedCountry === item.code && styles.countryResultTextActive,
+                              ]}
+                            >
+                              {item.name}
+                            </Text>
+                            {selectedCountry === item.code && (
+                              <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                            )}
+                          </Pressable>
+                        )}
+                        style={styles.countryResultsList}
+                        contentContainerStyle={styles.countryResultsListContent}
+                        keyboardShouldPersistTaps="handled"
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={20}
+                        windowSize={10}
+                        initialNumToRender={20}
+                        updateCellsBatchingPeriod={50}
+                        scrollEventThrottle={16}
+                        ListEmptyComponent={
+                          <View style={styles.countryResultsEmpty}>
+                            <Text style={styles.countryResultsEmptyText}>No countries found</Text>
+                          </View>
+                        }
+                      />
+                    </View>
+                  )}
+                </View>
+              </KeyboardAvoidingView>
+            )}
           </View>
 
           {/* Groups List */}
@@ -499,6 +594,13 @@ export default function GroupsScreen() {
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={10}
+            updateCellsBatchingPeriod={50}
+            scrollEventThrottle={16}
+            decelerationRate="normal"
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
@@ -547,6 +649,13 @@ export default function GroupsScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          updateCellsBatchingPeriod={50}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -663,9 +772,64 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   countryFilterContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  countryFilterHeader: {
+    paddingVertical: SPACING.sm,
+  },
+  countrySearchContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  countrySearchInput: {
+    marginBottom: SPACING.sm,
+  },
+  countryResultsContainer: {
+    maxHeight: 300,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    overflow: 'hidden',
+  },
+  countryResultsList: {
+    maxHeight: 300,
+  },
+  countryResultsListContent: {
+    paddingVertical: SPACING.xs,
+  },
+  countryResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.glass.border,
+  },
+  countryResultItemActive: {
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+  },
+  countryResultText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+  },
+  countryResultTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  countryResultsEmpty: {
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  countryResultsEmptyText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+  },
+  countryFilterChipSearchActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   countryFilterScroll: {
     paddingHorizontal: SPACING.md,
@@ -689,6 +853,73 @@ const styles = StyleSheet.create({
   },
   countryFilterTextActive: {
     color: COLORS.white,
+    fontWeight: '600',
+  },
+  countryFilterChipSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    borderColor: COLORS.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    maxHeight: '80%',
+    paddingBottom: SPACING.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.glass.backgroundLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSearchInput: {
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  modalList: {
+    flex: 1,
+  },
+  modalCountryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalCountryItemActive: {
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+  },
+  modalCountryText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+  },
+  modalCountryTextActive: {
+    color: COLORS.primary,
     fontWeight: '600',
   },
   filterTab: {

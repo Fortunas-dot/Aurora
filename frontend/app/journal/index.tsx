@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,20 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  FlatList,
+  Image,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard, GlassButton } from '../../src/components/common';
+import { GlassCard, GlassButton, Avatar } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
-import { journalService, JournalEntry, JournalPrompt, JournalInsights } from '../../src/services/journal.service';
+import { journalService, JournalEntry, JournalPrompt, JournalInsights, Journal } from '../../src/services/journal.service';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 // Mood emoji mapping
 const getMoodEmoji = (mood: number): string => {
@@ -39,9 +43,9 @@ const getMoodColor = (mood: number): string => {
 // Format date for display
 const formatEntryDate = (dateStr: string): string => {
   const date = parseISO(dateStr);
-  if (isToday(date)) return 'Vandaag';
-  if (isYesterday(date)) return 'Gisteren';
-  return format(date, 'd MMMM', { locale: nl });
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return format(date, 'd MMMM', { locale: enUS });
 };
 
 // Entry Card Component
@@ -129,7 +133,7 @@ const EntryCard: React.FC<{
             </View>
           )}
           <View style={styles.readMore}>
-            <Text style={styles.readMoreText}>Lees meer</Text>
+            <Text style={styles.readMoreText}>Read more</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </View>
         </View>
@@ -160,17 +164,17 @@ const PromptCard: React.FC<{
             <Ionicons name="sparkles" size={20} color={COLORS.white} />
           </LinearGradient>
         </View>
-        <View style={styles.promptCategoryContainer}>
-          <Text style={styles.promptCategory}>{prompt.category}</Text>
-          <View style={styles.promptBadge}>
-            <Text style={styles.promptBadgeText}>Vandaag</Text>
+          <View style={styles.promptCategoryContainer}>
+            <Text style={styles.promptCategory}>{prompt.category}</Text>
+            <View style={styles.promptBadge}>
+              <Text style={styles.promptBadgeText}>Today</Text>
+            </View>
           </View>
-        </View>
       </View>
       <Text style={styles.promptText}>{prompt.text}</Text>
       <View style={styles.promptAction}>
         <View style={styles.promptActionContent}>
-          <Text style={styles.promptActionText}>Begin te schrijven</Text>
+          <Text style={styles.promptActionText}>Start writing</Text>
           <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
         </View>
       </View>
@@ -194,14 +198,14 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Text style={styles.statsTitle}>Jouw voortgang</Text>
+      <Text style={styles.statsTitle}>Your Progress</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
           <View style={[styles.statIconContainer, { backgroundColor: `${COLORS.warning}20` }]}>
             <Ionicons name="flame" size={24} color={COLORS.warning} />
           </View>
           <Text style={styles.statValue}>{insights.streakDays}</Text>
-          <Text style={styles.statLabel}>dagen streak</Text>
+          <Text style={styles.statLabel}>day streak</Text>
           {insights.streakDays > 0 && (
             <View style={styles.streakIndicator}>
               <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
@@ -224,7 +228,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
           <Text style={[styles.statValue, { color: averageMoodColor }]}>
             {insights.averageMood ? insights.averageMood.toFixed(1) : '-'}
           </Text>
-          <Text style={styles.statLabel}>gem. stemming</Text>
+          <Text style={styles.statLabel}>avg. mood</Text>
         </View>
       </View>
     </GlassCard>
@@ -235,18 +239,44 @@ export default function JournalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
+  const [journals, setJournals] = useState<Journal[]>([]);
+  const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [prompt, setPrompt] = useState<JournalPrompt | null>(null);
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showJournalModal, setShowJournalModal] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadJournals = useCallback(async () => {
     try {
+      setLoading(true);
+      const response = await journalService.getUserJournals(1, 100);
+      if (response.success && response.data) {
+        setJournals(response.data);
+        // Auto-select first journal if available and no journal is selected
+        if (response.data.length > 0) {
+          setSelectedJournal((prev) => prev || response.data[0]);
+        } else {
+          setSelectedJournal(null);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error loading journals:', error);
+      setLoading(false);
+    }
+  }, []);
+
+  const loadData = useCallback(async (journalId: string) => {
+    try {
+      setLoading(true);
       const [entriesRes, promptRes, insightsRes] = await Promise.all([
-        journalService.getEntries(1, 10),
+        journalService.getEntries(1, 10, { journalId }),
         journalService.getPrompt(),
-        journalService.getInsights(30),
+        journalService.getInsights(30, journalId),
       ]);
 
       if (entriesRes.success && entriesRes.data) {
@@ -268,23 +298,45 @@ export default function JournalScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      loadJournals();
+    }, [loadJournals])
   );
 
+  useEffect(() => {
+    if (selectedJournal) {
+      loadData(selectedJournal._id);
+    } else if (journals.length === 0) {
+      setLoading(false);
+    }
+  }, [selectedJournal, loadData, journals.length]);
+
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadData();
-  }, [loadData]);
+    if (selectedJournal) {
+      setRefreshing(true);
+      loadData(selectedJournal._id);
+    }
+  }, [loadData, selectedJournal]);
 
   const handleNewEntry = (promptData?: JournalPrompt) => {
+    if (!selectedJournal) {
+      Alert.alert('No Journal', 'Please create or select a journal first');
+      return;
+    }
+
     if (promptData) {
       router.push({
         pathname: '/journal/create',
-        params: { promptId: promptData.id, promptText: promptData.text },
+        params: { 
+          journalId: selectedJournal._id,
+          promptId: promptData.id, 
+          promptText: promptData.text 
+        },
       });
     } else {
-      router.push('/journal/create');
+      router.push({
+        pathname: '/journal/create',
+        params: { journalId: selectedJournal._id },
+      });
     }
   };
 
@@ -295,6 +347,50 @@ export default function JournalScreen() {
   const handleInsightsPress = () => {
     router.push('/journal/insights');
   };
+
+  // Show journal selection/creation screen if no journals
+  if (!loading && journals.length === 0) {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Journal</Text>
+          <Pressable
+            style={styles.headerButton}
+            onPress={() => router.push('/journal/browse')}
+          >
+            <Ionicons name="search" size={24} color={COLORS.text} />
+          </Pressable>
+        </View>
+
+        <View style={styles.emptyJournalContainer}>
+          <GlassCard style={styles.emptyJournalCard} padding="xl">
+            <View style={styles.emptyJournalContent}>
+              <Ionicons name="book-outline" size={64} color={COLORS.primary} />
+              <Text style={styles.emptyJournalTitle}>Create Your First Journal</Text>
+              <Text style={styles.emptyJournalText}>
+                Start your journey by creating a private or public journal
+              </Text>
+              <GlassButton
+                title="Create Journal"
+                onPress={() => router.push('/journal/create-journal')}
+                style={styles.createJournalButton}
+                size="lg"
+              />
+              <Pressable
+                style={styles.browseButton}
+                onPress={() => router.push('/journal/browse')}
+              >
+                <Text style={styles.browseButtonText}>Browse Public Journals</Text>
+              </Pressable>
+            </View>
+          </GlassCard>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   if (loading) {
     return (
@@ -313,13 +409,43 @@ export default function JournalScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Dagboek</Text>
         <Pressable
-          style={styles.headerButton}
-          onPress={handleInsightsPress}
+          style={styles.journalSelector}
+          onPress={() => setShowJournalModal(true)}
         >
-          <Ionicons name="analytics" size={24} color={COLORS.text} />
+          {selectedJournal && (
+            <>
+              {selectedJournal.coverImage ? (
+                <Image
+                  source={{ uri: selectedJournal.coverImage }}
+                  style={styles.journalSelectorImage}
+                />
+              ) : (
+                <View style={styles.journalSelectorIcon}>
+                  <Ionicons name="book" size={20} color={COLORS.primary} />
+                </View>
+              )}
+              <Text style={styles.journalSelectorText} numberOfLines={1}>
+                {selectedJournal.name}
+              </Text>
+            </>
+          )}
+          <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
         </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable
+            style={styles.headerButton}
+            onPress={() => router.push('/journal/browse')}
+          >
+            <Ionicons name="search" size={24} color={COLORS.text} />
+          </Pressable>
+          <Pressable
+            style={styles.headerButton}
+            onPress={handleInsightsPress}
+          >
+            <Ionicons name="analytics" size={24} color={COLORS.text} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -329,6 +455,9 @@ export default function JournalScreen() {
           { paddingBottom: insets.bottom + SPACING.xl },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -340,7 +469,7 @@ export default function JournalScreen() {
         {/* Daily Prompt */}
         {prompt && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Vandaag</Text>
+            <Text style={styles.sectionTitle}>Today</Text>
             <PromptCard prompt={prompt} onPress={() => handleNewEntry(prompt)} />
           </View>
         )}
@@ -349,9 +478,9 @@ export default function JournalScreen() {
         {insights && insights.totalEntries > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Statistieken</Text>
+              <Text style={styles.sectionTitle}>Statistics</Text>
               <Pressable onPress={handleInsightsPress}>
-                <Text style={styles.sectionLink}>Bekijk alles</Text>
+                <Text style={styles.sectionLink}>View all</Text>
               </Pressable>
             </View>
             <StatsCard insights={insights} />
@@ -361,7 +490,7 @@ export default function JournalScreen() {
         {/* Recent Entries */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recente entries</Text>
+            <Text style={styles.sectionTitle}>Recent Entries</Text>
           </View>
 
           {entries.length === 0 ? (
@@ -369,9 +498,9 @@ export default function JournalScreen() {
               <GlassCard style={styles.emptyCard} padding="lg">
                 <View style={styles.emptyContent}>
                   <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyTitle}>Nog geen entries</Text>
+                  <Text style={styles.emptyTitle}>No entries yet</Text>
                   <Text style={styles.emptyText} numberOfLines={0}>
-                    Begin met schrijven om je gedachten en gevoelens te verkennen
+                    Start writing to explore your thoughts and feelings
                   </Text>
                 </View>
               </GlassCard>
@@ -403,6 +532,93 @@ export default function JournalScreen() {
           <Ionicons name="add" size={28} color={COLORS.white} />
         </LinearGradient>
       </Pressable>
+
+      {/* Journal Selection Modal */}
+      <Modal
+        visible={showJournalModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowJournalModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingTop: insets.top + SPACING.md }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Journal</Text>
+              <Pressable
+                style={styles.modalCloseButton}
+                onPress={() => setShowJournalModal(false)}
+              >
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </Pressable>
+            </View>
+
+            <FlatList
+              data={journals}
+              keyExtractor={(item) => item._id}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+              initialNumToRender={10}
+              updateCellsBatchingPeriod={50}
+              scrollEventThrottle={16}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.modalJournalItem}
+                  onPress={() => {
+                    setSelectedJournal(item);
+                    setShowJournalModal(false);
+                  }}
+                >
+                  {item.coverImage ? (
+                    <Image
+                      source={{ uri: item.coverImage }}
+                      style={styles.modalJournalImage}
+                    />
+                  ) : (
+                    <View style={styles.modalJournalIcon}>
+                      <Ionicons name="book" size={24} color={COLORS.primary} />
+                    </View>
+                  )}
+                  <View style={styles.modalJournalInfo}>
+                    <Text style={styles.modalJournalName}>{item.name}</Text>
+                    {item.description && (
+                      <Text style={styles.modalJournalDescription} numberOfLines={1}>
+                        {item.description}
+                      </Text>
+                    )}
+                    <View style={styles.modalJournalMeta}>
+                      <Ionicons
+                        name={item.isPublic ? 'globe' : 'lock-closed'}
+                        size={14}
+                        color={COLORS.textMuted}
+                      />
+                      <Text style={styles.modalJournalMetaText}>
+                        {item.entriesCount || 0} entries
+                      </Text>
+                    </View>
+                  </View>
+                  {selectedJournal?._id === item._id && (
+                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                  )}
+                </Pressable>
+              )}
+              ListFooterComponent={
+                <Pressable
+                  style={styles.modalCreateButton}
+                  onPress={() => {
+                    setShowJournalModal(false);
+                    router.push('/journal/create-journal');
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
+                  <Text style={styles.modalCreateButtonText}>Create New Journal</Text>
+                </Pressable>
+              }
+              contentContainerStyle={styles.modalListContent}
+            />
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -775,6 +991,183 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyJournalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+  },
+  emptyJournalCard: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xxl,
+  },
+  emptyJournalContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  emptyJournalTitle: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.text,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  emptyJournalText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+  },
+  createJournalButton: {
+    marginBottom: SPACING.md,
+  },
+  browseButton: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  browseButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
+  },
+  journalSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flex: 1,
+    marginHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  journalSelectorImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  journalSelectorIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  journalSelectorText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    maxHeight: '80%',
+    paddingBottom: SPACING.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalListContent: {
+    padding: SPACING.md,
+  },
+  modalJournalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginBottom: SPACING.sm,
+  },
+  modalJournalImage: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.md,
+  },
+  modalJournalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  modalJournalInfo: {
+    flex: 1,
+  },
+  modalJournalName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs / 2,
+  },
+  modalJournalDescription: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs / 2,
+  },
+  modalJournalMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  modalJournalMetaText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  modalCreateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    borderStyle: 'dashed',
+    marginTop: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  modalCreateButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
   },
 });
 

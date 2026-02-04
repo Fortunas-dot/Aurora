@@ -229,7 +229,23 @@ export default function PostDetailsScreen() {
             <CommentCard
               comment={item}
               onLike={() => handleLikeComment(item._id)}
+              onReplyAdded={(reply) => {
+                // Update the comment's replies count
+                setComments((prev) =>
+                  prev.map((comment) =>
+                    comment._id === item._id
+                      ? {
+                          ...comment,
+                          replies: [...(comment.replies || []), reply],
+                          repliesCount: (comment.repliesCount || 0) + 1,
+                        }
+                      : comment
+                  )
+                );
+              }}
               currentUserId={user?._id}
+              isAuthenticated={isAuthenticated}
+              postId={post._id}
             />
           )}
           keyExtractor={(item) => item._id}
@@ -239,6 +255,7 @@ export default function PostDetailsScreen() {
                 post={post}
                 onLike={handleLikePost}
                 onComment={() => {}}
+                onAuthorPress={() => router.push(`/user/${post.author._id}`)}
                 currentUserId={user?._id}
                 showFullContent={true}
               />
@@ -251,6 +268,13 @@ export default function PostDetailsScreen() {
           }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          updateCellsBatchingPeriod={50}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -290,12 +314,14 @@ export default function PostDetailsScreen() {
               inputStyle={styles.commentInputText}
             />
             <GlassButton
-              title="Post"
+              title="Verzend"
               onPress={handleSubmitComment}
               variant="primary"
-              size="small"
+              size="sm"
               isLoading={isSubmittingComment}
               disabled={!commentText.trim() || isSubmittingComment}
+              icon="send"
+              iconPosition="right"
               style={styles.submitCommentButton}
             />
           </View>
@@ -416,8 +442,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   submitCommentButton: {
-    minWidth: 70,
-    height: 40,
+    minWidth: 75,
     alignSelf: 'center',
   },
   authPrompt: {

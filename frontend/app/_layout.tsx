@@ -10,7 +10,7 @@ import { useNotificationStore } from '../src/store/notificationStore';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { pushNotificationService } from '../src/services/pushNotification.service';
 import { notificationWebSocketService } from '../src/services/notificationWebSocket.service';
-import { posthogService } from '../src/services/posthog.service';
+import { posthogService, POSTHOG_EVENTS } from '../src/services/posthog.service';
 
 function LoadingScreen() {
   return (
@@ -29,11 +29,39 @@ export default function RootLayout() {
   const { loadSettings } = useSettingsStore();
 
   useEffect(() => {
-    checkAuth();
-    loadSettings();
-    // Initialize PostHog
-    posthogService.initialize();
-  }, []);
+    let isMounted = true;
+    
+    const initialize = async () => {
+      try {
+        // First check authentication status (this is critical for app state)
+        await checkAuth();
+        
+        if (!isMounted) return;
+        
+        // Then load settings
+        await loadSettings();
+        
+        if (!isMounted) return;
+        
+        // Initialize PostHog (non-blocking)
+        posthogService.initialize().catch((error) => {
+          console.warn('PostHog initialization failed:', error);
+        });
+      } catch (error) {
+        console.error('Initialization error:', error);
+        // Ensure loading state is cleared even on error
+        if (isMounted) {
+          useAuthStore.setState({ isLoading: false });
+        }
+      }
+    };
+    
+    initialize();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Only run once on mount
 
   // Initialize push notifications
   useEffect(() => {
@@ -62,16 +90,23 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user, updateUnreadCount]);
 
-  // Identify user in PostHog when authenticated
+  // Identify user in PostHog when authenticated (for app restarts)
   useEffect(() => {
     if (isAuthenticated && user) {
       posthogService.identify(user._id, {
         email: user.email,
         username: user.username,
         displayName: user.displayName,
+        last_seen: new Date().toISOString(),
+      });
+      
+      // Track app opened event when user is already authenticated (app restart)
+      posthogService.trackEvent(POSTHOG_EVENTS.APP_OPENED, {
+        timestamp: new Date().toISOString(),
       });
     } else if (!isAuthenticated) {
-      posthogService.reset();
+      // Don't reset here - let logout handle it
+      // posthogService.reset();
     }
   }, [isAuthenticated, user]);
 

@@ -88,6 +88,10 @@ class PostService {
     return apiService.get<Post[]>(`/posts/saved?page=${page}&limit=${limit}`);
   }
 
+  async getUserPosts(userId: string, page: number = 1, limit: number = 20): Promise<ApiResponse<Post[]>> {
+    return apiService.get<Post[]>(`/users/${userId}/posts?page=${page}&limit=${limit}`);
+  }
+
   async savePost(id: string): Promise<ApiResponse<{ isSaved: boolean }>> {
     return apiService.post(`/posts/${id}/save`, {});
   }

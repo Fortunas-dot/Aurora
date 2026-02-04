@@ -7,6 +7,9 @@ export interface Comment {
   author: User;
   content: string;
   likes: string[];
+  parentComment?: string; // ID of parent comment if this is a reply
+  replies?: Comment[]; // Nested replies
+  repliesCount?: number; // Number of replies
   createdAt: string;
   updatedAt: string;
 }
@@ -22,12 +25,34 @@ class CommentService {
 
   async createComment(
     postId: string,
-    content: string
+    content: string,
+    parentCommentId?: string
   ): Promise<ApiResponse<Comment>> {
     return apiService.post<Comment>('/comments', {
       postId,
       content,
+      parentCommentId,
     });
+  }
+
+  async replyToComment(
+    commentId: string,
+    content: string,
+    postId: string
+  ): Promise<ApiResponse<Comment>> {
+    return apiService.post<Comment>('/comments', {
+      postId,
+      content,
+      parentCommentId: commentId,
+    });
+  }
+
+  async getReplies(
+    commentId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<ApiResponse<Comment[]>> {
+    return apiService.get<Comment[]>(`/comments/${commentId}/replies?page=${page}&limit=${limit}`);
   }
 
   async updateComment(

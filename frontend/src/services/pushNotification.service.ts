@@ -65,9 +65,18 @@ class PushNotificationService {
       // Get device ID
       this.deviceId = Constants.expoConfig?.extra?.deviceId || Device.modelName || 'unknown';
 
+      // Get projectId from config
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      
+      // Check if projectId is available
+      if (!projectId) {
+        console.warn('No EAS projectId found. Push notifications will not work. To enable push notifications, add your EAS projectId to app.config.js in extra.eas.projectId');
+        return null;
+      }
+
       // Get push token
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId,
+        projectId: projectId,
       });
 
       this.token = tokenData.data;
@@ -87,7 +96,12 @@ class PushNotificationService {
       }
 
       return this.token;
-    } catch (error) {
+    } catch (error: any) {
+      // Check if error is about missing projectId
+      if (error?.message?.includes('projectId')) {
+        console.warn('Push notifications require an EAS projectId. Add it to app.config.js in extra.eas.projectId. Push notifications are disabled for now.');
+        return null;
+      }
       console.error('Error registering for push notifications:', error);
       return null;
     }

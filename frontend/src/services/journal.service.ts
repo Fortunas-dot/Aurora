@@ -1,6 +1,24 @@
 import { apiService, ApiResponse } from './api.service';
+import { User } from './auth.service';
 
 export type SeverityLevel = 'mild' | 'moderate' | 'severe';
+
+export interface Journal {
+  _id: string;
+  name: string;
+  description?: string;
+  owner: User | string;
+  isPublic: boolean;
+  topics?: string[];
+  followers: string[];
+  followersCount: number;
+  entriesCount: number;
+  coverImage?: string;
+  isFollowing?: boolean;
+  isOwner?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ISymptom {
   condition: string;
@@ -20,6 +38,7 @@ export interface IAIInsights {
 export interface JournalEntry {
   _id: string;
   author: string;
+  journal: string | Journal;
   content: string;
   audioUrl?: string;
   transcription?: string;
@@ -61,12 +80,21 @@ export interface AuroraJournalContext {
 export interface CreateEntryData {
   content: string;
   mood: number;
+  journalId: string;
   audioUrl?: string;
   transcription?: string;
   symptoms?: ISymptom[];
   tags?: string[];
   promptId?: string;
   promptText?: string;
+}
+
+export interface CreateJournalData {
+  name: string;
+  description?: string;
+  isPublic: boolean;
+  coverImage?: string;
+  topics?: string[];
 }
 
 export interface UpdateEntryData {
@@ -77,6 +105,59 @@ export interface UpdateEntryData {
 }
 
 class JournalService {
+  // ==================== JOURNAL CRUD ====================
+  
+  // Create a new journal
+  async createJournal(data: CreateJournalData): Promise<ApiResponse<Journal>> {
+    return apiService.post<Journal>('/journals', data);
+  }
+
+  // Get user's journals
+  async getUserJournals(page: number = 1, limit: number = 20): Promise<ApiResponse<Journal[]>> {
+    return apiService.get<Journal[]>(`/journals?page=${page}&limit=${limit}`);
+  }
+
+  // Get public journals
+  async getPublicJournals(page: number = 1, limit: number = 20, search?: string): Promise<ApiResponse<Journal[]>> {
+    let endpoint = `/journals/public?page=${page}&limit=${limit}`;
+    if (search) {
+      endpoint += `&search=${encodeURIComponent(search)}`;
+    }
+    return apiService.get<Journal[]>(endpoint);
+  }
+
+  // Get single journal
+  async getJournal(id: string): Promise<ApiResponse<Journal>> {
+    return apiService.get<Journal>(`/journals/${id}`);
+  }
+
+  // Update journal
+  async updateJournal(id: string, data: Partial<CreateJournalData>): Promise<ApiResponse<Journal>> {
+    return apiService.put<Journal>(`/journals/${id}`, data);
+  }
+
+  // Delete journal
+  async deleteJournal(id: string): Promise<ApiResponse<void>> {
+    return apiService.delete(`/journals/${id}`);
+  }
+
+  // Follow a journal
+  async followJournal(id: string): Promise<ApiResponse<Journal>> {
+    return apiService.post<Journal>(`/journals/${id}/follow`, {});
+  }
+
+  // Unfollow a journal
+  async unfollowJournal(id: string): Promise<ApiResponse<Journal>> {
+    return apiService.post<Journal>(`/journals/${id}/unfollow`, {});
+  }
+
+  // Get followed journals
+  async getFollowingJournals(page: number = 1, limit: number = 20): Promise<ApiResponse<Journal[]>> {
+    return apiService.get<Journal[]>(`/journals/following?page=${page}&limit=${limit}`);
+  }
+
+  // ==================== JOURNAL ENTRY CRUD ====================
+  
   // Get all journal entries with optional filters
   async getEntries(
     page: number = 1,
@@ -86,6 +167,7 @@ class JournalService {
       endDate?: string;
       mood?: number;
       tag?: string;
+      journalId?: string;
     }
   ): Promise<ApiResponse<JournalEntry[]>> {
     let endpoint = `/journal?page=${page}&limit=${limit}`;
@@ -102,6 +184,9 @@ class JournalService {
     if (options?.tag) {
       endpoint += `&tag=${options.tag}`;
     }
+    if (options?.journalId) {
+      endpoint += `&journalId=${options.journalId}`;
+    }
     
     return apiService.get<JournalEntry[]>(endpoint);
   }
@@ -116,6 +201,11 @@ class JournalService {
     return apiService.post<JournalEntry>('/journal', data);
   }
 
+  // Get entries from followed journals
+  async getFollowingEntries(page: number = 1, limit: number = 20): Promise<ApiResponse<JournalEntry[]>> {
+    return apiService.get<JournalEntry[]>(`/journal/following?page=${page}&limit=${limit}`);
+  }
+
   // Update entry
   async updateEntry(id: string, data: UpdateEntryData): Promise<ApiResponse<JournalEntry>> {
     return apiService.put<JournalEntry>(`/journal/${id}`, data);
@@ -127,8 +217,12 @@ class JournalService {
   }
 
   // Get insights and patterns
-  async getInsights(days: number = 30): Promise<ApiResponse<JournalInsights>> {
-    return apiService.get<JournalInsights>(`/journal/insights?days=${days}`);
+  async getInsights(days: number = 30, journalId?: string): Promise<ApiResponse<JournalInsights>> {
+    let endpoint = `/journal/insights?days=${days}`;
+    if (journalId) {
+      endpoint += `&journalId=${journalId}`;
+    }
+    return apiService.get<JournalInsights>(endpoint);
   }
 
   // Get personalized prompt

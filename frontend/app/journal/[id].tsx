@@ -16,7 +16,7 @@ import { GlassCard } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalEntry } from '../../src/services/journal.service';
 import { format, parseISO } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 // Mood emoji mapping
 const getMoodEmoji = (mood: number): string => {
@@ -48,9 +48,9 @@ const getSeverityColor = (severity: string): string => {
 
 const getSeverityLabel = (severity: string): string => {
   switch (severity) {
-    case 'mild': return 'Licht';
-    case 'moderate': return 'Matig';
-    case 'severe': return 'Ernstig';
+    case 'mild': return 'Mild';
+    case 'moderate': return 'Moderate';
+    case 'severe': return 'Severe';
     default: return severity;
   }
 };
@@ -67,10 +67,10 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
   };
 
   const sentimentLabel: Record<string, string> = {
-    positive: 'Positief',
-    neutral: 'Neutraal',
-    negative: 'Negatief',
-    mixed: 'Gemengd',
+    positive: 'Positive',
+    neutral: 'Neutral',
+    negative: 'Negative',
+    mixed: 'Mixed',
   };
 
   return (
@@ -79,7 +79,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
         <View style={styles.insightsIconContainer}>
           <Ionicons name="sparkles" size={20} color={COLORS.primary} />
         </View>
-        <Text style={styles.insightsTitle}>Aurora's Inzichten</Text>
+        <Text style={styles.insightsTitle}>Aurora's Insights</Text>
       </View>
 
       {/* Sentiment */}
@@ -108,7 +108,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
       {/* Cognitive Patterns */}
       {insights.cognitivePatterns && insights.cognitivePatterns.length > 0 && (
         <View style={styles.insightSection}>
-          <Text style={styles.insightLabel}>Gedetecteerde patronen</Text>
+          <Text style={styles.insightLabel}>Detected patterns</Text>
           <View style={styles.patternsContainer}>
             {insights.cognitivePatterns.map((pattern, index) => (
               <View key={index} style={styles.patternTag}>
@@ -131,7 +131,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
       {/* Follow-up Questions */}
       {insights.followUpQuestions && insights.followUpQuestions.length > 0 && (
         <View style={styles.insightSection}>
-          <Text style={styles.insightLabel}>Vragen om over na te denken</Text>
+          <Text style={styles.insightLabel}>Questions to reflect on</Text>
           {insights.followUpQuestions.map((question, index) => (
             <View key={index} style={styles.questionRow}>
               <Ionicons name="help-circle-outline" size={18} color={COLORS.primary} />
@@ -173,13 +173,13 @@ export default function JournalEntryScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Verwijderen',
-      'Weet je zeker dat je deze entry wilt verwijderen?',
+      Alert.alert(
+      'Delete',
+      'Are you sure you want to delete this entry?',
       [
-        { text: 'Annuleren', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Verwijderen',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             if (!id) return;
@@ -203,7 +203,7 @@ export default function JournalEntryScreen() {
         setEntry(response.data);
       }
     } catch (error) {
-      Alert.alert('Fout', 'Kon analyse niet uitvoeren');
+      Alert.alert('Error', 'Could not perform analysis');
     } finally {
       setAnalyzing(false);
     }
@@ -223,7 +223,7 @@ export default function JournalEntryScreen() {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Entry niet gevonden</Text>
+          <Text style={styles.errorText}>Entry not found</Text>
         </View>
       </LinearGradient>
     );
@@ -263,7 +263,7 @@ export default function JournalEntryScreen() {
         <View style={styles.entryHeader}>
           <View style={styles.dateSection}>
             <Text style={styles.dateText}>
-              {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: nl })}
+              {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
             </Text>
             <Text style={styles.timeText}>
               {format(parseISO(entry.createdAt), 'HH:mm')}
@@ -296,7 +296,7 @@ export default function JournalEntryScreen() {
         {/* Symptoms */}
         {entry.symptoms && entry.symptoms.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Symptomen</Text>
+            <Text style={styles.sectionTitle}>Symptoms</Text>
             <View style={styles.symptomsContainer}>
               {entry.symptoms.map((symptom, index) => (
                 <View key={index} style={styles.symptomItem}>
@@ -345,7 +345,7 @@ export default function JournalEntryScreen() {
           <GlassCard style={styles.insightsCard} padding="lg">
             <View style={styles.analyzingContainer}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.analyzingText}>Aurora analyseert je entry...</Text>
+              <Text style={styles.analyzingText}>Aurora is analyzing your entry...</Text>
             </View>
           </GlassCard>
         ) : (

@@ -109,11 +109,11 @@ const MoodTrendChart: React.FC<{
           {points.length > 0 && (
             <>
               <Text style={chartStyles.axisLabel}>
-                {new Date(points[0].date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                {new Date(points[0].date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
               </Text>
               {points.length > 1 && (
                 <Text style={chartStyles.axisLabel}>
-                  {new Date(points[points.length - 1].date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                  {new Date(points[points.length - 1].date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                 </Text>
               )}
             </>
@@ -249,10 +249,10 @@ export default function JournalInsightsScreen() {
   }, [loadInsights]);
 
   const getMoodDescription = (mood: number): string => {
-    if (mood <= 3) return 'Laag';
-    if (mood <= 5) return 'Matig';
-    if (mood <= 7) return 'Goed';
-    return 'Uitstekend';
+    if (mood <= 3) return 'Low';
+    if (mood <= 5) return 'Moderate';
+    if (mood <= 7) return 'Good';
+    return 'Excellent';
   };
 
   if (loading) {
@@ -272,7 +272,7 @@ export default function JournalInsightsScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Inzichten</Text>
+        <Text style={styles.headerTitle}>Insights</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -308,7 +308,7 @@ export default function JournalInsightsScreen() {
                   selectedPeriod === period && styles.periodTextActive,
                 ]}
               >
-                {period} dagen
+                {period} days
               </Text>
             </Pressable>
           ))}
@@ -318,9 +318,9 @@ export default function JournalInsightsScreen() {
           <GlassCard style={styles.emptyCard} padding="xl">
             <View style={styles.emptyContent}>
               <Ionicons name="analytics-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyTitle}>Nog geen data</Text>
+              <Text style={styles.emptyTitle}>No data yet</Text>
               <Text style={styles.emptyText}>
-                Schrijf meer dagboekentries om inzichten te ontdekken over je stemming en patronen.
+                Write more journal entries to discover insights about your mood and patterns.
               </Text>
             </View>
           </GlassCard>
@@ -342,7 +342,7 @@ export default function JournalInsightsScreen() {
               />
               <StatCard
                 icon="happy"
-                label="Gem. stemming"
+                label="Avg. mood"
                 value={insights.averageMood ? `${insights.averageMood}/10` : '-'}
                 color={COLORS.success}
               />

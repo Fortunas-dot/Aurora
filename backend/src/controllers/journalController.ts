@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import JournalEntry, { IJournalEntry, IAIInsights } from '../models/JournalEntry';
+import Journal, { IJournal } from '../models/Journal';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import OpenAI from 'openai';
@@ -7,6 +8,403 @@ import OpenAI from 'openai';
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// ==================== JOURNAL CRUD ====================
+
+// @desc    Create a new journal
+// @route   POST /api/journals
+// @access  Private
+export const createJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, description, isPublic, coverImage, topics } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Journal name is required',
+      });
+      return;
+    }
+
+    const journal = await Journal.create({
+      name: name.trim(),
+      description: description?.trim(),
+      owner: req.userId,
+      isPublic: isPublic === true,
+      coverImage,
+      topics: topics && Array.isArray(topics) ? topics.map((t: string) => t.trim().toLowerCase()).filter((t: string) => t.length > 0) : [],
+    });
+
+    res.status(201).json({
+      success: true,
+      data: journal,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error creating journal',
+    });
+  }
+};
+
+// @desc    Get user's journals
+// @route   GET /api/journals
+// @access  Private
+export const getUserJournals = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const query: any = { owner: req.userId };
+
+    const journals = await Journal.find(query)
+      .populate('owner', 'username displayName avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Journal.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: journals,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching journals',
+    });
+  }
+};
+
+// @desc    Get public journals
+// @route   GET /api/journals/public
+// @access  Public
+export const getPublicJournals = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+
+    const query: any = { isPublic: true };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const journals = await Journal.find(query)
+      .populate('owner', 'username displayName avatar')
+      .sort({ followersCount: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Journal.countDocuments(query);
+
+    // Check if current user is following each journal
+    const journalsWithFollowStatus = journals.map((journal) => {
+      const journalObj = journal.toObject();
+      const isFollowing = req.userId ? journal.followers.includes(req.userId) : false;
+      return { ...journalObj, isFollowing };
+    });
+
+    res.json({
+      success: true,
+      data: journalsWithFollowStatus,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching public journals',
+    });
+  }
+};
+
+// @desc    Get single journal
+// @route   GET /api/journals/:id
+// @access  Private (if private) or Public (if public)
+export const getJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const journal = await Journal.findById(req.params.id)
+      .populate('owner', 'username displayName avatar')
+      .populate('followers', 'username displayName avatar');
+
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    // Check access
+    if (!journal.isPublic && journal.owner.toString() !== req.userId) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+      return;
+    }
+
+    const journalObj = journal.toObject();
+    const isFollowing = req.userId ? journal.followers.includes(req.userId) : false;
+    const isOwner = journal.owner.toString() === req.userId;
+
+    res.json({
+      success: true,
+      data: { ...journalObj, isFollowing, isOwner },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching journal',
+    });
+  }
+};
+
+// @desc    Update journal
+// @route   PUT /api/journals/:id
+// @access  Private (owner only)
+export const updateJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const journal = await Journal.findById(req.params.id);
+
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    if (journal.owner.toString() !== req.userId) {
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this journal',
+      });
+      return;
+    }
+
+    const { name, description, isPublic, coverImage, topics } = req.body;
+
+    if (name !== undefined) journal.name = name.trim();
+    if (description !== undefined) journal.description = description?.trim();
+    if (isPublic !== undefined) journal.isPublic = isPublic;
+    if (coverImage !== undefined) journal.coverImage = coverImage;
+    if (topics !== undefined) {
+      journal.topics = Array.isArray(topics) 
+        ? topics.map((t: string) => t.trim().toLowerCase()).filter((t: string) => t.length > 0)
+        : [];
+    }
+
+    await journal.save();
+
+    res.json({
+      success: true,
+      data: journal,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error updating journal',
+    });
+  }
+};
+
+// @desc    Delete journal
+// @route   DELETE /api/journals/:id
+// @access  Private (owner only)
+export const deleteJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const journal = await Journal.findById(req.params.id);
+
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    if (journal.owner.toString() !== req.userId) {
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this journal',
+      });
+      return;
+    }
+
+    // Delete all entries in this journal
+    await JournalEntry.deleteMany({ journal: journal._id });
+
+    // Delete the journal
+    await Journal.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Journal deleted successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error deleting journal',
+    });
+  }
+};
+
+// @desc    Follow a journal
+// @route   POST /api/journals/:id/follow
+// @access  Private
+export const followJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const journal = await Journal.findById(req.params.id);
+
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    if (!journal.isPublic) {
+      res.status(403).json({
+        success: false,
+        message: 'Cannot follow private journal',
+      });
+      return;
+    }
+
+    if (journal.owner.toString() === req.userId) {
+      res.status(400).json({
+        success: false,
+        message: 'Cannot follow your own journal',
+      });
+      return;
+    }
+
+    if (journal.followers.includes(req.userId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Already following this journal',
+      });
+      return;
+    }
+
+    journal.followers.push(req.userId);
+    await journal.save();
+
+    res.json({
+      success: true,
+      data: journal,
+      message: 'Journal followed successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error following journal',
+    });
+  }
+};
+
+// @desc    Unfollow a journal
+// @route   POST /api/journals/:id/unfollow
+// @access  Private
+export const unfollowJournal = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const journal = await Journal.findById(req.params.id);
+
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    if (!journal.followers.includes(req.userId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Not following this journal',
+      });
+      return;
+    }
+
+    journal.followers = journal.followers.filter(
+      (followerId) => followerId.toString() !== req.userId
+    );
+    await journal.save();
+
+    res.json({
+      success: true,
+      data: journal,
+      message: 'Journal unfollowed successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error unfollowing journal',
+    });
+  }
+};
+
+// @desc    Get followed journals
+// @route   GET /api/journals/following
+// @access  Private
+export const getFollowingJournals = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const journals = await Journal.find({ followers: req.userId })
+      .populate('owner', 'username displayName avatar')
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Journal.countDocuments({ followers: req.userId });
+
+    const journalsWithFollowStatus = journals.map((journal) => {
+      const journalObj = journal.toObject();
+      return { ...journalObj, isFollowing: true };
+    });
+
+    res.json({
+      success: true,
+      data: journalsWithFollowStatus,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching followed journals',
+    });
+  }
+};
+
+// ==================== JOURNAL ENTRY CRUD ====================
 
 // @desc    Get all journal entries for current user
 // @route   GET /api/journal
@@ -20,8 +418,14 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
     const endDate = req.query.endDate as string;
     const mood = req.query.mood as string;
     const tag = req.query.tag as string;
+    const journalId = req.query.journalId as string;
 
     const query: any = { author: req.userId };
+
+    // Filter by journal if provided
+    if (journalId) {
+      query.journal = journalId;
+    }
 
     // Date range filter
     if (startDate || endDate) {
@@ -48,6 +452,7 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const entries = await JournalEntry.find(query)
+      .populate('journal', 'name isPublic')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -80,7 +485,7 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
     const entry = await JournalEntry.findOne({
       _id: req.params.id,
       author: req.userId,
-    });
+    }).populate('journal', 'name isPublic');
 
     if (!entry) {
       res.status(404).json({
@@ -102,27 +507,72 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
   }
 };
 
-// @desc    Create journal entry
+// @desc    Create new journal entry
 // @route   POST /api/journal
 // @access  Private
 export const createEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, audioUrl, transcription, mood, symptoms, tags, promptId, promptText } = req.body;
+    const { content, mood, audioUrl, transcription, symptoms, tags, promptId, promptText, journalId } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Content is required',
+      });
+      return;
+    }
+
+    if (!mood || mood < 1 || mood > 10) {
+      res.status(400).json({
+        success: false,
+        message: 'Valid mood rating (1-10) is required',
+      });
+      return;
+    }
+
+    if (!journalId) {
+      res.status(400).json({
+        success: false,
+        message: 'Journal ID is required',
+      });
+      return;
+    }
+
+    // Verify journal exists and belongs to user
+    const journal = await Journal.findById(journalId);
+    if (!journal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found',
+      });
+      return;
+    }
+
+    if (journal.owner.toString() !== req.userId) {
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized to add entries to this journal',
+      });
+      return;
+    }
 
     const entry = await JournalEntry.create({
       author: req.userId,
-      content,
+      journal: journalId,
+      content: content.trim(),
+      mood,
       audioUrl,
       transcription,
-      mood,
       symptoms: symptoms || [],
       tags: tags || [],
       promptId,
       promptText,
+      isPrivate: !journal.isPublic, // Entry privacy follows journal privacy
     });
 
-    // Trigger AI analysis in background (don't await)
-    analyzeEntryBackground(entry._id.toString());
+    // Update journal entries count
+    journal.entriesCount = (journal.entriesCount || 0) + 1;
+    await journal.save();
 
     res.status(201).json({
       success: true,
@@ -141,8 +591,6 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
 // @access  Private
 export const updateEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, mood, symptoms, tags } = req.body;
-
     const entry = await JournalEntry.findOne({
       _id: req.params.id,
       author: req.userId,
@@ -156,18 +604,14 @@ export const updateEntry = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Update fields
-    if (content !== undefined) entry.content = content;
+    const { content, mood, symptoms, tags } = req.body;
+
+    if (content !== undefined) entry.content = content.trim();
     if (mood !== undefined) entry.mood = mood;
     if (symptoms !== undefined) entry.symptoms = symptoms;
     if (tags !== undefined) entry.tags = tags;
 
     await entry.save();
-
-    // Re-analyze if content changed
-    if (content !== undefined) {
-      analyzeEntryBackground(entry._id.toString());
-    }
 
     res.json({
       success: true,
@@ -186,7 +630,7 @@ export const updateEntry = async (req: AuthRequest, res: Response): Promise<void
 // @access  Private
 export const deleteEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const entry = await JournalEntry.findOneAndDelete({
+    const entry = await JournalEntry.findOne({
       _id: req.params.id,
       author: req.userId,
     });
@@ -199,9 +643,20 @@ export const deleteEntry = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const journalId = entry.journal;
+
+    await JournalEntry.findByIdAndDelete(req.params.id);
+
+    // Update journal entries count
+    const journal = await Journal.findById(journalId);
+    if (journal) {
+      journal.entriesCount = Math.max(0, (journal.entriesCount || 1) - 1);
+      await journal.save();
+    }
+
     res.json({
       success: true,
-      message: 'Journal entry deleted',
+      message: 'Journal entry deleted successfully',
     });
   } catch (error: any) {
     res.status(500).json({
@@ -211,20 +666,88 @@ export const deleteEntry = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-// @desc    Get journal insights and patterns
+// @desc    Get entries from followed journals
+// @route   GET /api/journal/following
+// @access  Private
+export const getFollowingEntries = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    // Get journals user is following
+    const followedJournals = await Journal.find({ followers: req.userId }).select('_id');
+    const journalIds = followedJournals.map((j) => j._id);
+
+    if (journalIds.length === 0) {
+      res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0,
+        },
+      });
+      return;
+    }
+
+    const entries = await JournalEntry.find({
+      journal: { $in: journalIds },
+      isPrivate: false,
+    })
+      .populate('author', 'username displayName avatar')
+      .populate('journal', 'name isPublic')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await JournalEntry.countDocuments({
+      journal: { $in: journalIds },
+      isPrivate: false,
+    });
+
+    res.json({
+      success: true,
+      data: entries,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching following entries',
+    });
+  }
+};
+
+// ==================== AI ANALYSIS & INSIGHTS ====================
+
+// @desc    Get insights and patterns
 // @route   GET /api/journal/insights
 // @access  Private
 export const getInsights = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const days = parseInt(req.query.days as string) || 30;
+    const journalId = req.query.journalId as string;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Get entries from the specified time period
-    const entries = await JournalEntry.find({
+    const query: any = {
       author: req.userId,
       createdAt: { $gte: startDate },
-    }).sort({ createdAt: -1 });
+    };
+
+    if (journalId) {
+      query.journal = journalId;
+    }
+
+    const entries = await JournalEntry.find(query).sort({ createdAt: 1 });
 
     if (entries.length === 0) {
       res.json({
@@ -243,28 +766,27 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Calculate average mood
-    const moodSum = entries.reduce((sum, entry) => sum + entry.mood, 0);
-    const averageMood = moodSum / entries.length;
+    const totalMood = entries.reduce((sum, entry) => sum + entry.mood, 0);
+    const averageMood = totalMood / entries.length;
 
-    // Mood trend (daily averages)
-    const moodByDay: { [key: string]: { sum: number; count: number } } = {};
+    // Mood trend (group by date)
+    const moodByDate: { [key: string]: number[] } = {};
     entries.forEach((entry) => {
-      const day = entry.createdAt.toISOString().split('T')[0];
-      if (!moodByDay[day]) {
-        moodByDay[day] = { sum: 0, count: 0 };
+      const dateKey = entry.createdAt.toISOString().split('T')[0];
+      if (!moodByDate[dateKey]) {
+        moodByDate[dateKey] = [];
       }
-      moodByDay[day].sum += entry.mood;
-      moodByDay[day].count += 1;
+      moodByDate[dateKey].push(entry.mood);
     });
 
-    const moodTrend = Object.entries(moodByDay)
-      .map(([date, { sum, count }]) => ({
+    const moodTrend = Object.entries(moodByDate)
+      .map(([date, moods]) => ({
         date,
-        mood: Math.round((sum / count) * 10) / 10,
+        mood: moods.reduce((sum, m) => sum + m, 0) / moods.length,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Extract themes from AI insights
+    // Top themes from AI insights
     const themeCounts: { [key: string]: number } = {};
     entries.forEach((entry) => {
       if (entry.aiInsights?.themes) {
@@ -275,11 +797,11 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     });
 
     const topThemes = Object.entries(themeCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([theme, count]) => ({ theme, count }));
+      .map(([theme, count]) => ({ theme, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
 
-    // Extract cognitive patterns
+    // Common patterns
     const patternCounts: { [key: string]: number } = {};
     entries.forEach((entry) => {
       if (entry.aiInsights?.cognitivePatterns) {
@@ -290,9 +812,9 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     });
 
     const commonPatterns = Object.entries(patternCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([pattern, count]) => ({ pattern, count }));
+      .map(([pattern, count]) => ({ pattern, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
 
     // Symptom frequency
     const symptomFrequency: { [key: string]: { count: number; avgSeverity: string } } = {};
@@ -300,25 +822,26 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
       entry.symptoms.forEach((symptom) => {
         const key = symptom.type ? `${symptom.condition} (${symptom.type})` : symptom.condition;
         if (!symptomFrequency[key]) {
-          symptomFrequency[key] = { count: 0, avgSeverity: 'moderate' };
+          symptomFrequency[key] = { count: 0, avgSeverity: symptom.severity };
         }
         symptomFrequency[key].count += 1;
       });
     });
 
     // Calculate streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     let streakDays = 0;
-    const entriesSet = new Set(entries.map((e) => e.createdAt.toISOString().split('T')[0]));
-    
-    for (let i = 0; i < days; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
-      const dateStr = checkDate.toISOString().split('T')[0];
-      if (entriesSet.has(dateStr)) {
+    const sortedEntries = [...entries].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    for (const entry of sortedEntries) {
+      const entryDate = new Date(entry.createdAt);
+      entryDate.setHours(0, 0, 0, 0);
+
+      if (entryDate.getTime() === currentDate.getTime()) {
         streakDays++;
-      } else if (i > 0) {
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else if (entryDate.getTime() < currentDate.getTime()) {
         break;
       }
     }
@@ -327,7 +850,7 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
       success: true,
       data: {
         totalEntries: entries.length,
-        averageMood: Math.round(averageMood * 10) / 10,
+        averageMood,
         moodTrend,
         topThemes,
         commonPatterns,
@@ -343,7 +866,108 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-// @desc    Analyze a journal entry with AI
+// @desc    Get personalized prompt
+// @route   GET /api/journal/prompt
+// @access  Private
+export const getPrompt = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Get user's health info and recent entries for context
+    const user = await User.findById(req.userId).select('healthInfo');
+    const recentEntries = await JournalEntry.find({ author: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const prompts: {
+      general: Array<{ id: string; text: string; category: string }>;
+      depression: Array<{ id: string; text: string; category: string }>;
+      anxiety: Array<{ id: string; text: string; category: string }>;
+      bipolar: Array<{ id: string; text: string; category: string }>;
+      trauma: Array<{ id: string; text: string; category: string }>;
+    } = {
+      general: [
+        { id: 'gen1', text: 'How are you feeling right now? Describe your emotions without judgment.', category: 'Reflection' },
+        { id: 'gen2', text: 'What was the best moment of today, no matter how small?', category: 'Gratitude' },
+        { id: 'gen3', text: 'If your current mood was a color, what would it be and why?', category: 'Creative' },
+        { id: 'gen4', text: 'What are you worried about right now? Write it down to release it.', category: 'Processing' },
+        { id: 'gen5', text: 'What did you do for yourself today?', category: 'Self-Care' },
+      ],
+      depression: [
+        { id: 'dep1', text: 'How was your energy level today on a scale of 1-10? What affected it?', category: 'Symptoms' },
+        { id: 'dep2', text: 'Name three things you are grateful for, no matter how small.', category: 'Gratitude' },
+        { id: 'dep3', text: 'What activity, no matter how small, brought a bit of joy today?', category: 'Behavioral Activation' },
+        { id: 'dep4', text: 'What negative thought came up today? Can you offer an alternative perspective?', category: 'CBT' },
+      ],
+      anxiety: [
+        { id: 'anx1', text: 'What worries came up today? How realistic are they on a scale of 1-10?', category: 'Worry' },
+        { id: 'anx2', text: 'Describe a moment of calm today. What made it soothing?', category: 'Grounding' },
+        { id: 'anx3', text: 'What physical sensations do you notice when you are anxious? Where in your body do you feel it?', category: 'Body Awareness' },
+        { id: 'anx4', text: 'Write about a situation you avoid. What is the worst that could happen?', category: 'Exposure' },
+      ],
+      bipolar: [
+        { id: 'bip1', text: 'How would you describe your mood today? Is there a pattern over the past few days?', category: 'Monitoring' },
+        { id: 'bip2', text: 'How was your sleep last night? Do you notice changes in your sleep pattern?', category: 'Sleep' },
+        { id: 'bip3', text: 'Do you have a lot of energy or very little? How does this affect your day?', category: 'Energy' },
+      ],
+      trauma: [
+        { id: 'trm1', text: 'What is a safe place in your thoughts where you can go right now?', category: 'Grounding' },
+        { id: 'trm2', text: 'What did you do today to take care of yourself?', category: 'Self-Care' },
+        { id: 'trm3', text: 'Describe five things you can see right now, four you can hear, three you can feel.', category: 'Grounding' },
+      ],
+    };
+
+    // Start with general prompts
+    let relevantPrompts = [...prompts.general];
+
+    // Add condition-specific prompts based on user's health info
+    if (user?.healthInfo) {
+      const mentalConditions = user.healthInfo.mentalHealth || [];
+      
+      mentalConditions.forEach((condition: any) => {
+        const conditionName = typeof condition === 'string' ? condition : condition.condition;
+        const conditionLower = conditionName.toLowerCase();
+        
+        if (conditionLower.includes('depress')) {
+          relevantPrompts = [...relevantPrompts, ...prompts.depression];
+        }
+        if (conditionLower.includes('anxiety') || conditionLower.includes('angst')) {
+          relevantPrompts = [...relevantPrompts, ...prompts.anxiety];
+        }
+        if (conditionLower.includes('bipolar') || conditionLower.includes('bipolair')) {
+          relevantPrompts = [...relevantPrompts, ...prompts.bipolar];
+        }
+        if (conditionLower.includes('trauma') || conditionLower.includes('ptsd') || conditionLower.includes('ptss')) {
+          relevantPrompts = [...relevantPrompts, ...prompts.trauma];
+        }
+      });
+    }
+
+    // Get recently used prompt IDs to avoid repetition
+    const recentPromptIds = recentEntries
+      .filter((e) => e.promptId)
+      .map((e) => e.promptId);
+
+    // Filter out recently used prompts
+    const unusedPrompts = relevantPrompts.filter((p) => !recentPromptIds.includes(p.id));
+    
+    // Use unused prompts if available, otherwise use all relevant prompts
+    const promptPool = unusedPrompts.length > 0 ? unusedPrompts : relevantPrompts;
+    
+    // Select a random prompt from the pool
+    const selectedPrompt = promptPool[Math.floor(Math.random() * promptPool.length)];
+
+    res.json({
+      success: true,
+      data: selectedPrompt,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching prompt',
+    });
+  }
+};
+
+// @desc    Trigger AI analysis on entry
 // @route   POST /api/journal/:id/analyze
 // @access  Private
 export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -361,12 +985,85 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // Get user's health info for context
-    const user = await User.findById(req.userId);
-    const healthContext = user?.healthInfo ? formatHealthContext(user.healthInfo) : '';
+    if (!openai.apiKey) {
+      res.status(500).json({
+        success: false,
+        message: 'AI analysis not configured',
+      });
+      return;
+    }
 
-    const insights = await performAIAnalysis(entry.content, healthContext);
-    
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
+1. Sentiment (positive, neutral, negative, mixed)
+2. Key themes (3-5 themes)
+3. Cognitive patterns if detected (e.g., negative self-talk, catastrophizing, all-or-nothing thinking)
+4. Therapeutic feedback (brief, supportive, non-clinical)
+5. Follow-up questions (2-3 questions to encourage reflection)
+
+Be empathetic, supportive, and focus on growth and self-awareness.`,
+        },
+        {
+          role: 'user',
+          content: `Analyze this journal entry:\n\nMood: ${entry.mood}/10\n\nContent: ${entry.content}`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '';
+    const insights: IAIInsights = {
+      sentiment: 'neutral',
+      themes: [],
+      cognitivePatterns: [],
+      therapeuticFeedback: '',
+      followUpQuestions: [],
+      analyzedAt: new Date(),
+    };
+
+    // Parse AI response (simplified - in production, use structured output)
+    try {
+      const lines = responseText.split('\n');
+      let currentSection = '';
+
+      for (const line of lines) {
+        if (line.toLowerCase().includes('sentiment')) {
+          if (line.toLowerCase().includes('positive')) insights.sentiment = 'positive';
+          else if (line.toLowerCase().includes('negative')) insights.sentiment = 'negative';
+          else if (line.toLowerCase().includes('mixed')) insights.sentiment = 'mixed';
+        } else if (line.toLowerCase().includes('theme')) {
+          currentSection = 'themes';
+        } else if (line.toLowerCase().includes('pattern')) {
+          currentSection = 'patterns';
+        } else if (line.toLowerCase().includes('feedback')) {
+          currentSection = 'feedback';
+        } else if (line.toLowerCase().includes('question')) {
+          currentSection = 'questions';
+        } else if (line.trim() && line.trim().startsWith('-')) {
+          const item = line.trim().substring(1).trim();
+          if (currentSection === 'themes' && insights.themes.length < 5) {
+            insights.themes.push(item);
+          } else if (currentSection === 'patterns') {
+            insights.cognitivePatterns?.push(item);
+          } else if (currentSection === 'questions') {
+            insights.followUpQuestions?.push(item);
+          }
+        } else if (currentSection === 'feedback' && line.trim()) {
+          insights.therapeuticFeedback = (insights.therapeuticFeedback || '') + line.trim() + ' ';
+        }
+      }
+
+      insights.therapeuticFeedback = insights.therapeuticFeedback?.trim() || responseText.substring(0, 500);
+    } catch (parseError) {
+      // Fallback: use raw response
+      insights.therapeuticFeedback = responseText.substring(0, 500);
+    }
+
     entry.aiInsights = insights;
     await entry.save();
 
@@ -382,51 +1079,28 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
-// @desc    Get personalized journal prompt
-// @route   GET /api/journal/prompt
-// @access  Private
-export const getPrompt = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    // Get user's health info
-    const user = await User.findById(req.userId);
-    
-    // Get recent entries for context
-    const recentEntries = await JournalEntry.find({ author: req.userId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('content mood createdAt aiInsights');
-
-    const prompt = await generatePersonalizedPrompt(user?.healthInfo, recentEntries);
-
-    res.json({
-      success: true,
-      data: prompt,
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error generating prompt',
-    });
-  }
-};
-
-// @desc    Get recent entries for Aurora context
+// @desc    Get journal context for Aurora
 // @route   GET /api/journal/aurora-context
 // @access  Private
 export const getAuroraContext = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const limit = parseInt(req.query.limit as string) || 5;
-    
-    const entries = await JournalEntry.find({ author: req.userId })
+    const journalId = req.query.journalId as string;
+
+    const query: any = { author: req.userId };
+    if (journalId) {
+      query.journal = journalId;
+    }
+
+    const entries = await JournalEntry.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select('content mood symptoms aiInsights createdAt');
+      .select('date mood content aiInsights.themes');
 
-    // Format for Aurora context
     const context = entries.map((entry) => ({
-      date: entry.createdAt.toISOString().split('T')[0],
+      date: entry.createdAt.toISOString(),
       mood: entry.mood,
-      summary: entry.content.substring(0, 200) + (entry.content.length > 200 ? '...' : ''),
+      summary: entry.content.substring(0, 200),
       themes: entry.aiInsights?.themes || [],
       sentiment: entry.aiInsights?.sentiment,
     }));
@@ -438,179 +1112,7 @@ export const getAuroraContext = async (req: AuthRequest, res: Response): Promise
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error fetching Aurora context',
+      message: error.message || 'Error fetching journal context',
     });
   }
 };
-
-// Helper function: Background AI analysis
-async function analyzeEntryBackground(entryId: string): Promise<void> {
-  try {
-    const entry = await JournalEntry.findById(entryId).populate('author');
-    if (!entry) return;
-
-    const author = await User.findById(entry.author);
-    const healthContext = author?.healthInfo ? formatHealthContext(author.healthInfo) : '';
-
-    const insights = await performAIAnalysis(entry.content, healthContext);
-    
-    entry.aiInsights = insights;
-    await entry.save();
-  } catch (error) {
-    console.error('Background analysis failed:', error);
-  }
-}
-
-// Helper function: Format health context
-function formatHealthContext(healthInfo: any): string {
-  const parts: string[] = [];
-
-  if (healthInfo.mentalHealth?.length > 0) {
-    parts.push(`Mental health: ${healthInfo.mentalHealth.map((h: any) => 
-      typeof h === 'string' ? h : `${h.condition}${h.type ? ` (${h.type})` : ''}`
-    ).join(', ')}`);
-  }
-
-  if (healthInfo.physicalHealth?.length > 0) {
-    parts.push(`Physical health: ${healthInfo.physicalHealth.map((h: any) => 
-      typeof h === 'string' ? h : `${h.condition}${h.type ? ` (${h.type})` : ''}`
-    ).join(', ')}`);
-  }
-
-  return parts.join('. ');
-}
-
-// Helper function: Perform AI analysis
-async function performAIAnalysis(content: string, healthContext: string): Promise<IAIInsights> {
-  try {
-    const systemPrompt = `Je bent een therapeutische AI-assistent die dagboekentries analyseert. Analyseer de volgende dagboekentry en geef gestructureerde inzichten terug.
-
-${healthContext ? `Context over de gebruiker: ${healthContext}` : ''}
-
-Geef je analyse in het volgende JSON-formaat:
-{
-  "sentiment": "positive" | "neutral" | "negative" | "mixed",
-  "themes": ["thema1", "thema2"],
-  "cognitivePatterns": ["patroon1", "patroon2"],
-  "therapeuticFeedback": "korte, empathische feedback in het Nederlands",
-  "followUpQuestions": ["vraag1", "vraag2"]
-}
-
-Wees empathisch en begripvol. Focus op:
-- Identificeer emotionele thema's
-- Herken cognitieve patronen (zwart-wit denken, catastroferen, etc.)
-- Geef ondersteunende, niet-oordelende feedback
-- Stel doordachte vervolgvragen`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: content },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 500,
-    });
-
-    const result = JSON.parse(response.choices[0]?.message?.content || '{}');
-
-    return {
-      sentiment: result.sentiment || 'neutral',
-      themes: result.themes || [],
-      cognitivePatterns: result.cognitivePatterns || [],
-      therapeuticFeedback: result.therapeuticFeedback || '',
-      followUpQuestions: result.followUpQuestions || [],
-      analyzedAt: new Date(),
-    };
-  } catch (error) {
-    console.error('AI analysis error:', error);
-    return {
-      sentiment: 'neutral',
-      themes: [],
-      analyzedAt: new Date(),
-    };
-  }
-}
-
-// Helper function: Generate personalized prompt
-async function generatePersonalizedPrompt(
-  healthInfo: any,
-  recentEntries: IJournalEntry[]
-): Promise<{ id: string; text: string; category: string }> {
-  // Predefined prompts categorized by type
-  const prompts = {
-    general: [
-      { id: 'gen1', text: 'Hoe voel je je op dit moment? Beschrijf je emoties zonder oordeel.', category: 'Reflectie' },
-      { id: 'gen2', text: 'Wat was het beste moment van vandaag, hoe klein ook?', category: 'Dankbaarheid' },
-      { id: 'gen3', text: 'Als je huidige stemming een kleur was, welke zou het zijn en waarom?', category: 'Creatief' },
-      { id: 'gen4', text: 'Waar maak je je op dit moment zorgen over? Schrijf het van je af.', category: 'Verwerking' },
-      { id: 'gen5', text: 'Wat heb je vandaag voor jezelf gedaan?', category: 'Zelfzorg' },
-    ],
-    depression: [
-      { id: 'dep1', text: 'Hoe was je energieniveau vandaag op een schaal van 1-10? Wat heeft het beïnvloed?', category: 'Symptomen' },
-      { id: 'dep2', text: 'Noem drie dingen waar je dankbaar voor bent, hoe klein ook.', category: 'Dankbaarheid' },
-      { id: 'dep3', text: 'Welke activiteit, hoe klein ook, bracht vandaag een beetje vreugde?', category: 'Gedragsactivatie' },
-      { id: 'dep4', text: 'Welke negatieve gedachte kwam vandaag naar boven? Kun je er een alternatief perspectief op geven?', category: 'CBT' },
-    ],
-    anxiety: [
-      { id: 'anx1', text: 'Welke zorgen kwamen vandaag op? Hoe realistisch zijn ze op een schaal van 1-10?', category: 'Bezorgdheid' },
-      { id: 'anx2', text: 'Beschrijf een moment van kalmte vandaag. Wat maakte het rustgevend?', category: 'Grounding' },
-      { id: 'anx3', text: 'Welke fysieke sensaties merk je op wanneer je angstig bent? Waar in je lichaam voel je het?', category: 'Lichaamsbewustzijn' },
-      { id: 'anx4', text: 'Schrijf over een situatie die je vermijdt. Wat is het ergste dat zou kunnen gebeuren?', category: 'Exposure' },
-    ],
-    bipolar: [
-      { id: 'bip1', text: 'Hoe zou je je stemming vandaag omschrijven? Is er een patroon de afgelopen dagen?', category: 'Monitoring' },
-      { id: 'bip2', text: 'Hoe was je slaap afgelopen nacht? Merk je veranderingen in je slaappatroon?', category: 'Slaap' },
-      { id: 'bip3', text: 'Heb je veel energie of juist weinig? Hoe beïnvloedt dit je dag?', category: 'Energie' },
-    ],
-    trauma: [
-      { id: 'trm1', text: 'Wat is een veilige plek in je gedachten waar je nu naartoe kunt gaan?', category: 'Grounding' },
-      { id: 'trm2', text: 'Wat heb je vandaag gedaan om voor jezelf te zorgen?', category: 'Zelfzorg' },
-      { id: 'trm3', text: 'Beschrijf vijf dingen die je nu kunt zien, vier die je kunt horen, drie die je kunt voelen.', category: 'Grounding' },
-    ],
-  };
-
-  // Determine which prompts to use based on health info
-  let relevantPrompts = [...prompts.general];
-
-  if (healthInfo) {
-    const mentalConditions = healthInfo.mentalHealth || [];
-    
-    mentalConditions.forEach((condition: any) => {
-      const conditionName = typeof condition === 'string' ? condition : condition.condition;
-      const conditionLower = conditionName.toLowerCase();
-
-      if (conditionLower.includes('depress')) {
-        relevantPrompts = [...relevantPrompts, ...prompts.depression];
-      }
-      if (conditionLower.includes('angst') || conditionLower.includes('anxiety')) {
-        relevantPrompts = [...relevantPrompts, ...prompts.anxiety];
-      }
-      if (conditionLower.includes('bipolair') || conditionLower.includes('bipolar')) {
-        relevantPrompts = [...relevantPrompts, ...prompts.bipolar];
-      }
-      if (conditionLower.includes('trauma') || conditionLower.includes('ptss') || conditionLower.includes('ptsd')) {
-        relevantPrompts = [...relevantPrompts, ...prompts.trauma];
-      }
-    });
-  }
-
-  // Filter out recently used prompts
-  const recentPromptIds = recentEntries
-    .filter((e) => e.promptId)
-    .map((e) => e.promptId);
-  
-  const unusedPrompts = relevantPrompts.filter((p) => !recentPromptIds.includes(p.id));
-  
-  // Select random prompt from unused, or all if all have been used
-  const promptPool = unusedPrompts.length > 0 ? unusedPrompts : relevantPrompts;
-  const selectedPrompt = promptPool[Math.floor(Math.random() * promptPool.length)];
-
-  return selectedPrompt;
-}
-
-
-
-
-
-

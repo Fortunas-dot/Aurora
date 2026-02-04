@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform, Animated, Dimensions, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -187,7 +187,7 @@ export default function AuroraScreen() {
     loadInsights();
   }, [loadInsights]);
 
-  // Animate aurora background
+  // Animate aurora background - optimized for performance
   useEffect(() => {
     const createAuroraAnimation = (animValue: Animated.Value, duration: number, delay: number) => {
       return Animated.loop(
@@ -196,21 +196,23 @@ export default function AuroraScreen() {
             toValue: 1,
             duration: duration,
             delay: delay,
-            useNativeDriver: false,
+            useNativeDriver: false, // Cannot use native driver with percentage-based transforms
+            easing: Easing.inOut(Easing.ease),
           }),
           Animated.timing(animValue, {
             toValue: 0,
             duration: duration,
             useNativeDriver: false,
+            easing: Easing.inOut(Easing.ease),
           }),
         ])
       );
     };
 
     Animated.parallel([
-      createAuroraAnimation(auroraAnim1, 8000, 0),
-      createAuroraAnimation(auroraAnim2, 10000, 2000),
-      createAuroraAnimation(auroraAnim3, 12000, 4000),
+      createAuroraAnimation(auroraAnim1, 12000, 0), // Slower for better performance
+      createAuroraAnimation(auroraAnim2, 15000, 2000),
+      createAuroraAnimation(auroraAnim3, 18000, 4000),
     ]).start();
   }, []);
 
@@ -223,31 +225,31 @@ export default function AuroraScreen() {
   const greeting = getGreeting();
   const userName = user?.displayName || user?.username || 'Friend';
 
-  // Interpolate aurora positions
-  const aurora1X = auroraAnim1.interpolate({
+  // Interpolate aurora positions - memoized for performance
+  const aurora1X = useMemo(() => auroraAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: ['-20%', '20%'],
-  });
-  const aurora1Y = auroraAnim1.interpolate({
+  }), [auroraAnim1]);
+  const aurora1Y = useMemo(() => auroraAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: ['-10%', '10%'],
-  });
-  const aurora2X = auroraAnim2.interpolate({
+  }), [auroraAnim1]);
+  const aurora2X = useMemo(() => auroraAnim2.interpolate({
     inputRange: [0, 1],
     outputRange: ['10%', '-10%'],
-  });
-  const aurora2Y = auroraAnim2.interpolate({
+  }), [auroraAnim2]);
+  const aurora2Y = useMemo(() => auroraAnim2.interpolate({
     inputRange: [0, 1],
     outputRange: ['-15%', '15%'],
-  });
-  const aurora3X = auroraAnim3.interpolate({
+  }), [auroraAnim2]);
+  const aurora3X = useMemo(() => auroraAnim3.interpolate({
     inputRange: [0, 1],
     outputRange: ['-15%', '15%'],
-  });
-  const aurora3Y = auroraAnim3.interpolate({
+  }), [auroraAnim3]);
+  const aurora3Y = useMemo(() => auroraAnim3.interpolate({
     inputRange: [0, 1],
     outputRange: ['10%', '-10%'],
-  });
+  }), [auroraAnim3]);
 
   return (
     <View style={styles.container}>
@@ -257,7 +259,7 @@ export default function AuroraScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Aurora layers */}
+      {/* Aurora layers - optimized for performance */}
       <Animated.View
         style={[
           styles.auroraLayer,
@@ -265,9 +267,11 @@ export default function AuroraScreen() {
             transform: [{ translateX: aurora1X }, { translateY: aurora1Y }],
           },
         ]}
+        renderToHardwareTextureAndroid={true}
+        collapsable={false}
       >
         <LinearGradient
-          colors={['rgba(96, 165, 250, 0.15)', 'rgba(167, 139, 250, 0.12)', 'transparent']}
+          colors={['rgba(96, 165, 250, 0.12)', 'rgba(167, 139, 250, 0.10)', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -281,9 +285,11 @@ export default function AuroraScreen() {
             transform: [{ translateX: aurora2X }, { translateY: aurora2Y }],
           },
         ]}
+        renderToHardwareTextureAndroid={true}
+        collapsable={false}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(94, 234, 212, 0.1)', 'rgba(139, 92, 246, 0.15)', 'transparent']}
+          colors={['transparent', 'rgba(94, 234, 212, 0.08)', 'rgba(139, 92, 246, 0.12)', 'transparent']}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -297,18 +303,20 @@ export default function AuroraScreen() {
             transform: [{ translateX: aurora3X }, { translateY: aurora3Y }],
           },
         ]}
+        renderToHardwareTextureAndroid={true}
+        collapsable={false}
       >
         <LinearGradient
-          colors={['rgba(167, 139, 250, 0.1)', 'transparent', 'rgba(96, 165, 250, 0.12)', 'rgba(94, 234, 212, 0.08)']}
+          colors={['rgba(167, 139, 250, 0.08)', 'transparent', 'rgba(96, 165, 250, 0.10)', 'rgba(94, 234, 212, 0.06)']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
         />
       </Animated.View>
       
-      {/* Star field effect */}
-      <View style={styles.starField}>
-        {Array.from({ length: 50 }).map((_, i) => (
+      {/* Star field effect - Reduced for better performance */}
+      <View style={styles.starField} pointerEvents="none">
+        {Array.from({ length: 30 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>
@@ -324,6 +332,9 @@ export default function AuroraScreen() {
           { paddingBottom: (Platform.OS === 'ios' ? 120 : 100) + insets.bottom }
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -614,8 +625,9 @@ const styles = StyleSheet.create({
     top: -height * 0.25,
     left: -width * 0.25,
     borderRadius: width,
-    opacity: 0.6,
+    opacity: 0.5, // Slightly reduced for better performance
     overflow: 'hidden',
+    pointerEvents: 'none',
   },
   starField: {
     position: 'absolute',
@@ -623,6 +635,8 @@ const styles = StyleSheet.create({
     height: '100%',
     top: 0,
     left: 0,
+    pointerEvents: 'none',
+    ...(Platform.OS === 'ios' && { shouldRasterizeIOS: true }),
   },
   star: {
     position: 'absolute',

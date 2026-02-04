@@ -4,7 +4,7 @@ module.exports = {
   expo: {
     name: 'Aurora',
     slug: 'aurora',
-    owner: 'Fortunas',
+    owner: 'pawbuddies',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -26,9 +26,9 @@ module.exports = {
       infoPlist: {
         FacebookAppID: process.env.FACEBOOK_APP_ID || '1261010692592854',
         FacebookDisplayName: 'Aurora',
-        // Client Token is optional - only add if you have it
-        ...(process.env.FACEBOOK_CLIENT_TOKEN && { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN }),
         LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
+        ITSAppUsesNonExemptEncryption: false,
+        ...(process.env.FACEBOOK_CLIENT_TOKEN ? { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN } : {}),
       },
     },
     android: {
@@ -60,7 +60,7 @@ module.exports = {
           sounds: [],
         },
       ],
-        [
+      [
         'react-native-fbsdk-next',
         (() => {
           const config = {
@@ -75,14 +75,12 @@ module.exports = {
           return config;
         })(),
       ],
-      'posthog-react-native',
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
-      // Temporarily commented out to recreate project under Fortunas organization
-      // eas: {
-      //   projectId: 'db4cf440-87fa-4d7e-96dd-e018c9bf743e',
-      // },
+      eas: {
+        projectId: '3e76b1de-69b1-45db-ab68-c957d25e4002',
+      },
       // Backend API URL
       // - For PRODUCTION: Set API_URL in .env to your Railway/Render URL (e.g., 'https://aurora-production.up.railway.app/api')
       // - For DEVELOPMENT: Leave as localhost (or set API_HOST for physical device testing)

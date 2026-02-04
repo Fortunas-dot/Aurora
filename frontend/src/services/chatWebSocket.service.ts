@@ -66,9 +66,30 @@ class ChatWebSocketService {
 
       this.ws.onmessage = (event) => {
         try {
+          // Handle plain text ping messages
+          if (typeof event.data === 'string' && event.data.trim() === 'ping') {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send('pong');
+            }
+            return;
+          }
+
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
+          // If parsing fails, check if it's a plain text ping/pong
+          if (typeof event.data === 'string') {
+            const text = event.data.trim();
+            if (text === 'ping') {
+              if (this.ws?.readyState === WebSocket.OPEN) {
+                this.ws.send('pong');
+              }
+              return;
+            }
+            if (text === 'pong') {
+              return; // Ignore pong silently
+            }
+          }
           console.error('Error parsing chat WebSocket message:', error);
         }
       };
@@ -118,14 +139,23 @@ class ChatWebSocketService {
       case 'conversation_updated':
         this.callbacks.onConversationUpdated?.(data.conversation);
         break;
+      case 'ping':
+        // Respond to ping with pong if WebSocket is open
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'pong' }));
+        }
+        break;
       case 'pong':
-        // Heartbeat response
+        // Heartbeat response, ignore silently
         break;
       case 'error':
         this.callbacks.onError?.(new Error(data.message));
         break;
       default:
-        console.log('Unknown chat WebSocket message type:', data.type);
+        // Only log if it's not a ping/pong message
+        if (data.type && data.type !== 'ping' && data.type !== 'pong') {
+          console.log('Unknown chat WebSocket message type:', data.type);
+        }
     }
   }
 

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { AuroraCore } from '../../src/components/voice/AuroraCore';
 
@@ -68,7 +68,7 @@ export default function LoginScreen() {
           {/* Logo/Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <AuroraCore state="idle" audioLevel={0} size={120} />
+              <AuroraCore state="idle" audioLevel={0} size={180} />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Log in to continue with Aurora</Text>
@@ -85,6 +85,9 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               icon="mail-outline"
+              textContentType="username"
+              autoComplete="username"
+              returnKeyType="next"
             />
 
             <GlassInput
@@ -94,6 +97,10 @@ export default function LoginScreen() {
               label="Password"
               secureTextEntry
               icon="lock-closed-outline"
+              textContentType="password"
+              autoComplete="password"
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
             />
 
             {displayError && (
@@ -134,14 +141,31 @@ export default function LoginScreen() {
           </View>
 
           {/* Facebook Login Button */}
-          <GlassButton
-            title="Continue with Facebook"
+          <Pressable
             onPress={handleFacebookLogin}
-            variant="secondary"
-            icon={<Ionicons name="logo-facebook" size={20} color="#1877F2" style={{ marginRight: SPACING.sm }} />}
-            style={styles.facebookButton}
-            loading={isLoading}
-          />
+            disabled={isLoading}
+            style={({ pressed }) => [
+              styles.facebookButton,
+              pressed && styles.facebookButtonPressed,
+              isLoading && styles.facebookButtonDisabled,
+            ]}
+          >
+            <LinearGradient
+              colors={['#1877F2', '#166FE5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.facebookGradient}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-facebook" size={20} color="#FFFFFF" style={{ marginRight: SPACING.sm }} />
+                  <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
+                </>
+              )}
+            </LinearGradient>
+          </Pressable>
 
           {/* Continue as Guest */}
           <GlassButton
@@ -251,6 +275,28 @@ const styles = StyleSheet.create({
   },
   facebookButton: {
     marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  facebookGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+  },
+  facebookButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  facebookButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  facebookButtonDisabled: {
+    opacity: 0.5,
   },
   guestButton: {
     alignSelf: 'center',

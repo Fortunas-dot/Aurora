@@ -302,6 +302,9 @@ export default function CreateGroupScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
         >
           {/* Cover Image Selection */}
           <GlassCard style={styles.inputCard} padding="lg">

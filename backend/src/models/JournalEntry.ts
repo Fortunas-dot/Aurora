@@ -19,6 +19,7 @@ export interface IAIInsights {
 
 export interface IJournalEntry extends Document {
   author: Types.ObjectId;
+  journal: Types.ObjectId; // Reference to Journal
   content: string;
   audioUrl?: string;
   transcription?: string;
@@ -39,6 +40,12 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    journal: {
+      type: Schema.Types.ObjectId,
+      ref: 'Journal',
+      required: true,
+      index: true,
     },
     content: {
       type: String,
@@ -129,6 +136,7 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
 
 // Indexes for efficient querying
 JournalEntrySchema.index({ author: 1, createdAt: -1 });
+JournalEntrySchema.index({ journal: 1, createdAt: -1 });
 JournalEntrySchema.index({ author: 1, mood: 1 });
 JournalEntrySchema.index({ tags: 1 });
 JournalEntrySchema.index({ createdAt: -1 });

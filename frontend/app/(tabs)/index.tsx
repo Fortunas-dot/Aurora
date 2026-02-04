@@ -9,6 +9,8 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Modal,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import { FeedTabs, FeedTab, CommunityFilter, SortDropdown, SortOption, SearchBar
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { postService, Post } from '../../src/services/post.service';
 import { therapistService } from '../../src/services/therapist.service';
+import { groupService, Group } from '../../src/services/group.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 
@@ -153,6 +156,41 @@ export default function FeedScreen() {
   // Online therapists state
   const [onlineTherapistsCount, setOnlineTherapistsCount] = useState<number | null>(null);
   const [onlineTherapistsMessage, setOnlineTherapistsMessage] = useState<string>('');
+
+  // Joined groups sidebar state
+  const [showJoinedGroupsModal, setShowJoinedGroupsModal] = useState(false);
+  const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
+  const [isLoadingJoinedGroups, setIsLoadingJoinedGroups] = useState(false);
+
+  // Load joined groups
+  const loadJoinedGroups = useCallback(async () => {
+    if (!isAuthenticated) {
+      setJoinedGroups([]);
+      return;
+    }
+
+    setIsLoadingJoinedGroups(true);
+    try {
+      // Load all groups and filter for joined ones
+      const response = await groupService.getGroups(1, 100);
+      if (response.success && response.data) {
+        const joined = response.data.filter(group => group.isMember);
+        setJoinedGroups(joined);
+      }
+    } catch (error) {
+      console.error('Error loading joined groups:', error);
+      setJoinedGroups([]);
+    } finally {
+      setIsLoadingJoinedGroups(false);
+    }
+  }, [isAuthenticated]);
+
+  // Load joined groups when modal opens
+  useEffect(() => {
+    if (showJoinedGroupsModal && isAuthenticated) {
+      loadJoinedGroups();
+    }
+  }, [showJoinedGroupsModal, isAuthenticated, loadJoinedGroups]);
 
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
@@ -373,7 +411,7 @@ export default function FeedScreen() {
     }
   };
 
-  const renderPost = ({ item }: { item: Post }) => (
+  const renderPost = useCallback(({ item }: { item: Post }) => (
     <PostCard
       post={item}
       onPress={() => router.push(`/post/${item._id}`)}
@@ -386,7 +424,7 @@ export default function FeedScreen() {
       currentUserId={user?._id}
       isSaved={item.isSaved}
     />
-  );
+  ), [user?._id, router, handleLike, handleShare, handleSavePost]);
 
   const getEmptyStateText = () => {
     if (isSearching && searchQuery) {
@@ -480,6 +518,12 @@ export default function FeedScreen() {
           />
         ) : (
           <>
+            <Pressable
+              style={styles.menuButton}
+              onPress={() => setShowJoinedGroupsModal(true)}
+            >
+              <Ionicons name="menu" size={24} color={COLORS.text} />
+            </Pressable>
             <Text style={styles.headerTitle}>Aurora</Text>
             <View style={styles.headerRight}>
               <SearchBar
@@ -525,11 +569,19 @@ export default function FeedScreen() {
       {/* Feed */}
       <FlatList
         data={posts}
-      renderItem={renderPost}
-      keyExtractor={(item) => item._id}
-      contentContainerStyle={styles.feedContent}
-      ListHeaderComponent={!isSearching ? ListHeader : undefined}
+        renderItem={renderPost}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.feedContent}
+        ListHeaderComponent={!isSearching ? ListHeader : undefined}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
+        getItemLayout={undefined}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -586,6 +638,97 @@ export default function FeedScreen() {
           <Ionicons name="add" size={28} color={COLORS.white} />
         </LinearGradient>
       </Pressable>
+
+      {/* Joined Groups Sidebar Modal */}
+      <Modal
+        visible={showJoinedGroupsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowJoinedGroupsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowJoinedGroupsModal(false)}
+          />
+          <View style={[styles.modalSidebar, { paddingTop: insets.top + SPACING.md }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Your Communities</Text>
+              <Pressable
+                onPress={() => setShowJoinedGroupsModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </Pressable>
+            </View>
+
+            {isLoadingJoinedGroups ? (
+              <View style={styles.modalLoadingContainer}>
+                <LoadingSpinner size="md" />
+              </View>
+            ) : joinedGroups.length === 0 ? (
+              <View style={styles.modalEmptyContainer}>
+                <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.modalEmptyText}>No communities yet</Text>
+                <Text style={styles.modalEmptySubtext}>
+                  Join communities to see them here
+                </Text>
+                <Pressable
+                  style={styles.modalEmptyButton}
+                  onPress={() => {
+                    setShowJoinedGroupsModal(false);
+                    router.push('/(tabs)/groups');
+                  }}
+                >
+                  <Text style={styles.modalEmptyButtonText}>Browse Communities</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <FlatList
+                data={joinedGroups}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalGroupItem}
+                    onPress={() => {
+                      setShowJoinedGroupsModal(false);
+                      router.push(`/group/${item._id}`);
+                    }}
+                  >
+                    <View style={styles.modalGroupItemLeft}>
+                      {item.avatar ? (
+                        <Image source={{ uri: item.avatar }} style={styles.modalGroupAvatar} />
+                      ) : (
+                        <LinearGradient
+                          colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+                          style={styles.modalGroupAvatarGradient}
+                        >
+                          <Ionicons name="people" size={20} color={COLORS.primary} />
+                        </LinearGradient>
+                      )}
+                      <View style={styles.modalGroupInfo}>
+                        <Text style={styles.modalGroupName}>{item.name}</Text>
+                        <Text style={styles.modalGroupMeta}>
+                          {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+                  </Pressable>
+                )}
+                style={styles.modalList}
+                contentContainerStyle={styles.modalListContent}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={10}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
+                scrollEventThrottle={16}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -623,9 +766,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.glass.border,
   },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
+  },
   headerTitle: {
     ...TYPOGRAPHY.h2,
     color: COLORS.text,
+    flex: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -765,5 +920,120 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalSidebar: {
+    width: '85%',
+    maxWidth: 400,
+    backgroundColor: COLORS.background,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.glass.border,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.glass.backgroundLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalLoadingContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+  },
+  modalEmptyContainer: {
+    padding: SPACING.xxl,
+    alignItems: 'center',
+  },
+  modalEmptyText: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+  },
+  modalEmptySubtext: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
+  },
+  modalEmptyButton: {
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  modalEmptyButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primary,
+  },
+  modalList: {
+    flex: 1,
+  },
+  modalListContent: {
+    paddingVertical: SPACING.sm,
+  },
+  modalGroupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalGroupItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalGroupAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: SPACING.md,
+  },
+  modalGroupAvatarGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  modalGroupInfo: {
+    flex: 1,
+  },
+  modalGroupName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  modalGroupMeta: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: 2,
   },
 });

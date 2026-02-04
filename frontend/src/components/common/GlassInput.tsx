@@ -31,6 +31,11 @@ interface GlassInputProps {
   onRightIconPress?: () => void;
   style?: ViewStyle;
   inputStyle?: TextStyle;
+  textContentType?: 'none' | 'username' | 'password' | 'emailAddress' | 'newPassword' | 'oneTimeCode' | 'telephoneNumber' | 'name' | 'familyName' | 'givenName' | 'streetAddressLine1' | 'streetAddressLine2' | 'addressCity' | 'addressState' | 'postalCode' | 'countryName' | 'creditCardNumber' | 'organizationName' | 'jobTitle' | 'URL';
+  autoComplete?: 'off' | 'username' | 'password' | 'email' | 'name' | 'tel' | 'street-address' | 'postal-code' | 'cc-number' | 'cc-csc' | 'cc-exp' | 'cc-exp-month' | 'cc-exp-year';
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
+  onSubmitEditing?: () => void;
+  passwordRules?: string;
 }
 
 export const GlassInput: React.FC<GlassInputProps> = ({
@@ -52,6 +57,11 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   onRightIconPress,
   style,
   inputStyle,
+  textContentType,
+  autoComplete,
+  returnKeyType,
+  onSubmitEditing,
+  passwordRules,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -93,6 +103,11 @@ export const GlassInput: React.FC<GlassInputProps> = ({
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
           editable={editable}
+          textContentType={textContentType}
+          autoComplete={autoComplete}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          passwordRules={passwordRules}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           style={[

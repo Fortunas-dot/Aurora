@@ -19,10 +19,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { GlassCard, GlassInput, GlassButton, TagChip, LoadingSpinner, Avatar } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
-import { postService } from '../src/services/post.service';
+import { postService, PostType } from '../src/services/post.service';
 import { uploadService } from '../src/services/upload.service';
 import { groupService, Group } from '../src/services/group.service';
 import { useAuthStore } from '../src/store/authStore';
+import { useSettingsStore } from '../src/store/settingsStore';
 
 const SUGGESTED_TAGS = [
   'meditatie',
@@ -42,9 +43,11 @@ export default function CreatePostScreen() {
   const { groupId: initialGroupId } = useLocalSearchParams<{ groupId?: string }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
+  const { language } = useSettingsStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [postType, setPostType] = useState<PostType>('post');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -222,7 +225,7 @@ export default function CreatePostScreen() {
         tags,
         selectedGroup?._id,
         imageUrls.length > 0 ? imageUrls : undefined,
-        undefined,
+        postType,
         title.trim()
       );
       
@@ -280,14 +283,69 @@ export default function CreatePostScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
         >
+          {/* Post Type Selection */}
+          <GlassCard style={styles.postTypeCard} padding="lg">
+            <Text style={styles.label}>Type *</Text>
+            <View style={styles.postTypeContainer}>
+              <Pressable
+                style={[styles.postTypeButton, postType === 'post' && styles.postTypeButtonActive]}
+                onPress={() => setPostType('post')}
+              >
+                <Ionicons 
+                  name="document-text-outline" 
+                  size={20} 
+                  color={postType === 'post' ? COLORS.primary : COLORS.textMuted} 
+                />
+                <Text style={[styles.postTypeText, postType === 'post' && styles.postTypeTextActive]}>
+                  {language === 'nl' ? 'Post' : 'Post'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.postTypeButton, postType === 'question' && styles.postTypeButtonActive]}
+                onPress={() => setPostType('question')}
+              >
+                <Ionicons 
+                  name="help-circle-outline" 
+                  size={20} 
+                  color={postType === 'question' ? COLORS.primary : COLORS.textMuted} 
+                />
+                <Text style={[styles.postTypeText, postType === 'question' && styles.postTypeTextActive]}>
+                  {language === 'nl' ? 'Vraag' : 'Question'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.postTypeButton, postType === 'story' && styles.postTypeButtonActive]}
+                onPress={() => setPostType('story')}
+              >
+                <Ionicons 
+                  name="book-outline" 
+                  size={20} 
+                  color={postType === 'story' ? COLORS.primary : COLORS.textMuted} 
+                />
+                <Text style={[styles.postTypeText, postType === 'story' && styles.postTypeTextActive]}>
+                  {language === 'nl' ? 'Verhaal' : 'Story'}
+                </Text>
+              </Pressable>
+            </View>
+          </GlassCard>
+
           {/* Title Input */}
           <GlassCard style={styles.titleCard} padding="lg">
             <Text style={styles.label}>Title *</Text>
             <GlassInput
               value={title}
               onChangeText={setTitle}
-              placeholder="Enter a title for your post..."
+              placeholder={
+                postType === 'question' 
+                  ? "What's your question?" 
+                  : postType === 'story'
+                  ? "What's your story about?"
+                  : "Enter a title for your post..."
+              }
               style={styles.titleInput}
               maxLength={200}
             />
@@ -299,7 +357,13 @@ export default function CreatePostScreen() {
             <GlassInput
               value={content}
               onChangeText={setContent}
-              placeholder="Share your thoughts, experiences, or ask a question..."
+              placeholder={
+                postType === 'question'
+                  ? "Ask your question here... Be specific so others can help you."
+                  : postType === 'story'
+                  ? "Share your story... What happened? How did it make you feel?"
+                  : "Share your thoughts, experiences, or ask a question..."
+              }
               multiline
               numberOfLines={8}
               style={styles.contentInput}
@@ -578,6 +642,40 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xxl,
+  },
+  postTypeCard: {
+    marginBottom: SPACING.md,
+  },
+  postTypeContainer: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  postTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    gap: SPACING.xs,
+  },
+  postTypeButtonActive: {
+    backgroundColor: COLORS.glass.background,
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+  },
+  postTypeText: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textMuted,
+  },
+  postTypeTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   titleCard: {
     marginBottom: SPACING.md,

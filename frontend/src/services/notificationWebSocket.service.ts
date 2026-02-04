@@ -61,9 +61,30 @@ class NotificationWebSocketService {
 
       this.ws.onmessage = (event) => {
         try {
+          // Handle plain text ping messages
+          if (typeof event.data === 'string' && event.data.trim() === 'ping') {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send('pong');
+            }
+            return;
+          }
+
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
+          // If parsing fails, check if it's a plain text ping/pong
+          if (typeof event.data === 'string') {
+            const text = event.data.trim();
+            if (text === 'ping') {
+              if (this.ws?.readyState === WebSocket.OPEN) {
+                this.ws.send('pong');
+              }
+              return;
+            }
+            if (text === 'pong') {
+              return; // Ignore pong silently
+            }
+          }
           console.error('Error parsing WebSocket message:', error);
         }
       };
@@ -91,6 +112,20 @@ class NotificationWebSocketService {
    * Handle incoming WebSocket messages
    */
   private handleMessage(data: any): void {
+    // Handle ping/pong heartbeat messages silently
+    if (data.type === 'ping' || data === 'ping' || typeof data === 'string' && data.trim() === 'ping') {
+      // Respond to ping with pong if WebSocket is open
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'pong' }));
+      }
+      return;
+    }
+
+    if (data.type === 'pong' || data === 'pong' || typeof data === 'string' && data.trim() === 'pong') {
+      // Heartbeat response, ignore silently
+      return;
+    }
+
     switch (data.type) {
       case 'notification':
         this.callbacks.onNotification?.(data.notification);
@@ -102,7 +137,10 @@ class NotificationWebSocketService {
         this.callbacks.onError?.(new Error(data.message));
         break;
       default:
-        console.log('Unknown WebSocket message type:', data.type);
+        // Only log if it's not a ping/pong message
+        if (data.type && data.type !== 'ping' && data.type !== 'pong') {
+          console.log('Unknown WebSocket message type:', data.type);
+        }
     }
   }
 

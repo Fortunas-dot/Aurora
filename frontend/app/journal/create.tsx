@@ -27,21 +27,21 @@ const MoodSelector: React.FC<{
   onChange: (value: number) => void;
 }> = ({ value, onChange }) => {
   const moods = [
-    { value: 1, emoji: '😢', label: 'Heel slecht' },
-    { value: 2, emoji: '😞', label: 'Slecht' },
-    { value: 3, emoji: '😔', label: 'Somber' },
-    { value: 4, emoji: '😕', label: 'Laag' },
-    { value: 5, emoji: '😐', label: 'Neutraal' },
-    { value: 6, emoji: '🙂', label: 'Oké' },
-    { value: 7, emoji: '😊', label: 'Goed' },
-    { value: 8, emoji: '😄', label: 'Fijn' },
-    { value: 9, emoji: '😁', label: 'Blij' },
-    { value: 10, emoji: '🤩', label: 'Geweldig' },
+    { value: 1, emoji: '😢', label: 'Very bad' },
+    { value: 2, emoji: '😞', label: 'Bad' },
+    { value: 3, emoji: '😔', label: 'Down' },
+    { value: 4, emoji: '😕', label: 'Low' },
+    { value: 5, emoji: '😐', label: 'Neutral' },
+    { value: 6, emoji: '🙂', label: 'Okay' },
+    { value: 7, emoji: '😊', label: 'Good' },
+    { value: 8, emoji: '😄', label: 'Great' },
+    { value: 9, emoji: '😁', label: 'Happy' },
+    { value: 10, emoji: '🤩', label: 'Excellent' },
   ];
 
   return (
     <View style={styles.moodSelector}>
-      <Text style={styles.moodLabel}>Hoe voel je je?</Text>
+      <Text style={styles.moodLabel}>How are you feeling?</Text>
       <View style={styles.moodGrid}>
         {moods.map((mood) => (
           <Pressable
@@ -62,8 +62,8 @@ const MoodSelector: React.FC<{
         ))}
       </View>
       <View style={styles.moodScale}>
-        <Text style={styles.moodScaleText}>Slecht</Text>
-        <Text style={styles.moodScaleText}>Geweldig</Text>
+        <Text style={styles.moodScaleText}>Bad</Text>
+        <Text style={styles.moodScaleText}>Excellent</Text>
       </View>
     </View>
   );
@@ -76,9 +76,9 @@ const SymptomTracker: React.FC<{
   userConditions: any[];
 }> = ({ symptoms, onChange, userConditions }) => {
   const severityLevels: { value: SeverityLevel; label: string; color: string }[] = [
-    { value: 'mild', label: 'Licht', color: '#A3E635' },
-    { value: 'moderate', label: 'Matig', color: '#FBBF24' },
-    { value: 'severe', label: 'Ernstig', color: '#F87171' },
+    { value: 'mild', label: 'Mild', color: '#A3E635' },
+    { value: 'moderate', label: 'Moderate', color: '#FBBF24' },
+    { value: 'severe', label: 'Severe', color: '#F87171' },
   ];
 
   const toggleSymptom = (condition: string, type?: string) => {
@@ -109,7 +109,7 @@ const SymptomTracker: React.FC<{
 
   return (
     <View style={styles.symptomTracker}>
-      <Text style={styles.symptomLabel}>Symptomen vandaag</Text>
+      <Text style={styles.symptomLabel}>Symptoms today</Text>
       <View style={styles.conditionsList}>
         {userConditions.map((condition: any, index: number) => {
           const conditionName = typeof condition === 'string' ? condition : condition.condition;
@@ -211,14 +211,14 @@ const VoiceRecorder: React.FC<{
 
   return (
     <View style={voiceStyles.container}>
-      <Text style={voiceStyles.label}>Of spreek je gedachten uit</Text>
+      <Text style={voiceStyles.label}>Or speak your thoughts</Text>
       
       <GlassCard style={voiceStyles.card} padding="lg">
         <View style={voiceStyles.content}>
           {state === 'processing' ? (
             <>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={voiceStyles.processingText}>Transcriberen...</Text>
+              <Text style={voiceStyles.processingText}>Transcribing...</Text>
             </>
           ) : (
             <>
@@ -242,12 +242,12 @@ const VoiceRecorder: React.FC<{
                   <Text style={voiceStyles.durationText}>{formatDuration(duration)}</Text>
                 </View>
               ) : (
-                <Text style={voiceStyles.hintText}>Tik om op te nemen</Text>
+                <Text style={voiceStyles.hintText}>Tap to record</Text>
               )}
 
               {state === 'recording' && (
                 <Pressable style={voiceStyles.cancelButton} onPress={cancelRecording}>
-                  <Text style={voiceStyles.cancelText}>Annuleren</Text>
+                  <Text style={voiceStyles.cancelText}>Cancel</Text>
                 </Pressable>
               )}
             </>
@@ -335,7 +335,7 @@ const voiceStyles = StyleSheet.create({
 
 export default function CreateJournalEntryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ promptId?: string; promptText?: string }>();
+  const params = useLocalSearchParams<{ journalId?: string; promptId?: string; promptText?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
@@ -359,7 +359,13 @@ export default function CreateJournalEntryScreen() {
 
   const handleSave = async () => {
     if (!content.trim()) {
-      Alert.alert('Oeps', 'Schrijf eerst iets voordat je opslaat.');
+      Alert.alert('Oops', 'Please write something before saving.');
+      return;
+    }
+
+    if (!params.journalId) {
+      Alert.alert('Error', 'Journal ID is required');
+      router.back();
       return;
     }
 
@@ -368,6 +374,7 @@ export default function CreateJournalEntryScreen() {
       const response = await journalService.createEntry({
         content: content.trim(),
         mood,
+        journalId: params.journalId,
         symptoms,
         tags,
         promptId: params.promptId,
@@ -377,10 +384,10 @@ export default function CreateJournalEntryScreen() {
       if (response.success) {
         router.back();
       } else {
-        Alert.alert('Fout', response.message || 'Kon entry niet opslaan');
+        Alert.alert('Error', response.message || 'Could not save entry');
       }
     } catch (error) {
-      Alert.alert('Fout', 'Er is iets misgegaan');
+      Alert.alert('Error', 'Something went wrong');
     } finally {
       setSaving(false);
     }
@@ -409,9 +416,9 @@ export default function CreateJournalEntryScreen() {
           <Pressable style={styles.closeButton} onPress={() => router.back()}>
             <Ionicons name="close" size={28} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Nieuwe entry</Text>
+          <Text style={styles.headerTitle}>New Entry</Text>
           <GlassButton
-            title={saving ? 'Opslaan...' : 'Opslaan'}
+            title={saving ? 'Saving...' : 'Save'}
             onPress={handleSave}
             size="small"
             disabled={saving || !content.trim()}
@@ -426,6 +433,9 @@ export default function CreateJournalEntryScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
         >
           {/* Prompt display */}
           {params.promptText && (
@@ -443,13 +453,13 @@ export default function CreateJournalEntryScreen() {
 
           {/* Content Input */}
           <View style={styles.contentSection}>
-            <Text style={styles.contentLabel}>Wat gaat er door je heen?</Text>
+            <Text style={styles.contentLabel}>What's on your mind?</Text>
             <GlassCard style={styles.contentCard} padding="md">
               <TextInput
                 style={styles.contentInput}
                 value={content}
                 onChangeText={setContent}
-                placeholder="Schrijf je gedachten en gevoelens op..."
+                placeholder="Write down your thoughts and feelings..."
                 placeholderTextColor={COLORS.textMuted}
                 multiline
                 textAlignVertical="top"
@@ -476,7 +486,7 @@ export default function CreateJournalEntryScreen() {
                 style={styles.tagInput}
                 value={tagInput}
                 onChangeText={setTagInput}
-                placeholder="Voeg tag toe..."
+                placeholder="Add tag..."
                 placeholderTextColor={COLORS.textMuted}
                 onSubmitEditing={handleAddTag}
                 returnKeyType="done"

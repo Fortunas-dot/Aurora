@@ -117,6 +117,8 @@ export default function RegisterScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               icon="mail-outline"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
 
             <GlassInput
@@ -128,6 +130,8 @@ export default function RegisterScreen() {
               autoCorrect={false}
               maxLength={30}
               icon="person-outline"
+              textContentType="username"
+              autoComplete="username"
             />
 
             <GlassInput
@@ -137,6 +141,8 @@ export default function RegisterScreen() {
               label="Password"
               secureTextEntry
               icon="lock-closed-outline"
+              textContentType="newPassword"
+              autoComplete="password-new"
             />
 
             <GlassInput
@@ -146,6 +152,8 @@ export default function RegisterScreen() {
               label="Confirm password"
               secureTextEntry
               icon="lock-closed-outline"
+              textContentType="newPassword"
+              autoComplete="password-new"
             />
 
             {displayError && (
