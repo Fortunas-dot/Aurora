@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "TherapyAI",
-    "slug": "therapyai",
+    "name": "Aurora",
+    "slug": "aurora",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "therapyai",
+    "scheme": "aurora",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.therapyai.app"
+      "bundleIdentifier": "com.auroracommune.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.therapyai.app"
+      "package": "com.auroracommune.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

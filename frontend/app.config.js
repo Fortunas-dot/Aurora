@@ -4,7 +4,7 @@ module.exports = {
   expo: {
     name: 'Aurora',
     slug: 'aurora',
-    owner: 'pawbuddies',
+    owner: 'Fortunas',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -18,7 +18,7 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.aurora.app',
+      bundleIdentifier: 'com.auroracommune.app',
     },
     android: {
       adaptiveIcon: {
@@ -28,7 +28,7 @@ module.exports = {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       softwareKeyboardLayoutMode: 'resize',
-      package: 'com.aurora.app',
+      package: 'com.auroracommune.app',
     },
     web: {
       favicon: './assets/favicon.png',
@@ -47,9 +47,10 @@ module.exports = {
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
-      eas: {
-        projectId: '170cce1d-c8a7-4a75-a7f7-e4c1b9567ded',
-      },
+      // Temporarily commented out to recreate project under Fortunas organization
+      // eas: {
+      //   projectId: 'db4cf440-87fa-4d7e-96dd-e018c9bf743e',
+      // },
       // Backend API URL
       // - For PRODUCTION: Set API_URL in .env to your Railway/Render URL (e.g., 'https://aurora-production.up.railway.app/api')
       // - For DEVELOPMENT: Leave as localhost (or set API_HOST for physical device testing)

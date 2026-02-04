@@ -338,9 +338,19 @@ async function seedDatabase() {
     // Connect to database
     await connectDB();
     
-    // Clear existing data
+    // Clear existing data (but preserve user's account)
     console.log('🗑️  Clearing existing data...');
-    await User.deleteMany({});
+    
+    // Preserve user's account before clearing
+    const preservedUser = await User.findOne({ email: 'ayman_el_filali@hotmail.com' });
+    let preservedUserId = null;
+    if (preservedUser) {
+      preservedUserId = preservedUser._id;
+      console.log('  ✓ Preserving user account: ayman_el_filali@hotmail.com');
+    }
+    
+    // Clear all data
+    await User.deleteMany({ email: { $ne: 'ayman_el_filali@hotmail.com' } });
     await Post.deleteMany({});
     await Group.deleteMany({});
     await Comment.deleteMany({});
@@ -365,6 +375,12 @@ async function seedDatabase() {
     createdUsers.forEach(user => {
       console.log(`  ✓ Created user: ${user.username}`);
     });
+    
+    // Add preserved user to createdUsers array if it exists
+    if (preservedUser) {
+      createdUsers.push(preservedUser);
+      console.log(`  ✓ Preserved existing user: ${preservedUser.username || preservedUser.email}`);
+    }
     
     // Create groups
     console.log('👥 Creating groups...');

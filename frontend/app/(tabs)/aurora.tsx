@@ -568,6 +568,33 @@ export default function AuroraScreen() {
               </View>
             </View>
           </GlassCard>
+
+          <GlassCard
+            style={styles.optionCard}
+            padding="lg"
+          >
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <LinearGradient
+                  colors={['rgba(236, 72, 153, 0.3)', 'rgba(244, 114, 182, 0.3)']}
+                  style={styles.optionIconGradient}
+                >
+                  <Ionicons name="calendar" size={28} color={COLORS.error} />
+                </LinearGradient>
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Events</Text>
+                <View style={styles.optionTitleRow}>
+                  <Text style={styles.optionDescription}>
+                    Join community events, workshops, and support groups
+                  </Text>
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </GlassCard>
         </View>
       </ScrollView>
     </View>
