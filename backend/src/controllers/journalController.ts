@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import JournalEntry, { IJournalEntry, IAIInsights } from '../models/JournalEntry';
 import Journal, { IJournal } from '../models/Journal';
 import User from '../models/User';
@@ -114,7 +115,7 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
     // Check if current user is following each journal
     const journalsWithFollowStatus = journals.map((journal) => {
       const journalObj = journal.toObject();
-      const isFollowing = req.userId ? journal.followers.includes(req.userId) : false;
+      const isFollowing = req.userId ? journal.followers.some((followerId) => followerId.toString() === req.userId) : false;
       return { ...journalObj, isFollowing };
     });
 
@@ -163,7 +164,7 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const journalObj = journal.toObject();
-    const isFollowing = req.userId ? journal.followers.includes(req.userId) : false;
+    const isFollowing = req.userId ? journal.followers.some((followerId) => followerId.toString() === req.userId) : false;
     const isOwner = journal.owner.toString() === req.userId;
 
     res.json({
@@ -299,7 +300,15 @@ export const followJournal = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    if (journal.followers.includes(req.userId)) {
+    if (!req.userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    if (journal.followers.some((followerId) => followerId.toString() === req.userId)) {
       res.status(400).json({
         success: false,
         message: 'Already following this journal',
@@ -307,7 +316,7 @@ export const followJournal = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    journal.followers.push(req.userId);
+    journal.followers.push(new Types.ObjectId(req.userId));
     await journal.save();
 
     res.json({
@@ -338,7 +347,15 @@ export const unfollowJournal = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    if (!journal.followers.includes(req.userId)) {
+    if (!req.userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    if (!journal.followers.some((followerId) => followerId.toString() === req.userId)) {
       res.status(400).json({
         success: false,
         message: 'Not following this journal',
@@ -373,13 +390,22 @@ export const getFollowingJournals = async (req: AuthRequest, res: Response): Pro
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const journals = await Journal.find({ followers: req.userId })
+    if (!req.userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const userIdObjectId = new Types.ObjectId(req.userId);
+    const journals = await Journal.find({ followers: userIdObjectId })
       .populate('owner', 'username displayName avatar')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Journal.countDocuments({ followers: req.userId });
+    const total = await Journal.countDocuments({ followers: userIdObjectId });
 
     const journalsWithFollowStatus = journals.map((journal) => {
       const journalObj = journal.toObject();
@@ -675,8 +701,17 @@ export const getFollowingEntries = async (req: AuthRequest, res: Response): Prom
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
+    if (!req.userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+      return;
+    }
+
     // Get journals user is following
-    const followedJournals = await Journal.find({ followers: req.userId }).select('_id');
+    const userIdObjectId = new Types.ObjectId(req.userId);
+    const followedJournals = await Journal.find({ followers: userIdObjectId }).select('_id');
     const journalIds = followedJournals.map((j) => j._id);
 
     if (journalIds.length === 0) {

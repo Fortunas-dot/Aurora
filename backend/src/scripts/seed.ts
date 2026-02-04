@@ -378,7 +378,12 @@ async function seedDatabase() {
     
     // Add preserved user to createdUsers array if it exists
     if (preservedUser) {
-      createdUsers.push(preservedUser);
+      // Ensure displayName is set (required field)
+      if (!preservedUser.displayName) {
+        preservedUser.displayName = preservedUser.username || preservedUser.email || 'User';
+        await preservedUser.save();
+      }
+      createdUsers.push(preservedUser as any);
       console.log(`  ✓ Preserved existing user: ${preservedUser.username || preservedUser.email}`);
     }
     
