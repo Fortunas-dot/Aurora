@@ -13,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, LoadingSpinner } from '../src/components/common';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
+import { useTheme } from '../src/hooks/useTheme';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
 import { useAuthStore } from '../src/store/authStore';
 import { i18n, Language } from '../src/utils/i18n';
@@ -34,21 +35,24 @@ const MenuItem: React.FC<MenuItemProps> = ({
   onPress,
   showArrow = true,
   rightComponent,
-}) => (
-  <Pressable style={styles.menuItem} onPress={onPress}>
-    <View style={styles.menuIconContainer}>
-      <Ionicons name={icon} size={22} color={COLORS.primary} />
-    </View>
-    <View style={styles.menuContent}>
-      <Text style={styles.menuTitle}>{title}</Text>
-      {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
-    </View>
-    {rightComponent && <View style={styles.menuRight}>{rightComponent}</View>}
-    {showArrow && !rightComponent && (
-      <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-    )}
-  </Pressable>
-);
+}) => {
+  const { colors } = useTheme();
+  return (
+    <Pressable style={[styles.menuItem, { borderBottomColor: colors.glass.border }]} onPress={onPress}>
+      <View style={[styles.menuIconContainer, { backgroundColor: colors.glass.backgroundLight }]}>
+        <Ionicons name={icon} size={22} color={colors.primary} />
+      </View>
+      <View style={styles.menuContent}>
+        <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
+        {subtitle && <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+      </View>
+      {rightComponent && <View style={styles.menuRight}>{rightComponent}</View>}
+      {showArrow && !rightComponent && (
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      )}
+    </Pressable>
+  );
+};
 
 interface SwitchItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -64,45 +68,39 @@ const SwitchItem: React.FC<SwitchItemProps> = ({
   subtitle,
   value,
   onValueChange,
-}) => (
-  <View style={styles.menuItem}>
-    <View style={styles.menuIconContainer}>
-      <Ionicons name={icon} size={22} color={COLORS.primary} />
+}) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.menuItem, { borderBottomColor: colors.glass.border }]}>
+      <View style={[styles.menuIconContainer, { backgroundColor: colors.glass.backgroundLight }]}>
+        <Ionicons name={icon} size={22} color={colors.primary} />
+      </View>
+      <View style={styles.menuContent}>
+        <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
+        {subtitle && <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.glass.border, true: colors.primary }}
+        thumbColor={colors.white}
+      />
     </View>
-    <View style={styles.menuContent}>
-      <Text style={styles.menuTitle}>{title}</Text>
-      {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
-    </View>
-    <Switch
-      value={value}
-      onValueChange={onValueChange}
-      trackColor={{ false: COLORS.glass.border, true: COLORS.primary }}
-      thumbColor={COLORS.white}
-    />
-  </View>
-);
+  );
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
+  const { colors } = useTheme();
   const {
-    language,
-    theme,
     fontFamily,
-    showEmail,
-    isAnonymous,
     notificationPreferences,
     isLoading,
-    isSaving,
-    setLanguage,
-    setTheme,
     setFontFamily,
-    setShowEmail,
-    setIsAnonymous,
     setNotificationPreference,
     loadSettings,
-    saveSettings,
   } = useSettingsStore();
 
   const [t, setT] = useState(() => i18n.getTranslations());
@@ -113,35 +111,24 @@ export default function SettingsScreen() {
     }
   }, [isAuthenticated, loadSettings]);
 
-  // Update translations when language changes
+  // Initialize translations (app is always in English)
   useEffect(() => {
     setT(i18n.getTranslations());
-  }, [language]);
-
-  const handleLanguageChange = async (newLanguage: Language) => {
-    await setLanguage(newLanguage);
-    setT(i18n.getTranslations());
-    Alert.alert(t.success, `Language changed to ${newLanguage === 'nl' ? 'Nederlands' : 'English'}`);
-  };
-
-  const handleSave = async () => {
-    await saveSettings();
-    Alert.alert(t.success, 'Settings saved successfully');
-  };
+  }, []);
 
   if (!isAuthenticated) {
     return (
-      <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+      <LinearGradient colors={colors.backgroundGradient as readonly [string, string, string]} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm, borderBottomColor: colors.glass.border }]}>
+          <Pressable style={[styles.backButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t.settings}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t.settings}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.authPrompt}>
-          <Ionicons name="settings-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.authPromptTitle}>Log in to access settings</Text>
+          <Ionicons name="settings-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in to access settings</Text>
           <GlassButton
             title={t.back}
             onPress={() => router.push('/(auth)/login')}
@@ -155,34 +142,24 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
+      <LinearGradient colors={colors.backgroundGradient as readonly [string, string, string]} style={styles.container}>
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="lg" />
-          <Text style={styles.loadingText}>{t.loading}</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t.loading}</Text>
         </View>
       </LinearGradient>
     );
   }
 
   return (
-    <LinearGradient colors={COLORS.backgroundGradient as readonly [string, string, string]} style={styles.container}>
+    <LinearGradient colors={colors.backgroundGradient as readonly [string, string, string]} style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm, borderBottomColor: colors.glass.border }]}>
+        <Pressable style={[styles.backButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>{t.settings}</Text>
-        <Pressable
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <LoadingSpinner size="sm" />
-          ) : (
-            <Text style={styles.saveButtonText}>{t.save}</Text>
-          )}
-        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t.settings}</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -192,144 +169,27 @@ export default function SettingsScreen() {
       >
         {/* App Settings */}
         <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>{t.appSettings}</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.appSettings}</Text>
           <GlassCard padding={0}>
-            <MenuItem
-              icon="language-outline"
-              title={t.language}
-              subtitle={language === 'nl' ? 'Nederlands' : 'English'}
-              onPress={() => {
-                Alert.alert(
-                  t.language,
-                  'Choose language',
-                  [
-                    {
-                      text: 'Nederlands',
-                      onPress: () => handleLanguageChange('nl'),
-                    },
-                    {
-                      text: 'English',
-                      onPress: () => handleLanguageChange('en'),
-                    },
-                    { text: t.cancel, style: 'cancel' },
-                  ]
-                );
-              }}
-            />
-            <View style={styles.menuDivider} />
             <MenuItem
               icon="text-outline"
               title="Font"
               subtitle={fontFamily === 'system' ? 'System Default' : fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
               onPress={() => router.push('/font-settings')}
             />
-            <View style={styles.menuDivider} />
-            <MenuItem
-              icon="layers-outline"
-              title="Group Page Design"
-              subtitle="Choose group page style"
-              onPress={() => router.push('/group-design-preview')}
-            />
-            <View style={styles.menuDivider} />
-            <MenuItem
-              icon="color-palette-outline"
-              title={t.theme}
-              subtitle={
-                theme === 'dark'
-                  ? t.dark
-                  : theme === 'light'
-                  ? t.light
-                  : t.system
-              }
-              onPress={async () => {
-                Alert.alert(
-                  t.theme,
-                  'Choose theme',
-                  [
-                    {
-                      text: t.dark,
-                      onPress: async () => {
-                        try {
-                          await setTheme('dark');
-                          await saveSettings();
-                          Alert.alert(t.success, 'Theme changed to dark. The app will use dark mode.');
-                        } catch (error) {
-                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
-                        }
-                      },
-                    },
-                    {
-                      text: t.light,
-                      onPress: async () => {
-                        try {
-                          await setTheme('light');
-                          await saveSettings();
-                          Alert.alert(t.success, 'Theme changed to light. Note: Light theme is not yet fully implemented.');
-                        } catch (error) {
-                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
-                        }
-                      },
-                    },
-                    {
-                      text: t.system,
-                      onPress: async () => {
-                        try {
-                          await setTheme('system');
-                          await saveSettings();
-                          Alert.alert(t.success, 'Theme changed to system. The app will follow your device theme.');
-                        } catch (error) {
-                          Alert.alert(t.error, 'Failed to change theme. Please try again.');
-                        }
-                      },
-                    },
-                    { text: t.cancel, style: 'cancel' },
-                  ]
-                );
-              }}
-            />
           </GlassCard>
         </View>
 
         {/* Privacy Settings */}
         <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>{t.privacySettings}</Text>
-          <GlassCard padding={0}>
-            <SwitchItem
-              icon="mail-outline"
-              title={t.showEmail}
-              subtitle={t.showEmailDesc}
-              value={showEmail}
-              onValueChange={setShowEmail}
-            />
-            <View style={styles.menuDivider} />
-            <SwitchItem
-              icon="eye-off-outline"
-              title={t.isAnonymous}
-              subtitle={t.isAnonymousDesc}
-              value={isAnonymous}
-              onValueChange={setIsAnonymous}
-            />
-          </GlassCard>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.privacySettings}</Text>
           
           {/* Account Data & Privacy */}
           <GlassCard padding={0} style={styles.menuCard}>
-            <Text style={styles.subsectionTitle}>{t.accountData}</Text>
-            <MenuItem
-              icon="download-outline"
-              title={t.exportData}
-              subtitle={t.exportDataDesc}
-              onPress={() => {
-                Alert.alert(
-                  t.exportData,
-                  'This feature will be available soon. You will be able to download all your account data in a JSON format.',
-                  [{ text: t.cancel, style: 'cancel' }]
-                );
-              }}
-            />
-            <View style={styles.menuDivider} />
+            <Text style={[styles.subsectionTitle, { color: colors.textSecondary }]}>{t.accountData}</Text>
             <MenuItem
               icon="trash-outline"
-              title={t.deleteAccount}
+              title="Delete account and all data"
               subtitle={t.deleteAccountDesc}
               onPress={() => {
                 Alert.alert(
@@ -405,52 +265,6 @@ export default function SettingsScreen() {
                 setNotificationPreference('emailEnabled', value)
               }
             />
-            <View style={styles.menuDivider} />
-            <Text style={styles.subsectionTitle}>Notification Types</Text>
-            <SwitchItem
-              icon="heart-outline"
-              title={t.likes}
-              value={notificationPreferences.likes}
-              onValueChange={(value) =>
-                setNotificationPreference('likes', value)
-              }
-            />
-            <View style={styles.menuDivider} />
-            <SwitchItem
-              icon="chatbubble-outline"
-              title={t.comments}
-              value={notificationPreferences.comments}
-              onValueChange={(value) =>
-                setNotificationPreference('comments', value)
-              }
-            />
-            <View style={styles.menuDivider} />
-            <SwitchItem
-              icon="mail-outline"
-              title={t.messages}
-              value={notificationPreferences.messages}
-              onValueChange={(value) =>
-                setNotificationPreference('messages', value)
-              }
-            />
-            <View style={styles.menuDivider} />
-            <SwitchItem
-              icon="people-outline"
-              title={t.follows}
-              value={notificationPreferences.follows}
-              onValueChange={(value) =>
-                setNotificationPreference('follows', value)
-              }
-            />
-            <View style={styles.menuDivider} />
-            <SwitchItem
-              icon="people-circle-outline"
-              title={t.groups}
-              value={notificationPreferences.groups}
-              onValueChange={(value) =>
-                setNotificationPreference('groups', value)
-              }
-            />
           </GlassCard>
         </View>
       </ScrollView>
@@ -469,34 +283,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.glass.border,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     ...TYPOGRAPHY.h2,
-    color: COLORS.text,
   },
   headerSpacer: {
     width: 40,
-  },
-  saveButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.primary,
-  },
-  saveButtonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.white,
   },
   scrollView: {
     flex: 1,
@@ -510,7 +309,6 @@ const styles = StyleSheet.create({
   },
   menuSectionTitle: {
     ...TYPOGRAPHY.h3,
-    color: COLORS.text,
     marginBottom: SPACING.sm,
     marginLeft: SPACING.xs,
   },
@@ -518,12 +316,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
+    borderBottomWidth: 1,
   },
   menuIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.glass.backgroundLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.md,
@@ -533,11 +331,9 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.text,
   },
   menuSubtitle: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
     marginTop: 2,
   },
   menuRight: {
@@ -545,12 +341,10 @@ const styles = StyleSheet.create({
   },
   menuDivider: {
     height: 1,
-    backgroundColor: COLORS.glass.border,
     marginLeft: SPACING.md + 40 + SPACING.md,
   },
   subsectionTitle: {
     ...TYPOGRAPHY.captionMedium,
-    color: COLORS.textSecondary,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.xs,
@@ -562,7 +356,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
     marginTop: SPACING.md,
   },
   authPrompt: {
@@ -573,7 +366,6 @@ const styles = StyleSheet.create({
   },
   authPromptTitle: {
     ...TYPOGRAPHY.h3,
-    color: COLORS.text,
     marginTop: SPACING.lg,
     marginBottom: SPACING.lg,
   },

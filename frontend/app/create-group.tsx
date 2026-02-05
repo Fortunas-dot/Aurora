@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Modal,
   FlatList,
   Image,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,6 +74,106 @@ const COVER_IMAGE_OPTIONS = [
   { id: 'orange', name: 'Orange', colors: ['rgba(249, 115, 22, 0.8)', 'rgba(251, 146, 60, 0.8)'] },
   { id: 'green', name: 'Green', colors: ['rgba(34, 197, 94, 0.8)', 'rgba(74, 222, 128, 0.8)'] },
 ];
+
+// Animated star component for gradient previews
+const AnimatedStar = ({ index }: { index: number }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const initialX = Math.random() * 100;
+  const initialY = Math.random() * 100;
+  const direction = Math.random() * Math.PI * 2;
+  const distance = 30 + Math.random() * 50;
+
+  useEffect(() => {
+    const duration = 3000 + Math.random() * 4000;
+
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.cos(direction) * distance,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: Math.sin(direction) * distance,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(opacity, {
+              toValue: 0.1,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0.3 + Math.random() * 0.4,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 0.5,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.star,
+        {
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+    />
+  );
+};
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -671,10 +773,16 @@ export default function CreateGroupScreen() {
                   style={styles.coverImageGradientOption}
                   onPress={() => handleSelectCoverImageOption(item.id)}
                 >
-                  <LinearGradient
-                    colors={item.colors}
-                    style={styles.coverImageGradientPreview}
-                  />
+                  <View style={styles.coverImageGradientPreview}>
+                    <LinearGradient
+                      colors={item.colors}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    {/* Animated stars background */}
+                    {Array.from({ length: 15 }).map((_, index) => (
+                      <AnimatedStar key={index} index={index} />
+                    ))}
+                  </View>
                   {selectedCoverImageOption === item.id && (
                     <View style={styles.coverImageGradientCheck}>
                       <Ionicons name="checkmark-circle" size={24} color={COLORS.white} />
@@ -1028,6 +1136,14 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.xs,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
   },
   coverImageGradientCheck: {
     position: 'absolute',

@@ -1,7 +1,7 @@
 import { ViewStyle, TextStyle, Platform } from 'react-native';
 
 // Dark theme with glass effect colors
-export const COLORS = {
+const DARK_COLORS = {
   // Background - Deep dark with subtle gradient
   background: '#0A0E1A',
   backgroundGradient: ['#0A0E1A', '#151B2E', '#1A2238'] as readonly [string, string, string],
@@ -73,6 +73,89 @@ export const COLORS = {
   tabInactive: 'rgba(255, 255, 255, 0.5)',
   tabActive: '#60A5FA',
 };
+
+// Light theme with glass effect colors
+const LIGHT_COLORS = {
+  // Background - Light with subtle gradient
+  background: '#F5F7FA',
+  backgroundGradient: ['#F5F7FA', '#E8ECF1', '#DCE2E8'] as readonly [string, string, string],
+  surface: '#FFFFFF',
+  surfaceLight: '#F9FAFB',
+
+  // Glass effect colors (adjusted for light mode)
+  glass: {
+    background: 'rgba(0, 0, 0, 0.05)',
+    backgroundLight: 'rgba(0, 0, 0, 0.08)',
+    backgroundDark: 'rgba(0, 0, 0, 0.02)',
+    border: 'rgba(0, 0, 0, 0.12)',
+    borderLight: 'rgba(0, 0, 0, 0.18)',
+    highlight: 'rgba(0, 0, 0, 0.06)',
+  },
+
+  // Text - High contrast for light mode
+  text: '#1A1F2E',
+  textSecondary: 'rgba(26, 31, 46, 0.7)',
+  textMuted: 'rgba(26, 31, 46, 0.5)',
+  textInverse: '#FFFFFF',
+
+  // Primary - Soft blue accent (same as dark)
+  primary: '#60A5FA',
+  primaryLight: '#93C5FD',
+  primaryDark: '#3B82F6',
+  primaryGlow: 'rgba(96, 165, 250, 0.2)',
+
+  // Secondary - Warm purple accent (same as dark)
+  secondary: '#A78BFA',
+  secondaryLight: '#C4B5FD',
+  secondaryDark: '#8B5CF6',
+
+  // Accent - Soft teal (same as dark)
+  accent: '#5EEAD4',
+  accentLight: '#99F6E4',
+  accentDark: '#2DD4BF',
+
+  // Message bubbles - Glass effect (adjusted for light)
+  userBubble: 'rgba(96, 165, 250, 0.15)',
+  userBubbleBorder: 'rgba(96, 165, 250, 0.3)',
+  assistantBubble: 'rgba(0, 0, 0, 0.05)',
+  assistantBubbleBorder: 'rgba(0, 0, 0, 0.12)',
+
+  // UI
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderLight: 'rgba(0, 0, 0, 0.15)',
+  divider: 'rgba(0, 0, 0, 0.06)',
+  white: '#FFFFFF',
+  black: '#000000',
+
+  // Status colors with glass effect (same as dark)
+  error: '#F87171',
+  errorGlass: 'rgba(248, 113, 113, 0.15)',
+  success: '#34D399',
+  successGlass: 'rgba(52, 211, 153, 0.15)',
+  warning: '#FBBF24',
+  warningGlass: 'rgba(251, 191, 36, 0.15)',
+  info: '#60A5FA',
+  infoGlass: 'rgba(96, 165, 250, 0.15)',
+
+  // Overlay (adjusted for light)
+  overlay: 'rgba(0, 0, 0, 0.4)',
+  overlayLight: 'rgba(0, 0, 0, 0.2)',
+
+  // Tab bar (adjusted for light)
+  tabBar: 'rgba(255, 255, 255, 0.95)',
+  tabBarBorder: 'rgba(0, 0, 0, 0.08)',
+  tabInactive: 'rgba(0, 0, 0, 0.4)',
+  tabActive: '#60A5FA',
+};
+
+// Default to dark theme for backward compatibility
+export const COLORS = DARK_COLORS;
+
+// Export both color schemes
+export { DARK_COLORS, LIGHT_COLORS };
+
+// Theme type
+export type ThemeMode = 'dark' | 'light' | 'system';
 
 export const SPACING = {
   xs: 4,
@@ -161,68 +244,71 @@ export const BORDER_RADIUS = {
   full: 9999,
 };
 
-// Glass style presets
-export const GLASS_STYLES: Record<string, ViewStyle> = {
+// Glass style presets (will be generated dynamically based on theme)
+export const getGlassStyles = (colors: typeof DARK_COLORS): Record<string, ViewStyle> => ({
   card: {
-    backgroundColor: COLORS.glass.background,
+    backgroundColor: colors.glass.background,
     borderRadius: BORDER_RADIUS.xl,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: colors.glass.border,
     overflow: 'hidden',
   },
   cardLight: {
-    backgroundColor: COLORS.glass.backgroundLight,
+    backgroundColor: colors.glass.backgroundLight,
     borderRadius: BORDER_RADIUS.xl,
     borderWidth: 1,
-    borderColor: COLORS.glass.borderLight,
+    borderColor: colors.glass.borderLight,
     overflow: 'hidden',
   },
   cardDark: {
-    backgroundColor: COLORS.glass.backgroundDark,
+    backgroundColor: colors.glass.backgroundDark,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: colors.glass.border,
     overflow: 'hidden',
   },
   button: {
-    backgroundColor: COLORS.glass.backgroundLight,
+    backgroundColor: colors.glass.backgroundLight,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: colors.glass.border,
     overflow: 'hidden',
   },
   buttonPrimary: {
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: colors.primaryGlow,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.4)',
+    borderColor: colors.primary,
     overflow: 'hidden',
   },
   input: {
-    backgroundColor: COLORS.glass.backgroundDark,
+    backgroundColor: colors.glass.backgroundDark,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: colors.glass.border,
   },
   inputFocused: {
-    backgroundColor: COLORS.glass.background,
+    backgroundColor: colors.glass.background,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   modal: {
-    backgroundColor: 'rgba(20, 24, 36, 0.95)',
+    backgroundColor: colors.surface,
     borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    borderColor: colors.glass.border,
     overflow: 'hidden',
   },
   tabBar: {
-    backgroundColor: COLORS.tabBar,
+    backgroundColor: colors.tabBar,
     borderTopWidth: 1,
-    borderTopColor: COLORS.tabBarBorder,
+    borderTopColor: colors.tabBarBorder,
   },
-};
+});
+
+// Default glass styles for backward compatibility
+export const GLASS_STYLES = getGlassStyles(COLORS);
 
 // Shadow presets (for iOS)
 export const SHADOWS = {

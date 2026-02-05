@@ -334,7 +334,7 @@ export default function CreatePostScreen() {
           </GlassCard>
 
           {/* Title Input */}
-          <GlassCard style={styles.titleCard} padding="lg">
+          <GlassCard style={styles.titleCard} padding="md">
             <Text style={styles.label}>Title *</Text>
             <GlassInput
               value={title}
@@ -683,11 +683,11 @@ const styles = StyleSheet.create({
   label: {
     ...TYPOGRAPHY.captionMedium,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-    marginLeft: SPACING.xs,
+    marginBottom: SPACING.xs / 2,
+    marginLeft: 0,
   },
   titleInput: {
-    marginTop: SPACING.xs,
+    marginTop: 0,
   },
   contentCard: {
     marginBottom: SPACING.md,

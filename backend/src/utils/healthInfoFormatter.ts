@@ -99,15 +99,72 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
 };
 
 /**
- * Combine health info and journal context for complete AI context
+ * Format calendar events into a readable string for AI context
+ */
+export const formatCalendarContextForAI = (events: any[]): string => {
+  if (!events || events.length === 0) {
+    return '';
+  }
+
+  const typeLabels: Record<string, string> = {
+    appointment: 'Afspraak',
+    therapy: 'Therapie',
+    medication: 'Medicatie',
+    reminder: 'Herinnering',
+    other: 'Overig',
+  };
+
+  const now = new Date();
+  const upcomingEvents = events
+    .filter(event => new Date(event.startDate) >= now)
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .slice(0, 10); // Limit to 10 upcoming events
+
+  if (upcomingEvents.length === 0) {
+    return '';
+  }
+
+  const eventSummaries = upcomingEvents.map((event) => {
+    const date = new Date(event.startDate);
+    const dateStr = date.toLocaleDateString('nl-NL', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const timeStr = event.allDay 
+      ? 'hele dag' 
+      : date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    
+    const typeLabel = typeLabels[event.type] || event.type;
+    let summary = `- ${dateStr} om ${timeStr}: ${event.title} (${typeLabel})`;
+    
+    if (event.location) {
+      summary += ` - Locatie: ${event.location}`;
+    }
+    
+    if (event.description) {
+      summary += `\n  ${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}`;
+    }
+    
+    return summary;
+  }).join('\n\n');
+
+  return `\n\nAankomende agenda items van de gebruiker:\n${eventSummaries}\n\nJe kunt naar deze agenda items verwijzen als dat relevant is voor het gesprek. Bijvoorbeeld: "Ik zie dat je morgen een therapie sessie hebt..." of "Je hebt volgende week een afspraak met..." Wees subtiel en empathisch wanneer je verwijst naar agenda items.`;
+};
+
+/**
+ * Combine health info, journal context, and calendar context for complete AI context
  */
 export const formatCompleteContextForAI = (
   user: IUser | null,
-  journalEntries?: IJournalEntry[]
+  journalEntries?: IJournalEntry[],
+  calendarEvents?: any[]
 ): string => {
   const healthContext = formatHealthInfoForAI(user);
   const journalContext = journalEntries ? formatJournalContextForAI(journalEntries) : '';
+  const calendarContext = calendarEvents ? formatCalendarContextForAI(calendarEvents) : '';
   
-  return healthContext + journalContext;
+  return healthContext + journalContext + calendarContext;
 };
 

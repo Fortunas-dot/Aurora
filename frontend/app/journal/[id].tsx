@@ -15,6 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalEntry } from '../../src/services/journal.service';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { getFontFamily } from '../../src/utils/fontHelper';
 import { format, parseISO } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
@@ -290,7 +292,7 @@ export default function JournalEntryScreen() {
 
         {/* Content */}
         <GlassCard style={styles.contentCard} padding="lg">
-          <Text style={styles.contentText}>{entry.content}</Text>
+          <Text style={[styles.contentText, { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }]}>{entry.content}</Text>
         </GlassCard>
 
         {/* Symptoms */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { GlassCard, GlassButton } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, ISymptom, SeverityLevel } from '../../src/services/journal.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
 import { useVoiceJournaling, formatDuration } from '../../src/hooks/useVoiceJournaling';
+import { getFontFamily } from '../../src/utils/fontHelper';
 
 // Mood selector component
 const MoodSelector: React.FC<{
@@ -55,15 +57,14 @@ const MoodSelector: React.FC<{
             <View style={styles.moodEmojiContainer}>
               <Text style={styles.moodEmoji}>{mood.emoji}</Text>
             </View>
+            <Text style={[styles.moodNumber, value === mood.value && styles.moodNumberSelected]}>
+              {mood.value}
+            </Text>
             {value === mood.value && (
               <Text style={styles.moodValue}>{mood.label}</Text>
             )}
           </Pressable>
         ))}
-      </View>
-      <View style={styles.moodScale}>
-        <Text style={styles.moodScaleText}>Bad</Text>
-        <Text style={styles.moodScaleText}>Excellent</Text>
       </View>
     </View>
   );
@@ -194,11 +195,19 @@ const VoiceRecorder: React.FC<{
     reset,
   } = useVoiceJournaling();
 
+  const hasProcessedRef = React.useRef(false);
+
   useEffect(() => {
-    if (state === 'done' && transcription) {
+    if (state === 'done' && transcription && !hasProcessedRef.current) {
+      hasProcessedRef.current = true;
       onTranscriptionComplete(transcription);
       reset();
     }
+    // Reset ref when state changes back to idle
+    if (state === 'idle') {
+      hasProcessedRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, transcription]);
 
   const handleRecordPress = async () => {
@@ -338,6 +347,7 @@ export default function CreateJournalEntryScreen() {
   const params = useLocalSearchParams<{ journalId?: string; promptId?: string; promptText?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const { fontFamily } = useSettingsStore();
 
   const [content, setContent] = useState('');
   const [mood, setMood] = useState(5);
@@ -346,16 +356,19 @@ export default function CreateJournalEntryScreen() {
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Get user's health conditions for symptom tracking
-  const userConditions = [
+  // Get user's health conditions for symptom tracking (memoized)
+  const userConditions = useMemo(() => [
     ...(user?.healthInfo?.mentalHealth || []),
     ...(user?.healthInfo?.physicalHealth || []),
-  ];
+  ], [user?.healthInfo?.mentalHealth, user?.healthInfo?.physicalHealth]);
+
+  // Use Palatino as default font for journal entries
+  const selectedFontFamily = useMemo(() => getFontFamily('palatino'), []);
 
   // Handle voice transcription
-  const handleVoiceTranscription = (text: string) => {
+  const handleVoiceTranscription = useCallback((text: string) => {
     setContent((prev) => prev ? `${prev}\n\n${text}` : text);
-  };
+  }, []);
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -369,8 +382,20 @@ export default function CreateJournalEntryScreen() {
       return;
     }
 
+    if (saving) {
+      return; // Prevent double submission
+    }
+
     setSaving(true);
     try {
+      console.log('Creating journal entry with data:', {
+        content: content.trim().substring(0, 50) + '...',
+        mood,
+        journalId: params.journalId,
+        symptomsCount: symptoms.length,
+        tagsCount: tags.length,
+      });
+
       const response = await journalService.createEntry({
         content: content.trim(),
         mood,
@@ -379,16 +404,23 @@ export default function CreateJournalEntryScreen() {
         tags,
         promptId: params.promptId,
         promptText: params.promptText,
+        fontFamily: 'palatino', // Save Palatino as the font for this entry
       });
+
+      console.log('Journal entry response:', response);
 
       if (response.success) {
         router.back();
       } else {
         Alert.alert('Error', response.message || 'Could not save entry');
+        setSaving(false);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong');
-    } finally {
+    } catch (error: any) {
+      console.error('Error creating journal entry:', error);
+      Alert.alert(
+        'Error',
+        error?.message || 'Something went wrong while saving your entry'
+      );
       setSaving(false);
     }
   };
@@ -456,7 +488,7 @@ export default function CreateJournalEntryScreen() {
             <Text style={styles.contentLabel}>What's on your mind?</Text>
             <GlassCard style={styles.contentCard} padding="md">
               <TextInput
-                style={styles.contentInput}
+                style={[styles.contentInput, { fontFamily: selectedFontFamily }]}
                 value={content}
                 onChangeText={setContent}
                 placeholder="Write down your thoughts and feelings..."
@@ -464,6 +496,7 @@ export default function CreateJournalEntryScreen() {
                 multiline
                 textAlignVertical="top"
                 autoFocus={!params.promptText}
+                blurOnSubmit={false}
               />
             </GlassCard>
           </View>
@@ -617,20 +650,22 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     includeFontPadding: false,
   },
+  moodNumber: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  moodNumberSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   moodValue: {
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
     marginTop: SPACING.xs,
     textAlign: 'center',
-  },
-  moodScale: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: SPACING.sm,
-  },
-  moodScaleText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
   },
   contentSection: {
     marginBottom: SPACING.xl,

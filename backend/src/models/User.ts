@@ -127,6 +127,11 @@ const UserSchema = new Schema<IUser>(
           enum: ['mild', 'moderate', 'severe'],
           default: 'moderate',
         },
+        notes: {
+          type: String,
+          trim: true,
+          maxlength: [1000, 'Notes cannot exceed 1000 characters'],
+        },
       }],
       physicalHealth: [{
         condition: {
@@ -143,6 +148,11 @@ const UserSchema = new Schema<IUser>(
           enum: ['mild', 'moderate', 'severe'],
           default: 'moderate',
         },
+        notes: {
+          type: String,
+          trim: true,
+          maxlength: [1000, 'Notes cannot exceed 1000 characters'],
+        },
       }],
       medications: [{
         type: String,
@@ -152,6 +162,11 @@ const UserSchema = new Schema<IUser>(
         type: String,
         trim: true,
       }],
+      lifeContext: {
+        type: String,
+        trim: true,
+        maxlength: [5000, 'Life context cannot exceed 5000 characters'],
+      },
     },
   },
   {
@@ -160,10 +175,82 @@ const UserSchema = new Schema<IUser>(
 );
 
 // Validate password before saving (required unless Facebook user)
-UserSchema.pre('validate', function (next) {
-  if (!this.facebookId && !this.password) {
+// Only validate on new documents or when password is being modified
+UserSchema.pre('validate', async function (next) {
+  // #region agent log
+  const fs = require('fs');
+  const logPath = 'c:\\Users\\ayman\\Desktop\\Fortunas\\TherapyAI\\.cursor\\debug.log';
+  try {
+    const logEntry = JSON.stringify({location:'User.ts:179',message:'pre-validate hook entry',data:{isNew:this.isNew,isModifiedPassword:this.isModified('password'),hasPassword:!!this.password,hasFacebookId:!!this.facebookId,userId:this._id?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H3,H5'})+'\n';
+    fs.appendFileSync(logPath, logEntry);
+  } catch(e){}
+  // #endregion
+  // Skip validation if this is an update and password is not being modified
+  if (!this.isNew) {
+    // For updates, only validate if password is explicitly being modified
+    if (!this.isModified('password')) {
+      // #region agent log
+      try {
+        const logEntry = JSON.stringify({location:'User.ts:184',message:'pre-validate: password not modified, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})+'\n';
+        fs.appendFileSync(logPath, logEntry);
+      } catch(e){}
+      // #endregion
+      return next();
+    }
+    // Password is being modified - validate it
+    if (this.password && this.password.length < 6) {
+      this.invalidate('password', 'Password must be at least 6 characters');
+      return next();
+    }
+    // If password is being removed (set to null/undefined) during update,
+    // check if user has facebookId or existing password in DB
+    if (!this.password) {
+      try {
+        // Check if user has facebookId or if password exists in DB
+        const UserModel = mongoose.model<IUser>('User');
+        const existingUser = await UserModel.findById(this._id).select('password facebookId');
+        // #region agent log
+        try {
+          const logEntry = JSON.stringify({location:'User.ts:197',message:'pre-validate: checking existing user',data:{existingUserFound:!!existingUser,existingFacebookId:!!existingUser?.facebookId,existingPassword:!!existingUser?.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H3'})+'\n';
+          fs.appendFileSync(logPath, logEntry);
+        } catch(e){}
+        // #endregion
+        if (existingUser && !existingUser.facebookId && !existingUser.password) {
+          // User doesn't have facebookId and no password in DB - require password
+          // #region agent log
+          try {
+            const logEntry = JSON.stringify({location:'User.ts:200',message:'pre-validate: invalidating password',data:{reason:'no facebookId and no existing password'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H3'})+'\n';
+            fs.appendFileSync(logPath, logEntry);
+          } catch(e){}
+          // #endregion
+          this.invalidate('password', 'Password is required for non-Facebook users');
+          return next();
+        }
+      } catch (error: any) {
+        // If we can't check, allow the update to proceed
+        // The user might already have a password in the database
+        // #region agent log
+        try {
+          const logEntry = JSON.stringify({location:'User.ts:206',message:'pre-validate: error checking existing user',data:{errorMessage:error?.message || String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H3'})+'\n';
+          fs.appendFileSync(logPath, logEntry);
+        } catch(e){}
+        // #endregion
+      }
+    }
+    return next();
+  }
+  
+  // For new documents, require password unless Facebook user
+  if (this.isNew && !this.facebookId && !this.password) {
+    // #region agent log
+    try {
+      const logEntry = JSON.stringify({location:'User.ts:213',message:'pre-validate: invalidating new user password',data:{reason:'new user without facebookId and password'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})+'\n';
+      fs.appendFileSync(logPath, logEntry);
+    } catch(e){}
+    // #endregion
     this.invalidate('password', 'Password is required for non-Facebook users');
   }
+  
   next();
 });
 

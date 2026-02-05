@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
 
@@ -47,6 +48,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           login_method: 'email',
           timestamp: new Date().toISOString(),
         });
+        
+        // Cache user data for persistence
+        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        console.log('✅ User data cached after login');
         
         set({
           user: user,
@@ -110,6 +115,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           signup_method: 'email',
           timestamp: new Date().toISOString(),
         });
+        
+        // Cache user data for persistence
+        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
         
         set({
           user: user,
@@ -243,6 +251,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           timestamp: new Date().toISOString(),
         });
         
+        // Cache user data for persistence
+        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        
         set({
           user: user,
           isAuthenticated: true,
@@ -304,6 +315,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear cached user data
+      await SecureStore.deleteItemAsync('cached_user');
+      
       // Reset user identification (BELANGRIJK: doe dit na tracking)
       posthogService.reset();
       
@@ -320,10 +334,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     
     try {
+      console.log('🔐 Starting auth check...');
+      
+      // First, try to restore user from cache for faster startup
+      const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+      if (cachedUserJson) {
+        try {
+          const cachedUser = JSON.parse(cachedUserJson);
+          console.log('✅ Found cached user:', cachedUser.email || cachedUser.username);
+          // Set cached user immediately for faster UI
+          set({
+            user: cachedUser,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch (e) {
+          console.warn('⚠️ Invalid cached user, clearing cache');
+          await SecureStore.deleteItemAsync('cached_user');
+        }
+      } else {
+        console.log('⚠️ No cached user found');
+      }
+
       const token = await authService.getToken();
       
       if (!token) {
-        // No token found, user is not authenticated
+        console.log('❌ No token found, user not authenticated');
+        // No token found, clear cache and user is not authenticated
+        await SecureStore.deleteItemAsync('cached_user');
         set({
           user: null,
           isAuthenticated: false,
@@ -331,12 +369,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         return;
       }
+      
+      console.log('✅ Token found, verifying with backend...');
 
       // Token exists, verify it by fetching user data
-      const response = await authService.getMe();
+      // Use a timeout to prevent hanging on network issues
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Auth check timeout')), 10000); // 10 second timeout
+      });
+
+      const authPromise = authService.getMe();
+      
+      let response;
+      try {
+        response = await Promise.race([authPromise, timeoutPromise]) as any;
+      } catch (timeoutError) {
+        // Network timeout or error - if we have cached user and token, assume still authenticated
+        console.warn('Auth check timeout or network error, using cached user if available');
+        const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+        if (cachedUserJson) {
+          try {
+            const cachedUser = JSON.parse(cachedUserJson);
+            set({
+              user: cachedUser,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            return;
+          } catch (e) {
+            // Cache invalid, continue to set as not authenticated
+          }
+        }
+        
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+        return;
+      }
       
       if (response.success && response.data) {
         const user = response.data;
+        console.log('✅ Auth verified successfully for user:', user.email || user.username);
+        
+        // Cache user data for faster next startup
+        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        console.log('✅ User data cached');
         
         // Identify user in PostHog after successful restore
         posthogService.identify(user._id, {
@@ -353,11 +432,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         return;
       } else {
-        // Token is invalid or expired, remove it
+        // Token is invalid or expired, remove it and cache
         const status = (response as any).status;
         if (status === 401 || status === 403) {
-          console.warn('Token is invalid or expired, removing token');
+          console.warn('❌ Token is invalid or expired (status:', status, '), removing token and cache');
           await authService.removeToken();
+          await SecureStore.deleteItemAsync('cached_user');
+        } else {
+          console.warn('❌ Auth check failed:', response.message || 'Unknown error');
         }
         
         set({
@@ -371,8 +453,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // If error is 401 (Unauthorized), token is invalid
       if (error?.response?.status === 401 || error?.message?.includes('401')) {
-        console.warn('Token is invalid, removing token');
+        console.warn('Token is invalid, removing token and cache');
         await authService.removeToken();
+        await SecureStore.deleteItemAsync('cached_user');
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+        return;
+      }
+      
+      // For other errors (network issues, etc.), check if we have cached user
+      const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+      const token = await authService.getToken();
+      
+      if (cachedUserJson && token) {
+        // We have both token and cached user, assume still authenticated
+        try {
+          const cachedUser = JSON.parse(cachedUserJson);
+          console.warn('Using cached user due to network error');
+          set({
+            user: cachedUser,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return;
+        } catch (e) {
+          // Cache invalid, continue to set as not authenticated
+        }
       }
       
       set({
@@ -385,10 +494,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  updateUser: (userData: Partial<User>) => {
+  updateUser: async (userData: Partial<User>) => {
     const currentUser = get().user;
     if (currentUser) {
-      set({ user: { ...currentUser, ...userData } });
+      const updatedUser = { ...currentUser, ...userData };
+      set({ user: updatedUser });
+      
+      // Update cached user data
+      try {
+        await SecureStore.setItemAsync('cached_user', JSON.stringify(updatedUser));
+      } catch (error) {
+        console.error('Error caching user data:', error);
+      }
     }
   },
 }));

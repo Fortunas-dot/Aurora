@@ -14,7 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { GlassCard, Avatar, GlassInput, LoadingSpinner } from '../../src/components/common';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { messageService, Conversation } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
@@ -22,6 +23,7 @@ import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { isAuthenticated } = useAuthStore();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -137,17 +139,18 @@ export default function ChatScreen() {
           
           <View style={styles.conversationInfo}>
             <View style={styles.conversationHeader}>
-              <Text style={styles.userName} numberOfLines={1}>
+              <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
                 {item.user.displayName || item.user.username}
               </Text>
-              <Text style={styles.timestamp}>{formattedDate}</Text>
+              <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formattedDate}</Text>
             </View>
             
             <View style={styles.messageRow}>
               <Text
                 style={[
                   styles.lastMessage,
-                  item.unreadCount > 0 && styles.lastMessageUnread,
+                  { color: colors.textSecondary },
+                  item.unreadCount > 0 && [styles.lastMessageUnread, { color: colors.text, fontWeight: '500' }],
                 ]}
                 numberOfLines={1}
               >
@@ -156,8 +159,8 @@ export default function ChatScreen() {
               </Text>
               
               {item.unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+                <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.unreadCount, { color: colors.white }]}>{item.unreadCount}</Text>
                 </View>
               )}
             </View>
@@ -170,24 +173,24 @@ export default function ChatScreen() {
   if (!isAuthenticated) {
     return (
       <LinearGradient
-        colors={COLORS.backgroundGradient}
+        colors={colors.backgroundGradient}
         style={styles.container}
       >
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={styles.headerTitle}>Berichten</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Berichten</Text>
         </View>
         
         <View style={styles.authPrompt}>
-          <Ionicons name="chatbubbles-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.authPromptTitle}>Log in om te chatten</Text>
-          <Text style={styles.authPromptText}>
+          <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in om te chatten</Text>
+          <Text style={[styles.authPromptText, { color: colors.textSecondary }]}>
             Maak verbinding met andere community leden
           </Text>
           <Pressable
-            style={styles.authButton}
+            style={[styles.authButton, { backgroundColor: colors.primaryGlow, borderColor: colors.primary }]}
             onPress={() => router.push('/(auth)/login')}
           >
-            <Text style={styles.authButtonText}>Inloggen</Text>
+            <Text style={[styles.authButtonText, { color: colors.primary }]}>Inloggen</Text>
           </Pressable>
         </View>
       </LinearGradient>
@@ -196,14 +199,14 @@ export default function ChatScreen() {
 
   return (
     <LinearGradient
-      colors={COLORS.backgroundGradient}
+      colors={colors.backgroundGradient}
       style={styles.container}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Berichten</Text>
-        <Pressable style={styles.headerButton} onPress={handleCreateNewChat}>
-          <Ionicons name="create-outline" size={24} color={COLORS.text} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Berichten</Text>
+        <Pressable style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={handleCreateNewChat}>
+          <Ionicons name="create-outline" size={24} color={colors.text} />
         </Pressable>
       </View>
 
@@ -229,7 +232,7 @@ export default function ChatScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
         ListEmptyComponent={
@@ -239,16 +242,16 @@ export default function ChatScreen() {
             </View>
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Geen gesprekken</Text>
-              <Text style={styles.emptySubtext}>
+              <Ionicons name="chatbubbles-outline" size={48} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Geen gesprekken</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 Start een gesprek met iemand uit de community
               </Text>
               <Pressable
-                style={styles.startChatButton}
+                style={[styles.startChatButton, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}
                 onPress={handleCreateNewChat}
               >
-                <Text style={styles.startChatButtonText}>Nieuw gesprek starten</Text>
+                <Text style={[styles.startChatButtonText, { color: colors.primary }]}>Nieuw gesprek starten</Text>
               </Pressable>
             </View>
           )

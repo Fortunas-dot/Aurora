@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton } from '../../src/components/common';
 // import { AuroraCore } from '../../src/components/voice/AuroraCore'; // Bewaard voor later gebruik
-import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
+import { SPACING, TYPOGRAPHY, COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
 
@@ -154,6 +155,7 @@ const AnimatedStar = ({ index }: { index: number }) => {
 export default function AuroraScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -255,7 +257,7 @@ export default function AuroraScreen() {
     <View style={styles.container}>
       {/* Base gradient */}
       <LinearGradient
-        colors={['#0A0E1A', '#0F1625', '#151B2E', '#1A2238']}
+        colors={colors.backgroundGradient}
         style={StyleSheet.absoluteFill}
       />
       
@@ -322,7 +324,7 @@ export default function AuroraScreen() {
       </View>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Aurora AI</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora AI</Text>
       </View>
 
       <ScrollView
@@ -339,17 +341,17 @@ export default function AuroraScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
       >
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>{greeting}, {userName} 👋</Text>
+          <Text style={[styles.greeting, { color: colors.text }]}>{greeting}, {userName} 👋</Text>
           <GlassCard style={styles.quoteCard} padding="md" gradient>
             <View style={styles.quoteContainer}>
-              <Ionicons name="quote" size={24} color={COLORS.primary} style={styles.quoteIcon} />
-              <Text style={styles.quoteText}>{dailyQuote}</Text>
+              <Ionicons name="quote" size={24} color={colors.primary} style={styles.quoteIcon} />
+              <Text style={[styles.quoteText, { color: colors.text }]}>{dailyQuote}</Text>
             </View>
           </GlassCard>
         </View>
@@ -357,31 +359,31 @@ export default function AuroraScreen() {
         {/* Quick Stats */}
         {isAuthenticated && insights && insights.totalEntries > 0 && (
           <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Your Progress</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Progress</Text>
             <View style={styles.statsGrid}>
               <GlassCard style={styles.statCard} padding="md">
                 <View style={styles.statContent}>
-                  <Ionicons name="flame" size={24} color={COLORS.warning} />
-                  <Text style={styles.statValue}>{insights.streakDays}</Text>
-                  <Text style={styles.statLabel}>day streak</Text>
+                  <Ionicons name="flame" size={24} color={colors.warning} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>{insights.streakDays}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>day streak</Text>
                 </View>
               </GlassCard>
               
               <GlassCard style={styles.statCard} padding="md">
                 <View style={styles.statContent}>
-                  <Ionicons name="journal" size={24} color={COLORS.primary} />
-                  <Text style={styles.statValue}>{insights.totalEntries}</Text>
-                  <Text style={styles.statLabel}>entries</Text>
+                  <Ionicons name="journal" size={24} color={colors.primary} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>{insights.totalEntries}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>entries</Text>
                 </View>
               </GlassCard>
               
               <GlassCard style={styles.statCard} padding="md">
                 <View style={styles.statContent}>
-                  <Ionicons name="happy" size={24} color={COLORS.accent} />
-                  <Text style={styles.statValue}>
+                  <Ionicons name="happy" size={24} color={colors.accent} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>
                     {insights.averageMood ? insights.averageMood.toFixed(1) : '-'}
                   </Text>
-                  <Text style={styles.statLabel}>avg. mood</Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>avg. mood</Text>
                 </View>
               </GlassCard>
             </View>
@@ -391,15 +393,15 @@ export default function AuroraScreen() {
         {/* Quick Actions */}
         {isAuthenticated && (
           <View style={styles.quickActionsSection}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
                 onPress={() => router.push('/journal/create')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-                  <Text style={styles.quickActionText}>Quick Entry</Text>
+                  <Ionicons name="add-circle" size={28} color={colors.primary} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Quick Entry</Text>
                 </GlassCard>
               </Pressable>
               
@@ -408,8 +410,8 @@ export default function AuroraScreen() {
                 onPress={() => router.push('/journal/insights')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="analytics" size={28} color={COLORS.accent} />
-                  <Text style={styles.quickActionText}>Insights</Text>
+                  <Ionicons name="analytics" size={28} color={colors.accent} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Insights</Text>
                 </GlassCard>
               </Pressable>
               
@@ -418,8 +420,8 @@ export default function AuroraScreen() {
                 onPress={() => router.push('/ideas')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="bulb" size={28} color={COLORS.warning} />
-                  <Text style={styles.quickActionText}>Submit Idea</Text>
+                  <Ionicons name="bulb" size={28} color={colors.warning} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Submit Idea</Text>
                 </GlassCard>
               </Pressable>
             </View>
@@ -428,7 +430,7 @@ export default function AuroraScreen() {
 
         {/* Options - How can I help you? */}
         <View style={styles.optionsContainer}>
-          <Text style={styles.optionsTitle}>How can I help you?</Text>
+          <Text style={[styles.optionsTitle, { color: colors.text }]}>How can I help you?</Text>
           
           <GlassCard
             style={styles.optionCard}
@@ -441,16 +443,16 @@ export default function AuroraScreen() {
                   colors={['rgba(94, 234, 212, 0.3)', 'rgba(52, 211, 153, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={28} color={COLORS.accent} />
+                  <Ionicons name="chatbubble-ellipses" size={28} color={colors.accent} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Chat with Aurora</Text>
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Chat with Aurora</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                   Chat with Aurora via text at your own pace
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
             </View>
           </GlassCard>
 
@@ -465,16 +467,16 @@ export default function AuroraScreen() {
                   colors={['rgba(251, 191, 36, 0.3)', 'rgba(245, 158, 11, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="journal" size={28} color={COLORS.warning} />
+                  <Ionicons name="journal" size={28} color={colors.warning} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Journal</Text>
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Journal</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                   Write your thoughts with AI guidance
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
             </View>
           </GlassCard>
 
@@ -489,16 +491,16 @@ export default function AuroraScreen() {
                   colors={['rgba(139, 92, 246, 0.3)', 'rgba(167, 139, 250, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="analytics" size={28} color={COLORS.secondary} />
+                  <Ionicons name="analytics" size={28} color={colors.secondary} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Insights</Text>
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Insights</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                   View patterns and insights from your journal
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
             </View>
           </GlassCard>
 
@@ -513,16 +515,16 @@ export default function AuroraScreen() {
                   colors={['rgba(239, 68, 68, 0.3)', 'rgba(248, 113, 113, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="heart" size={28} color={COLORS.error} />
+                  <Ionicons name="heart" size={28} color={colors.error} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Health Check</Text>
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Health Check</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                   Manage your health information
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
             </View>
           </GlassCard>
 
@@ -536,17 +538,17 @@ export default function AuroraScreen() {
                   colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="mic" size={28} color={COLORS.primary} />
+                  <Ionicons name="mic" size={28} color={colors.primary} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Voice Sessions</Text>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Voice Sessions</Text>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionDescription}>
+                  <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                     Talk with Aurora via voice in a safe environment
                   </Text>
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  <View style={[styles.comingSoonBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.comingSoonText, { color: colors.background }]}>Coming Soon</Text>
                   </View>
                 </View>
               </View>
@@ -563,17 +565,17 @@ export default function AuroraScreen() {
                   colors={['rgba(139, 92, 246, 0.3)', 'rgba(167, 139, 250, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="musical-notes" size={28} color={COLORS.secondary} />
+                  <Ionicons name="musical-notes" size={28} color={colors.secondary} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Discover the power of noises & sounds</Text>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Discover the power of noises & sounds</Text>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionDescription}>
+                  <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                     Mix ambient sounds for focus, sleep, and relaxation
                   </Text>
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  <View style={[styles.comingSoonBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.comingSoonText, { color: colors.background }]}>Coming Soon</Text>
                   </View>
                 </View>
               </View>
@@ -590,17 +592,17 @@ export default function AuroraScreen() {
                   colors={['rgba(236, 72, 153, 0.3)', 'rgba(244, 114, 182, 0.3)']}
                   style={styles.optionIconGradient}
                 >
-                  <Ionicons name="calendar" size={28} color={COLORS.error} />
+                  <Ionicons name="calendar" size={28} color={colors.error} />
                 </LinearGradient>
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>Events</Text>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Events</Text>
                 <View style={styles.optionTitleRow}>
-                  <Text style={styles.optionDescription}>
+                  <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                     Join community events, workshops, and support groups
                   </Text>
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  <View style={[styles.comingSoonBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.comingSoonText, { color: colors.background }]}>Coming Soon</Text>
                   </View>
                 </View>
               </View>

@@ -18,19 +18,26 @@ import { getFontFamily } from '../src/utils/fontHelper';
 
 // Available fonts that work cross-platform
 const AVAILABLE_FONTS = [
-  { id: 'system', name: 'System Default', family: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) },
-  { id: 'sfpro', name: 'SF Pro', family: Platform.select({ ios: 'SF Pro Display', android: 'Roboto', default: 'SF Pro Display' }) },
-  { id: 'roboto', name: 'Roboto', family: 'Roboto' },
-  { id: 'arial', name: 'Arial', family: 'Arial' },
-  { id: 'helvetica', name: 'Helvetica', family: 'Helvetica' },
-  { id: 'georgia', name: 'Georgia', family: 'Georgia' },
-  { id: 'times', name: 'Times New Roman', family: 'Times New Roman' },
-  { id: 'courier', name: 'Courier New', family: 'Courier New' },
-  { id: 'verdana', name: 'Verdana', family: 'Verdana' },
-  { id: 'trebuchet', name: 'Trebuchet MS', family: 'Trebuchet MS' },
-  { id: 'comic', name: 'Comic Sans MS', family: 'Comic Sans MS' },
-  { id: 'impact', name: 'Impact', family: 'Impact' },
-  { id: 'palatino', name: 'Palatino', family: 'Palatino' },
+  { id: 'system', name: 'System Default', category: 'Modern', family: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) },
+  { id: 'sfpro', name: 'SF Pro', category: 'Modern', family: Platform.select({ ios: 'SF Pro Display', android: 'Roboto', default: 'SF Pro Display' }) },
+  { id: 'roboto', name: 'Roboto', category: 'Modern', family: 'Roboto' },
+  { id: 'arial', name: 'Arial', category: 'Modern', family: 'Arial' },
+  { id: 'helvetica', name: 'Helvetica', category: 'Modern', family: 'Helvetica' },
+  { id: 'verdana', name: 'Verdana', category: 'Modern', family: 'Verdana' },
+  { id: 'trebuchet', name: 'Trebuchet MS', category: 'Modern', family: 'Trebuchet MS' },
+  { id: 'comic', name: 'Comic Sans MS', category: 'Casual', family: 'Comic Sans MS' },
+  { id: 'impact', name: 'Impact', category: 'Modern', family: 'Impact' },
+  // Vintage/Classic fonts
+  { id: 'times', name: 'Times New Roman', category: 'Vintage', family: 'Times New Roman' },
+  { id: 'georgia', name: 'Georgia', category: 'Vintage', family: 'Georgia' },
+  { id: 'palatino', name: 'Palatino', category: 'Vintage', family: 'Palatino' },
+  { id: 'courier', name: 'Courier New', category: 'Vintage', family: 'Courier New' },
+  { id: 'baskerville', name: 'Baskerville', category: 'Vintage', family: 'Baskerville' },
+  { id: 'garamond', name: 'Garamond', category: 'Vintage', family: 'Garamond' },
+  { id: 'bookantiqua', name: 'Book Antiqua', category: 'Vintage', family: 'Book Antiqua' },
+  { id: 'didot', name: 'Didot', category: 'Vintage', family: 'Didot' },
+  { id: 'bodoni', name: 'Bodoni', category: 'Vintage', family: 'Bodoni' },
+  { id: 'caslon', name: 'Caslon', category: 'Vintage', family: 'Caslon' },
 ];
 
 const SAMPLE_TEXT = 'The quick brown fox jumps over the lazy dog. 1234567890';
@@ -89,7 +96,89 @@ export default function FontSettingsScreen() {
             Select a font that you find most comfortable to read
           </Text>
 
-          {AVAILABLE_FONTS.map((font) => (
+          {/* Vintage/Classic Fonts Section */}
+          <View style={styles.categorySection}>
+            <Text style={styles.categoryTitle}>📜 Vintage & Classic</Text>
+            <Text style={styles.categoryDescription}>
+              Ouderwetse lettertypes voor een klassieke journal-ervaring
+            </Text>
+            {AVAILABLE_FONTS.filter(f => f.category === 'Vintage').map((font) => (
+              <Pressable
+                key={font.id}
+                style={[
+                  styles.fontItem,
+                  selectedFont === font.id && styles.fontItemSelected,
+                ]}
+                onPress={() => handleSelectFont(font.id)}
+              >
+                <View style={styles.fontItemContent}>
+                  <Text
+                    style={[
+                      styles.fontName,
+                      { fontFamily: getFontFamily(font.id) },
+                      selectedFont === font.id && styles.fontNameSelected,
+                    ]}
+                  >
+                    {font.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.fontSample,
+                      { fontFamily: getFontFamily(font.id) },
+                      selectedFont === font.id && styles.fontSampleSelected,
+                    ]}
+                  >
+                    {SAMPLE_TEXT}
+                  </Text>
+                </View>
+                {selectedFont === font.id && (
+                  <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                )}
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Modern Fonts Section */}
+          <View style={styles.categorySection}>
+            <Text style={styles.categoryTitle}>Modern</Text>
+            {AVAILABLE_FONTS.filter(f => f.category === 'Modern').map((font) => (
+              <Pressable
+                key={font.id}
+                style={[
+                  styles.fontItem,
+                  selectedFont === font.id && styles.fontItemSelected,
+                ]}
+                onPress={() => handleSelectFont(font.id)}
+              >
+                <View style={styles.fontItemContent}>
+                  <Text
+                    style={[
+                      styles.fontName,
+                      { fontFamily: getFontFamily(font.id) },
+                      selectedFont === font.id && styles.fontNameSelected,
+                    ]}
+                  >
+                    {font.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.fontSample,
+                      { fontFamily: getFontFamily(font.id) },
+                      selectedFont === font.id && styles.fontSampleSelected,
+                    ]}
+                  >
+                    {SAMPLE_TEXT}
+                  </Text>
+                </View>
+                {selectedFont === font.id && (
+                  <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                )}
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Other Fonts */}
+          {AVAILABLE_FONTS.filter(f => f.category === 'Casual').map((font) => (
             <Pressable
               key={font.id}
               style={[
@@ -242,5 +331,19 @@ const styles = StyleSheet.create({
   },
   fontSampleSelected: {
     color: COLORS.textSecondary,
+  },
+  categorySection: {
+    marginTop: SPACING.lg,
+  },
+  categoryTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  categoryDescription: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.md,
+    fontStyle: 'italic',
   },
 });

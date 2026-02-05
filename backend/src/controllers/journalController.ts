@@ -3,8 +3,10 @@ import { Types } from 'mongoose';
 import JournalEntry, { IJournalEntry, IAIInsights } from '../models/JournalEntry';
 import Journal, { IJournal } from '../models/Journal';
 import User from '../models/User';
+import CalendarEvent from '../models/Calendar';
 import { AuthRequest } from '../middleware/auth';
 import OpenAI from 'openai';
+import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -538,7 +540,7 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
 // @access  Private
 export const createEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content, mood, audioUrl, transcription, symptoms, tags, promptId, promptText, journalId } = req.body;
+    const { content, mood, audioUrl, transcription, symptoms, tags, promptId, promptText, journalId, fontFamily } = req.body;
 
     if (!content || content.trim().length === 0) {
       res.status(400).json({
@@ -593,6 +595,7 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
       tags: tags || [],
       promptId,
       promptText,
+      fontFamily: fontFamily || 'palatino', // Default to Palatino if not provided
       isPrivate: !journal.isPublic, // Entry privacy follows journal privacy
     });
 
@@ -807,11 +810,13 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     // Mood trend (group by date)
     const moodByDate: { [key: string]: number[] } = {};
     entries.forEach((entry) => {
-      const dateKey = entry.createdAt.toISOString().split('T')[0];
-      if (!moodByDate[dateKey]) {
-        moodByDate[dateKey] = [];
+      if (entry.createdAt) {
+        const dateKey = entry.createdAt.toISOString().split('T')[0];
+        if (!moodByDate[dateKey]) {
+          moodByDate[dateKey] = [];
+        }
+        moodByDate[dateKey].push(entry.mood);
       }
-      moodByDate[dateKey].push(entry.mood);
     });
 
     const moodTrend = Object.entries(moodByDate)
@@ -865,11 +870,14 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
 
     // Calculate streak
     let streakDays = 0;
-    const sortedEntries = [...entries].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const sortedEntries = [...entries]
+      .filter((e) => e.createdAt) // Filter out entries without createdAt
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
     let currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
     for (const entry of sortedEntries) {
+      if (!entry.createdAt) continue;
       const entryDate = new Date(entry.createdAt);
       entryDate.setHours(0, 0, 0, 0);
 
@@ -1028,6 +1036,20 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
+    // Get user's health info and upcoming calendar events for context
+    const user = await User.findById(req.userId).select('healthInfo');
+    const now = new Date();
+    const upcomingEvents = await CalendarEvent.find({
+      user: req.userId,
+      startDate: { $gte: now },
+    })
+      .sort({ startDate: 1 })
+      .limit(10)
+      .lean();
+
+    // Format context for AI
+    const context = formatCompleteContextForAI(user, undefined, upcomingEvents);
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -1040,7 +1062,7 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
 4. Therapeutic feedback (brief, supportive, non-clinical)
 5. Follow-up questions (2-3 questions to encourage reflection)
 
-Be empathetic, supportive, and focus on growth and self-awareness.`,
+Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
         },
         {
           role: 'user',
@@ -1132,8 +1154,18 @@ export const getAuroraContext = async (req: AuthRequest, res: Response): Promise
       .limit(limit)
       .select('date mood content aiInsights.themes');
 
+    // Get upcoming calendar events for AI context
+    const now = new Date();
+    const upcomingEvents = await CalendarEvent.find({
+      user: req.userId,
+      startDate: { $gte: now },
+    })
+      .sort({ startDate: 1 })
+      .limit(10)
+      .lean();
+
     const context = entries.map((entry) => ({
-      date: entry.createdAt.toISOString(),
+      date: entry.createdAt ? entry.createdAt.toISOString() : new Date().toISOString(),
       mood: entry.mood,
       summary: entry.content.substring(0, 200),
       themes: entry.aiInsights?.themes || [],
@@ -1142,7 +1174,10 @@ export const getAuroraContext = async (req: AuthRequest, res: Response): Promise
 
     res.json({
       success: true,
-      data: context,
+      data: {
+        journalEntries: context,
+        calendarEvents: upcomingEvents,
+      },
     });
   } catch (error: any) {
     res.status(500).json({

@@ -17,7 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, GlassInput, Avatar, TagChip, LoadingSpinner } from '../../src/components/common';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { groupService, Group } from '../../src/services/group.service';
 import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
@@ -28,6 +29,7 @@ type TabType = 'groups' | 'buddies';
 export default function GroupsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { isAuthenticated, user: currentUser } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState<TabType>('groups');
@@ -270,32 +272,32 @@ export default function GroupsScreen() {
               colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
               style={styles.groupAvatarGradient}
             >
-              <Ionicons name="people" size={24} color={COLORS.primary} />
+              <Ionicons name="people" size={24} color={colors.primary} />
             </LinearGradient>
           )}
         </View>
         <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{item.name}</Text>
+          <Text style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
           <View style={styles.groupMeta}>
-            <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
-            <Text style={styles.groupMetaText}>{item.memberCount} members</Text>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{item.memberCount} members</Text>
             {item.country && (
               <>
-                <Ionicons name="globe-outline" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
-                <Text style={styles.groupMetaText}>{getCountryName(item.country)}</Text>
+                <Ionicons name="globe-outline" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
+                <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{getCountryName(item.country)}</Text>
               </>
             )}
             {item.isPrivate && (
               <>
-                <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} style={{ marginLeft: SPACING.sm }} />
-                <Text style={styles.groupMetaText}>Private</Text>
+                <Ionicons name="lock-closed" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
+                <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>Private</Text>
               </>
             )}
           </View>
         </View>
       </View>
 
-      <Text style={styles.groupDescription} numberOfLines={2}>
+      <Text style={[styles.groupDescription, { color: colors.textSecondary }]} numberOfLines={2}>
         {item.description}
       </Text>
 
@@ -315,14 +317,14 @@ export default function GroupsScreen() {
             <Ionicons
               name={item.isMember ? 'checkmark' : 'add'}
               size={16}
-              color={item.isMember ? COLORS.text : COLORS.primary}
+              color={item.isMember ? colors.text : colors.primary}
               style={{ marginRight: SPACING.xs }}
             />
           }
         />
       </View>
     </GlassCard>
-  ), [router, handleJoinGroup]);
+  ), [router, handleJoinGroup, colors]);
 
   // Render Buddy Card
   const renderBuddy = useCallback(({ item }: { item: UserProfile }) => {
@@ -344,9 +346,9 @@ export default function GroupsScreen() {
               onPress={() => router.push(`/user/${item._id}`)}
               style={styles.buddyInfoText}
             >
-              <Text style={styles.buddyName} numberOfLines={1}>{item.displayName || item.username}</Text>
+              <Text style={[styles.buddyName, { color: colors.text }]} numberOfLines={1}>{item.displayName || item.username}</Text>
               {item.bio && (
-                <Text style={styles.buddyBio} numberOfLines={1}>
+                <Text style={[styles.buddyBio, { color: colors.textMuted }]} numberOfLines={1}>
                   {item.bio}
                 </Text>
               )}
@@ -357,7 +359,7 @@ export default function GroupsScreen() {
                   style={styles.messageButton}
                   onPress={() => handleMessageUser(item._id)}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
+                  <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
                 </Pressable>
               )}
               {!isInBuddiesList && (
@@ -374,55 +376,57 @@ export default function GroupsScreen() {
         </View>
       </GlassCard>
     );
-  }, [router, buddies, handleFollowUser, handleMessageUser]);
+  }, [router, buddies, handleFollowUser, handleMessageUser, colors]);
 
   return (
     <LinearGradient
-      colors={COLORS.backgroundGradient}
+      colors={colors.backgroundGradient as readonly [string, string, string]}
       style={styles.container}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={styles.headerTitle}>Groups / Buddies</Text>
-        <Pressable
-          style={styles.headerButton}
-          onPress={() => {
-            if (!isAuthenticated) {
-              router.push('/(auth)/login');
-            } else if (activeTab === 'groups') {
-              router.push('/create-group');
-            }
-          }}
-        >
-          <Ionicons name={activeTab === 'groups' ? 'add' : 'search'} size={24} color={COLORS.text} />
-        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Groups / Buddies</Text>
+        {activeTab === 'groups' && (
+          <Pressable
+            style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+              } else {
+                router.push('/create-group');
+              }
+            }}
+          >
+            <Ionicons name="add" size={24} color={colors.text} />
+          </Pressable>
+        )}
       </View>
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <Pressable
-          style={[styles.tab, activeTab === 'groups' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'groups' && [styles.tabActive, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]]}
           onPress={() => setActiveTab('groups')}
         >
           <Ionicons
             name="people"
             size={20}
-            color={activeTab === 'groups' ? COLORS.primary : COLORS.textMuted}
+            color={activeTab === 'groups' ? colors.primary : colors.textMuted}
           />
-          <Text style={[styles.tabText, activeTab === 'groups' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'groups' ? colors.primary : colors.textMuted }]}>
             Groups
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.tab, activeTab === 'buddies' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'buddies' && [styles.tabActive, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]]}
           onPress={() => setActiveTab('buddies')}
         >
           <Ionicons
             name="person"
             size={20}
-            color={activeTab === 'buddies' ? COLORS.primary : COLORS.textMuted}
+            color={activeTab === 'buddies' ? colors.primary : colors.textMuted}
           />
-          <Text style={[styles.tabText, activeTab === 'buddies' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: activeTab === 'buddies' ? colors.primary : colors.textMuted }]}>
             Buddies
           </Text>
         </Pressable>
@@ -493,8 +497,8 @@ export default function GroupsScreen() {
                     }
                   }}
                 >
-                  <Ionicons name="search" size={16} color={showCountrySearch ? COLORS.white : COLORS.primary} />
-                  <Text style={[styles.countryFilterText, { color: showCountrySearch ? COLORS.white : COLORS.primary, marginLeft: SPACING.xs }]}>
+                  <Ionicons name="search" size={16} color={showCountrySearch ? colors.white : colors.primary} />
+                  <Text style={[styles.countryFilterText, { color: showCountrySearch ? colors.white : colors.primary, marginLeft: SPACING.xs, fontWeight: '600' }]}>
                     Search Country
                   </Text>
                 </Pressable>
@@ -529,7 +533,7 @@ export default function GroupsScreen() {
                   />
                   
                   {countrySearchQuery.trim() && (
-                    <View style={styles.countryResultsContainer}>
+                    <View style={[styles.countryResultsContainer, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]}>
                       <FlatList
                         data={COUNTRIES.filter((country) => {
                           if (country.code === 'global') return false;
@@ -544,7 +548,8 @@ export default function GroupsScreen() {
                           <Pressable
                             style={[
                               styles.countryResultItem,
-                              selectedCountry === item.code && styles.countryResultItemActive,
+                              { borderBottomColor: colors.glass.border },
+                              selectedCountry === item.code && [styles.countryResultItemActive, { backgroundColor: 'rgba(96, 165, 250, 0.1)' }],
                             ]}
                             onPress={() => {
                               setSelectedCountry(item.code);
@@ -555,13 +560,14 @@ export default function GroupsScreen() {
                             <Text
                               style={[
                                 styles.countryResultText,
-                                selectedCountry === item.code && styles.countryResultTextActive,
+                                { color: colors.text },
+                                selectedCountry === item.code && { color: colors.primary, fontWeight: '600' },
                               ]}
                             >
                               {item.name}
                             </Text>
                             {selectedCountry === item.code && (
-                              <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                             )}
                           </Pressable>
                         )}
@@ -576,7 +582,7 @@ export default function GroupsScreen() {
                         scrollEventThrottle={16}
                         ListEmptyComponent={
                           <View style={styles.countryResultsEmpty}>
-                            <Text style={styles.countryResultsEmptyText}>No countries found</Text>
+                            <Text style={[styles.countryResultsEmptyText, { color: colors.textMuted }]}>No countries found</Text>
                           </View>
                         }
                       />
@@ -605,7 +611,7 @@ export default function GroupsScreen() {
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
-                tintColor={COLORS.primary}
+                tintColor={colors.primary}
               />
             }
             onEndReached={loadMore}
@@ -624,8 +630,8 @@ export default function GroupsScreen() {
                 </View>
               ) : (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyText}>No groups found</Text>
+                  <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>No groups found</Text>
                   {isAuthenticated && (
                     <Pressable
                       style={styles.createGroupButton}
@@ -660,7 +666,7 @@ export default function GroupsScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor={COLORS.primary}
+              tintColor={colors.primary}
             />
           }
           ListFooterComponent={
@@ -677,8 +683,8 @@ export default function GroupsScreen() {
               </View>
             ) : (
               <View style={styles.emptyContainer}>
-                <Ionicons name="person-outline" size={48} color={COLORS.textMuted} />
-                <Text style={styles.emptyText}>
+                <Ionicons name="person-outline" size={48} color={colors.textMuted} />
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   {buddySearchQuery.trim()
                     ? 'No users found'
                     : isAuthenticated
@@ -687,10 +693,10 @@ export default function GroupsScreen() {
                 </Text>
                 {!isAuthenticated && (
                   <Pressable
-                    style={styles.createGroupButton}
+                    style={[styles.createGroupButton, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}
                     onPress={() => router.push('/(auth)/login')}
                   >
-                    <Text style={styles.createGroupButtonText}>Log in</Text>
+                    <Text style={[styles.createGroupButtonText, { color: colors.primary }]}>Log in</Text>
                   </Pressable>
                 )}
               </View>

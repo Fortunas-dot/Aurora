@@ -81,16 +81,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ language });
   },
 
-  // Set theme
+  // Set theme (automatically saves)
   setTheme: async (theme: 'dark' | 'light' | 'system') => {
     await SecureStore.setItemAsync('app_theme', theme);
     set({ theme });
+    // Theme is already saved to SecureStore, no need to call saveSettings
   },
 
-  // Set font family
+  // Set font family (automatically saves)
   setFontFamily: async (fontFamily: string) => {
     await SecureStore.setItemAsync('app_font_family', fontFamily);
     set({ fontFamily });
+    // Font family is already saved to SecureStore, no need to call saveSettings
   },
 
   // Set show email
@@ -142,18 +144,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // Load language
+      // App is always in English (Dutch translations are kept for future use)
       await i18n.init();
-      const savedLanguage = await SecureStore.getItemAsync('app_language');
-      const language = (savedLanguage && (savedLanguage === 'nl' || savedLanguage === 'en'))
-        ? (savedLanguage as Language)
-        : i18n.getLanguage();
+      const language: Language = 'en';
       
-      // Set language in i18n
+      // Set language in i18n to English
       await i18n.setLanguage(language);
       
-      // Load theme
-      const theme = (await SecureStore.getItemAsync('app_theme')) || 'dark';
+      // App only supports dark mode - always set to dark
+      const theme = 'dark';
       
       // Load font family
       const fontFamily = (await SecureStore.getItemAsync('app_font_family')) || 'system';
@@ -191,8 +190,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const state = get();
       
-      // Save language
-      await SecureStore.setItemAsync('app_language', state.language);
+      // Language is always English, no need to save
       
       // Save theme
       await SecureStore.setItemAsync('app_theme', state.theme);

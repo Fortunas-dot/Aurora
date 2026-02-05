@@ -25,6 +25,7 @@ interface HealthCondition {
   condition: string; // Hoofdconditie (bijv. "Depressie")
   type?: string; // Sub-type (bijv. "Unipolaire depressie")
   severity: SeverityLevel;
+  notes?: string; // Additional context/explanation for this condition
 }
 
 interface HealthInfo {
@@ -32,6 +33,7 @@ interface HealthInfo {
   physicalHealth?: HealthCondition[];
   medications?: string[];
   therapies?: string[];
+  lifeContext?: string; // General context about user's life for AI
 }
 
 // Medical terminology based on standards
@@ -292,6 +294,7 @@ interface ConditionChipProps {
   condition: HealthCondition;
   onSeverityChange: (severity: SeverityLevel) => void;
   onTypeChange: (newType: string | undefined) => void;
+  onNotesChange: (notes: string) => void;
   onRemove: () => void;
   availableTypes?: string[];
   color?: string;
@@ -301,11 +304,14 @@ const ConditionChip: React.FC<ConditionChipProps> = ({
   condition, 
   onSeverityChange, 
   onTypeChange,
+  onNotesChange,
   onRemove,
   availableTypes,
   color = COLORS.primary,
 }) => {
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [showNotesInput, setShowNotesInput] = useState(false);
+  const [notesText, setNotesText] = useState(condition.notes || '');
 
   return (
     <View style={styles.conditionChipContainer}>
@@ -416,6 +422,62 @@ const ConditionChip: React.FC<ConditionChipProps> = ({
           })}
         </View>
       </View>
+
+      {/* Notes Input */}
+      <View style={styles.notesContainer}>
+        <Pressable
+          style={styles.notesToggleButton}
+          onPress={() => setShowNotesInput(!showNotesInput)}
+        >
+          <Ionicons 
+            name={showNotesInput ? 'chevron-up' : 'chevron-down'} 
+            size={16} 
+            color={color} 
+          />
+          <Text style={[styles.notesToggleText, { color }]}>
+            {condition.notes ? 'Edit context/explanation' : 'Add context/explanation (optional)'}
+          </Text>
+        </Pressable>
+        {showNotesInput && (
+          <View style={styles.notesInputContainer}>
+            <TextInput
+              style={styles.notesInput}
+              value={notesText}
+              onChangeText={setNotesText}
+              placeholder="Provide additional context or explanation about this condition..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <View style={styles.notesInputActions}>
+              <Pressable
+                style={[styles.notesInputButton, styles.notesInputButtonCancel]}
+                onPress={() => {
+                  setNotesText(condition.notes || '');
+                  setShowNotesInput(false);
+                }}
+              >
+                <Text style={styles.notesInputButtonTextCancel}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.notesInputButton, styles.notesInputButtonSave]}
+                onPress={() => {
+                  onNotesChange(notesText.trim());
+                  setShowNotesInput(false);
+                }}
+              >
+                <Text style={styles.notesInputButtonTextSave}>Save</Text>
+              </Pressable>
+            </View>
+            {condition.notes && (
+              <Text style={styles.notesPreview}>
+                Current: {condition.notes}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -428,6 +490,7 @@ interface CategorySectionProps {
   onAdd: (condition: string, type?: string) => void;
   onUpdate: (condition: string, type: string | undefined, severity: SeverityLevel) => void;
   onUpdateType: (condition: string, oldType: string | undefined, newType: string | undefined) => void;
+  onUpdateNotes: (condition: string, type: string | undefined, notes: string) => void;
   onRemove: (condition: string, type: string | undefined) => void;
   color?: string;
 }
@@ -440,6 +503,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   onAdd,
   onUpdate,
   onUpdateType,
+  onUpdateNotes,
   onRemove,
   color = COLORS.primary,
 }) => {
@@ -511,6 +575,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
                   condition={item}
                   onSeverityChange={(severity) => onUpdate(item.condition, item.type, severity)}
                   onTypeChange={(newType) => onUpdateType(item.condition, item.type, newType)}
+                  onNotesChange={(notes) => onUpdateNotes(item.condition, item.type, notes)}
                   onRemove={() => onRemove(item.condition, item.type)}
                   availableTypes={conditions.find((c) => c.name === item.condition)?.types}
                   color={color}
@@ -551,13 +616,12 @@ const CategorySection: React.FC<CategorySectionProps> = ({
         {/* Other Input Field */}
         {showOtherInput && selectedCondition === 'Other' && (
           <View style={styles.otherInputContainer}>
-            <GlassInput
-              value={otherTypeText}
-              onChangeText={setOtherTypeText}
-              placeholder="Enter condition type..."
-              style={styles.otherInput}
-              autoFocus={true}
-            />
+              <GlassInput
+                value={otherTypeText}
+                onChangeText={setOtherTypeText}
+                placeholder="Enter condition type..."
+                style={styles.otherInput}
+              />
             <View style={styles.otherInputActions}>
               <Pressable
                 style={[styles.otherInputButton, styles.otherInputButtonCancel]}
@@ -702,7 +766,6 @@ const CategorySection: React.FC<CategorySectionProps> = ({
                   onChangeText={setOtherTypeText}
                   placeholder="Enter condition type..."
                   style={styles.modalOtherInput}
-                  autoFocus={true}
                 />
                 <View style={styles.modalOtherInputActions}>
                   <Pressable
@@ -749,6 +812,7 @@ export default function HealthInfoScreen() {
     physicalHealth: [],
     medications: [],
     therapies: [],
+    lifeContext: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -760,7 +824,7 @@ export default function HealthInfoScreen() {
     }
 
     // Load existing health info and convert old format to new format
-    const convertToNewFormat = (oldData: any[]): HealthCondition[] => {
+    const convertToNewFormat = (oldData: any[] | undefined): HealthCondition[] => {
       if (!oldData || oldData.length === 0) return [];
       // Check if it's old format (string[]) or new format (HealthCondition[])
       if (typeof oldData[0] === 'string') {
@@ -775,15 +839,17 @@ export default function HealthInfoScreen() {
         condition: item.condition || item,
         type: item.type,
         severity: item.severity || 'moderate',
+        notes: item.notes || undefined,
       }));
     };
 
     if (user?.healthInfo) {
       setHealthInfo({
-        mentalHealth: convertToNewFormat(user.healthInfo.mentalHealth),
-        physicalHealth: convertToNewFormat(user.healthInfo.physicalHealth),
+        mentalHealth: convertToNewFormat(user.healthInfo.mentalHealth || []),
+        physicalHealth: convertToNewFormat(user.healthInfo.physicalHealth || []),
         medications: user.healthInfo.medications || [],
         therapies: user.healthInfo.therapies || [],
+        lifeContext: (user.healthInfo as any).lifeContext || '',
       });
     } else {
       // Reset to empty if no healthInfo exists
@@ -792,6 +858,7 @@ export default function HealthInfoScreen() {
         physicalHealth: [],
         medications: [],
         therapies: [],
+        lifeContext: '',
       });
     }
     setIsLoading(false);
@@ -808,7 +875,7 @@ export default function HealthInfoScreen() {
 
       return {
         ...prev,
-        [category]: [...current, { condition, type, severity: 'moderate' as SeverityLevel }],
+        [category]: [...current, { condition, type, severity: 'moderate' as SeverityLevel, notes: undefined }],
       };
     });
   };
@@ -835,6 +902,20 @@ export default function HealthInfoScreen() {
         [category]: current.map((item) =>
           item.condition === condition && item.type === oldType
             ? { ...item, type: newType }
+            : item
+        ),
+      };
+    });
+  };
+
+  const handleUpdateNotes = (category: 'mentalHealth' | 'physicalHealth', condition: string, type: string | undefined, notes: string) => {
+    setHealthInfo((prev) => {
+      const current = prev[category] || [];
+      return {
+        ...prev,
+        [category]: current.map((item) =>
+          item.condition === condition && item.type === type
+            ? { ...item, notes }
             : item
         ),
       };
@@ -1007,6 +1088,7 @@ export default function HealthInfoScreen() {
           onAdd={(condition, type) => handleAddCondition('mentalHealth', condition, type)}
           onUpdate={(condition, type, severity) => handleUpdateSeverity('mentalHealth', condition, type, severity)}
           onUpdateType={(condition, oldType, newType) => handleUpdateType('mentalHealth', condition, oldType, newType)}
+          onUpdateNotes={(condition, type, notes) => handleUpdateNotes('mentalHealth', condition, type, notes)}
           onRemove={(condition, type) => handleRemoveCondition('mentalHealth', condition, type)}
           color={COLORS.error}
         />
@@ -1019,6 +1101,7 @@ export default function HealthInfoScreen() {
           onAdd={(condition, type) => handleAddCondition('physicalHealth', condition, type)}
           onUpdate={(condition, type, severity) => handleUpdateSeverity('physicalHealth', condition, type, severity)}
           onUpdateType={(condition, oldType, newType) => handleUpdateType('physicalHealth', condition, oldType, newType)}
+          onUpdateNotes={(condition, type, notes) => handleUpdateNotes('physicalHealth', condition, type, notes)}
           onRemove={(condition, type) => handleRemoveCondition('physicalHealth', condition, type)}
           color={COLORS.warning}
         />
@@ -1072,7 +1155,6 @@ export default function HealthInfoScreen() {
                 onChangeText={setMedicationOtherText}
                 placeholder="Enter medication name..."
                 style={styles.otherInput}
-                autoFocus={true}
               />
               <View style={styles.otherInputActions}>
                 <Pressable
@@ -1145,7 +1227,6 @@ export default function HealthInfoScreen() {
                 onChangeText={setTherapyOtherText}
                 placeholder="Enter therapy type..."
                 style={styles.otherInput}
-                autoFocus={true}
               />
               <View style={styles.otherInputActions}>
                 <Pressable
@@ -1167,6 +1248,31 @@ export default function HealthInfoScreen() {
               </View>
             </View>
           )}
+        </GlassCard>
+
+        {/* Life Context Section */}
+        <GlassCard style={styles.categoryCard} padding="lg">
+          <View style={styles.categoryHeader}>
+            <View style={[styles.categoryIconContainer, { backgroundColor: `${COLORS.primary}20` }]}>
+              <Ionicons name="document-text-outline" size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.categoryHeaderText}>
+              <Text style={styles.categoryTitle}>Life Context</Text>
+              <Text style={styles.categorySubtitle}>
+                Share general information about your life, circumstances, or anything else that might help the AI understand you better
+              </Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.lifeContextInput}
+            value={healthInfo.lifeContext || ''}
+            onChangeText={(text) => setHealthInfo((prev) => ({ ...prev, lifeContext: text }))}
+            placeholder="Tell us about your life, current circumstances, relationships, work, hobbies, or anything else that might be relevant for the AI to better understand and support you..."
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            numberOfLines={8}
+            textAlignVertical="top"
+          />
         </GlassCard>
 
         <View style={styles.privacyNote}>
@@ -1550,5 +1656,97 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.white,
     fontWeight: '600',
+  },
+  notesContainer: {
+    marginTop: SPACING.sm,
+  },
+  notesToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
+    gap: SPACING.xs / 2,
+  },
+  notesToggleText: {
+    ...TYPOGRAPHY.caption,
+    fontSize: 11,
+  },
+  notesInputContainer: {
+    marginTop: SPACING.xs,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  notesInput: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.text,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    minHeight: 80,
+    maxHeight: 150,
+  },
+  notesInputActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    justifyContent: 'flex-end',
+    marginTop: SPACING.xs,
+  },
+  notesInputButton: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  notesInputButtonCancel: {
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  notesInputButtonSave: {
+    backgroundColor: COLORS.primary,
+  },
+  notesInputButtonTextCancel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text,
+  },
+  notesInputButtonTextSave: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  notesPreview: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
+    marginTop: SPACING.xs,
+    padding: SPACING.xs,
+    backgroundColor: COLORS.glass.background,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  categoryHeaderText: {
+    flex: 1,
+  },
+  categorySubtitle: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs / 2,
+    lineHeight: 16,
+  },
+  lifeContextInput: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    minHeight: 120,
+    maxHeight: 200,
+    marginTop: SPACING.md,
   },
 });

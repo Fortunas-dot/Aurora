@@ -29,19 +29,8 @@ export const MessageList: React.FC = () => {
   );
 
   const renderEmptyState = () => {
-    if (messages.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="sparkles" size={48} color={COLORS.primary} />
-          </View>
-          <Text style={styles.emptyStateTitle}>Hallo! Ik ben Aurora</Text>
-          <Text style={styles.emptyStateText}>
-            Ik ben hier om je te helpen. Deel gerust je gedachten met me.
-          </Text>
-        </View>
-      );
-    }
+    // Empty state is now handled by the parent component (text-chat.tsx)
+    // which shows a large animated Aurora symbol
     return null;
   };
 

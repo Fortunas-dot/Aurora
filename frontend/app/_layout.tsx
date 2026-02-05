@@ -4,7 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../src/constants/theme';
+import { useTheme } from '../src/hooks/useTheme';
 import { useAuthStore } from '../src/store/authStore';
 import { useNotificationStore } from '../src/store/notificationStore';
 import { useSettingsStore } from '../src/store/settingsStore';
@@ -12,13 +12,13 @@ import { pushNotificationService } from '../src/services/pushNotification.servic
 import { notificationWebSocketService } from '../src/services/notificationWebSocket.service';
 import { posthogService, POSTHOG_EVENTS } from '../src/services/posthog.service';
 
-function LoadingScreen() {
+function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
     <LinearGradient
-      colors={COLORS.backgroundGradient}
+      colors={colors.backgroundGradient}
       style={styles.loadingContainer}
     >
-      <ActivityIndicator size="large" color={COLORS.primary} />
+      <ActivityIndicator size="large" color={colors.primary} />
     </LinearGradient>
   );
 }
@@ -27,6 +27,7 @@ export default function RootLayout() {
   const { checkAuth, isLoading, isAuthenticated, user } = useAuthStore();
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     let isMounted = true;
@@ -145,20 +146,20 @@ export default function RootLayout() {
   if (isLoading) {
     return (
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <LoadingScreen />
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <LoadingScreen colors={colors} />
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: COLORS.background,
+            backgroundColor: colors.background,
           },
           animation: 'fade',
         }}

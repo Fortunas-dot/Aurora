@@ -74,11 +74,19 @@ class ApiService {
   async post<T = any>(endpoint: string, body: any): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       // Check if response is JSON before parsing
       const contentType = response.headers.get('content-type');
@@ -129,6 +137,15 @@ class ApiService {
       }
     } catch (error: any) {
       console.error('API POST Error:', error);
+      
+      // Handle abort/timeout errors
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          message: 'Request timed out. Please try again.',
+        };
+      }
+      
       return {
         success: false,
         message: error.message || 'Network error',

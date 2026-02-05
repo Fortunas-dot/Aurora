@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
@@ -9,10 +9,20 @@ export default function Index() {
   const { isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (isLoading) {
-      return; // Still loading, wait
+    // Wait a bit to ensure router is ready
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isReady || isLoading) {
+      return; // Router not ready yet or still loading
     }
 
     // Check if we're already in a route
@@ -26,7 +36,7 @@ export default function Index() {
     } else {
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, isLoading, segments, router]);
+  }, [isAuthenticated, isLoading, segments, router, isReady]);
 
   // Show loading screen while checking auth
   if (isLoading) {

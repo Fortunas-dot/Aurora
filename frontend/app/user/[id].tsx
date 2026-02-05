@@ -176,10 +176,12 @@ export default function UserProfileScreen() {
               size="xl"
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.displayName}>
+              <Text style={styles.displayName} numberOfLines={1} ellipsizeMode="tail">
                 {profile.displayName || profile.username}
               </Text>
-              <Text style={styles.username}>@{profile.username}</Text>
+              <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">
+                @{profile.username}
+              </Text>
             </View>
             {!isOwnProfile && isAuthenticated && (
               <GlassButton
@@ -320,10 +322,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SPACING.md,
+    gap: SPACING.sm,
   },
   profileInfo: {
     flex: 1,
     marginLeft: SPACING.md,
+    minWidth: 0, // Allows flex item to shrink below its content size
   },
   displayName: {
     ...TYPOGRAPHY.h3,
@@ -336,6 +340,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     minWidth: 100,
+    flexShrink: 0, // Prevents button from shrinking
   },
   editButton: {
     width: 36,

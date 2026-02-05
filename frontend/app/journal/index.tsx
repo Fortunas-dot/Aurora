@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, Avatar } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalEntry, JournalPrompt, JournalInsights, Journal } from '../../src/services/journal.service';
+import { getFontFamily } from '../../src/utils/fontHelper';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
@@ -103,7 +104,13 @@ const EntryCard: React.FC<{
         </View>
 
         {/* Content with better styling */}
-        <Text style={styles.entryContent} numberOfLines={4}>
+        <Text 
+          style={[
+            styles.entryContent, 
+            { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }
+          ]} 
+          numberOfLines={4}
+        >
           {entry.content}
         </Text>
 
@@ -433,6 +440,14 @@ export default function JournalScreen() {
           <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
         </Pressable>
         <View style={styles.headerRight}>
+          {selectedJournal && (
+            <Pressable
+              style={styles.headerButton}
+              onPress={() => router.push(`/journal/settings?journalId=${selectedJournal._id}`)}
+            >
+              <Ionicons name="settings-outline" size={24} color={COLORS.text} />
+            </Pressable>
+          )}
           <Pressable
             style={styles.headerButton}
             onPress={() => router.push('/journal/browse')}
@@ -969,7 +984,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: 'center',
     width: '100%',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.xl,
     lineHeight: 22,
     flexShrink: 1,
   },

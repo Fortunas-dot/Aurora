@@ -489,6 +489,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 100,
     paddingTop: 0,
+    paddingHorizontal: SPACING.md,
   },
   postsHeader: {
     flexDirection: 'row',

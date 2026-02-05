@@ -69,11 +69,28 @@ class AuthService {
   }
 
   async saveToken(token: string): Promise<void> {
-    await SecureStore.setItemAsync('auth_token', token);
+    try {
+      await SecureStore.setItemAsync('auth_token', token);
+      console.log('✅ Token saved successfully');
+    } catch (error) {
+      console.error('❌ Error saving token:', error);
+      throw error;
+    }
   }
 
   async getToken(): Promise<string | null> {
-    return SecureStore.getItemAsync('auth_token');
+    try {
+      const token = await SecureStore.getItemAsync('auth_token');
+      if (token) {
+        console.log('✅ Token retrieved successfully');
+      } else {
+        console.log('⚠️ No token found in SecureStore');
+      }
+      return token;
+    } catch (error) {
+      console.error('❌ Error getting token:', error);
+      return null;
+    }
   }
 
   async removeToken(): Promise<void> {

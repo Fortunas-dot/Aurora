@@ -21,7 +21,8 @@ const { width, height } = Dimensions.get('window');
 import { GlassCard, LoadingSpinner, Avatar, Badge } from '../../src/components/common';
 import { PostCard } from '../../src/components/post/PostCard';
 import { FeedTabs, FeedTab, CommunityFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { postService, Post } from '../../src/services/post.service';
 import { therapistService } from '../../src/services/therapist.service';
 import { groupService, Group } from '../../src/services/group.service';
@@ -135,6 +136,7 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
   const { unreadCount, updateUnreadCount } = useNotificationStore();
+  const { colors } = useTheme();
   
   // Feed state
   const [posts, setPosts] = useState<Post[]>([]);
@@ -161,6 +163,7 @@ export default function FeedScreen() {
   const [showJoinedGroupsModal, setShowJoinedGroupsModal] = useState(false);
   const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
   const [isLoadingJoinedGroups, setIsLoadingJoinedGroups] = useState(false);
+  const sidebarAnimation = useRef(new Animated.Value(0)).current;
 
   // Load joined groups
   const loadJoinedGroups = useCallback(async () => {
@@ -191,6 +194,25 @@ export default function FeedScreen() {
       loadJoinedGroups();
     }
   }, [showJoinedGroupsModal, isAuthenticated, loadJoinedGroups]);
+
+  // Animate sidebar
+  useEffect(() => {
+    if (showJoinedGroupsModal) {
+      Animated.timing(sidebarAnimation, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(sidebarAnimation, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showJoinedGroupsModal]);
 
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
@@ -497,7 +519,7 @@ export default function FeedScreen() {
     <View style={styles.container}>
       {/* Base gradient */}
       <LinearGradient
-        colors={COLORS.backgroundGradient}
+        colors={colors.backgroundGradient as readonly [string, string, string]}
         style={StyleSheet.absoluteFill}
       />
       
@@ -519,12 +541,12 @@ export default function FeedScreen() {
         ) : (
           <>
             <Pressable
-              style={styles.menuButton}
+              style={[styles.menuButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
               onPress={() => setShowJoinedGroupsModal(true)}
             >
-              <Ionicons name="menu" size={24} color={COLORS.text} />
+              <Ionicons name="menu" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.headerTitle}>Aurora</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
             <View style={styles.headerRight}>
               <SearchBar
                 onSearch={handleSearch}
@@ -532,11 +554,11 @@ export default function FeedScreen() {
                 onExpandChange={handleSearchExpandChange}
               />
               <Pressable
-                style={styles.headerButton}
+                style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
                 onPress={() => router.push('/notifications')}
               >
                 <View style={styles.notificationButtonContainer}>
-                  <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+                  <Ionicons name="notifications-outline" size={24} color={colors.text} />
                   {unreadCount > 0 && <Badge count={unreadCount} size="sm" />}
                 </View>
               </Pressable>
@@ -586,7 +608,7 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
+            tintColor={colors.primary}
           />
         }
         onEndReached={loadMore}
@@ -618,7 +640,7 @@ export default function FeedScreen() {
                           : 'apps-outline'
                 } 
                 size={48} 
-                color={COLORS.textMuted} 
+                color={colors.textMuted} 
               />
               <Text style={styles.emptyText}>{emptyState.title}</Text>
               <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
@@ -635,32 +657,72 @@ export default function FeedScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.fabGradient}
         >
-          <Ionicons name="add" size={28} color={COLORS.white} />
+          <Ionicons name="add" size={28} color={colors.white} />
         </LinearGradient>
       </Pressable>
 
       {/* Joined Groups Sidebar Modal */}
       <Modal
         visible={showJoinedGroupsModal}
-        animationType="slide"
+        animationType="none"
         transparent={true}
         onRequestClose={() => setShowJoinedGroupsModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowJoinedGroupsModal(false)}
-          />
-          <View style={[styles.modalSidebar, { paddingTop: insets.top + SPACING.md }]}>
+          <Animated.View
+            style={[
+              styles.modalSidebar,
+              { paddingTop: insets.top + SPACING.md },
+              {
+                transform: [
+                  {
+                    translateX: sidebarAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-width * 0.85, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Your Communities</Text>
+              <Text style={styles.modalTitle}>Communities</Text>
               <Pressable
                 onPress={() => setShowJoinedGroupsModal(false)}
-                style={styles.modalCloseButton}
+                style={[styles.modalCloseButton, { backgroundColor: colors.glass.backgroundLight }]}
               >
-                <Ionicons name="close" size={24} color={COLORS.text} />
+                <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
+
+            {/* All Communities Option */}
+            <Pressable
+              style={styles.modalAllCommunitiesItem}
+              onPress={() => {
+                setShowJoinedGroupsModal(false);
+                router.push('/(tabs)/groups');
+              }}
+            >
+              <View style={styles.modalGroupItemLeft}>
+                <LinearGradient
+                  colors={['rgba(96, 165, 250, 0.4)', 'rgba(167, 139, 250, 0.4)']}
+                  style={styles.modalGroupAvatarGradient}
+                >
+                  <Ionicons name="apps" size={20} color={colors.primary} />
+                </LinearGradient>
+                <View style={styles.modalGroupInfo}>
+                  <Text style={[styles.modalGroupName, { color: colors.primary }]}>
+                    Alle communities
+                  </Text>
+                  <Text style={styles.modalGroupMeta}>
+                    Browse all communities
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </Pressable>
+
+            <View style={styles.modalDivider} />
 
             {isLoadingJoinedGroups ? (
               <View style={styles.modalLoadingContainer}>
@@ -668,65 +730,77 @@ export default function FeedScreen() {
               </View>
             ) : joinedGroups.length === 0 ? (
               <View style={styles.modalEmptyContainer}>
-                <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                <Ionicons name="people-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.modalEmptyText}>No communities yet</Text>
                 <Text style={styles.modalEmptySubtext}>
                   Join communities to see them here
                 </Text>
-                <Pressable
-                  style={styles.modalEmptyButton}
-                  onPress={() => {
-                    setShowJoinedGroupsModal(false);
-                    router.push('/(tabs)/groups');
-                  }}
-                >
-                  <Text style={styles.modalEmptyButtonText}>Browse Communities</Text>
-                </Pressable>
               </View>
             ) : (
-              <FlatList
-                data={joinedGroups}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={styles.modalGroupItem}
-                    onPress={() => {
-                      setShowJoinedGroupsModal(false);
-                      router.push(`/group/${item._id}`);
-                    }}
-                  >
-                    <View style={styles.modalGroupItemLeft}>
-                      {item.avatar ? (
-                        <Image source={{ uri: item.avatar }} style={styles.modalGroupAvatar} />
-                      ) : (
-                        <LinearGradient
-                          colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
-                          style={styles.modalGroupAvatarGradient}
-                        >
-                          <Ionicons name="people" size={20} color={COLORS.primary} />
-                        </LinearGradient>
-                      )}
-                      <View style={styles.modalGroupInfo}>
-                        <Text style={styles.modalGroupName}>{item.name}</Text>
-                        <Text style={styles.modalGroupMeta}>
-                          {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
-                        </Text>
+              <>
+                <View style={styles.modalSectionHeader}>
+                  <Text style={styles.modalSectionTitle}>Your Communities</Text>
+                </View>
+                <FlatList
+                  data={joinedGroups}
+                  keyExtractor={(item) => item._id}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      style={styles.modalGroupItem}
+                      onPress={() => {
+                        setShowJoinedGroupsModal(false);
+                        router.push(`/group/${item._id}`);
+                      }}
+                    >
+                      <View style={styles.modalGroupItemLeft}>
+                        {item.avatar ? (
+                          <Image source={{ uri: item.avatar }} style={styles.modalGroupAvatar} />
+                        ) : (
+                          <LinearGradient
+                            colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+                            style={styles.modalGroupAvatarGradient}
+                          >
+                            <Ionicons name="people" size={20} color={colors.primary} />
+                          </LinearGradient>
+                        )}
+                        <View style={styles.modalGroupInfo}>
+                          <Text style={styles.modalGroupName}>{item.name}</Text>
+                          <Text style={styles.modalGroupMeta}>
+                            {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-                  </Pressable>
-                )}
-                style={styles.modalList}
-                contentContainerStyle={styles.modalListContent}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={10}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
-                scrollEventThrottle={16}
-              />
+                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    </Pressable>
+                  )}
+                  style={styles.modalList}
+                  contentContainerStyle={styles.modalListContent}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={10}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
+                  scrollEventThrottle={16}
+                />
+              </>
             )}
-          </View>
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.modalBackdrop,
+              {
+                opacity: sidebarAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            ]}
+          >
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setShowJoinedGroupsModal(false)}
+            />
+          </Animated.View>
         </View>
       </Modal>
     </View>
@@ -933,8 +1007,13 @@ const styles = StyleSheet.create({
     width: '85%',
     maxWidth: 400,
     backgroundColor: COLORS.background,
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.glass.border,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.glass.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1035,5 +1114,32 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginTop: 2,
+  },
+  modalAllCommunitiesItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.glass.backgroundLight,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: COLORS.glass.border,
+    marginVertical: SPACING.xs,
+  },
+  modalSectionHeader: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  modalSectionTitle: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

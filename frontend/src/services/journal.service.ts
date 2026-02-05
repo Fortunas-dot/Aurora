@@ -48,6 +48,7 @@ export interface JournalEntry {
   promptId?: string;
   promptText?: string;
   aiInsights?: IAIInsights;
+  fontFamily?: string; // Font family used for this entry
   isPrivate: boolean;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,7 @@ export interface CreateEntryData {
   tags?: string[];
   promptId?: string;
   promptText?: string;
+  fontFamily?: string; // Font family to use for this entry
 }
 
 export interface CreateJournalData {

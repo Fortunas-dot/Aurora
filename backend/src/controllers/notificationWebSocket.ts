@@ -87,9 +87,14 @@ export const sendNotificationToUser = async (userId: string, notification: any):
   const ws = activeConnections.get(userId);
   if (ws && ws.readyState === 1) { // OPEN
     try {
+      // Ensure createdAt exists before sending
+      const notificationData = notification.toObject ? notification.toObject() : notification;
+      if (!notificationData.createdAt) {
+        notificationData.createdAt = new Date();
+      }
       ws.send(JSON.stringify({
         type: 'notification',
-        notification,
+        notification: notificationData,
       }));
     } catch (error) {
       console.error('Error sending notification via WebSocket:', error);

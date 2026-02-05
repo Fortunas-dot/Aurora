@@ -15,6 +15,15 @@ const FONT_MAP: Record<string, string> = {
   comic: 'Comic Sans MS',
   impact: 'Impact',
   palatino: 'Palatino',
+  // Vintage/Classic fonts
+  baskerville: 'Baskerville',
+  garamond: 'Garamond',
+  bookantiqua: 'Book Antiqua',
+  didot: 'Didot',
+  bodoni: 'Bodoni',
+  caslon: 'Caslon',
+  minion: 'Minion Pro',
+  baskervilleoldface: 'Baskerville Old Face',
 };
 
 export const getFontFamily = (fontId: string | undefined): string => {

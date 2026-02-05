@@ -170,7 +170,11 @@ export default function LoginScreen() {
           {/* Continue as Guest */}
           <GlassButton
             title="Continue as guest"
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => {
+              // Navigate directly to tabs without checking auth
+              // User will be in guest mode (not authenticated)
+              router.replace('/(tabs)');
+            }}
             variant="ghost"
             icon={<Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={{ marginRight: SPACING.sm }} />}
             style={styles.guestButton}

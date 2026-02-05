@@ -3,28 +3,37 @@ import { Tabs } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING } from '../../src/constants/theme';
+import { SPACING } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { AuroraCore } from '../../src/components/voice/AuroraCore';
 
 export default function TabsLayout() {
+  const { colors, isDark } = useTheme();
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.tabBar,
+            borderTopColor: colors.tabBarBorder,
+          },
+        ],
         tabBarBackground: () => (
           Platform.OS === 'ios' ? (
             <BlurView
               intensity={80}
-              tint="dark"
+              tint={isDark ? 'dark' : 'light'}
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, styles.androidTabBarBg]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.tabBar }]} />
           )
         ),
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.tabInactive,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.tabInactive,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIconStyle: styles.tabBarIcon,
       }}
@@ -85,16 +94,12 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : COLORS.tabBar,
     borderTopWidth: 1,
-    borderTopColor: COLORS.tabBarBorder,
     elevation: 0,
     height: Platform.OS === 'ios' ? 88 : 65,
     paddingBottom: Platform.OS === 'ios' ? 28 : 8,
     paddingTop: 8,
-  },
-  androidTabBarBg: {
-    backgroundColor: COLORS.tabBar,
+    // backgroundColor and borderTopColor will be set inline with colors
   },
   tabBarLabel: {
     fontSize: 11,

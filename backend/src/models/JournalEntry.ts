@@ -29,6 +29,7 @@ export interface IJournalEntry extends Document {
   promptId?: string;
   promptText?: string;
   aiInsights?: IAIInsights;
+  fontFamily?: string; // Font family used for this entry
   isPrivate: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -123,6 +124,11 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
       analyzedAt: {
         type: Date,
       },
+    },
+    fontFamily: {
+      type: String,
+      trim: true,
+      default: 'palatino',
     },
     isPrivate: {
       type: Boolean,
