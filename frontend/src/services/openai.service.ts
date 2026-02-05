@@ -51,7 +51,18 @@ export class OpenAIService {
       pollingInterval: 0, // Disable automatic reconnections
     });
 
+    let streamOpened = false;
+    const openTimeout = setTimeout(() => {
+      if (!streamOpened) {
+        console.error('OpenAI stream failed to open within 10 seconds');
+        eventSource.close();
+        onError(new Error('Connection timeout. Please check your internet connection and try again.'));
+      }
+    }, 10000); // 10 second timeout for stream to open
+
     eventSource.addEventListener('open', () => {
+      streamOpened = true;
+      clearTimeout(openTimeout);
       console.log('OpenAI stream opened');
     });
 
@@ -76,6 +87,7 @@ export class OpenAIService {
     });
 
     eventSource.addEventListener('error', (event: any) => {
+      clearTimeout(openTimeout);
       console.error('OpenAI stream error:', event);
       eventSource.close();
 
@@ -98,6 +110,7 @@ export class OpenAIService {
 
     // Return cleanup function
     return () => {
+      clearTimeout(openTimeout);
       console.log('Closing OpenAI stream');
       eventSource.close();
     };

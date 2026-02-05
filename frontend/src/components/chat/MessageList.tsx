@@ -12,8 +12,40 @@ import { useChatStore } from '../../store/chatStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants/theme';
 
 export const MessageList: React.FC = () => {
-  const { messages, isStreaming, currentStreamingMessage } = useChatStore();
+  const { messages, isStreaming, currentStreamingMessage, setStreaming } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
+  const streamingStartTime = useRef<number | null>(null);
+
+  // Safety check: Reset streaming state if it's been active for too long without data
+  useEffect(() => {
+    if (isStreaming) {
+      if (!streamingStartTime.current) {
+        streamingStartTime.current = Date.now();
+      }
+      
+      // If streaming for more than 15 seconds without data, reset it
+      const checkInterval = setInterval(() => {
+        if (streamingStartTime.current && Date.now() - streamingStartTime.current > 15000) {
+          if (!currentStreamingMessage || currentStreamingMessage.trim() === '') {
+            console.warn('Streaming state stuck - resetting after 15 seconds without data');
+            setStreaming(false);
+            streamingStartTime.current = null;
+          }
+        }
+      }, 2000); // Check every 2 seconds
+
+      return () => clearInterval(checkInterval);
+    } else {
+      streamingStartTime.current = null;
+    }
+  }, [isStreaming, currentStreamingMessage, setStreaming]);
+
+  // Reset streaming start time when we receive data
+  useEffect(() => {
+    if (currentStreamingMessage && currentStreamingMessage.trim() !== '') {
+      streamingStartTime.current = null; // Reset timer when we get data
+    }
+  }, [currentStreamingMessage]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

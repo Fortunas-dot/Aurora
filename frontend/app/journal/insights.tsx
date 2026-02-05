@@ -224,23 +224,50 @@ export default function JournalInsightsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30>(30);
+  const isLoadingRef = React.useRef(false);
 
   const loadInsights = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingRef.current) {
+      return;
+    }
+
+    isLoadingRef.current = true;
+    setLoading(true);
+    
     try {
       const response = await journalService.getInsights(selectedPeriod);
       if (response.success && response.data) {
         setInsights(response.data);
+      } else {
+        // If request failed, still set loading to false
+        console.warn('Failed to load insights:', response.message);
       }
     } catch (error) {
       console.error('Error loading insights:', error);
     } finally {
+      isLoadingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
   }, [selectedPeriod]);
 
   useEffect(() => {
-    loadInsights();
+    let isMounted = true;
+    
+    const load = async () => {
+      if (isMounted) {
+        await loadInsights();
+      }
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+      // Cleanup: prevent further loading attempts
+      isLoadingRef.current = false;
+    };
   }, [loadInsights]);
 
   const onRefresh = useCallback(() => {

@@ -25,11 +25,14 @@ export interface AppSettings {
   fontFamily?: string;
 }
 
+export type AuroraStyle = 'sphere' | 'blobs';
+
 interface SettingsState {
   // App Settings
   language: Language;
   theme: 'dark' | 'light' | 'system';
   fontFamily: string;
+  auroraStyle: AuroraStyle;
   
   // Privacy Settings
   showEmail: boolean;
@@ -46,6 +49,7 @@ interface SettingsState {
   setLanguage: (language: Language) => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<void>;
   setFontFamily: (fontFamily: string) => Promise<void>;
+  setAuroraStyle: (style: AuroraStyle) => Promise<void>;
   setShowEmail: (show: boolean) => Promise<void>;
   setIsAnonymous: (anonymous: boolean) => Promise<void>;
   setNotificationPreference: (key: keyof NotificationPreferences, value: boolean) => Promise<void>;
@@ -68,6 +72,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   language: 'en',
   theme: 'dark',
   fontFamily: 'system',
+  auroraStyle: 'sphere',
   showEmail: false,
   isAnonymous: true,
   notificationPreferences: defaultNotificationPreferences,
@@ -93,6 +98,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await SecureStore.setItemAsync('app_font_family', fontFamily);
     set({ fontFamily });
     // Font family is already saved to SecureStore, no need to call saveSettings
+  },
+
+  // Set Aurora style (automatically saves)
+  setAuroraStyle: async (auroraStyle: AuroraStyle) => {
+    await SecureStore.setItemAsync('app_aurora_style', auroraStyle);
+    set({ auroraStyle });
   },
 
   // Set show email
@@ -157,6 +168,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Load font family
       const fontFamily = (await SecureStore.getItemAsync('app_font_family')) || 'system';
       
+      // Load Aurora style
+      const auroraStyle = ((await SecureStore.getItemAsync('app_aurora_style')) || 'sphere') as AuroraStyle;
+      
       // Load notification preferences
       const prefsJson = await SecureStore.getItemAsync('notification_preferences');
       const notificationPreferences = prefsJson
@@ -172,6 +186,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         language: language as Language,
         theme: theme as 'dark' | 'light' | 'system',
         fontFamily: fontFamily as string,
+        auroraStyle,
         showEmail,
         isAnonymous,
         notificationPreferences,

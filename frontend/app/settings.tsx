@@ -96,9 +96,11 @@ export default function SettingsScreen() {
   const { colors } = useTheme();
   const {
     fontFamily,
+    auroraStyle,
     notificationPreferences,
     isLoading,
     setFontFamily,
+    setAuroraStyle,
     setNotificationPreference,
     loadSettings,
   } = useSettingsStore();
@@ -177,6 +179,13 @@ export default function SettingsScreen() {
               subtitle={fontFamily === 'system' ? 'System Default' : fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
               onPress={() => router.push('/font-settings')}
             />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="sparkles-outline"
+              title="Aurora Style"
+              subtitle={auroraStyle === 'sphere' ? 'Sphere with Glow' : 'Organic Blobs'}
+              onPress={() => router.push('/aurora-style')}
+            />
           </GlassCard>
         </View>
 
@@ -244,7 +253,7 @@ export default function SettingsScreen() {
 
         {/* Notification Preferences */}
         <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>{t.notificationSettings}</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.notificationSettings}</Text>
           <GlassCard padding={0}>
             <SwitchItem
               icon="notifications-outline"

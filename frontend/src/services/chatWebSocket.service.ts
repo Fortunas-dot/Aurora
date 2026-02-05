@@ -46,7 +46,11 @@ class ChatWebSocketService {
     try {
       const token = await SecureStore.getItemAsync('auth_token');
       if (!token) {
-        throw new Error('No auth token available');
+        // Silently fail if no token - user might not be logged in yet
+        console.log('No auth token available, skipping WebSocket connection');
+        this.isConnecting = false;
+        this.callbacks.onError?.(new Error('No auth token available'));
+        return;
       }
 
       const baseUrl = getApiUrl().replace('/api', '');
@@ -107,7 +111,13 @@ class ChatWebSocketService {
         this.attemptReconnect();
       };
     } catch (error) {
-      console.error('Error connecting to chat WebSocket:', error);
+      // Only log non-token errors as errors, token errors are expected
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('No auth token available')) {
+        console.log('No auth token available, skipping WebSocket connection');
+      } else {
+        console.error('Error connecting to chat WebSocket:', error);
+      }
       this.isConnecting = false;
       this.callbacks.onError?.(error as Error);
     }

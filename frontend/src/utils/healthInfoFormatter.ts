@@ -21,7 +21,7 @@ export const formatHealthInfoForAI = (user: User | null): string => {
   const parts: string[] = [];
 
   // Mental health conditions
-  if (mentalHealth && mentalHealth.length > 0) {
+  if (mentalHealth && Array.isArray(mentalHealth) && mentalHealth.length > 0) {
     const mentalConditions = mentalHealth.map((item) => {
       const conditionText = item.type 
         ? `${item.condition} (${item.type})`
@@ -33,7 +33,7 @@ export const formatHealthInfoForAI = (user: User | null): string => {
   }
 
   // Physical health conditions
-  if (physicalHealth && physicalHealth.length > 0) {
+  if (physicalHealth && Array.isArray(physicalHealth) && physicalHealth.length > 0) {
     const physicalConditions = physicalHealth.map((item) => {
       const conditionText = item.type 
         ? `${item.condition} (${item.type})`
@@ -45,12 +45,12 @@ export const formatHealthInfoForAI = (user: User | null): string => {
   }
 
   // Medications
-  if (medications && medications.length > 0) {
+  if (medications && Array.isArray(medications) && medications.length > 0) {
     parts.push(`Medications: ${medications.join(', ')}`);
   }
 
   // Therapies
-  if (therapies && therapies.length > 0) {
+  if (therapies && Array.isArray(therapies) && therapies.length > 0) {
     parts.push(`Therapies: ${therapies.join(', ')}`);
   }
 
@@ -64,8 +64,8 @@ export const formatHealthInfoForAI = (user: User | null): string => {
 /**
  * Format journal entries into a readable string for AI context
  */
-export const formatJournalContextForAI = (entries: AuroraJournalContext[]): string => {
-  if (!entries || entries.length === 0) {
+export const formatJournalContextForAI = (entries?: AuroraJournalContext[] | null): string => {
+  if (!entries || !Array.isArray(entries) || entries.length === 0) {
     return '';
   }
 

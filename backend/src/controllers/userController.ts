@@ -466,33 +466,37 @@ export const registerPushToken = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const user = await User.findById(req.userId);
-    if (!user) {
+    // Use findOneAndUpdate to avoid version conflicts
+    // First, remove existing token for this device
+    await User.findOneAndUpdate(
+      { _id: req.userId },
+      { $pull: { pushTokens: { deviceId } } },
+      { new: false }
+    );
+
+    // Then add the new token
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: req.userId },
+      {
+        $push: {
+          pushTokens: {
+            token,
+            deviceId,
+            platform: platform || 'web',
+            createdAt: new Date(),
+          },
+        },
+      },
+      { new: true, runValidators: false }
+    );
+
+    if (!updatedUser) {
       res.status(404).json({
         success: false,
         message: 'User not found',
       });
       return;
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:456',message:'before user.save in registerPushToken',data:{hasFacebookId:!!user.facebookId,hasPassword:!!user.password,isNew:user.isNew},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-
-    // Remove existing token for this device
-    user.pushTokens = user.pushTokens.filter(
-      (t) => t.deviceId !== deviceId
-    );
-
-    // Add new token
-    user.pushTokens.push({
-      token,
-      deviceId,
-      platform: platform || 'web',
-      createdAt: new Date(),
-    });
-
-    await user.save();
 
     // #region agent log
     fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:478',message:'after user.save in registerPushToken',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});

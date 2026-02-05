@@ -36,10 +36,18 @@ class ApiService {
   async get<T = any>(endpoint: string): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'GET',
         headers,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -63,6 +71,14 @@ class ApiService {
       const data = await response.json();
       return data;
     } catch (error: any) {
+      // Handle AbortError (timeout) specifically
+      if (error.name === 'AbortError') {
+        console.error('API GET Error: Request timeout');
+        return {
+          success: false,
+          message: 'Request timeout. Please try again.',
+        };
+      }
       console.error('API GET Error:', error);
       return {
         success: false,

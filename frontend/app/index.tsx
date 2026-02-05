@@ -26,8 +26,14 @@ export default function Index() {
     }
 
     // Check if we're already in a route
-    if (segments.length > 0) {
-      return; // Already navigated
+    const currentPath = segments.join('/');
+    if (currentPath && currentPath !== 'index') {
+      // Already navigated to a specific route, don't interfere
+      // But if authenticated and on login, redirect to tabs
+      if (isAuthenticated && (currentPath === '(auth)/login' || currentPath === '(auth)/register')) {
+        router.replace('/(tabs)');
+      }
+      return;
     }
 
     // Navigate based on auth status

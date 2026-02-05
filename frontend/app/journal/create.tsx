@@ -355,6 +355,8 @@ export default function CreateJournalEntryScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const isMountedRef = React.useRef(true);
+  const saveAbortControllerRef = React.useRef<AbortController | null>(null);
 
   // Get user's health conditions for symptom tracking (memoized)
   const userConditions = useMemo(() => [
@@ -368,6 +370,21 @@ export default function CreateJournalEntryScreen() {
   // Handle voice transcription
   const handleVoiceTranscription = useCallback((text: string) => {
     setContent((prev) => prev ? `${prev}\n\n${text}` : text);
+  }, []);
+
+  // Cleanup on unmount to prevent loading state issues
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cancel any ongoing save operation
+      if (saveAbortControllerRef.current) {
+        saveAbortControllerRef.current.abort();
+        saveAbortControllerRef.current = null;
+      }
+      // Reset saving state when component unmounts
+      setSaving(false);
+    };
   }, []);
 
   const handleSave = async () => {
@@ -387,6 +404,11 @@ export default function CreateJournalEntryScreen() {
     }
 
     setSaving(true);
+    
+    // Create abort controller for this save operation
+    const abortController = new AbortController();
+    saveAbortControllerRef.current = abortController;
+
     try {
       console.log('Creating journal entry with data:', {
         content: content.trim().substring(0, 50) + '...',
@@ -407,21 +429,39 @@ export default function CreateJournalEntryScreen() {
         fontFamily: 'palatino', // Save Palatino as the font for this entry
       });
 
+      // Check if component is still mounted and operation wasn't aborted
+      if (!isMountedRef.current || abortController.signal.aborted) {
+        return;
+      }
+
       console.log('Journal entry response:', response);
 
       if (response.success) {
         router.back();
       } else {
-        Alert.alert('Error', response.message || 'Could not save entry');
-        setSaving(false);
+        if (isMountedRef.current) {
+          Alert.alert('Error', response.message || 'Could not save entry');
+          setSaving(false);
+        }
       }
     } catch (error: any) {
+      // Don't show error if operation was aborted or component unmounted
+      if (!isMountedRef.current || abortController.signal.aborted) {
+        return;
+      }
       console.error('Error creating journal entry:', error);
-      Alert.alert(
-        'Error',
-        error?.message || 'Something went wrong while saving your entry'
-      );
-      setSaving(false);
+      if (isMountedRef.current) {
+        Alert.alert(
+          'Error',
+          error?.message || 'Something went wrong while saving your entry'
+        );
+        setSaving(false);
+      }
+    } finally {
+      // Clear abort controller reference if this was the current operation
+      if (saveAbortControllerRef.current === abortController) {
+        saveAbortControllerRef.current = null;
+      }
     }
   };
 
@@ -445,7 +485,19 @@ export default function CreateJournalEntryScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+          <Pressable 
+            style={styles.closeButton} 
+            onPress={() => {
+              // Cancel any ongoing save operation
+              if (saveAbortControllerRef.current) {
+                saveAbortControllerRef.current.abort();
+                saveAbortControllerRef.current = null;
+              }
+              // Reset saving state before navigating back
+              setSaving(false);
+              router.back();
+            }}
+          >
             <Ionicons name="close" size={28} color={COLORS.text} />
           </Pressable>
           <Text style={styles.headerTitle}>New Entry</Text>

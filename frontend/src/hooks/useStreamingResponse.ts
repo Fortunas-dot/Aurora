@@ -84,6 +84,23 @@ export const useStreamingResponse = () => {
       ];
 
       let fullResponse = '';
+      let hasReceivedData = false;
+      let timeoutId: NodeJS.Timeout | null = null;
+
+      // Set a timeout to reset streaming state if no data is received within 30 seconds
+      timeoutId = setTimeout(() => {
+        if (!hasReceivedData) {
+          console.warn('Streaming timeout - no data received');
+          setError('Request timed out. Please try again.');
+          setStreaming(false);
+          setIsLoading(false);
+          updateStreamingMessage('');
+          if (cleanupRef.current) {
+            cleanupRef.current();
+            cleanupRef.current = null;
+          }
+        }
+      }, 30000); // 30 second timeout
 
       try {
         // Start streaming
@@ -91,11 +108,20 @@ export const useStreamingResponse = () => {
           conversationMessages,
           // On chunk received
           (chunk) => {
+            hasReceivedData = true;
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
             fullResponse += chunk;
             updateStreamingMessage(fullResponse);
           },
           // On complete
           () => {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
             const assistantMsg = {
               id: uuidv4(),
               role: 'assistant' as const,
@@ -111,6 +137,10 @@ export const useStreamingResponse = () => {
           },
           // On error
           (err) => {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
             console.error('Streaming error:', err);
             setError(err.message);
             setStreaming(false);
@@ -120,13 +150,27 @@ export const useStreamingResponse = () => {
           }
         );
 
-        cleanupRef.current = cleanup;
+        cleanupRef.current = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          cleanup();
+        };
       } catch (err) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         console.error('Failed to start streaming:', err);
         setError('Failed to send message. Please try again.');
         setStreaming(false);
         setIsLoading(false);
         updateStreamingMessage('');
+        if (cleanupRef.current) {
+          cleanupRef.current();
+          cleanupRef.current = null;
+        }
       }
     },
     [messages, addMessage, updateStreamingMessage, setStreaming, setError, isLoading]

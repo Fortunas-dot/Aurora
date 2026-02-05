@@ -12,11 +12,18 @@ import { AuroraCore } from '../../src/components/voice/AuroraCore';
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, loginWithFacebook, isLoading, error, clearError } = useAuthStore();
+  const { login, loginWithFacebook, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState('');
+
+  // Redirect immediately if already authenticated (prevents flash)
+  React.useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleLogin = async () => {
     setValidationError('');
@@ -33,6 +40,8 @@ export default function LoginScreen() {
 
     const success = await login(email.trim(), password);
     if (success) {
+      // Navigation will happen via the useEffect above when isAuthenticated becomes true
+      // This prevents the flash by ensuring immediate redirect
       router.replace('/(tabs)');
     }
   };
@@ -43,11 +52,24 @@ export default function LoginScreen() {
     
     const success = await loginWithFacebook();
     if (success) {
+      // Immediately navigate - the useEffect will also handle redirect as backup
       router.replace('/(tabs)');
     }
   };
 
   const displayError = validationError || error;
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Don't show login screen if already authenticated
+  if (isAuthenticated && !isLoading) {
+    return null;
+  }
 
   return (
     <LinearGradient
