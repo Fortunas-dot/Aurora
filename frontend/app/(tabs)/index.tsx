@@ -131,6 +131,97 @@ const AnimatedStar = ({ index }: { index: number }) => {
   );
 };
 
+// Falling star component that appears randomly
+const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const trailOpacity = useRef(new Animated.Value(0)).current;
+  
+  const startX = Math.random() * 100; // Random starting X position (0-100%)
+  const fallDistance = 120; // Fall from top to bottom + extra
+  const fallDuration = 1000 + Math.random() * 1500; // 1-2.5 seconds
+  const horizontalDrift = (Math.random() - 0.5) * 30; // Slight horizontal movement
+  
+  useEffect(() => {
+    // Fade in quickly
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(trailOpacity, {
+          toValue: 0.6,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Fall down
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: fallDistance,
+          duration: fallDuration,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: horizontalDrift,
+          duration: fallDuration,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: fallDuration * 0.8,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(trailOpacity, {
+          toValue: 0,
+          duration: fallDuration * 0.8,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      onComplete();
+    });
+  }, []);
+  
+  return (
+    <Animated.View
+      style={[
+        feedStyles.fallingStarContainer,
+        {
+          left: `${startX}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+          ],
+        },
+      ]}
+      pointerEvents="none"
+    >
+      {/* Trail */}
+      <Animated.View
+        style={[
+          feedStyles.fallingStarTrail,
+          {
+            opacity: trailOpacity,
+          },
+        ]}
+      />
+      {/* Star */}
+      <View style={feedStyles.fallingStar} />
+    </Animated.View>
+  );
+};
+
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -159,6 +250,10 @@ export default function FeedScreen() {
   // Online therapists state
   const [onlineTherapistsCount, setOnlineTherapistsCount] = useState<number | null>(null);
   const [onlineTherapistsMessage, setOnlineTherapistsMessage] = useState<string>('');
+  
+  // Falling star state
+  const [fallingStars, setFallingStars] = useState<Array<{ id: number; key: number }>>([]);
+  const fallingStarIdRef = useRef(0);
 
   // Joined groups sidebar state
   const [showJoinedGroupsModal, setShowJoinedGroupsModal] = useState(false);
@@ -329,6 +424,41 @@ export default function FeedScreen() {
     const interval = setInterval(loadOnlineTherapists, 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Random falling star effect
+  useEffect(() => {
+    const createFallingStar = () => {
+      const id = fallingStarIdRef.current++;
+      setFallingStars((prev) => [...prev, { id, key: Date.now() + id }]);
+    };
+    
+    // Create first falling star after a random delay (3-8 seconds)
+    const initialDelay = 3000 + Math.random() * 5000;
+    const initialTimeout = setTimeout(createFallingStar, initialDelay);
+    
+    // Then create falling stars at random intervals (5-15 seconds)
+    let currentTimeout: NodeJS.Timeout;
+    const scheduleNext = () => {
+      const delay = 5000 + Math.random() * 10000; // 5-15 seconds
+      currentTimeout = setTimeout(() => {
+        createFallingStar();
+        scheduleNext();
+      }, delay);
+    };
+    
+    scheduleNext();
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+    };
+  }, []);
+  
+  const removeFallingStar = useCallback((id: number) => {
+    setFallingStars((prev) => prev.filter((star) => star.id !== id));
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -345,13 +475,13 @@ export default function FeedScreen() {
     setSearchQuery('');
   };
 
-  const handleCommunityChange = (communityId: string | null) => {
+  const handleCommunityChange = useCallback((communityId: string | null) => {
     setSelectedCommunity(communityId);
     // Reset showAllPublicPosts when a specific community is selected
     if (communityId) {
       setShowAllPublicPosts(false);
     }
-  };
+  }, []);
 
   const handleSortChange = (sort: SortOption) => {
     setSortOption(sort);
@@ -537,6 +667,14 @@ export default function FeedScreen() {
           <AnimatedStar key={i} index={i} />
         ))}
       </View>
+      
+      {/* Falling stars */}
+      {fallingStars.map((star) => (
+        <FallingStar
+          key={star.key}
+          onComplete={() => removeFallingStar(star.id)}
+        />
+      ))}
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         {isSearchExpanded ? (
@@ -863,6 +1001,33 @@ const feedStyles = StyleSheet.create({
     height: 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 1,
+  },
+  fallingStarContainer: {
+    position: 'absolute',
+    top: -20,
+    width: 4,
+    height: 20,
+    zIndex: 1,
+  },
+  fallingStar: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#60A5FA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  fallingStarTrail: {
+    position: 'absolute',
+    top: 4,
+    left: 1,
+    width: 2,
+    height: 16,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.6,
   },
 });
 

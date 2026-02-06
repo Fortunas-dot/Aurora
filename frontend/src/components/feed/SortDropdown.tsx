@@ -19,9 +19,9 @@ interface SortConfig {
 }
 
 const SORT_OPTIONS: SortConfig[] = [
-  { id: 'newest', label: 'Nieuwste', labelEn: 'Newest', icon: 'time-outline' },
-  { id: 'popular', label: 'Populairste', labelEn: 'Most Popular', icon: 'heart-outline' },
-  { id: 'discussed', label: 'Meest besproken', labelEn: 'Most Discussed', icon: 'chatbubbles-outline' },
+  { id: 'newest', label: 'Newest', labelEn: 'Newest', icon: 'time-outline' },
+  { id: 'popular', label: 'Most Popular', labelEn: 'Most Popular', icon: 'heart-outline' },
+  { id: 'discussed', label: 'Most Discussed', labelEn: 'Most Discussed', icon: 'chatbubbles-outline' },
 ];
 
 interface SortDropdownProps {
@@ -58,7 +58,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
       >
         <Pressable style={styles.overlay} onPress={() => setIsOpen(false)}>
           <View style={styles.dropdown}>
-            <Text style={styles.dropdownTitle}>Sorteren op</Text>
+            <Text style={styles.dropdownTitle}>Sort by</Text>
             {SORT_OPTIONS.map((option) => {
               const isSelected = selectedSort === option.id;
               return (

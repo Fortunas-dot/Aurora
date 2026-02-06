@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ interface CommunityFilterProps {
   onShowAllPublicPostsChange?: (show: boolean) => void;
 }
 
-export const CommunityFilter: React.FC<CommunityFilterProps> = ({
+export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   selectedCommunity,
   onCommunityChange,
   isAuthenticated,
@@ -29,15 +29,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
   const [communities, setCommunities] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadCommunities();
-    } else {
-      setCommunities([]);
-    }
-  }, [isAuthenticated]);
-
-  const loadCommunities = async () => {
+  const loadCommunities = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await groupService.getGroups(1, 100);
@@ -51,20 +43,18 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCommunities();
+    } else {
+      setCommunities([]);
+    }
+  }, [isAuthenticated, loadCommunities]);
 
   if (!isAuthenticated) {
     return null;
-  }
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size="sm" />
-        </View>
-      </View>
-    );
   }
 
   return (
@@ -116,8 +106,15 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
           </Text>
         </Pressable>
 
+        {/* Loading State for Communities */}
+        {isLoading && (
+          <View style={styles.loadingChip}>
+            <LoadingSpinner size="sm" />
+          </View>
+        )}
+
         {/* Community Chips */}
-        {communities.map((community) => {
+        {!isLoading && communities.map((community) => {
           const isSelected = selectedCommunity === community._id;
           return (
             <Pressable
@@ -144,7 +141,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
         })}
 
         {/* Empty State */}
-        {communities.length === 0 && (
+        {!isLoading && communities.length === 0 && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>
@@ -152,7 +149,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
       </ScrollView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -166,6 +163,13 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.md,
     alignItems: 'center',
+  },
+  loadingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.xs + 2,
+    paddingHorizontal: SPACING.md,
+    marginRight: SPACING.xs,
   },
   chip: {
     flexDirection: 'row',

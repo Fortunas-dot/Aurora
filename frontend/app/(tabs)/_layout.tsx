@@ -1,14 +1,86 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { Tabs, useFocusEffect } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { SPACING } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { AuroraCore } from '../../src/components/voice/AuroraCore';
+import { Badge } from '../../src/components/common';
+import { useAuthStore } from '../../src/store/authStore';
+import { messageService } from '../../src/services/message.service';
+import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
+import { useCallback } from 'react';
 
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
+  const { isAuthenticated } = useAuthStore();
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  
+  // Load total unread messages count
+  const loadUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) {
+      setTotalUnreadMessages(0);
+      return;
+    }
+    
+    try {
+      const response = await messageService.getConversations();
+      if (response.success && response.data) {
+        const total = response.data.reduce((sum: number, conv: any) => sum + (conv.unreadCount || 0), 0);
+        setTotalUnreadMessages(total);
+      }
+    } catch (error) {
+      console.error('Error loading unread messages count:', error);
+    }
+  }, [isAuthenticated]);
+  
+  useEffect(() => {
+    loadUnreadCount();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [loadUnreadCount]);
+  
+  // Reload unread count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        loadUnreadCount();
+      }
+    }, [isAuthenticated, loadUnreadCount])
+  );
+  
+  // Setup WebSocket to update unread count in real-time
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    chatWebSocketService.connect({
+      onNewMessage: () => {
+        // Reload unread count when new message arrives
+        loadUnreadCount();
+      },
+      onMessageSent: () => {
+        // Reload unread count when message is sent (might affect unread count)
+        loadUnreadCount();
+      },
+      onConversationUpdated: () => {
+        // Reload unread count when conversation is updated
+        loadUnreadCount();
+      },
+      onConnected: () => {
+        // Reload unread count when connected
+        loadUnreadCount();
+      },
+      onError: () => {},
+      onDisconnected: () => {},
+    });
+    
+    return () => {
+      // Don't disconnect here as other screens might be using it
+    };
+  }, [isAuthenticated, loadUnreadCount]);
   
   return (
     <Tabs
@@ -72,9 +144,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Berichten',
+          title: 'Messages',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <View style={styles.chatIconContainer}>
+              <Ionicons name="chatbubbles" size={size} color={color} />
+              {totalUnreadMessages > 0 && (
+                <Badge count={totalUnreadMessages} size="sm" />
+              )}
+            </View>
           ),
         }}
       />
@@ -127,5 +204,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'visible',
+  },
+  chatIconContainer: {
+    position: 'relative',
   },
 });

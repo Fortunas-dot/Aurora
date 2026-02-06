@@ -325,7 +325,7 @@ export default function TextChatScreen() {
       </View>
 
       <KeyboardAvoidingView
-        style={[styles.chatContainer, { zIndex: hasMessages ? 4 : 2 }]}
+        style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginLeft: -(width * 0.7) / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 3, // Above star field but below header
+    zIndex: 1, // Below chat container and input
   },
   headerAurora: {
     position: 'absolute',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
-    zIndex: 4, // Above Aurora when messages exist, but below header
+    zIndex: 5, // Always above Aurora, below header
   },
   loadingContainer: {
     flex: 1,

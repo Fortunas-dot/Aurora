@@ -87,6 +87,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         <Avatar
           uri={post.author.avatar}
           name={post.author.displayName || post.author.username}
+          userId={post.author._id}
+          avatarCharacter={post.author.avatarCharacter}
+          avatarBackgroundColor={post.author.avatarBackgroundColor}
           size="md"
         />
         <View style={styles.headerInfo}>

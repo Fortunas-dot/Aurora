@@ -148,6 +148,9 @@ export default function BrowseJournalsScreen() {
                       uri={owner.avatar}
                       size={20}
                       name={owner.displayName || owner.username}
+                      userId={owner._id}
+                      avatarCharacter={owner.avatarCharacter}
+                      avatarBackgroundColor={owner.avatarBackgroundColor}
                     />
                     <Text style={styles.ownerName}>
                       {owner.displayName || owner.username}
@@ -186,13 +189,13 @@ export default function BrowseJournalsScreen() {
               <View style={styles.stat}>
                 <Ionicons name="people-outline" size={16} color={COLORS.textMuted} />
                 <Text style={styles.statText}>
-                  {item.followersCount || 0} {language === 'nl' ? 'volgers' : 'followers'}
+                  {item.followersCount || 0} followers
                 </Text>
               </View>
               <View style={styles.stat}>
                 <Ionicons name="book-outline" size={16} color={COLORS.textMuted} />
                 <Text style={styles.statText}>
-                  {item.entriesCount || 0} {language === 'nl' ? 'entries' : 'entries'}
+                  {item.entriesCount || 0} entries
                 </Text>
               </View>
             </View>
@@ -207,7 +210,7 @@ export default function BrowseJournalsScreen() {
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>
-            {language === 'nl' ? 'Log in om dagboeken te bekijken' : 'Log in to view journals'}
+            Log in to view journals
           </Text>
         </View>
       </LinearGradient>
@@ -222,7 +225,7 @@ export default function BrowseJournalsScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
-          {language === 'nl' ? 'Openbare Dagboeken' : 'Public Journals'}
+          Public Journals
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -233,7 +236,7 @@ export default function BrowseJournalsScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={
-            language === 'nl' ? 'Zoek dagboeken...' : 'Search journals...'
+            'Search journals...'
           }
           style={styles.searchInput}
           icon="search"
@@ -250,12 +253,10 @@ export default function BrowseJournalsScreen() {
           <GlassCard style={styles.emptyCard} padding="xl">
             <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
             <Text style={styles.emptyTitle}>
-              {language === 'nl' ? 'Geen dagboeken gevonden' : 'No journals found'}
+              No journals found
             </Text>
             <Text style={styles.emptyText}>
-              {language === 'nl'
-                ? 'Er zijn nog geen openbare dagboeken beschikbaar'
-                : 'No public journals available yet'}
+              No public journals available yet
             </Text>
           </GlassCard>
         </View>

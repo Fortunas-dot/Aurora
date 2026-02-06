@@ -60,16 +60,16 @@ export default function JournalSettingsScreen() {
         setCoverImageUrl(journalData.coverImage || null);
       } else {
         Alert.alert(
-          language === 'nl' ? 'Fout' : 'Error',
-          language === 'nl' ? 'Kon dagboek niet laden' : 'Could not load journal'
+          'Error',
+          'Could not load journal'
         );
         router.back();
       }
     } catch (error) {
       console.error('Error loading journal:', error);
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Er is iets misgegaan' : 'Something went wrong'
+        'Error',
+        'Something went wrong'
       );
       router.back();
     } finally {
@@ -82,10 +82,8 @@ export default function JournalSettingsScreen() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          language === 'nl' ? 'Toegang geweigerd' : 'Permission Denied',
-          language === 'nl' 
-            ? 'We hebben toegang tot je foto\'s nodig om een omslagfoto te selecteren.'
-            : 'We need access to your photos to select a cover image.'
+          'Permission Denied',
+          'We need access to your photos to select a cover image.'
         );
         return;
       }
@@ -103,8 +101,8 @@ export default function JournalSettingsScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Kon afbeelding niet selecteren' : 'Could not select image'
+        'Error',
+        'Could not select image'
       );
     }
   };
@@ -117,16 +115,16 @@ export default function JournalSettingsScreen() {
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Voer een naam in voor je dagboek' : 'Please enter a name for your journal'
+        'Error',
+        'Please enter a name for your journal'
       );
       return;
     }
 
     if (name.trim().length < 3) {
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Naam moet minimaal 3 tekens zijn' : 'Name must be at least 3 characters'
+        'Error',
+        'Name must be at least 3 characters'
       );
       return;
     }
@@ -158,26 +156,26 @@ export default function JournalSettingsScreen() {
         // Refresh the journal data
         await loadJournal();
         Alert.alert(
-          language === 'nl' ? 'Succes' : 'Success',
-          language === 'nl' ? 'Dagboek bijgewerkt' : 'Journal updated successfully',
+          'Success',
+          'Journal updated successfully',
           [
             {
-              text: language === 'nl' ? 'OK' : 'OK',
+              text: 'OK',
               onPress: () => router.back(),
             },
           ]
         );
       } else {
         Alert.alert(
-          language === 'nl' ? 'Fout' : 'Error',
-          response.message || (language === 'nl' ? 'Kon dagboek niet bijwerken' : 'Could not update journal')
+          'Error',
+          response.message || 'Could not update journal'
         );
       }
     } catch (error: any) {
       console.error('Error updating journal:', error);
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        error?.message || (language === 'nl' ? 'Er is iets misgegaan' : 'Something went wrong')
+        'Error',
+        error?.message || 'Something went wrong'
       );
     } finally {
       setSaving(false);
@@ -187,43 +185,41 @@ export default function JournalSettingsScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      language === 'nl' ? 'Dagboek verwijderen' : 'Delete Journal',
-      language === 'nl'
-        ? 'Weet je zeker dat je dit dagboek wilt verwijderen? Alle entries worden ook verwijderd. Deze actie kan niet ongedaan worden gemaakt.'
-        : 'Are you sure you want to delete this journal? All entries will also be deleted. This action cannot be undone.',
+      'Delete Journal',
+      'Are you sure you want to delete this journal? All entries will also be deleted. This action cannot be undone.',
       [
         {
-          text: language === 'nl' ? 'Annuleren' : 'Cancel',
+          text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: language === 'nl' ? 'Verwijderen' : 'Delete',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await journalService.deleteJournal(params.journalId!);
               if (response.success) {
                 Alert.alert(
-                  language === 'nl' ? 'Verwijderd' : 'Deleted',
-                  language === 'nl' ? 'Dagboek verwijderd' : 'Journal deleted successfully',
+                  'Deleted',
+                  'Journal deleted successfully',
                   [
                     {
-                      text: language === 'nl' ? 'OK' : 'OK',
+                      text: 'OK',
                       onPress: () => router.back(),
                     },
                   ]
                 );
               } else {
                 Alert.alert(
-                  language === 'nl' ? 'Fout' : 'Error',
-                  response.message || (language === 'nl' ? 'Kon dagboek niet verwijderen' : 'Could not delete journal')
+                  'Error',
+                  response.message || 'Could not delete journal'
                 );
               }
             } catch (error) {
               console.error('Error deleting journal:', error);
               Alert.alert(
-                language === 'nl' ? 'Fout' : 'Error',
-                language === 'nl' ? 'Er is iets misgegaan' : 'Something went wrong'
+                'Error',
+                'Something went wrong'
               );
             }
           },
@@ -240,7 +236,7 @@ export default function JournalSettingsScreen() {
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {language === 'nl' ? 'Instellingen' : 'Settings'}
+            Settings
           </Text>
           <View style={styles.headerRight} />
         </View>
@@ -263,7 +259,7 @@ export default function JournalSettingsScreen() {
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {language === 'nl' ? 'Instellingen' : 'Settings'}
+            Settings
           </Text>
           <View style={styles.headerRight} />
         </View>
@@ -279,7 +275,7 @@ export default function JournalSettingsScreen() {
           {/* Cover Image */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {language === 'nl' ? 'Omslagfoto' : 'Cover Image'}
+              Cover Image
             </Text>
             <GlassCard style={styles.coverImageCard} padding="md">
               {coverImageUri || coverImageUrl ? (
@@ -302,7 +298,7 @@ export default function JournalSettingsScreen() {
                 >
                   <Ionicons name="image-outline" size={32} color={COLORS.primary} />
                   <Text style={styles.addImageText}>
-                    {language === 'nl' ? 'Voeg omslagfoto toe' : 'Add cover image'}
+                    Add cover image
                   </Text>
                 </Pressable>
               )}
@@ -312,7 +308,7 @@ export default function JournalSettingsScreen() {
                   onPress={handlePickCoverImage}
                 >
                   <Text style={styles.changeImageText}>
-                    {language === 'nl' ? 'Selecteer afbeelding' : 'Select image'}
+                    Select image
                   </Text>
                 </Pressable>
               )}
@@ -322,12 +318,12 @@ export default function JournalSettingsScreen() {
           {/* Name */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {language === 'nl' ? 'Naam' : 'Name'}
+              Name
             </Text>
             <GlassInput
               value={name}
               onChangeText={setName}
-              placeholder={language === 'nl' ? 'Dagboek naam' : 'Journal name'}
+              placeholder="Journal name"
               maxLength={100}
             />
           </View>
@@ -335,7 +331,7 @@ export default function JournalSettingsScreen() {
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {language === 'nl' ? 'Beschrijving' : 'Description'}
+              Description
             </Text>
             <GlassCard style={styles.descriptionCard} padding="md">
               <TextInput
@@ -343,9 +339,7 @@ export default function JournalSettingsScreen() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder={
-                  language === 'nl'
-                    ? 'Beschrijf je dagboek (optioneel)'
-                    : 'Describe your journal (optional)'
+                  'Describe your journal (optional)'
                 }
                 placeholderTextColor={COLORS.textMuted}
                 multiline
@@ -362,7 +356,7 @@ export default function JournalSettingsScreen() {
           {/* Privacy */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {language === 'nl' ? 'Privacy' : 'Privacy'}
+              Privacy
             </Text>
             <GlassCard style={styles.privacyCard} padding="md">
               <View style={styles.privacyRow}>
@@ -374,21 +368,11 @@ export default function JournalSettingsScreen() {
                   />
                   <View style={styles.privacyTextContainer}>
                     <Text style={styles.privacyTitle}>
-                      {isPublic
-                        ? language === 'nl'
-                          ? 'Openbaar'
-                          : 'Public'
-                        : language === 'nl'
-                        ? 'Privé'
-                        : 'Private'}
+                      {isPublic ? 'Public' : 'Private'}
                     </Text>
                     <Text style={styles.privacyDescription}>
                       {isPublic
-                        ? language === 'nl'
-                          ? 'Iedereen kan dit dagboek zien en volgen'
-                          : 'Anyone can view and follow this journal'
-                        : language === 'nl'
-                        ? 'Alleen jij kunt dit dagboek zien'
+                        ? 'Anyone can view and follow this journal'
                         : 'Only you can view this journal'}
                     </Text>
                   </View>
@@ -410,12 +394,12 @@ export default function JournalSettingsScreen() {
           {journal && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {language === 'nl' ? 'Informatie' : 'Information'}
+                Information
               </Text>
               <GlassCard style={styles.infoCard} padding="md">
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>
-                    {language === 'nl' ? 'Entries' : 'Entries'}
+                    Entries
                   </Text>
                   <Text style={styles.infoValue}>
                     {journal.entriesCount || 0}
@@ -423,7 +407,7 @@ export default function JournalSettingsScreen() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>
-                    {language === 'nl' ? 'Volgers' : 'Followers'}
+                    Followers
                   </Text>
                   <Text style={styles.infoValue}>
                     {journal.followersCount || 0}
@@ -436,15 +420,7 @@ export default function JournalSettingsScreen() {
           {/* Save Button */}
           <View style={styles.section}>
             <GlassButton
-              title={
-                saving
-                  ? language === 'nl'
-                    ? 'Opslaan...'
-                    : 'Saving...'
-                  : language === 'nl'
-                  ? 'Opslaan'
-                  : 'Save'
-              }
+              title={saving ? 'Saving...' : 'Save'}
               onPress={handleSave}
               disabled={saving || uploading}
               loading={saving || uploading}
@@ -460,7 +436,7 @@ export default function JournalSettingsScreen() {
             >
               <Ionicons name="trash-outline" size={20} color={COLORS.error} />
               <Text style={styles.deleteButtonText}>
-                {language === 'nl' ? 'Dagboek verwijderen' : 'Delete Journal'}
+                Delete Journal
               </Text>
             </Pressable>
           </View>

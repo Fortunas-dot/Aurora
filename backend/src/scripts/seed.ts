@@ -338,19 +338,35 @@ async function seedDatabase() {
     // Connect to database
     await connectDB();
     
-    // Clear existing data (but preserve user's account)
+    // Clear existing data (but preserve protected accounts)
     console.log('🗑️  Clearing existing data...');
     
-    // Preserve user's account before clearing
+    // Preserve protected accounts (Apple review account, etc.)
+    const protectedUsers = await User.find({ isProtected: true });
+    const protectedEmails = protectedUsers.map(u => u.email);
     const preservedUser = await User.findOne({ email: 'ayman_el_filali@hotmail.com' });
-    let preservedUserId = null;
-    if (preservedUser) {
-      preservedUserId = preservedUser._id;
+    
+    if (preservedUser && !preservedUser.isProtected) {
+      protectedEmails.push('ayman_el_filali@hotmail.com');
+    }
+    
+    if (protectedUsers.length > 0) {
+      console.log(`  ✓ Preserving ${protectedUsers.length} protected account(s):`);
+      protectedUsers.forEach(user => {
+        console.log(`    - ${user.email} (${user.username})`);
+      });
+    }
+    
+    if (preservedUser && !preservedUser.isProtected) {
       console.log('  ✓ Preserving user account: ayman_el_filali@hotmail.com');
     }
     
-    // Clear all data
-    await User.deleteMany({ email: { $ne: 'ayman_el_filali@hotmail.com' } });
+    // Clear all data except protected accounts
+    if (protectedEmails.length > 0) {
+      await User.deleteMany({ email: { $nin: protectedEmails } });
+    } else {
+      await User.deleteMany({});
+    }
     await Post.deleteMany({});
     await Group.deleteMany({});
     await Comment.deleteMany({});
@@ -376,8 +392,20 @@ async function seedDatabase() {
       console.log(`  ✓ Created user: ${user.username}`);
     });
     
-    // Add preserved user to createdUsers array if it exists
-    if (preservedUser) {
+    // Add preserved users to createdUsers array
+    if (protectedUsers.length > 0) {
+      protectedUsers.forEach(user => {
+        // Ensure displayName is set (required field)
+        if (!user.displayName) {
+          user.displayName = user.username || user.email || 'User';
+          user.save();
+        }
+        createdUsers.push(user as any);
+        console.log(`  ✓ Preserved protected user: ${user.username || user.email}`);
+      });
+    }
+    
+    if (preservedUser && !preservedUser.isProtected) {
       // Ensure displayName is set (required field)
       if (!preservedUser.displayName) {
         preservedUser.displayName = preservedUser.username || preservedUser.email || 'User';

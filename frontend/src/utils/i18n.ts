@@ -166,7 +166,8 @@ class I18n {
   }
 
   t(key: keyof typeof translations.nl): string {
-    return translations[this.currentLanguage][key] || translations.nl[key] || key;
+    // Always return English translations
+    return translations.en[key] || translations.nl[key] || key;
   }
 
   // Get all translations for current language

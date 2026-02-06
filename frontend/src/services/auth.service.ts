@@ -7,6 +7,8 @@ export interface User {
   username: string;
   displayName?: string;
   avatar?: string;
+  avatarCharacter?: string;
+  avatarBackgroundColor?: string;
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;

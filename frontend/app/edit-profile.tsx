@@ -8,7 +8,6 @@ import {
   Platform,
   Alert,
   Pressable,
-  Switch,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,17 +20,20 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import { userService } from '../src/services/user.service';
 import { uploadService } from '../src/services/upload.service';
 import { useAuthStore } from '../src/store/authStore';
+import { AVATAR_CHARACTERS } from '../src/utils/characters';
+import { AVATAR_BACKGROUND_COLORS } from '../src/utils/avatarColors';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, setUser } = useAuthStore();
 
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
-  const [isAnonymous, setIsAnonymous] = useState(user?.isAnonymous || false);
-  const [showEmail, setShowEmail] = useState(user?.showEmail || false);
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatar || null);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(user?.avatarCharacter || null);
+  const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string | null>(user?.avatarBackgroundColor || null);
+  const [avatarMode, setAvatarMode] = useState<'photo' | 'character'>(user?.avatar ? 'photo' : 'character');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
@@ -44,7 +46,7 @@ export default function EditProfileScreen() {
   const requestMediaPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Toestemming nodig', 'We hebben toegang nodig tot je foto\'s');
+      Alert.alert('Permission needed', 'We need access to your photos');
       return false;
     }
     return true;
@@ -64,11 +66,32 @@ export default function EditProfileScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setAvatarUri(result.assets[0].uri);
+        setSelectedCharacter(null); // Clear character when photo is selected
+        setAvatarMode('photo');
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fout', 'Kon afbeelding niet selecteren');
+      Alert.alert('Error', 'Could not select image');
     }
+  };
+
+  const handleSelectCharacter = (character: string) => {
+    setSelectedCharacter(character);
+    setAvatarUri(null); // Clear photo when character is selected
+    setAvatarMode('character');
+    // If no background color is selected yet, set a default one
+    if (!selectedBackgroundColor) {
+      // Use the first color as default, or keep existing if user has one
+      if (!user?.avatarBackgroundColor) {
+        setSelectedBackgroundColor(AVATAR_BACKGROUND_COLORS[0].value);
+      }
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarUri(null);
+    setSelectedCharacter(null);
+    setAvatarMode('character');
   };
 
   const handleSubmit = async () => {
@@ -84,19 +107,38 @@ export default function EditProfileScreen() {
         if (uploadResult.success && uploadResult.data) {
           avatarUrl = uploadResult.data.url;
         } else {
-          Alert.alert('Fout', 'Kon avatar niet uploaden');
+          Alert.alert('Error', 'Could not upload avatar');
           setIsSubmitting(false);
           setIsUploadingAvatar(false);
           return;
         }
       }
 
+      // Determine avatar and character based on mode
+      let finalAvatar: string | undefined = undefined;
+      let finalCharacter: string | undefined = undefined;
+      let finalBackgroundColor: string | undefined = undefined;
+
+      if (avatarMode === 'photo' && avatarUrl) {
+        finalAvatar = avatarUrl;
+        finalCharacter = undefined; // Clear character when using photo
+        finalBackgroundColor = undefined; // Clear background color when using photo
+      } else if (avatarMode === 'character' && selectedCharacter) {
+        finalAvatar = undefined; // Clear photo when using character
+        finalCharacter = selectedCharacter;
+        finalBackgroundColor = selectedBackgroundColor || undefined;
+      } else if (!avatarUri && !selectedCharacter) {
+        // If both are cleared, keep existing character and color
+        finalCharacter = user?.avatarCharacter || undefined;
+        finalBackgroundColor = user?.avatarBackgroundColor || undefined;
+      }
+
       const response = await userService.updateProfile({
-        displayName: displayName.trim() || undefined,
+        username: username.trim() || undefined,
         bio: bio.trim() || undefined,
-        avatar: avatarUrl || undefined,
-        isAnonymous,
-        showEmail,
+        avatar: finalAvatar,
+        avatarCharacter: finalCharacter,
+        avatarBackgroundColor: finalBackgroundColor,
       });
 
       if (response.success && response.data) {
@@ -157,40 +199,160 @@ export default function EditProfileScreen() {
         >
           {/* Avatar Section */}
           <GlassCard style={styles.avatarCard} padding="lg">
-            <Text style={styles.label}>Profile Photo</Text>
+            <Text style={styles.label}>Profile Avatar</Text>
             <View style={styles.avatarSection}>
               <Avatar
                 uri={avatarUri || undefined}
-                name={displayName || user.username}
+                name={username || user.username}
+                userId={user._id}
+                avatarCharacter={selectedCharacter || undefined}
+                avatarBackgroundColor={selectedBackgroundColor || undefined}
                 size="xl"
               />
-              <Pressable
-                style={styles.changeAvatarButton}
-                onPress={handlePickAvatar}
-                disabled={isUploadingAvatar}
-              >
-                {isUploadingAvatar ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <>
-                    <Ionicons name="camera" size={20} color={COLORS.primary} />
-                    <Text style={styles.changeAvatarText}>Change</Text>
-                  </>
-                )}
-              </Pressable>
+              
+              {/* Mode Selection */}
+              <View style={styles.modeSelector}>
+                <Pressable
+                  style={[styles.modeButton, avatarMode === 'photo' && styles.modeButtonActive]}
+                  onPress={() => setAvatarMode('photo')}
+                >
+                  <Ionicons 
+                    name="camera" 
+                    size={20} 
+                    color={avatarMode === 'photo' ? COLORS.primary : COLORS.textMuted} 
+                  />
+                  <Text 
+                    style={[
+                      styles.modeButtonText,
+                      avatarMode === 'photo' && styles.modeButtonTextActive
+                    ]}
+                    numberOfLines={1}
+                  >
+                    Photo
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modeButton, avatarMode === 'character' && styles.modeButtonActive]}
+                  onPress={() => setAvatarMode('character')}
+                >
+                  <Ionicons 
+                    name="happy" 
+                    size={20} 
+                    color={avatarMode === 'character' ? COLORS.primary : COLORS.textMuted} 
+                  />
+                  <Text 
+                    style={[
+                      styles.modeButtonText,
+                      avatarMode === 'character' && styles.modeButtonTextActive
+                    ]}
+                    numberOfLines={1}
+                  >
+                    Character
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Photo Upload */}
+              {avatarMode === 'photo' && (
+                <View style={styles.avatarActions}>
+                  <Pressable
+                    style={styles.changeAvatarButton}
+                    onPress={handlePickAvatar}
+                    disabled={isUploadingAvatar}
+                  >
+                    {isUploadingAvatar ? (
+                      <LoadingSpinner size="sm" />
+                    ) : (
+                      <>
+                        <Ionicons name="camera" size={20} color={COLORS.primary} />
+                        <Text style={styles.changeAvatarText}>
+                          {avatarUri ? 'Change Photo' : 'Upload Photo'}
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
+                  {avatarUri && (
+                    <Pressable
+                      style={[styles.changeAvatarButton, styles.removeButton]}
+                      onPress={handleRemoveAvatar}
+                    >
+                      <Ionicons name="trash" size={20} color={COLORS.error} />
+                      <Text style={[styles.changeAvatarText, styles.removeButtonText]}>
+                        Remove
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+
+              {/* Character Selection */}
+              {avatarMode === 'character' && (
+                <View style={styles.characterSelector}>
+                  <Text style={styles.characterSelectorLabel}>Choose a character:</Text>
+                  <View style={styles.characterGrid}>
+                    {AVATAR_CHARACTERS.map((char, index) => (
+                      <Pressable
+                        key={index}
+                        style={[
+                          styles.characterOption,
+                          selectedCharacter === char && styles.characterOptionSelected,
+                        ]}
+                        onPress={() => handleSelectCharacter(char)}
+                      >
+                        <Text style={styles.characterEmoji}>{char}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  
+                  <Text style={[styles.characterSelectorLabel, { marginTop: SPACING.lg }]}>
+                    Choose a background color:
+                  </Text>
+                  <View style={styles.colorGrid}>
+                    {AVATAR_BACKGROUND_COLORS.map((color, index) => (
+                      <Pressable
+                        key={index}
+                        style={[
+                          styles.colorOption,
+                          {
+                            backgroundColor: color.value,
+                            borderColor: selectedBackgroundColor === color.value 
+                              ? COLORS.primary 
+                              : COLORS.glass.border,
+                            borderWidth: selectedBackgroundColor === color.value ? 3 : 2,
+                          },
+                          selectedBackgroundColor === color.value && styles.colorOptionSelected,
+                        ]}
+                        onPress={() => setSelectedBackgroundColor(color.value)}
+                      >
+                        {selectedBackgroundColor === color.value && (
+                          <Ionicons name="checkmark" size={20} color={COLORS.white} />
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                  {!selectedCharacter && (
+                    <Text style={styles.hintText}>
+                      Select a character first to see the background color preview
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
           </GlassCard>
 
-          {/* Display Name */}
+          {/* Username */}
           <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.label}>Display Name</Text>
+            <Text style={styles.label}>Username</Text>
             <GlassInput
-              value={displayName}
-              onChangeText={setDisplayName}
+              value={username}
+              onChangeText={setUsername}
               placeholder={user.username}
               style={styles.input}
-              maxLength={50}
+              maxLength={30}
             />
+            <Text style={styles.hintText}>
+              Username can only be changed once every 30 days
+            </Text>
           </GlassCard>
 
           {/* Bio */}
@@ -207,43 +369,6 @@ export default function EditProfileScreen() {
               maxLength={500}
             />
             <Text style={styles.charCount}>{bio.length} / 500</Text>
-          </GlassCard>
-
-          {/* Privacy Settings */}
-          <GlassCard style={styles.inputCard} padding="lg">
-            <Text style={styles.sectionTitle}>Privacy Settings</Text>
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Anonymous Profile</Text>
-                <Text style={styles.settingDescription}>
-                  Your username will be hidden from others
-                </Text>
-              </View>
-              <Switch
-                value={isAnonymous}
-                onValueChange={setIsAnonymous}
-                trackColor={{ false: COLORS.glass.border, true: COLORS.primary }}
-                thumbColor={COLORS.white}
-              />
-            </View>
-
-            <View style={styles.settingDivider} />
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Show Email</Text>
-                <Text style={styles.settingDescription}>
-                  Let others see your email address on your profile
-                </Text>
-              </View>
-              <Switch
-                value={showEmail}
-                onValueChange={setShowEmail}
-                trackColor={{ false: COLORS.glass.border, true: COLORS.primary }}
-                thumbColor={COLORS.white}
-              />
-            </View>
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -299,6 +424,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
     marginBottom: SPACING.md,
+    textAlign: 'center',
   },
   avatarSection: {
     alignItems: 'center',
@@ -337,34 +463,110 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: SPACING.xs,
   },
-  sectionTitle: {
+  modeSelector: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    width: '100%',
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    minWidth: 100,
+    flexShrink: 0,
+  },
+  modeButtonActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.glass.background,
+  },
+  modeButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.textMuted,
+    flexShrink: 1,
+  },
+  modeButtonTextActive: {
+    color: COLORS.primary,
+  },
+  avatarActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    width: '100%',
+  },
+  removeButton: {
+    borderColor: COLORS.error,
+  },
+  removeButtonText: {
+    color: COLORS.error,
+  },
+  characterSelector: {
+    width: '100%',
+    marginTop: SPACING.md,
+  },
+  characterSelectorLabel: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
     marginBottom: SPACING.md,
+    textAlign: 'center',
   },
-  settingRow: {
+  characterGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    justifyContent: 'center',
+  },
+  characterOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 2,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.sm,
   },
-  settingInfo: {
-    flex: 1,
-    marginRight: SPACING.md,
+  characterOptionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.glass.background,
+    transform: [{ scale: 1.1 }],
   },
-  settingLabel: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+  characterEmoji: {
+    fontSize: 28,
   },
-  settingDescription: {
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    justifyContent: 'center',
+    marginTop: SPACING.sm,
+  },
+  colorOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  colorOptionSelected: {
+    transform: [{ scale: 1.1 }],
+  },
+  hintText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
-  },
-  settingDivider: {
-    height: 1,
-    backgroundColor: COLORS.glass.border,
-    marginVertical: SPACING.sm,
+    textAlign: 'center',
+    marginTop: SPACING.md,
+    fontStyle: 'italic',
   },
 });
 

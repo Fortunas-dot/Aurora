@@ -85,6 +85,9 @@ export default function SearchUsersScreen() {
         <Avatar
           uri={item.avatar}
           name={item.displayName || item.username}
+          userId={item._id}
+          avatarCharacter={item.avatarCharacter}
+          avatarBackgroundColor={item.avatarBackgroundColor}
           size="md"
         />
         <View style={styles.userInfo}>
@@ -149,9 +152,9 @@ export default function SearchUsersScreen() {
         ) : users.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Geen gebruikers gevonden</Text>
+            <Text style={styles.emptyText}>No users found</Text>
             <Text style={styles.emptySubtext}>
-              Probeer een andere zoekterm
+              Try a different search term
             </Text>
           </View>
         ) : (

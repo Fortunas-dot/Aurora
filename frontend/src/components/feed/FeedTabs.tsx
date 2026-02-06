@@ -20,11 +20,11 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: 'all', label: 'Alles', labelEn: 'All', icon: 'apps-outline' },
+  { id: 'all', label: 'All', labelEn: 'All', icon: 'apps-outline' },
   { id: 'post', label: 'Posts', labelEn: 'Posts', icon: 'chatbubbles-outline' },
-  { id: 'question', label: 'Vragen', labelEn: 'Questions', icon: 'help-circle-outline' },
-  { id: 'story', label: 'Verhalen', labelEn: 'Stories', icon: 'book-outline' },
-  { id: 'saved', label: 'Opgeslagen', labelEn: 'Saved', icon: 'bookmark-outline' },
+  { id: 'question', label: 'Questions', labelEn: 'Questions', icon: 'help-circle-outline' },
+  { id: 'story', label: 'Stories', labelEn: 'Stories', icon: 'book-outline' },
+  { id: 'saved', label: 'Saved', labelEn: 'Saved', icon: 'bookmark-outline' },
 ];
 
 interface FeedTabsProps {

@@ -2,10 +2,15 @@ import React from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS } from '../../constants/theme';
+import { getCharacterForUser } from '../../utils/characters';
+import { getColorByValue, getDefaultGradientColors } from '../../utils/avatarColors';
 
 interface AvatarProps {
   uri?: string | null;
   name?: string;
+  userId?: string;
+  avatarCharacter?: string | null;
+  avatarBackgroundColor?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   style?: ViewStyle;
   showBorder?: boolean;
@@ -14,6 +19,9 @@ interface AvatarProps {
 export const Avatar: React.FC<AvatarProps> = ({
   uri,
   name,
+  userId,
+  avatarCharacter,
+  avatarBackgroundColor,
   size = 'md',
   style,
   showBorder = true,
@@ -39,7 +47,15 @@ export const Avatar: React.FC<AvatarProps> = ({
   const sizeValue = getSize();
   const fontSize = getFontSize();
 
-  const getInitials = (): string => {
+  // Get character to display (prefer avatarCharacter, fallback to user-based character, then initials)
+  const getDisplayCharacter = (): string => {
+    if (avatarCharacter) {
+      return avatarCharacter;
+    }
+    if (userId) {
+      return getCharacterForUser(userId);
+    }
+    // Fallback to initials if no userId or character
     if (!name) return '?';
     const parts = name.split(' ');
     if (parts.length >= 2) {
@@ -48,24 +64,18 @@ export const Avatar: React.FC<AvatarProps> = ({
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Generate consistent color based on name
+  // Get gradient colors - use custom background color if provided, otherwise use default
   const getGradientColors = (): string[] => {
-    if (!name) return ['#60A5FA', '#3B82F6'];
-    
-    const hash = name.split('').reduce((acc, char) => {
-      return char.charCodeAt(0) + ((acc << 5) - acc);
-    }, 0);
-
-    const gradients = [
-      ['#60A5FA', '#3B82F6'], // Blue
-      ['#A78BFA', '#8B5CF6'], // Purple
-      ['#5EEAD4', '#14B8A6'], // Teal
-      ['#F472B6', '#EC4899'], // Pink
-      ['#FBBF24', '#F59E0B'], // Yellow
-      ['#34D399', '#10B981'], // Green
-    ];
-
-    return gradients[Math.abs(hash) % gradients.length];
+    if (avatarBackgroundColor) {
+      const colorInfo = getColorByValue(avatarBackgroundColor);
+      if (colorInfo) {
+        return colorInfo.gradient;
+      }
+      // If color value exists but not in our palette, create a gradient from it
+      return [avatarBackgroundColor, avatarBackgroundColor];
+    }
+    // Fallback to default gradient based on name
+    return getDefaultGradientColors(name);
   };
 
   return (
@@ -107,8 +117,8 @@ export const Avatar: React.FC<AvatarProps> = ({
             },
           ]}
         >
-          <Text style={[styles.initials, { fontSize }]}>
-            {getInitials()}
+          <Text style={[styles.character, { fontSize: sizeValue * 0.5 }]}>
+            {getDisplayCharacter()}
           </Text>
         </LinearGradient>
       )}
@@ -133,9 +143,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  initials: {
+  character: {
     color: COLORS.white,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

@@ -58,6 +58,8 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       username: user.username,
       displayName: user.displayName,
       avatar: user.avatar,
+      avatarCharacter: user.avatarCharacter,
+      avatarBackgroundColor: user.avatarBackgroundColor,
       bio: user.bio,
       createdAt: user.createdAt || new Date(), // Ensure createdAt exists
       postCount,
@@ -90,10 +92,39 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     // #region agent log
     fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:88',message:'updateProfile entry',data:{userId:req.userId,bodyKeys:Object.keys(req.body),hasPassword:'password' in req.body,passwordValue:req.body.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H4'})}).catch(()=>{});
     // #endregion
-    const { username, displayName, bio, avatar, isAnonymous, showEmail } = req.body;
+    const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, isAnonymous, showEmail } = req.body;
 
-    // Check if username is taken (if changing)
-    if (username) {
+    // Get current user first to check username change restrictions
+    const currentUser = await User.findById(req.userId);
+    if (!currentUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    const updateData: any = {};
+    
+    // Check if username is being changed
+    if (username && username !== currentUser.username) {
+      // Username is being changed - check if it's been less than 30 days since last change
+      if (currentUser.lastUsernameChange) {
+        const daysSinceLastChange = Math.floor(
+          (Date.now() - currentUser.lastUsernameChange.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        if (daysSinceLastChange < 30) {
+          const daysRemaining = 30 - daysSinceLastChange;
+          res.status(400).json({
+            success: false,
+            message: `Username can only be changed once every 30 days. Please wait ${daysRemaining} more day${daysRemaining === 1 ? '' : 's'}.`,
+          });
+          return;
+        }
+      }
+      
+      // Check if new username is taken
       const existingUser = await User.findOne({
         username,
         _id: { $ne: req.userId },
@@ -106,13 +137,19 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
         });
         return;
       }
+      
+      // Username is valid to change - update username and lastUsernameChange
+      updateData.username = username;
+      updateData.lastUsernameChange = new Date();
+    } else if (username !== undefined) {
+      // Username is provided but same as current - just allow it (no change needed)
+      updateData.username = username;
     }
-
-    const updateData: any = {};
-    if (username !== undefined) updateData.username = username;
     if (displayName !== undefined) updateData.displayName = displayName;
     if (bio !== undefined) updateData.bio = bio;
     if (avatar !== undefined) updateData.avatar = avatar;
+    if (avatarCharacter !== undefined) updateData.avatarCharacter = avatarCharacter;
+    if (avatarBackgroundColor !== undefined) updateData.avatarBackgroundColor = avatarBackgroundColor;
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
     if (showEmail !== undefined) updateData.showEmail = showEmail;
     if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;

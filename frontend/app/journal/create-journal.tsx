@@ -66,10 +66,8 @@ export default function CreateJournalScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        language === 'nl' ? 'Toestemming nodig' : 'Permission needed',
-        language === 'nl' 
-          ? 'We hebben toegang tot je foto\'s nodig'
-          : 'We need access to your photos'
+        'Permission needed',
+        'We need access to your photos'
       );
       return false;
     }
@@ -94,8 +92,8 @@ export default function CreateJournalScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Kon afbeelding niet selecteren' : 'Could not select image'
+        'Error',
+        'Could not select image'
       );
     }
   };
@@ -103,16 +101,16 @@ export default function CreateJournalScreen() {
   const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Voer een naam in voor je dagboek' : 'Please enter a name for your journal'
+        'Error',
+        'Please enter a name for your journal'
       );
       return;
     }
 
     if (name.trim().length < 3) {
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Naam moet minimaal 3 tekens zijn' : 'Name must be at least 3 characters'
+        'Error',
+        'Name must be at least 3 characters'
       );
       return;
     }
@@ -145,15 +143,15 @@ export default function CreateJournalScreen() {
         router.back();
       } else {
         Alert.alert(
-          language === 'nl' ? 'Fout' : 'Error',
-          response.message || (language === 'nl' ? 'Kon dagboek niet aanmaken' : 'Could not create journal')
+          'Error',
+          response.message || 'Could not create journal'
         );
       }
     } catch (error: any) {
       console.error('Error creating journal:', error);
       Alert.alert(
-        language === 'nl' ? 'Fout' : 'Error',
-        language === 'nl' ? 'Er is iets misgegaan' : 'Something went wrong'
+        'Error',
+        'Something went wrong'
       );
     } finally {
       setIsSubmitting(false);
@@ -174,7 +172,7 @@ export default function CreateJournalScreen() {
             <Ionicons name="close" size={28} color={COLORS.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {language === 'nl' ? 'Nieuw Dagboek' : 'New Journal'}
+            New Journal
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -190,7 +188,7 @@ export default function CreateJournalScreen() {
           {/* Cover Image */}
           <GlassCard style={styles.coverCard} padding="lg">
             <Text style={styles.label}>
-              {language === 'nl' ? 'Cover Afbeelding (optioneel)' : 'Cover Image (optional)'}
+              Cover Image (optional)
             </Text>
             {coverImageUri ? (
               <View style={styles.coverImageContainer}>
@@ -215,7 +213,7 @@ export default function CreateJournalScreen() {
               <Pressable style={styles.addCoverButton} onPress={handlePickCoverImage}>
                 <Ionicons name="image-outline" size={32} color={COLORS.primary} />
                 <Text style={styles.addCoverText}>
-                  {language === 'nl' ? 'Voeg cover toe' : 'Add cover'}
+                  Add cover
                 </Text>
               </Pressable>
             )}
@@ -224,12 +222,12 @@ export default function CreateJournalScreen() {
           {/* Name Input */}
           <GlassCard style={styles.nameCard} padding="lg">
             <Text style={styles.label}>
-              {language === 'nl' ? 'Naam *' : 'Name *'}
+              Name *
             </Text>
             <GlassInput
               value={name}
               onChangeText={setName}
-              placeholder={language === 'nl' ? 'Mijn Dagboek' : 'My Journal'}
+              placeholder="My Journal"
               style={styles.nameInput}
               maxLength={100}
             />
@@ -238,15 +236,13 @@ export default function CreateJournalScreen() {
           {/* Description Input */}
           <GlassCard style={styles.descriptionCard} padding="lg">
             <Text style={styles.label}>
-              {language === 'nl' ? 'Beschrijving (optioneel)' : 'Description (optional)'}
+              Description (optional)
             </Text>
             <GlassInput
               value={description}
               onChangeText={setDescription}
               placeholder={
-                language === 'nl'
-                  ? 'Beschrijf je dagboek...'
-                  : 'Describe your journal...'
+                'Describe your journal...'
               }
               multiline
               numberOfLines={4}
@@ -259,12 +255,10 @@ export default function CreateJournalScreen() {
           {/* Mental Health Topics Selection */}
           <GlassCard style={styles.topicsCard} padding="lg">
             <Text style={styles.label}>
-              {language === 'nl' ? 'Mentale Gezondheid Topics (optioneel)' : 'Mental Health Topics (optional)'}
+              Mental Health Topics (optional)
             </Text>
             <Text style={styles.topicsSubtitle}>
-              {language === 'nl'
-                ? 'Selecteer de topics waar dit dagboek over gaat'
-                : 'Select the topics this journal focuses on'}
+              Select the topics this journal focuses on
             </Text>
             <View style={styles.topicsGrid}>
               {mentalHealthTopics.map((topic) => {
@@ -307,12 +301,10 @@ export default function CreateJournalScreen() {
           {/* Privacy Selection */}
           <GlassCard style={styles.privacyCard} padding="lg">
             <Text style={styles.label}>
-              {language === 'nl' ? 'Privacy *' : 'Privacy *'}
+              Privacy *
             </Text>
             <Text style={styles.privacySubtitle}>
-              {language === 'nl'
-                ? 'Kies of je dagboek privé of openbaar is'
-                : 'Choose if your journal is private or public'}
+              Choose if your journal is private or public
             </Text>
 
             <View style={styles.privacyOptions}>
@@ -336,12 +328,10 @@ export default function CreateJournalScreen() {
                         !isPublic && styles.privacyOptionTitleActive,
                       ]}
                     >
-                      {language === 'nl' ? 'Privé' : 'Private'}
+                      Private
                     </Text>
                     <Text style={styles.privacyOptionDescription}>
-                      {language === 'nl'
-                        ? 'Alleen jij kunt je entries zien'
-                        : 'Only you can see your entries'}
+                      Only you can see your entries
                     </Text>
                   </View>
                 </View>
@@ -370,12 +360,10 @@ export default function CreateJournalScreen() {
                         isPublic && styles.privacyOptionTitleActive,
                       ]}
                     >
-                      {language === 'nl' ? 'Openbaar' : 'Public'}
+                      Public
                     </Text>
                     <Text style={styles.privacyOptionDescription}>
-                      {language === 'nl'
-                        ? 'Anderen kunnen je journey volgen'
-                        : 'Others can follow your journey'}
+                      Others can follow your journey
                     </Text>
                   </View>
                 </View>
@@ -388,15 +376,7 @@ export default function CreateJournalScreen() {
 
           {/* Submit Button */}
           <GlassButton
-            title={
-              isSubmitting || isUploading
-                ? language === 'nl'
-                  ? 'Aanmaken...'
-                  : 'Creating...'
-                : language === 'nl'
-                ? 'Dagboek Aanmaken'
-                : 'Create Journal'
-            }
+            title={isSubmitting || isUploading ? 'Creating...' : 'Create Journal'}
             onPress={handleSubmit}
             disabled={isSubmitting || isUploading || !name.trim()}
             style={styles.submitButton}

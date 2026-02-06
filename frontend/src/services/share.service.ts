@@ -14,7 +14,7 @@ class ShareService {
 
       const result = await Share.share({
         message: shareText,
-        title: 'Deel post',
+        title: 'Share post',
       });
 
       if (result.action === Share.sharedAction) {
@@ -22,7 +22,7 @@ class ShareService {
       }
     } catch (error: any) {
       console.error('Error sharing post:', error);
-      Alert.alert('Fout', 'Kon post niet delen');
+      Alert.alert('Error', 'Could not share post');
     }
   }
 
@@ -35,10 +35,10 @@ class ShareService {
       const postUrl = `${baseUrl}/post/${postId}`;
       
       await Clipboard.setStringAsync(postUrl);
-      Alert.alert('Gekopieerd', 'Link gekopieerd naar klembord');
+      Alert.alert('Copied', 'Link copied to clipboard');
     } catch (error: any) {
       console.error('Error copying link:', error);
-      Alert.alert('Fout', 'Kon link niet kopiëren');
+      Alert.alert('Error', 'Could not copy link');
     }
   }
 
@@ -49,7 +49,7 @@ class ShareService {
     try {
       await Share.share({
         message: text,
-        title: title || 'Deel',
+        title: title || 'Share',
       });
     } catch (error: any) {
       console.error('Error sharing text:', error);

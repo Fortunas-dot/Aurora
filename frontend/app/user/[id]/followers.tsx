@@ -83,6 +83,9 @@ export default function FollowersScreen() {
         <Avatar
           uri={item.avatar}
           name={item.displayName || item.username}
+          userId={item._id}
+          avatarCharacter={item.avatarCharacter}
+          avatarBackgroundColor={item.avatarBackgroundColor}
           size="md"
         />
         <View style={styles.userInfo}>
@@ -109,7 +112,7 @@ export default function FollowersScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
-          {language === 'nl' ? 'Volgers' : 'Followers'}
+          Followers
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -146,7 +149,7 @@ export default function FollowersScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyText}>
-                {language === 'nl' ? 'Geen volgers' : 'No followers'}
+                No followers
               </Text>
             </View>
           }

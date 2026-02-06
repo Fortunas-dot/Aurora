@@ -14,10 +14,14 @@ export interface IUser extends Document {
   username: string;
   displayName?: string;
   avatar?: string;
+  avatarCharacter?: string; // Emoji character for avatar when no photo is set
+  avatarBackgroundColor?: string; // Background color for avatar character
   bio?: string;
+  lastUsernameChange?: Date; // Track when username was last changed
   isAnonymous: boolean;
   showEmail: boolean;
   facebookId?: string;
+  isProtected?: boolean; // Protected accounts cannot be deleted (e.g., Apple review account)
   following: Types.ObjectId[];
   savedPosts: Types.ObjectId[];
   pushTokens: PushToken[];
@@ -66,16 +70,32 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: null,
     },
+    avatarCharacter: {
+      type: String,
+      default: null,
+    },
+    avatarBackgroundColor: {
+      type: String,
+      default: null,
+    },
     bio: {
       type: String,
       maxlength: [500, 'Bio cannot exceed 500 characters'],
       default: '',
+    },
+    lastUsernameChange: {
+      type: Date,
+      default: null,
     },
     isAnonymous: {
       type: Boolean,
       default: true,
     },
     showEmail: {
+      type: Boolean,
+      default: false,
+    },
+    isProtected: {
       type: Boolean,
       default: false,
     },

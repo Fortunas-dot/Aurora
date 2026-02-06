@@ -25,7 +25,7 @@ export default function HelpSupportScreen() {
 
   const handleSendEmail = async () => {
     if (!subject.trim() || !message.trim()) {
-      Alert.alert('Velden vereist', 'Vul alstublieft zowel onderwerp als bericht in.');
+      Alert.alert('Fields required', 'Please fill in both subject and message.');
       return;
     }
 
@@ -40,40 +40,40 @@ export default function HelpSupportScreen() {
         await Linking.openURL(mailtoUrl);
       } else {
         Alert.alert(
-          'Email niet beschikbaar',
-          'Er is geen email app geïnstalleerd. Je kunt ons bereiken op: info@aurora.nl'
+          'Email not available',
+          'No email app is installed. You can reach us at: info@aurora.nl'
         );
       }
     } catch (error) {
       console.error('Error opening email:', error);
       Alert.alert(
-        'Fout',
-        'Kon email app niet openen. Je kunt ons bereiken op: info@aurora.nl'
+        'Error',
+        'Could not open email app. You can reach us at: info@aurora.nl'
       );
     }
   };
 
   const handleCopyEmail = async () => {
     await Clipboard.setStringAsync('info@aurora.nl');
-    Alert.alert('Gekopieerd', 'Email adres gekopieerd naar klembord');
+    Alert.alert('Copied', 'Email address copied to clipboard');
   };
 
   const faqItems = [
     {
-      question: 'Hoe gebruik ik Aurora?',
-      answer: 'Aurora is een A.I. mentale gezondheid companion die je helpt met je mentale gezondheid. Je kunt chatten, journal entries maken, en deelnemen aan support groepen.',
+      question: 'How do I use Aurora?',
+      answer: 'Aurora is an A.I. mental health companion that helps you with your mental health. You can chat, create journal entries, and participate in support groups.',
     },
     {
-      question: 'Is mijn data privé?',
-      answer: 'Ja, we nemen privacy zeer serieus. Je kunt anoniem blijven en alle data is versleuteld en veilig opgeslagen.',
+      question: 'Is my data private?',
+      answer: 'Yes, we take privacy very seriously. You can stay anonymous and all data is encrypted and securely stored.',
     },
     {
-      question: 'Hoe kan ik mijn account verwijderen?',
-      answer: 'Ga naar je profiel instellingen en selecteer "Account verwijderen". Je kunt ook contact met ons opnemen via email.',
+      question: 'How can I delete my account?',
+      answer: 'Go to your profile settings and select "Delete Account". You can also contact us via email.',
     },
     {
-      question: 'Werkt Aurora offline?',
-      answer: 'Nee, Aurora heeft een internetverbinding nodig om te functioneren, omdat de A.I. mentale gezondheid ondersteuning real-time plaatsvindt.',
+      question: 'Does Aurora work offline?',
+      answer: 'No, Aurora needs an internet connection to function, as the A.I. mental health support happens in real-time.',
     },
   ];
 
@@ -100,10 +100,10 @@ export default function HelpSupportScreen() {
       >
         {/* Contact Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Neem contact op</Text>
+          <Text style={styles.sectionTitle}>Contact Us</Text>
           <GlassCard padding="lg">
             <Text style={styles.contactText}>
-              Heb je vragen of problemen? Stuur ons een email en we helpen je graag verder.
+              Have questions or problems? Send us an email and we'll be happy to help.
             </Text>
 
             <View style={styles.emailContainer}>
@@ -116,7 +116,7 @@ export default function HelpSupportScreen() {
                 onPress={handleCopyEmail}
               >
                 <Ionicons name="copy-outline" size={18} color={COLORS.primary} />
-                <Text style={styles.copyButtonText}>Kopieer</Text>
+                <Text style={styles.copyButtonText}>Copy</Text>
               </Pressable>
             </View>
 
@@ -130,10 +130,10 @@ export default function HelpSupportScreen() {
               style={styles.input}
             />
 
-            <Text style={styles.formLabel}>Bericht</Text>
+            <Text style={styles.formLabel}>Message</Text>
             <TextInput
               style={styles.textArea}
-              placeholder="Beschrijf je vraag of probleem..."
+              placeholder="Describe your question or problem..."
               placeholderTextColor={COLORS.textMuted}
               value={message}
               onChangeText={setMessage}
@@ -153,7 +153,7 @@ export default function HelpSupportScreen() {
 
         {/* FAQ Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Veelgestelde vragen</Text>
+          <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
           {faqItems.map((item, index) => (
             <GlassCard key={index} padding="md" style={styles.faqCard}>
               <Text style={styles.faqQuestion}>{item.question}</Text>
@@ -168,9 +168,9 @@ export default function HelpSupportScreen() {
             <View style={styles.supportInfo}>
               <Ionicons name="information-circle-outline" size={24} color={COLORS.primary} />
               <View style={styles.supportInfoText}>
-                <Text style={styles.supportInfoTitle}>Response tijd</Text>
+                <Text style={styles.supportInfoTitle}>Response Time</Text>
                 <Text style={styles.supportInfoDescription}>
-                  We proberen binnen 24-48 uur te reageren op je email.
+                  We try to respond to your email within 24-48 hours.
                 </Text>
               </View>
             </View>

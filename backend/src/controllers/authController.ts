@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import { generateToken, sanitizeUser } from '../utils/helpers';
 import { AuthRequest } from '../middleware/auth';
+import { getRandomCharacter } from '../utils/characters';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -25,12 +26,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Create user
+    // Create user with random avatar character
     const user = await User.create({
       email,
       password,
       username,
       displayName: displayName || username,
+      avatarCharacter: getRandomCharacter(),
     });
 
     // Generate token
@@ -170,6 +172,12 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
         user.avatar = picture.data.url;
         await user.save();
       }
+
+      // Assign character if user doesn't have one
+      if (!user.avatarCharacter) {
+        user.avatarCharacter = getRandomCharacter();
+        await user.save();
+      }
     } else {
       // Create new user
       if (!email) {
@@ -197,6 +205,7 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
         username,
         displayName: name || username,
         avatar: picture?.data?.url,
+        avatarCharacter: getRandomCharacter(), // Assign random character
         facebookId,
         isAnonymous: false,
       };

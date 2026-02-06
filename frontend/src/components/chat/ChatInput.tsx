@@ -37,7 +37,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           style={styles.input}
           value={text}
           onChangeText={setText}
-          placeholder="Typ je bericht..."
+          placeholder="Type your message..."
           placeholderTextColor={COLORS.textMuted}
           multiline
           maxLength={2000}
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.glass.border,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm + 4,
+    zIndex: 6, // Above everything including Aurora
   },
   inputContainer: {
     flexDirection: 'row',

@@ -120,6 +120,9 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
               <Avatar
                 uri={notification.relatedUser.avatar}
                 name={notification.relatedUser.displayName || notification.relatedUser.username}
+                userId={notification.relatedUser._id}
+                avatarCharacter={notification.relatedUser.avatarCharacter}
+                avatarBackgroundColor={notification.relatedUser.avatarBackgroundColor}
                 size="md"
               />
             ) : (

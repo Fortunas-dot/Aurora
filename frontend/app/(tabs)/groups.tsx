@@ -223,18 +223,37 @@ export default function GroupsScreen() {
     try {
       const response = await userService.followUser(userId);
       if (response.success) {
+        // Determine new following state
+        const newFollowingState = response.data?.isFollowing !== undefined 
+          ? response.data.isFollowing 
+          : !searchResults.find(u => u._id === userId)?.isFollowing;
+        
         // Update search results
         setSearchResults((prev) =>
           prev.map((user) =>
             user._id === userId
-              ? { ...user, isFollowing: response.data?.isFollowing }
+              ? { ...user, isFollowing: newFollowingState }
               : user
           )
         );
-        // Reload buddies if now following
-        if (response.data?.isFollowing) {
+        
+        // Update buddies list if user is in it
+        setBuddies((prev) =>
+          prev.map((user) =>
+            user._id === userId
+              ? { ...user, isFollowing: newFollowingState }
+              : user
+          )
+        );
+        
+        // Reload buddies if now following (to add to list)
+        if (newFollowingState) {
           loadBuddies();
+          // Navigate to conversation after following
+          router.push(`/conversation/${userId}`);
         }
+      } else {
+        console.error('Follow failed:', response.message);
       }
     } catch (error) {
       console.error('Error following user:', error);
@@ -338,6 +357,9 @@ export default function GroupsScreen() {
             <Avatar
               uri={item.avatar}
               name={item.displayName || item.username}
+              userId={item._id}
+              avatarCharacter={item.avatarCharacter}
+              avatarBackgroundColor={item.avatarBackgroundColor}
               size={48}
             />
           </Pressable>
@@ -363,13 +385,23 @@ export default function GroupsScreen() {
                 </Pressable>
               )}
               {!isInBuddiesList && (
-                <GlassButton
-                  title={isFollowing ? 'Following' : 'Follow'}
-                  onPress={() => handleFollowUser(item._id)}
-                  variant={isFollowing ? 'default' : 'primary'}
-                  size="sm"
-                  style={styles.followButton}
-                />
+                <>
+                  {isFollowing && (
+                    <Pressable
+                      style={styles.messageButton}
+                      onPress={() => handleMessageUser(item._id)}
+                    >
+                      <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                    </Pressable>
+                  )}
+                  <GlassButton
+                    title={isFollowing ? 'Following' : 'Follow'}
+                    onPress={() => handleFollowUser(item._id)}
+                    variant={isFollowing ? 'default' : 'primary'}
+                    size="sm"
+                    style={styles.followButton}
+                  />
+                </>
               )}
             </View>
           </View>

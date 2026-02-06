@@ -301,7 +301,7 @@ export default function CreatePostScreen() {
                   color={postType === 'post' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'post' && styles.postTypeTextActive]}>
-                  {language === 'nl' ? 'Post' : 'Post'}
+                  Post
                 </Text>
               </Pressable>
               <Pressable
@@ -314,7 +314,7 @@ export default function CreatePostScreen() {
                   color={postType === 'question' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'question' && styles.postTypeTextActive]}>
-                  {language === 'nl' ? 'Vraag' : 'Question'}
+                  Question
                 </Text>
               </Pressable>
               <Pressable
@@ -327,7 +327,7 @@ export default function CreatePostScreen() {
                   color={postType === 'story' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'story' && styles.postTypeTextActive]}>
-                  {language === 'nl' ? 'Verhaal' : 'Story'}
+                  Story
                 </Text>
               </Pressable>
             </View>

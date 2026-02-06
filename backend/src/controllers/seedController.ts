@@ -267,9 +267,26 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
     // Ensure database is connected
     await connectDB();
     
-    // Clear existing data
+    // Clear existing data (but preserve protected accounts)
     console.log('🗑️  Clearing existing data...');
-    await User.deleteMany({});
+    
+    // Preserve protected accounts (Apple review account, etc.)
+    const protectedUsers = await User.find({ isProtected: true });
+    const protectedEmails = protectedUsers.map(u => u.email);
+    
+    if (protectedUsers.length > 0) {
+      console.log(`  ✓ Preserving ${protectedUsers.length} protected account(s):`);
+      protectedUsers.forEach(user => {
+        console.log(`    - ${user.email} (${user.username})`);
+      });
+    }
+    
+    // Clear all data except protected accounts
+    if (protectedEmails.length > 0) {
+      await User.deleteMany({ email: { $nin: protectedEmails } });
+    } else {
+      await User.deleteMany({});
+    }
     await Post.deleteMany({});
     await Group.deleteMany({});
     await Comment.deleteMany({});
@@ -289,7 +306,20 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
       });
     }
     const insertedUsers = await User.insertMany(usersToInsert);
-    const createdUsers = insertedUsers;
+    const createdUsers = [...insertedUsers];
+    
+    // Add protected users to createdUsers array if they exist
+    if (protectedUsers.length > 0) {
+      protectedUsers.forEach(user => {
+        // Ensure displayName is set (required field)
+        if (!user.displayName) {
+          user.displayName = user.username || user.email || 'User';
+          user.save();
+        }
+        createdUsers.push(user as any);
+        console.log(`  ✓ Preserved protected user: ${user.username || user.email}`);
+      });
+    }
     
     // Create groups
     console.log('👥 Creating groups...');

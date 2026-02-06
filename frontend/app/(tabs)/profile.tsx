@@ -190,6 +190,9 @@ export default function ProfileScreen() {
               <Avatar
                 uri={user.avatar}
                 name={user.displayName || user.username}
+                userId={user._id}
+                avatarCharacter={user.avatarCharacter}
+                avatarBackgroundColor={user.avatarBackgroundColor}
                 size="xl"
               />
               <View style={styles.profileInfo}>
@@ -338,8 +341,8 @@ export default function ProfileScreen() {
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="bulb-outline"
-              title="Ideeën indienen"
-              subtitle="Deel je ideeën voor de app"
+              title="Submit Ideas"
+              subtitle="Share your ideas for the app"
               onPress={() => router.push('/ideas')}
             />
           </GlassCard>

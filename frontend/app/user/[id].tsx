@@ -145,7 +145,7 @@ export default function UserProfileScreen() {
         <View style={styles.emptyContainer}>
           <Ionicons name="person-outline" size={64} color={COLORS.textMuted} />
           <Text style={styles.emptyText}>
-            {language === 'nl' ? 'Gebruiker niet gevonden' : 'User not found'}
+            User not found
           </Text>
         </View>
       </LinearGradient>
@@ -185,6 +185,9 @@ export default function UserProfileScreen() {
             <Avatar
               uri={profile.avatar}
               name={profile.displayName || profile.username}
+              userId={profile._id}
+              avatarCharacter={profile.avatarCharacter}
+              avatarBackgroundColor={profile.avatarBackgroundColor}
               size="xl"
             />
             <View style={styles.profileInfo}>
@@ -197,7 +200,7 @@ export default function UserProfileScreen() {
             </View>
             {!isOwnProfile && isAuthenticated && (
               <GlassButton
-                title={isFollowing ? (language === 'nl' ? 'Ontvolgen' : 'Unfollow') : (language === 'nl' ? 'Volgen' : 'Follow')}
+                title={isFollowing ? 'Unfollow' : 'Follow'}
                 onPress={handleFollow}
                 variant={isFollowing ? 'outline' : 'primary'}
                 disabled={isTogglingFollow}
@@ -228,7 +231,7 @@ export default function UserProfileScreen() {
             >
               <Text style={styles.statNumber}>{profile.followersCount || 0}</Text>
               <Text style={styles.statLabel}>
-                {language === 'nl' ? 'Volgers' : 'Followers'}
+                Followers
               </Text>
             </Pressable>
             <Pressable
@@ -237,7 +240,7 @@ export default function UserProfileScreen() {
             >
               <Text style={styles.statNumber}>{profile.followingCount || 0}</Text>
               <Text style={styles.statLabel}>
-                {language === 'nl' ? 'Volgend' : 'Following'}
+                Following
               </Text>
             </Pressable>
           </View>
@@ -248,13 +251,13 @@ export default function UserProfileScreen() {
               <View style={styles.engagementItem}>
                 <Ionicons name="heart" size={16} color={COLORS.error} />
                 <Text style={styles.engagementText}>
-                  {profile.totalLikes || 0} {language === 'nl' ? 'likes ontvangen' : 'likes received'}
+                  {profile.totalLikes || 0} likes received
                 </Text>
               </View>
               <View style={styles.engagementItem}>
                 <Ionicons name="chatbubble" size={16} color={COLORS.primary} />
                 <Text style={styles.engagementText}>
-                  {profile.totalComments || 0} {language === 'nl' ? 'reacties ontvangen' : 'comments received'}
+                  {profile.totalComments || 0} comments received
                 </Text>
               </View>
             </View>
@@ -268,7 +271,7 @@ export default function UserProfileScreen() {
             <GlassCard style={styles.emptyPostsCard} padding="lg">
               <Ionicons name="document-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyPostsText}>
-                {language === 'nl' ? 'Geen posts' : 'No posts'}
+                No posts
               </Text>
             </GlassCard>
           ) : (

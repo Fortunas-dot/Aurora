@@ -80,6 +80,9 @@ export const CommentCard: React.FC<CommentCardProps> = ({
           <Avatar
             uri={comment.author.avatar}
             name={comment.author.displayName || comment.author.username}
+            userId={comment.author._id}
+            avatarCharacter={comment.author.avatarCharacter}
+            avatarBackgroundColor={comment.author.avatarBackgroundColor}
             size="sm"
           />
           <View style={styles.headerInfo}>

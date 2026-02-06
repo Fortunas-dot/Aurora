@@ -32,16 +32,16 @@ const CATEGORIES = [
 ];
 
 const STATUSES = [
-  { id: 'all', label: 'Alle' },
+  { id: 'all', label: 'All' },
   { id: 'open', label: 'Open' },
-  { id: 'in-progress', label: 'In behandeling' },
-  { id: 'completed', label: 'Voltooid' },
-  { id: 'rejected', label: 'Afgewezen' },
+  { id: 'in-progress', label: 'In Progress' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'rejected', label: 'Rejected' },
 ];
 
 const SORT_OPTIONS = [
-  { id: 'recent', label: 'Meest recent' },
-  { id: 'popular', label: 'Meest populair' },
+  { id: 'recent', label: 'Most Recent' },
+  { id: 'popular', label: 'Most Popular' },
   { id: 'trending', label: 'Trending' },
 ];
 
@@ -153,12 +153,12 @@ export default function IdeasScreen() {
         setDescription('');
         setCategory('feature');
         handleRefresh();
-        Alert.alert('Succes', 'Je idee is ingediend!');
+        Alert.alert('Success', 'Your idea has been submitted!');
       } else {
-        Alert.alert('Fout', response.message || 'Kon idee niet indienen');
+        Alert.alert('Error', response.message || 'Could not submit idea');
       }
     } catch (error) {
-      Alert.alert('Fout', 'Er ging iets mis');
+      Alert.alert('Error', 'Something went wrong');
     } finally {
       setIsSubmitting(false);
     }
@@ -237,6 +237,9 @@ export default function IdeasScreen() {
           <Avatar
             uri={item.author.avatar}
             name={item.author.displayName || item.author.username}
+            userId={item.author._id}
+            avatarCharacter={item.author.avatarCharacter}
+            avatarBackgroundColor={item.author.avatarBackgroundColor}
             size={32}
           />
           <View style={styles.ideaAuthorInfo}>
@@ -311,7 +314,7 @@ export default function IdeasScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Ideeën</Text>
+        <Text style={styles.headerTitle}>Ideas</Text>
         <Pressable
           style={styles.headerButton}
           onPress={() => {
@@ -418,10 +421,10 @@ export default function IdeasScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="bulb-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Nog geen ideeën</Text>
+              <Text style={styles.emptyText}>No ideas yet</Text>
               {isAuthenticated && (
                 <GlassButton
-                  title="Dien een idee in"
+                  title="Submit an idea"
                   onPress={() => setShowCreateModal(true)}
                   variant="primary"
                   style={styles.emptyButton}
@@ -444,7 +447,7 @@ export default function IdeasScreen() {
           />
           <GlassCard style={styles.modalContent} padding="lg">
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nieuw idee indienen</Text>
+              <Text style={styles.modalTitle}>Submit New Idea</Text>
               <Pressable onPress={() => setShowCreateModal(false)}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </Pressable>
@@ -452,11 +455,11 @@ export default function IdeasScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Titel *</Text>
+                <Text style={styles.label}>Title *</Text>
                 <GlassInput
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="Bijv. Dark mode toevoegen"
+                  placeholder="E.g. Add dark mode"
                   style={styles.input}
                   maxLength={200}
                 />
@@ -467,7 +470,7 @@ export default function IdeasScreen() {
                 <GlassInput
                   value={description}
                   onChangeText={setDescription}
-                  placeholder="Beschrijf je idee in detail..."
+                  placeholder="Describe your idea in detail..."
                   multiline
                   numberOfLines={6}
                   style={styles.input}
@@ -477,7 +480,7 @@ export default function IdeasScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Categorie</Text>
+                <Text style={styles.label}>Category</Text>
                 <View style={styles.categoryGrid}>
                   {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
                     <Pressable
@@ -502,7 +505,7 @@ export default function IdeasScreen() {
               </View>
 
               <GlassButton
-                title="Indienen"
+                title="Submit"
                 onPress={handleCreateIdea}
                 variant="primary"
                 disabled={!title.trim() || !description.trim() || isSubmitting}

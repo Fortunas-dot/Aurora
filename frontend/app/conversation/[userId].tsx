@@ -11,6 +11,9 @@ import {
   Pressable,
   Alert,
   Dimensions,
+  ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +31,108 @@ import { messageService, Message } from '../../src/services/message.service';
 import { uploadService } from '../../src/services/upload.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
+import { userService, UserProfile } from '../../src/services/user.service';
+
+// Animated star component for background
+const AnimatedStar = ({ index }: { index: number }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const initialX = Math.random() * 100;
+  const initialY = Math.random() * 100;
+  const speed = 20 + Math.random() * 30;
+  const direction = Math.random() * Math.PI * 2;
+  const distance = 30 + Math.random() * 50;
+
+  useEffect(() => {
+    const duration = 3000 + Math.random() * 4000;
+
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.cos(direction) * distance,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: Math.sin(direction) * distance,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(opacity, {
+              toValue: 0.1,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0.3 + Math.random() * 0.4,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 0.5,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.star,
+        {
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+    />
+  );
+};
 
 export default function ConversationScreen() {
   const router = useRouter();
@@ -40,7 +145,7 @@ export default function ConversationScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [otherUser, setOtherUser] = useState<Message['sender'] | null>(null);
+  const [otherUser, setOtherUser] = useState<Message['sender'] | UserProfile | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
@@ -56,6 +161,25 @@ export default function ConversationScreen() {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const loadOtherUser = useCallback(async () => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const response = await userService.getUserProfile(userId);
+      if (response.success && response.data) {
+        // Convert UserProfile to Message sender format
+        setOtherUser({
+          _id: response.data._id,
+          username: response.data.username,
+          displayName: response.data.displayName,
+          avatar: response.data.avatar,
+        } as Message['sender']);
+      }
+    } catch (error) {
+      console.error('Error loading other user:', error);
+    }
+  }, [userId, isAuthenticated]);
+
   const loadMessages = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!userId || !isAuthenticated) return;
 
@@ -68,8 +192,8 @@ export default function ConversationScreen() {
           setMessages((prev) => [...response.data!, ...prev]);
         } else {
           setMessages(response.data);
-          // Set other user from first message
-          if (response.data.length > 0) {
+          // Set other user from first message if available, otherwise keep existing
+          if (response.data.length > 0 && !otherUser) {
             const firstMessage = response.data[0];
             setOtherUser(
               firstMessage.sender._id === currentUser?._id
@@ -95,7 +219,11 @@ export default function ConversationScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, isAuthenticated, currentUser]);
+  }, [userId, isAuthenticated, currentUser, otherUser]);
+
+  useEffect(() => {
+    loadOtherUser();
+  }, [loadOtherUser]);
 
   useEffect(() => {
     loadMessages(1, false);
@@ -129,14 +257,30 @@ export default function ConversationScreen() {
         }
       },
       onMessageSent: (message) => {
-        // Update message in list if it exists (optimistic update)
+        // Only add message if it doesn't already exist (check by _id and content/timestamp)
         setMessages((prev) => {
-          const index = prev.findIndex((m) => m._id === message._id);
-          if (index !== -1) {
-            const updated = [...prev];
-            updated[index] = message;
-            return updated;
+          // Check if message already exists by _id
+          if (prev.some((m) => m._id === message._id)) {
+            return prev;
           }
+          
+          // Check if it's a duplicate by content and sender (within last 2 seconds)
+          const now = new Date().getTime();
+          const messageTime = new Date(message.createdAt).getTime();
+          const isDuplicate = prev.some((m) => {
+            const mTime = new Date(m.createdAt).getTime();
+            return (
+              m.sender._id === message.sender._id &&
+              m.content === message.content &&
+              Math.abs(now - mTime) < 2000 &&
+              Math.abs(messageTime - mTime) < 2000
+            );
+          });
+          
+          if (isDuplicate) {
+            return prev;
+          }
+          
           return [...prev, message];
         });
         
@@ -195,7 +339,7 @@ export default function ConversationScreen() {
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Toestemming nodig', 'We hebben toegang nodig tot je foto\'s');
+      Alert.alert('Permission needed', 'We need access to your photos');
       return;
     }
 
@@ -213,7 +357,7 @@ export default function ConversationScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fout', 'Kon afbeelding niet selecteren');
+      Alert.alert('Error', 'Could not select image');
     }
   };
 
@@ -267,7 +411,7 @@ export default function ConversationScreen() {
       }
     } catch (error) {
       console.error('Error uploading voice message:', error);
-      Alert.alert('Fout', 'Kon spraakbericht niet verzenden');
+      Alert.alert('Error', 'Could not send voice message');
     } finally {
       setIsUploading(false);
     }
@@ -299,7 +443,7 @@ export default function ConversationScreen() {
         attachments = uploadedAttachments.filter((a) => a !== null) as Array<{ type: 'image'; url: string }>;
       } catch (error) {
         console.error('Error uploading images:', error);
-        Alert.alert('Fout', 'Kon afbeeldingen niet uploaden');
+        Alert.alert('Error', 'Could not upload images');
         setIsSending(false);
         setIsUploading(false);
         return;
@@ -309,33 +453,33 @@ export default function ConversationScreen() {
     const messageContent = messageText.trim();
     setMessageText('');
     setSelectedImages([]);
-    
-    // Optimistic update - add message immediately
-    const tempMessage: Message = {
-      _id: `temp-${Date.now()}`,
-      sender: currentUser!,
-      receiver: otherUser!,
-      content: messageContent,
-      attachments: attachments.length > 0 ? attachments : undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    setMessages((prev) => [...prev, tempMessage]);
-    
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
 
     setIsUploading(false);
     
     // Send via WebSocket (preferred) or fallback to REST API
     if (chatWebSocketService.isConnected()) {
+      // No optimistic update for WebSocket - it's fast enough and will trigger onMessageSent
       chatWebSocketService.sendMessage(userId, messageContent, attachments);
       setIsSending(false);
     } else {
-      // Fallback to REST API
+      // Fallback to REST API - use optimistic update here
+      const tempMessage: Message = {
+        _id: `temp-${Date.now()}`,
+        sender: currentUser!,
+        receiver: otherUser!,
+        content: messageContent,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      setMessages((prev) => [...prev, tempMessage]);
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+      
       try {
         const response = await messageService.sendMessage(userId, messageContent, attachments);
         
@@ -434,6 +578,9 @@ export default function ConversationScreen() {
           <Avatar
             uri={item.sender.avatar}
             name={item.sender.displayName || item.sender.username}
+            userId={item.sender._id}
+            avatarCharacter={item.sender.avatarCharacter}
+            avatarBackgroundColor={item.sender.avatarBackgroundColor}
             size="sm"
             style={styles.messageAvatar}
           />
@@ -533,10 +680,17 @@ export default function ConversationScreen() {
 
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+      {/* Star field effect */}
+      <View style={[styles.starField, { pointerEvents: 'none' }]}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <AnimatedStar key={i} index={i} />
+        ))}
+      </View>
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={insets.top}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
@@ -551,6 +705,9 @@ export default function ConversationScreen() {
               <Avatar
                 uri={otherUser.avatar}
                 name={otherUser.displayName || otherUser.username}
+                userId={otherUser._id}
+                avatarCharacter={otherUser.avatarCharacter}
+                avatarBackgroundColor={otherUser.avatarBackgroundColor}
                 size="sm"
               />
               <View style={styles.headerUserInfo}>
@@ -558,7 +715,7 @@ export default function ConversationScreen() {
                   {otherUser.displayName || otherUser.username}
                 </Text>
                 <Text style={[styles.headerUserStatus, isOnline && styles.headerUserStatusOnline]}>
-                  {isTyping ? 'typt...' : isOnline ? 'Online' : 'Offline'}
+                  {isTyping ? 'typing...' : isOnline ? 'Online' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -574,6 +731,8 @@ export default function ConversationScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -597,7 +756,7 @@ export default function ConversationScreen() {
         {isTyping && (
           <View style={styles.typingIndicator}>
             <Text style={styles.typingText}>
-              {otherUser?.displayName || otherUser?.username} is aan het typen...
+              {otherUser?.displayName || otherUser?.username} is typing...
             </Text>
           </View>
         )}
@@ -631,57 +790,82 @@ export default function ConversationScreen() {
 
         {/* Input */}
         {!showVoiceRecorder && (
-          <View style={styles.inputContainer}>
-            <Pressable
-              style={styles.attachButton}
-              onPress={handlePickImage}
-              disabled={isSending || isUploading}
-            >
-              <Ionicons
-                name="image-outline"
-                size={22}
-                color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
-              />
-            </Pressable>
-            <Pressable
-              style={styles.attachButton}
-              onPress={() => setShowVoiceRecorder(true)}
-              disabled={isSending || isUploading}
-            >
-              <Ionicons
-                name="mic-outline"
-                size={22}
-                color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
-              />
-            </Pressable>
-          <GlassInput
-            value={messageText}
-            onChangeText={handleTextChange}
-            placeholder="Typ een bericht..."
-            multiline
-            style={styles.messageInput}
-            inputStyle={styles.messageInputText}
-            maxLength={2000}
-            onSubmitEditing={handleSendMessage}
-          />
-          <Pressable
-            style={[
-              styles.sendButton,
-              ((!messageText.trim() && selectedImages.length === 0) || isSending || isUploading) && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={(!messageText.trim() && selectedImages.length === 0) || isSending || isUploading}
-          >
-            {isSending || isUploading ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <Ionicons
-                name="send"
-                size={20}
-                color={(messageText.trim() || selectedImages.length > 0) ? COLORS.primary : COLORS.textMuted}
-              />
-            )}
-          </Pressable>
+          <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom + SPACING.xs : SPACING.sm }]}>
+            <View style={styles.inputRow}>
+              <View style={[
+                styles.inputWrapper,
+                (messageText.includes('\n') || messageText.length > 40) && styles.inputWrapperMultiline
+              ]}>
+                <View style={[
+                  styles.inputFieldContainer,
+                  (messageText.includes('\n') || messageText.length > 40) && styles.inputFieldContainerMultiline
+                ]}>
+                  <GlassInput
+                    value={messageText}
+                    onChangeText={handleTextChange}
+                    placeholder="Type a message..."
+                    multiline={messageText.includes('\n') || messageText.length > 40}
+                    style={styles.messageInput}
+                    inputStyle={[
+                      !messageText.includes('\n') && messageText.length <= 40
+                        ? styles.messageInputTextCentered
+                        : styles.messageInputTextMultiline,
+                      messageText.length > 0 && !messageText.includes('\n') && messageText.length <= 40 && { paddingRight: 60 },
+                      messageText.length > 0 && (messageText.includes('\n') || messageText.length > 40) && { paddingBottom: 20, paddingRight: 60 },
+                    ]}
+                    maxLength={2000}
+                    onSubmitEditing={handleSendMessage}
+                  />
+                  {messageText.length > 0 && (messageText.includes('\n') || messageText.length > 40) && (
+                    <View style={styles.charCountContainer}>
+                      <Text style={styles.charCount}>
+                        {messageText.length}/2000
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <Pressable
+                style={styles.attachButton}
+                onPress={handlePickImage}
+                disabled={isSending || isUploading}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={22}
+                  color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
+                />
+              </Pressable>
+              <Pressable
+                style={styles.attachButton}
+                onPress={() => setShowVoiceRecorder(true)}
+                disabled={isSending || isUploading}
+              >
+                <Ionicons
+                  name="mic-outline"
+                  size={22}
+                  color={isSending || isUploading ? COLORS.textMuted : COLORS.primary}
+                />
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.sendButton,
+                  ((!messageText.trim() && selectedImages.length === 0) || isSending || isUploading) && styles.sendButtonDisabled,
+                ]}
+                onPress={handleSendMessage}
+                disabled={(!messageText.trim() && selectedImages.length === 0) || isSending || isUploading}
+              >
+                {isSending || isUploading ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <Ionicons
+                    name="send"
+                    size={20}
+                    color={(messageText.trim() || selectedImages.length > 0) ? COLORS.primary : COLORS.textMuted}
+                  />
+                )}
+              </Pressable>
+            </View>
           </View>
         )}
 
@@ -758,7 +942,7 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     padding: SPACING.md,
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -807,24 +991,70 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   inputContainer: {
-    flexDirection: 'row',
-    padding: SPACING.md,
-    paddingBottom: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.glass.border,
     backgroundColor: COLORS.background,
-    alignItems: 'flex-end',
+    paddingTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
+    minHeight: 40,
+  },
+  inputWrapper: {
+    flex: 1,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  inputWrapperMultiline: {
+    justifyContent: 'flex-start',
+  },
+  inputFieldContainer: {
+    position: 'relative',
+    minHeight: 40,
+  },
+  inputFieldContainerMultiline: {
+    minHeight: 'auto',
   },
   messageInput: {
     flex: 1,
+    minHeight: 40,
     maxHeight: 100,
   },
-  messageInputText: {
+  messageInputTextMultiline: {
+    minHeight: 40,
     maxHeight: 100,
     textAlignVertical: 'top',
     ...TYPOGRAPHY.body,
     color: COLORS.text,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.sm,
+    paddingRight: SPACING.md,
+  },
+  messageInputTextCentered: {
+    height: 40,
+    textAlignVertical: 'center',
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingRight: SPACING.md,
+    paddingLeft: SPACING.md,
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 20 : 20,
+  },
+  charCountContainer: {
+    position: 'absolute',
+    bottom: 6,
+    right: SPACING.md,
+    backgroundColor: 'transparent',
+  },
+  charCount: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 10,
   },
   sendButton: {
     width: 40,
@@ -835,6 +1065,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
+    alignSelf: 'center',
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -913,7 +1145,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    flexShrink: 0,
+    alignSelf: 'center',
   },
   reactionsContainer: {
     flexDirection: 'row',
@@ -990,6 +1223,21 @@ const styles = StyleSheet.create({
   searchResultTime: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  starField: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: COLORS.text,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  Animated,
+  Easing,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +21,108 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { messageService, Conversation } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
+import { Badge } from '../../src/components/common';
+
+// Animated star component for background
+const AnimatedStar = ({ index }: { index: number }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const initialX = Math.random() * 100;
+  const initialY = Math.random() * 100;
+  const speed = 20 + Math.random() * 30;
+  const direction = Math.random() * Math.PI * 2;
+  const distance = 30 + Math.random() * 50;
+
+  useEffect(() => {
+    const duration = 3000 + Math.random() * 4000;
+
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.cos(direction) * distance,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: Math.sin(direction) * distance,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(opacity, {
+              toValue: 0.1,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0.3 + Math.random() * 0.4,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 0.5,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.star,
+        {
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+    />
+  );
+};
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -55,6 +159,15 @@ export default function ChatScreen() {
     loadConversations();
   }, [loadConversations]);
 
+  // Reload conversations when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        loadConversations();
+      }
+    }, [isAuthenticated, loadConversations])
+  );
+
   // Setup WebSocket connection for real-time conversation updates
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -62,6 +175,10 @@ export default function ChatScreen() {
     chatWebSocketService.connect({
       onNewMessage: (message) => {
         // Reload conversations to update unread counts and last messages
+        loadConversations();
+      },
+      onMessageSent: (message) => {
+        // When you send a message, update the conversation list
         loadConversations();
       },
       onConversationUpdated: (conversation) => {
@@ -73,6 +190,8 @@ export default function ChatScreen() {
             updated[index] = {
               ...updated[index],
               lastMessage: conversation.lastMessage,
+              // Update unreadCount if provided in conversation
+              unreadCount: conversation.unreadCount !== undefined ? conversation.unreadCount : updated[index].unreadCount,
             };
             // Move to top
             const [moved] = updated.splice(index, 1);
@@ -134,6 +253,9 @@ export default function ChatScreen() {
           <Avatar
             uri={item.user.avatar}
             name={item.user.displayName || item.user.username}
+            userId={item.user._id}
+            avatarCharacter={item.user.avatarCharacter}
+            avatarBackgroundColor={item.user.avatarBackgroundColor}
             size="lg"
           />
           
@@ -177,20 +299,20 @@ export default function ChatScreen() {
         style={styles.container}
       >
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Berichten</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
         </View>
         
         <View style={styles.authPrompt}>
           <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in om te chatten</Text>
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in to chat</Text>
           <Text style={[styles.authPromptText, { color: colors.textSecondary }]}>
-            Maak verbinding met andere community leden
+            Connect with other community members
           </Text>
           <Pressable
             style={[styles.authButton, { backgroundColor: colors.primaryGlow, borderColor: colors.primary }]}
             onPress={() => router.push('/(auth)/login')}
           >
-            <Text style={[styles.authButtonText, { color: colors.primary }]}>Inloggen</Text>
+            <Text style={[styles.authButtonText, { color: colors.primary }]}>Login</Text>
           </Pressable>
         </View>
       </LinearGradient>
@@ -202,6 +324,13 @@ export default function ChatScreen() {
       colors={colors.backgroundGradient}
       style={styles.container}
     >
+      {/* Star field effect */}
+      <View style={[styles.starField, { pointerEvents: 'none' }]}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <AnimatedStar key={i} index={i} />
+        ))}
+      </View>
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Berichten</Text>
@@ -215,7 +344,7 @@ export default function ChatScreen() {
         <GlassInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Zoek gesprekken..."
+          placeholder="Search conversations..."
           icon="search"
           style={styles.searchInput}
         />
@@ -243,15 +372,15 @@ export default function ChatScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={48} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Geen gesprekken</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No conversations</Text>
               <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                Start een gesprek met iemand uit de community
+                Start a conversation with someone from the community
               </Text>
               <Pressable
                 style={[styles.startChatButton, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}
                 onPress={handleCreateNewChat}
               >
-                <Text style={[styles.startChatButtonText, { color: colors.primary }]}>Nieuw gesprek starten</Text>
+                <Text style={[styles.startChatButtonText, { color: colors.primary }]}>Start new conversation</Text>
               </Pressable>
             </View>
           )
@@ -415,6 +544,21 @@ const styles = StyleSheet.create({
   authButtonText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
+  },
+  starField: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: COLORS.text,
   },
 });
 
