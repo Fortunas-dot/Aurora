@@ -367,6 +367,9 @@ async function seedDatabase() {
     } else {
       await User.deleteMany({});
     }
+    // Update all existing groups to remove avatars (in case there are groups not created via seed)
+    await Group.updateMany({ avatar: { $ne: null } }, { avatar: null });
+    
     await Post.deleteMany({});
     await Group.deleteMany({});
     await Comment.deleteMany({});

@@ -138,36 +138,42 @@ const sampleGroups = [
     description: 'A safe space for people dealing with depression. Share your experiences, tips and support each other.',
     tags: ['depression', 'support', 'mental-health'],
     isPrivate: false,
+    avatar: null,
   },
   {
     name: 'Anxiety & Panic',
     description: 'For everyone struggling with anxiety and panic attacks. Together we are stronger.',
     tags: ['anxiety', 'panic', 'support'],
     isPrivate: false,
+    avatar: null,
   },
   {
     name: 'Self-Care & Mindfulness',
     description: 'Tips, tricks and inspiration for self-care and mindfulness. Take time for yourself.',
     tags: ['self-care', 'mindfulness', 'wellness'],
     isPrivate: false,
+    avatar: null,
   },
   {
     name: 'Bipolar Support',
     description: 'A community for people with bipolar disorder. Share experiences and support each other.',
     tags: ['bipolar', 'support', 'mental-health'],
     isPrivate: true,
+    avatar: null,
   },
   {
     name: 'ADHD Community',
     description: 'For people with ADHD. Tips, strategies and understanding from like-minded people.',
     tags: ['adhd', 'neurodiversity', 'support'],
     isPrivate: false,
+    avatar: null,
   },
   {
     name: 'Trauma Healing',
     description: 'A safe space for trauma healing and recovery. Professional guidance and peer support.',
     tags: ['trauma', 'healing', 'ptsd'],
     isPrivate: true,
+    avatar: null,
   },
 ];
 
@@ -287,6 +293,9 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
     } else {
       await User.deleteMany({});
     }
+    // Update all existing groups to remove avatars (in case there are groups not created via seed)
+    await Group.updateMany({ avatar: { $ne: null } }, { avatar: null });
+    
     await Post.deleteMany({});
     await Group.deleteMany({});
     await Comment.deleteMany({});
@@ -333,6 +342,7 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
         ...groupData,
         admins: [admin._id],
         members: members.map(u => u._id),
+        avatar: null, // Explicitly set to null - no person photos
       });
       createdGroups.push(group);
     }
