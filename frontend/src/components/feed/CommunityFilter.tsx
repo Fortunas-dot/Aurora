@@ -28,6 +28,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
 }) => {
   const [communities, setCommunities] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadCommunities = useCallback(async () => {
     setIsLoading(true);
@@ -37,11 +38,15 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
         // Filter to show only groups where user is a member
         const userCommunities = response.data.filter((group) => group.isMember);
         setCommunities(userCommunities);
+      } else {
+        setCommunities([]);
       }
     } catch (error) {
       console.error('Error loading communities:', error);
+      setCommunities([]);
     } finally {
       setIsLoading(false);
+      setHasLoaded(true);
     }
   }, []);
 
@@ -50,6 +55,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
       loadCommunities();
     } else {
       setCommunities([]);
+      setHasLoaded(false);
     }
   }, [isAuthenticated, loadCommunities]);
 
@@ -140,8 +146,8 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           );
         })}
 
-        {/* Empty State */}
-        {!isLoading && communities.length === 0 && (
+        {/* Empty State - Only show after loading is complete */}
+        {hasLoaded && !isLoading && communities.length === 0 && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>
