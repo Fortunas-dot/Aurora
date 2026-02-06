@@ -213,19 +213,27 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
   const glowOpacity = useRef(new Animated.Value(0.6)).current;
   const glowScale = useRef(new Animated.Value(1)).current;
   
+  // Organic movement animations for tab bar
+  const isSmall = size && size < 100;
+  const rotateZ = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const innerRotate = useRef(new Animated.Value(0)).current;
+  
   useEffect(() => {
+    // Breathing/pulsing glow animation
     Animated.loop(
       Animated.sequence([
         Animated.parallel([
           Animated.timing(glowOpacity, {
             toValue: 0.8,
-            duration: 3000,
+            duration: isSmall ? 2500 : 3000,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
             useNativeDriver: true,
           }),
           Animated.timing(glowScale, {
             toValue: 1.1,
-            duration: 3000,
+            duration: isSmall ? 2500 : 3000,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
             useNativeDriver: true,
           }),
@@ -233,20 +241,91 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
         Animated.parallel([
           Animated.timing(glowOpacity, {
             toValue: 0.4,
-            duration: 3000,
+            duration: isSmall ? 2500 : 3000,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
             useNativeDriver: true,
           }),
           Animated.timing(glowScale, {
             toValue: 0.95,
-            duration: 3000,
+            duration: isSmall ? 2500 : 3000,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
             useNativeDriver: true,
           }),
         ]),
       ])
     ).start();
-  }, []);
+    
+    // Organic floating movement (only for small sizes like tab bar)
+    if (isSmall) {
+      // Gentle vertical floating
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateY, {
+            toValue: -2,
+            duration: 2000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: 2,
+            duration: 2000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: 2000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+      
+      // Subtle horizontal drift
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateX, {
+            toValue: 1.5,
+            duration: 3000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateX, {
+            toValue: -1.5,
+            duration: 3000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateX, {
+            toValue: 0,
+            duration: 3000,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+      
+      // Slow continuous rotation
+      Animated.loop(
+        Animated.timing(rotateZ, {
+          toValue: 1,
+          duration: 8000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+      
+      // Inner gradient rotation (counter-rotation for depth)
+      Animated.loop(
+        Animated.timing(innerRotate, {
+          toValue: 1,
+          duration: 12000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [isSmall]);
   
   useEffect(() => {
     if (state === 'speaking' || state === 'listening') {
@@ -269,6 +348,21 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
     )), [state, audioLevel, numParticles, CORE_SIZE]
   );
 
+  const rotation = rotateZ.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+  
+  const innerRotation = innerRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '-360deg'],
+  });
+  
+  const innerHighlightRotation = innerRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
   return (
       <Animated.View
         style={[
@@ -278,7 +372,10 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             justifyContent: 'center',
             alignItems: 'center',
             transform: [
-            { scale: Animated.multiply(containerScale, pulseScale) },
+              { scale: Animated.multiply(containerScale, pulseScale) },
+              { translateY: isSmall ? translateY : 0 },
+              { translateX: isSmall ? translateX : 0 },
+              { rotateZ: isSmall ? rotation : '0deg' },
             ],
           },
         ]}
@@ -343,7 +440,10 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             width: sphereSize,
             height: sphereSize,
             borderRadius: sphereSize / 2,
-            transform: [{ scale: pulseScale }],
+            transform: [
+              { scale: pulseScale },
+              { rotateZ: isSmall ? innerRotation : '0deg' },
+            ],
             opacity: state === 'speaking' ? 1 : state === 'listening' ? 0.95 : 0.9,
           },
         ]}
@@ -385,7 +485,10 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             width: sphereSize * 0.4,
             height: sphereSize * 0.4,
             borderRadius: (sphereSize * 0.4) / 2,
-            transform: [{ scale: pulseScale }],
+            transform: [
+              { scale: pulseScale },
+              { rotateZ: isSmall ? innerHighlightRotation : '0deg' },
+            ],
             opacity: state === 'speaking' ? 0.9 : state === 'listening' ? 0.7 : 0.6,
           },
         ]}

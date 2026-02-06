@@ -219,12 +219,12 @@ class JournalService {
   }
 
   // Get insights and patterns
-  async getInsights(days: number = 30, journalId?: string): Promise<ApiResponse<JournalInsights>> {
+  async getInsights(days: number = 30, journalId?: string, signal?: AbortSignal): Promise<ApiResponse<JournalInsights>> {
     let endpoint = `/journal/insights?days=${days}`;
     if (journalId) {
       endpoint += `&journalId=${journalId}`;
     }
-    return apiService.get<JournalInsights>(endpoint);
+    return apiService.get<JournalInsights>(endpoint, { signal });
   }
 
   // Get personalized prompt

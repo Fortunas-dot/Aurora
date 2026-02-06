@@ -39,16 +39,18 @@ export interface GetPostsParams {
   groupId?: string;
   postType?: PostType;
   sortBy?: SortOption;
+  publicOnly?: boolean;
 }
 
 class PostService {
   async getPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
-    const { page = 1, limit = 20, tag, groupId, postType, sortBy } = params;
+    const { page = 1, limit = 20, tag, groupId, postType, sortBy, publicOnly } = params;
     let endpoint = `/posts?page=${page}&limit=${limit}`;
     if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
     if (groupId) endpoint += `&groupId=${groupId}`;
     if (postType) endpoint += `&postType=${postType}`;
     if (sortBy) endpoint += `&sortBy=${sortBy}`;
+    if (publicOnly) endpoint += `&publicOnly=true`;
     
     return apiService.get<Post[]>(endpoint);
   }

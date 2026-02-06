@@ -18,12 +18,14 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { userService, UserProfile } from '../../src/services/user.service';
 import { postService, Post } from '../../src/services/post.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
 
 export default function UserProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user: currentUser, isAuthenticated } = useAuthStore();
+  const { language } = useSettingsStore();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -92,10 +94,18 @@ export default function UserProfileScreen() {
     setIsTogglingFollow(true);
     try {
       const response = await userService.followUser(id);
-      if (response.success && response.data) {
-        setIsFollowing(response.data.isFollowing);
+      if (response.success) {
+        // Update following state - response.data might be undefined, so toggle it
+        if (response.data?.isFollowing !== undefined) {
+          setIsFollowing(response.data.isFollowing);
+        } else {
+          // If response doesn't have isFollowing, toggle it
+          setIsFollowing(prev => !prev);
+        }
         // Reload profile to update counts
         await loadProfile();
+      } else {
+        console.error('Follow failed:', response.message);
       }
     } catch (error) {
       console.error('Error toggling follow:', error);
@@ -134,7 +144,9 @@ export default function UserProfileScreen() {
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="person-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>Gebruiker niet gevonden</Text>
+          <Text style={styles.emptyText}>
+            {language === 'nl' ? 'Gebruiker niet gevonden' : 'User not found'}
+          </Text>
         </View>
       </LinearGradient>
     );
@@ -185,7 +197,7 @@ export default function UserProfileScreen() {
             </View>
             {!isOwnProfile && isAuthenticated && (
               <GlassButton
-                title={isFollowing ? 'Ontvolgen' : 'Volgen'}
+                title={isFollowing ? (language === 'nl' ? 'Ontvolgen' : 'Unfollow') : (language === 'nl' ? 'Volgen' : 'Follow')}
                 onPress={handleFollow}
                 variant={isFollowing ? 'outline' : 'primary'}
                 disabled={isTogglingFollow}
@@ -215,14 +227,18 @@ export default function UserProfileScreen() {
               onPress={() => router.push(`/user/${id}/followers`)}
             >
               <Text style={styles.statNumber}>{profile.followersCount || 0}</Text>
-              <Text style={styles.statLabel}>Volgers</Text>
+              <Text style={styles.statLabel}>
+                {language === 'nl' ? 'Volgers' : 'Followers'}
+              </Text>
             </Pressable>
             <Pressable
               style={styles.statItem}
               onPress={() => router.push(`/user/${id}/following`)}
             >
               <Text style={styles.statNumber}>{profile.followingCount || 0}</Text>
-              <Text style={styles.statLabel}>Volgend</Text>
+              <Text style={styles.statLabel}>
+                {language === 'nl' ? 'Volgend' : 'Following'}
+              </Text>
             </Pressable>
           </View>
 
@@ -232,13 +248,13 @@ export default function UserProfileScreen() {
               <View style={styles.engagementItem}>
                 <Ionicons name="heart" size={16} color={COLORS.error} />
                 <Text style={styles.engagementText}>
-                  {profile.totalLikes || 0} likes ontvangen
+                  {profile.totalLikes || 0} {language === 'nl' ? 'likes ontvangen' : 'likes received'}
                 </Text>
               </View>
               <View style={styles.engagementItem}>
                 <Ionicons name="chatbubble" size={16} color={COLORS.primary} />
                 <Text style={styles.engagementText}>
-                  {profile.totalComments || 0} reacties ontvangen
+                  {profile.totalComments || 0} {language === 'nl' ? 'reacties ontvangen' : 'comments received'}
                 </Text>
               </View>
             </View>
@@ -251,7 +267,9 @@ export default function UserProfileScreen() {
           {posts.length === 0 ? (
             <GlassCard style={styles.emptyPostsCard} padding="lg">
               <Ionicons name="document-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyPostsText}>Geen posts</Text>
+              <Text style={styles.emptyPostsText}>
+                {language === 'nl' ? 'Geen posts' : 'No posts'}
+              </Text>
             </GlassCard>
           ) : (
             <FlatList

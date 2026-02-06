@@ -15,12 +15,14 @@ import { GlassCard, Avatar, LoadingSpinner } from '../../../src/components/commo
 import { COLORS, SPACING, TYPOGRAPHY } from '../../../src/constants/theme';
 import { userService, UserProfile } from '../../../src/services/user.service';
 import { useAuthStore } from '../../../src/store/authStore';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 export default function FollowersScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useAuthStore();
+  const { language } = useSettingsStore();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,7 +108,9 @@ export default function FollowersScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Volgers</Text>
+        <Text style={styles.headerTitle}>
+          {language === 'nl' ? 'Volgers' : 'Followers'}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -141,7 +145,9 @@ export default function FollowersScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Geen volgers</Text>
+              <Text style={styles.emptyText}>
+                {language === 'nl' ? 'Geen volgers' : 'No followers'}
+              </Text>
             </View>
           }
         />

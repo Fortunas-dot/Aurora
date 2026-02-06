@@ -149,6 +149,7 @@ export default function FeedScreen() {
   const [activeTab, setActiveTab] = useState<FeedTab>('all');
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [showAllPublicPosts, setShowAllPublicPosts] = useState(false);
   
   // Search state
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -240,9 +241,10 @@ export default function FeedScreen() {
         response = await postService.getPosts({
           page: pageNum,
           limit: 20,
-          groupId,
+          groupId: showAllPublicPosts ? undefined : groupId, // Don't filter by specific group if showing all public posts
           postType,
           sortBy: sortOption,
+          publicOnly: showAllPublicPosts, // Only show posts from public communities
         });
       }
       
@@ -287,14 +289,14 @@ export default function FeedScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated]);
+  }, [isLoading, activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated, showAllPublicPosts]);
 
   // Reload posts when filters change
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     loadPosts(1, false);
-  }, [activeTab, selectedCommunity, sortOption, isSearching]);
+  }, [activeTab, selectedCommunity, sortOption, isSearching, showAllPublicPosts]);
 
   // Update unread count on mount and focus
   useEffect(() => {
@@ -345,6 +347,10 @@ export default function FeedScreen() {
 
   const handleCommunityChange = (communityId: string | null) => {
     setSelectedCommunity(communityId);
+    // Reset showAllPublicPosts when a specific community is selected
+    if (communityId) {
+      setShowAllPublicPosts(false);
+    }
   };
 
   const handleSortChange = (sort: SortOption) => {
@@ -502,6 +508,8 @@ export default function FeedScreen() {
           selectedCommunity={selectedCommunity}
           onCommunityChange={handleCommunityChange}
           isAuthenticated={isAuthenticated}
+          showAllPublicPosts={showAllPublicPosts}
+          onShowAllPublicPostsChange={setShowAllPublicPosts}
         />
         <View style={styles.sortContainer}>
           <SortDropdown
@@ -720,6 +728,39 @@ export default function FeedScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </Pressable>
+
+            {/* All Public Posts Option */}
+            <Pressable
+              style={[
+                styles.modalAllCommunitiesItem,
+                showAllPublicPosts && { backgroundColor: colors.glass.background }
+              ]}
+              onPress={() => {
+                setShowJoinedGroupsModal(false);
+                setShowAllPublicPosts(true);
+                setSelectedCommunity(null); // Clear selected community
+              }}
+            >
+              <View style={styles.modalGroupItemLeft}>
+                <LinearGradient
+                  colors={['rgba(96, 165, 250, 0.4)', 'rgba(167, 139, 250, 0.4)']}
+                  style={styles.modalGroupAvatarGradient}
+                >
+                  <Ionicons name="globe-outline" size={20} color={colors.primary} />
+                </LinearGradient>
+                <View style={styles.modalGroupInfo}>
+                  <Text style={[styles.modalGroupName, { color: colors.primary }]}>
+                    Alle public posts
+                  </Text>
+                  <Text style={styles.modalGroupMeta}>
+                    Posts van alle public communities
+                  </Text>
+                </View>
+              </View>
+              {showAllPublicPosts && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              )}
             </Pressable>
 
             <View style={styles.modalDivider} />

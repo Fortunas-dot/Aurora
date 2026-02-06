@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -224,55 +224,103 @@ export default function JournalInsightsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30>(30);
-  const isLoadingRef = React.useRef(false);
+  const isLoadingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+  const hasLoadedRef = useRef(false);
 
-  const loadInsights = useCallback(async () => {
+  const loadInsights = useCallback(async (signal?: AbortSignal) => {
     // Prevent multiple simultaneous calls
     if (isLoadingRef.current) {
       return;
     }
 
     isLoadingRef.current = true;
-    setLoading(true);
+    
+    // Only set loading to true if we don't have data yet
+    if (!hasLoadedRef.current) {
+      setLoading(true);
+    }
     
     try {
-      const response = await journalService.getInsights(selectedPeriod);
+      const response = await journalService.getInsights(selectedPeriod, undefined, signal);
+      
+      // Check if request was aborted or component unmounted
+      if (signal?.aborted || !isMountedRef.current) {
+        return;
+      }
+      
       if (response.success && response.data) {
         setInsights(response.data);
+        hasLoadedRef.current = true;
       } else {
         // If request failed, still set loading to false
         console.warn('Failed to load insights:', response.message);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Ignore abort errors
+      if (error.name === 'AbortError' || signal?.aborted) {
+        return;
+      }
       console.error('Error loading insights:', error);
     } finally {
-      isLoadingRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
+      // Only update state if component is still mounted and not aborted
+      if (isMountedRef.current && !signal?.aborted) {
+        isLoadingRef.current = false;
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [selectedPeriod]);
 
+  // Load insights on mount and when period changes
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
     
-    const load = async () => {
-      if (isMounted) {
-        await loadInsights();
-      }
-    };
+    // Create abort controller for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
     
-    load();
+    // Reset hasLoaded when period changes
+    hasLoadedRef.current = false;
+    
+    loadInsights(signal);
     
     return () => {
-      isMounted = false;
-      // Cleanup: prevent further loading attempts
+      // Abort any ongoing request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      isMountedRef.current = false;
       isLoadingRef.current = false;
+      // Explicitly reset loading state to prevent stuck loading
+      setLoading(false);
+      setRefreshing(false);
     };
   }, [loadInsights]);
 
+  // Prevent reloading when navigating back to this screen
+  useFocusEffect(
+    useCallback(() => {
+      // Only reload if we don't have data yet
+      if (!hasLoadedRef.current && !isLoadingRef.current) {
+        abortControllerRef.current = new AbortController();
+        loadInsights(abortControllerRef.current.signal);
+      }
+    }, [loadInsights])
+  );
+
   const onRefresh = useCallback(() => {
+    // Abort any ongoing request before starting refresh
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller for refresh
+    abortControllerRef.current = new AbortController();
     setRefreshing(true);
-    loadInsights();
+    loadInsights(abortControllerRef.current.signal);
   }, [loadInsights]);
 
   const getMoodDescription = (mood: number): string => {
@@ -296,7 +344,20 @@ export default function JournalInsightsScreen() {
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Pressable 
+          style={styles.backButton} 
+          onPress={() => {
+            // Abort any ongoing request before navigating back
+            if (abortControllerRef.current) {
+              abortControllerRef.current.abort();
+              abortControllerRef.current = null;
+            }
+            isLoadingRef.current = false;
+            setLoading(false);
+            setRefreshing(false);
+            router.back();
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Insights</Text>

@@ -15,12 +15,16 @@ interface CommunityFilterProps {
   selectedCommunity: string | null;
   onCommunityChange: (communityId: string | null) => void;
   isAuthenticated: boolean;
+  showAllPublicPosts?: boolean;
+  onShowAllPublicPostsChange?: (show: boolean) => void;
 }
 
 export const CommunityFilter: React.FC<CommunityFilterProps> = ({
   selectedCommunity,
   onCommunityChange,
   isAuthenticated,
+  showAllPublicPosts = false,
+  onShowAllPublicPostsChange,
 }) => {
   const [communities, setCommunities] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,17 +76,43 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
       >
         {/* All Communities Option */}
         <Pressable
-          style={[styles.chip, !selectedCommunity && styles.selectedChip]}
-          onPress={() => onCommunityChange(null)}
+          style={[styles.chip, !selectedCommunity && !showAllPublicPosts && styles.selectedChip]}
+          onPress={() => {
+            if (onShowAllPublicPostsChange) {
+              onShowAllPublicPostsChange(false);
+            }
+            onCommunityChange(null);
+          }}
         >
           <Ionicons
             name="apps-outline"
             size={16}
-            color={!selectedCommunity ? COLORS.white : COLORS.textMuted}
+            color={!selectedCommunity && !showAllPublicPosts ? COLORS.white : COLORS.textMuted}
             style={styles.chipIcon}
           />
-          <Text style={[styles.chipText, !selectedCommunity && styles.selectedChipText]}>
+          <Text style={[styles.chipText, !selectedCommunity && !showAllPublicPosts && styles.selectedChipText]}>
             All
+          </Text>
+        </Pressable>
+
+        {/* All Public Posts Option */}
+        <Pressable
+          style={[styles.chip, showAllPublicPosts && styles.selectedChip]}
+          onPress={() => {
+            if (onShowAllPublicPostsChange) {
+              onShowAllPublicPostsChange(true);
+            }
+            onCommunityChange(null);
+          }}
+        >
+          <Ionicons
+            name="globe-outline"
+            size={16}
+            color={showAllPublicPosts ? COLORS.white : COLORS.textMuted}
+            style={styles.chipIcon}
+          />
+          <Text style={[styles.chipText, showAllPublicPosts && styles.selectedChipText]}>
+            Public
           </Text>
         </Pressable>
 
@@ -93,7 +123,12 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = ({
             <Pressable
               key={community._id}
               style={[styles.chip, isSelected && styles.selectedChip]}
-              onPress={() => onCommunityChange(community._id)}
+              onPress={() => {
+                if (onShowAllPublicPostsChange) {
+                  onShowAllPublicPostsChange(false);
+                }
+                onCommunityChange(community._id);
+              }}
             >
               <Ionicons
                 name="people"

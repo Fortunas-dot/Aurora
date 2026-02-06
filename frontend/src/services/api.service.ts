@@ -33,21 +33,24 @@ class ApiService {
     return headers;
   }
 
-  async get<T = any>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T = any>(endpoint: string, options?: { signal?: AbortSignal }): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
       
-      // Add timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      // Use provided signal or create a new one with timeout
+      const controller = options?.signal ? null : new AbortController();
+      const signal = options?.signal || controller!.signal;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 30000) : null; // 30 second timeout
       
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'GET',
         headers,
-        signal: controller.signal,
+        signal,
       });
       
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

@@ -38,6 +38,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     const groupId = req.query.groupId as string;
     const postType = req.query.postType as string;
     const sortBy = req.query.sortBy as string || 'newest';
+    const publicOnly = req.query.publicOnly === 'true';
 
     const query: any = {};
     
@@ -55,6 +56,19 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     if (postType && ['post', 'question', 'story'].includes(postType)) {
       query.postType = postType;
+    }
+
+    // If publicOnly is true and no specific groupId is selected, filter posts from public communities only
+    // Note: If a specific groupId is provided, publicOnly is ignored (user wants that specific group)
+    if (publicOnly && (!groupId || groupId === 'null' || groupId === '')) {
+      // First, get all public group IDs
+      const publicGroups = await Group.find({ isPrivate: false }).select('_id').lean();
+      const publicGroupIds = publicGroups.map((g: any) => g._id.toString());
+      // Include posts with no group (null groupId) as they are also public
+      query.$or = [
+        { groupId: { $in: publicGroupIds } },
+        { groupId: null },
+      ];
     }
 
     // Determine sort order
@@ -110,10 +124,25 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Filter out posts with invalid IDs
     // Note: We allow posts with null authors (they will get a fallback author)
-    const validPosts = posts.filter((post: any) => {
+    let validPosts = posts.filter((post: any) => {
       if (!post || !post._id) return false;
       const postId = post._id.toString();
       if (!/^[0-9a-fA-F]{24}$/.test(postId)) return false;
+      
+      // If publicOnly is true, filter out posts from private communities
+      if (publicOnly) {
+        const groupIdObj = post.groupId as any;
+        // Allow posts with no group (null) or posts from public groups
+        if (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) {
+          // Check if the group is private
+          if (groupIdObj.isPrivate === true) {
+            return false; // Exclude private community posts
+          }
+        }
+        // Include posts with null groupId or public groups
+        return true;
+      }
+      
       return true;
     }).map((post: any) => {
       // If author is null (populate failed), create a fallback author
