@@ -1,7 +1,7 @@
 // Content filtering utility for objectionable content
 // This is a basic implementation - in production, consider using a more sophisticated service
 
-const objectionableWords = [
+const objectionableWords: string[] = [
   // Add common objectionable words/phrases here
   // This is a basic list - expand as needed
 ];

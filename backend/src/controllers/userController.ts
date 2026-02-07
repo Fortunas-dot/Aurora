@@ -2,6 +2,8 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User';
 import Post from '../models/Post';
+import Comment from '../models/Comment';
+import Message from '../models/Message';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sanitizeUser } from '../utils/helpers';
