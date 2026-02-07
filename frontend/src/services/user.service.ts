@@ -81,6 +81,14 @@ class UserService {
       `/users/${userId}/following?page=${page}&limit=${limit}`
     );
   }
+
+  async blockUser(userId: string): Promise<ApiResponse<{ isBlocked: boolean }>> {
+    return apiService.post<{ isBlocked: boolean }>(`/users/${userId}/block`, {});
+  }
+
+  async deleteAccount(): Promise<ApiResponse<void>> {
+    return apiService.delete<void>('/users/account');
+  }
 }
 
 export const userService = new UserService();

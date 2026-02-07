@@ -74,15 +74,18 @@ export default function TermsOfServiceScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. User Conduct</Text>
+            <Text style={styles.sectionTitle}>4. User Conduct and Zero Tolerance Policy</Text>
             <Text style={styles.sectionText}>
-              You agree not to use Aurora to:
+              Aurora has a zero tolerance policy for objectionable content and abusive users. We are committed to maintaining a safe, supportive, and respectful community. You agree not to use Aurora to:
             </Text>
-            <Text style={styles.bulletPoint}>• Post harmful, abusive, or offensive content</Text>
+            <Text style={styles.bulletPoint}>• Post harmful, abusive, offensive, or objectionable content</Text>
             <Text style={styles.bulletPoint}>• Harass, threaten, or harm others</Text>
             <Text style={styles.bulletPoint}>• Violate any applicable laws or regulations</Text>
             <Text style={styles.bulletPoint}>• Infringe on intellectual property rights</Text>
             <Text style={styles.bulletPoint}>• Spread misinformation or false information</Text>
+            <Text style={[styles.sectionText, { marginTop: SPACING.md, fontWeight: '600', color: COLORS.error }]}>
+              Violation of these terms will result in immediate content removal and account termination. We reserve the right to remove any objectionable content and permanently ban users who violate these terms.
+            </Text>
           </View>
 
           <View style={styles.section}>

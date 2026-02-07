@@ -554,3 +554,140 @@ export const registerPushToken = async (req: AuthRequest, res: Response): Promis
   }
 };
 
+// @desc    Block/Unblock user
+// @route   POST /api/users/:id/block
+// @access  Private
+export const blockUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.userId!;
+
+    if (targetUserId === currentUserId) {
+      res.status(400).json({
+        success: false,
+        message: 'Cannot block yourself',
+      });
+      return;
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    const targetUser = await User.findById(targetUserId);
+
+    if (!currentUser || !targetUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    const isBlocked = currentUser.blockedUsers.some(
+      (id) => id.toString() === targetUserId
+    );
+
+    if (isBlocked) {
+      // Unblock
+      currentUser.blockedUsers = currentUser.blockedUsers.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      await currentUser.save();
+
+      res.json({
+        success: true,
+        message: 'User unblocked successfully',
+        isBlocked: false,
+      });
+    } else {
+      // Block
+      currentUser.blockedUsers.push(targetUserId as any);
+      
+      // Also unfollow if following
+      currentUser.following = currentUser.following.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      
+      await currentUser.save();
+
+      // Remove blocked user's posts from current user's feed
+      // This is handled in postController by filtering blocked users
+
+      res.json({
+        success: true,
+        message: 'User blocked successfully. Their content will no longer appear in your feed.',
+        isBlocked: true,
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error blocking/unblocking user',
+    });
+  }
+};
+
+// @desc    Delete account
+// @route   DELETE /api/users/account
+// @access  Private
+export const deleteAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Prevent deletion of protected accounts
+    if (user.isProtected) {
+      res.status(403).json({
+        success: false,
+        message: 'This account cannot be deleted',
+      });
+      return;
+    }
+
+    // Delete all user-related data
+    await Post.deleteMany({ author: userId });
+    await Comment.deleteMany({ author: userId });
+    await Notification.deleteMany({ user: userId });
+    await Notification.deleteMany({ relatedUser: userId });
+    await Message.deleteMany({ $or: [{ sender: userId }, { receiver: userId }] });
+    
+    // Remove user from other users' following lists
+    await User.updateMany(
+      { following: userId },
+      { $pull: { following: userId } }
+    );
+
+    // Remove user from other users' blocked lists
+    await User.updateMany(
+      { blockedUsers: userId },
+      { $pull: { blockedUsers: userId } }
+    );
+
+    // Remove user's posts from other users' saved posts
+    const userPosts = await Post.find({ author: userId }).select('_id');
+    const postIds = userPosts.map(p => p._id);
+    await User.updateMany(
+      { savedPosts: { $in: postIds } },
+      { $pull: { savedPosts: { $in: postIds } } }
+    );
+
+    // Delete the user account
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error deleting account',
+    });
+  }
+};

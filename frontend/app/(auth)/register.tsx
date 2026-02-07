@@ -18,6 +18,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleRegister = async () => {
     setValidationError('');
@@ -50,6 +51,10 @@ export default function RegisterScreen() {
     }
     if (password !== confirmPassword) {
       setValidationError('Passwords do not match');
+      return;
+    }
+    if (!acceptedTerms) {
+      setValidationError('You must accept the Terms of Service to create an account');
       return;
     }
 
@@ -162,6 +167,31 @@ export default function RegisterScreen() {
                 <Text style={styles.errorText}>{displayError}</Text>
               </View>
             )}
+
+            {/* Terms Agreement */}
+            <Pressable
+              style={styles.termsContainer}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms && <Ionicons name="checkmark" size={16} color={COLORS.primary} />}
+              </View>
+              <View style={styles.termsTextContainer}>
+                <Text style={styles.termsText}>
+                  I agree to the{' '}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      router.push('/terms-of-service');
+                    }}
+                  >
+                    Terms of Service
+                  </Text>
+                  {' '}and acknowledge Aurora's zero tolerance policy for objectionable content and abusive users.
+                </Text>
+              </View>
+            </Pressable>
 
             {/* Privacy note */}
             <View style={styles.privacyNote}>
@@ -292,6 +322,42 @@ const styles = StyleSheet.create({
   loginLink: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: COLORS.glass.border,
+    marginRight: SPACING.sm,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.glass.background,
+  },
+  checkboxChecked: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  termsTextContainer: {
+    flex: 1,
+  },
+  termsText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
   },
 });
 

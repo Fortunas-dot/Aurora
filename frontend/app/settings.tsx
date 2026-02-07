@@ -17,6 +17,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
 import { useAuthStore } from '../src/store/authStore';
+import { userService } from '../src/services/user.service';
 import { i18n, Language } from '../src/utils/i18n';
 
 interface MenuItemProps {
@@ -218,9 +219,30 @@ export default function SettingsScreen() {
                             {
                               text: 'Delete',
                               style: 'destructive',
-                              onPress: () => {
-                                // TODO: Implement account deletion
-                                Alert.alert('Account deletion', 'Account deletion feature will be implemented soon.');
+                              onPress: async () => {
+                                try {
+                                  const response = await userService.deleteAccount();
+                                  
+                                  if (response.success) {
+                                    Alert.alert(
+                                      'Account Deleted',
+                                      'Your account and all associated data have been permanently deleted.',
+                                      [
+                                        {
+                                          text: 'OK',
+                                          onPress: () => {
+                                            useAuthStore.getState().logout();
+                                            router.replace('/(auth)/login');
+                                          },
+                                        },
+                                      ]
+                                    );
+                                  } else {
+                                    Alert.alert('Error', response.message || 'Failed to delete account');
+                                  }
+                                } catch (error: any) {
+                                  Alert.alert('Error', error.message || 'Failed to delete account');
+                                }
                               },
                             },
                           ]

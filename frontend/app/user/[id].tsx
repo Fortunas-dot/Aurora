@@ -7,6 +7,7 @@ import {
   Pressable,
   FlatList,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,8 @@ export default function UserProfileScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isTogglingBlock, setIsTogglingBlock] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
@@ -199,13 +202,29 @@ export default function UserProfileScreen() {
               </Text>
             </View>
             {!isOwnProfile && isAuthenticated && (
-              <GlassButton
-                title={isFollowing ? 'Unfollow' : 'Follow'}
-                onPress={handleFollow}
-                variant={isFollowing ? 'outline' : 'primary'}
-                disabled={isTogglingFollow}
-                style={styles.followButton}
-              />
+              <View style={styles.actionButtons}>
+                <GlassButton
+                  title={isFollowing ? 'Unfollow' : 'Follow'}
+                  onPress={handleFollow}
+                  variant={isFollowing ? 'outline' : 'primary'}
+                  disabled={isTogglingFollow}
+                  style={styles.followButton}
+                />
+                <Pressable
+                  style={styles.blockButton}
+                  onPress={handleBlock}
+                  disabled={isTogglingBlock}
+                >
+                  <Ionicons
+                    name={isBlocked ? 'ban' : 'ban-outline'}
+                    size={20}
+                    color={isBlocked ? COLORS.error : COLORS.textSecondary}
+                  />
+                  <Text style={[styles.blockButtonText, isBlocked && { color: COLORS.error }]}>
+                    {isBlocked ? 'Blocked' : 'Block'}
+                  </Text>
+                </Pressable>
+              </View>
             )}
             {isOwnProfile && (
               <Pressable
@@ -359,9 +378,29 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 2,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'center',
+  },
   followButton: {
     minWidth: 100,
     flexShrink: 0, // Prevents button from shrinking
+  },
+  blockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  blockButtonText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
   },
   editButton: {
     width: 36,

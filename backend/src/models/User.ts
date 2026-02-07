@@ -24,6 +24,7 @@ export interface IUser extends Document {
   isProtected?: boolean; // Protected accounts cannot be deleted (e.g., Apple review account)
   following: Types.ObjectId[];
   savedPosts: Types.ObjectId[];
+  blockedUsers: Types.ObjectId[]; // Users that this user has blocked
   pushTokens: PushToken[];
   healthInfo?: {
     mentalHealth?: Array<{
@@ -123,6 +124,10 @@ const UserSchema = new Schema<IUser>(
     savedPosts: [{
       type: Schema.Types.ObjectId,
       ref: 'Post',
+    }],
+    blockedUsers: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     }],
     pushTokens: [{
       token: {

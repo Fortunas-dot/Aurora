@@ -7,6 +7,7 @@ import Group from '../models/Group';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { containsObjectionableContent } from '../utils/contentFilter';
 
 const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
 const logDebug = (data: any) => {
@@ -107,6 +108,14 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
         authorIdMap.set(post._id.toString(), post.author.toString());
       }
     });
+
+    // Filter out blocked users if authenticated
+    if (req.userId) {
+      const currentUser = await User.findById(req.userId).select('blockedUsers');
+      if (currentUser && currentUser.blockedUsers.length > 0) {
+        query.author = { $nin: currentUser.blockedUsers };
+      }
+    }
 
     // Now get posts with populate
     const posts = await Post.find(query)
@@ -342,6 +351,16 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { title, content, tags, groupId, images, postType } = req.body;
+
+    // Check for objectionable content
+    const contentToCheck = `${title || ''} ${content || ''}`.trim();
+    if (containsObjectionableContent(contentToCheck)) {
+      res.status(400).json({
+        success: false,
+        message: 'Your post contains content that violates our community guidelines. Please review and revise your content.',
+      });
+      return;
+    }
 
     const post = await Post.create({
       author: req.userId,
