@@ -10,7 +10,8 @@
     "watch": "tsc --watch",
     "seed": "ts-node src/scripts/seed.ts",
     "create-apple-account": "ts-node src/scripts/create-apple-review-account.ts",
-    "create-showcase-account": "ts-node src/scripts/create-showcase-account.ts"
+    "create-showcase-account": "ts-node src/scripts/create-showcase-account.ts",
+    "remove-group-avatars": "ts-node src/scripts/remove-group-avatars.ts"
   },
   "keywords": [],
   "author": "",

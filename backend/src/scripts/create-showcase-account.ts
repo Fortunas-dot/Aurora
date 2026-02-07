@@ -114,27 +114,38 @@ async function createShowcaseAccount() {
     
     if (showcaseUser) {
       console.log('  ✓ Showcase account already exists, updating...');
-      showcaseUser.displayName = SHOWCASE_DISPLAY_NAME;
-      showcaseUser.bio = 'Welcome to Aurora - Your mental health companion';
-      showcaseUser.isAnonymous = false;
-      showcaseUser.isProtected = true;
       
       // Update password
-      const salt = await bcrypt.genSalt(10);
-      showcaseUser.password = await bcrypt.hash(SHOWCASE_PASSWORD, salt);
+      const hashedPassword = await bcrypt.hash(SHOWCASE_PASSWORD, 10);
       
       // Set avatar character if not set
-      if (!showcaseUser.avatarCharacter) {
-        showcaseUser.avatarCharacter = getRandomCharacter();
-      }
+      const avatarCharacter = showcaseUser.avatarCharacter || getRandomCharacter();
       
-      await showcaseUser.save();
+      // Use updateOne to bypass pre-save hook (password is already hashed)
+      await User.updateOne(
+        { _id: showcaseUser._id },
+        {
+          displayName: SHOWCASE_DISPLAY_NAME,
+          bio: 'Welcome to Aurora - Your mental health companion',
+          isAnonymous: false,
+          isProtected: true,
+          password: hashedPassword,
+          avatarCharacter,
+        }
+      );
+      
+      // Reload the user to get updated data
+      showcaseUser = await User.findById(showcaseUser._id);
+      if (!showcaseUser) {
+        throw new Error('Failed to reload showcase user after update');
+      }
     } else {
       // Create new showcase user
       const hashedPassword = await bcrypt.hash(SHOWCASE_PASSWORD, 10);
       const avatarCharacter = getRandomCharacter();
       
-      showcaseUser = await User.create({
+      // Use insertMany to bypass pre-save hook (password is already hashed)
+      const createdUsers = await User.insertMany([{
         email: SHOWCASE_EMAIL,
         password: hashedPassword,
         username: SHOWCASE_USERNAME,
@@ -150,8 +161,18 @@ async function createShowcaseAccount() {
           ],
           therapies: ['cbt', 'mindfulness'],
         },
-      });
+      }]);
+      
+      if (!createdUsers || createdUsers.length === 0) {
+        throw new Error('Failed to create showcase user');
+      }
+      
+      showcaseUser = createdUsers[0];
       console.log('  ✓ Showcase account created');
+    }
+    
+    if (!showcaseUser) {
+      throw new Error('Showcase user not found or could not be created');
     }
     
     // Get other users for interactions (create some if they don't exist)
@@ -163,10 +184,10 @@ async function createShowcaseAccount() {
     
     // Create a few additional users if needed
     if (otherUsers.length < 5) {
-      const additionalUsers = [];
+      const usersToInsert = [];
       for (let i = 0; i < 5; i++) {
         const hashedPassword = await bcrypt.hash('password123', 10);
-        const user = await User.create({
+        usersToInsert.push({
           email: `testuser${i}@test.com`,
           password: hashedPassword,
           username: `testuser${i}`,
@@ -175,8 +196,9 @@ async function createShowcaseAccount() {
           isAnonymous: false,
           avatarCharacter: getRandomCharacter(),
         });
-        additionalUsers.push(user);
       }
+      // Use insertMany to bypass pre-save hook (passwords are already hashed)
+      const additionalUsers = await User.insertMany(usersToInsert);
       otherUsers.push(...additionalUsers);
       console.log(`  ✓ Created ${additionalUsers.length} additional users`);
     }
@@ -313,6 +335,11 @@ async function createShowcaseAccount() {
           const sender = isShowcaseTurn ? showcaseUser : partner;
           const receiver = isShowcaseTurn ? partner : showcaseUser;
           const messageContent = isShowcaseTurn ? conversation.sender[j] : conversation.receiver[j];
+          
+          if (!sender || !receiver) {
+            console.warn(`  ⚠ Skipping message - missing sender or receiver`);
+            continue;
+          }
           
           const createdAt = new Date();
           createdAt.setHours(createdAt.getHours() - hoursAgo);
@@ -470,9 +497,15 @@ async function createShowcaseAccount() {
     // Make some users follow showcase user
     for (let i = 0; i < 5; i++) {
       const follower = otherUsers[i];
-      if (follower && !follower.following.some(f => f.toString() === showcaseUser._id.toString())) {
-        follower.following.push(showcaseUser._id);
-        await follower.save();
+      if (follower) {
+        // Initialize following array if it doesn't exist
+        if (!follower.following) {
+          follower.following = [];
+        }
+        if (!follower.following.some(f => f.toString() === showcaseUser._id.toString())) {
+          follower.following.push(showcaseUser._id);
+          await follower.save();
+        }
       }
     }
     
@@ -491,7 +524,7 @@ async function createShowcaseAccount() {
     console.log(`   - Conversations: ${await Message.countDocuments({ $or: [{ sender: showcaseUser._id }, { receiver: showcaseUser._id }] }) / 2}`);
     console.log(`   - Notifications: ${await Notification.countDocuments({ user: showcaseUser._id })}`);
     console.log(`   - Journal Entries: ${await JournalEntry.countDocuments({ author: showcaseUser._id })}`);
-    console.log(`   - Following: ${showcaseUser.following.length} users`);
+    console.log(`   - Following: ${showcaseUser.following?.length || 0} users`);
     console.log(`   - Followers: ${await User.countDocuments({ following: showcaseUser._id })}`);
     console.log(`\n🎬 Ready for screenshots!`);
     

@@ -276,7 +276,7 @@ export default function ChatScreen() {
                 ]}
                 numberOfLines={1}
               >
-                {item.lastMessage.isOwn && 'Jij: '}
+                {item.lastMessage.isOwn && 'You: '}
                 {item.lastMessage.content}
               </Text>
               

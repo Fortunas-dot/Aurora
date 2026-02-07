@@ -26,10 +26,21 @@ export interface IUser extends Document {
   savedPosts: Types.ObjectId[];
   pushTokens: PushToken[];
   healthInfo?: {
-    mentalHealth?: string[];
-    physicalHealth?: string[];
+    mentalHealth?: Array<{
+      condition: string;
+      type?: string;
+      severity?: 'mild' | 'moderate' | 'severe';
+      notes?: string;
+    }>;
+    physicalHealth?: Array<{
+      condition: string;
+      type?: string;
+      severity?: 'mild' | 'moderate' | 'severe';
+      notes?: string;
+    }>;
     medications?: string[];
     therapies?: string[];
+    lifeContext?: string;
   };
   createdAt: Date;
   updatedAt: Date;

@@ -507,8 +507,8 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
     } else {
       await User.deleteMany({});
     }
-    // Update all existing groups to remove avatars (in case there are groups not created via seed)
-    await Group.updateMany({ avatar: { $ne: null } }, { avatar: null });
+    // Update all existing groups to remove avatars BEFORE deleting (in case there are groups not created via seed)
+    await Group.updateMany({}, { avatar: null }); // Force all groups to have null avatar
     
     await Post.deleteMany({});
     await Group.deleteMany({});
@@ -560,6 +560,9 @@ export const seedDatabase = async (req: AuthRequest, res: Response): Promise<voi
       });
       createdGroups.push(group);
     }
+    
+    // Force update all groups to ensure avatar is null (safety check)
+    await Group.updateMany({}, { avatar: null });
     
     // Create posts
     console.log('📝 Creating posts...');

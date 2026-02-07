@@ -12,7 +12,7 @@ import { AuroraCore as SphereAuroraCore } from '../../src/components/voice/Auror
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, loginWithFacebook, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,17 +42,6 @@ export default function LoginScreen() {
     if (success) {
       // Navigation will happen via the useEffect above when isAuthenticated becomes true
       // This prevents the flash by ensuring immediate redirect
-      router.replace('/(tabs)');
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    setValidationError('');
-    clearError();
-    
-    const success = await loginWithFacebook();
-    if (success) {
-      // Immediately navigate - the useEffect will also handle redirect as backup
       router.replace('/(tabs)');
     }
   };
@@ -155,40 +144,6 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Facebook Login Button */}
-          <Pressable
-            onPress={handleFacebookLogin}
-            disabled={isLoading}
-            style={({ pressed }) => [
-              styles.facebookButton,
-              pressed && styles.facebookButtonPressed,
-              isLoading && styles.facebookButtonDisabled,
-            ]}
-          >
-            <LinearGradient
-              colors={['#1877F2', '#166FE5']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.facebookGradient}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="logo-facebook" size={20} color="#FFFFFF" style={{ marginRight: SPACING.sm }} />
-                  <Text style={styles.facebookButtonText}>Continue with Facebook</Text>
-                </>
-              )}
-            </LinearGradient>
-          </Pressable>
-
           {/* Continue as Guest */}
           <GlassButton
             title="Continue as guest"
@@ -283,46 +238,6 @@ const styles = StyleSheet.create({
   registerLink: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.glass.border,
-  },
-  dividerText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    paddingHorizontal: SPACING.md,
-  },
-  facebookButton: {
-    marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
-    ...SHADOWS.sm,
-  },
-  facebookGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-  },
-  facebookButtonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  facebookButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  facebookButtonDisabled: {
-    opacity: 0.5,
   },
   guestButton: {
     alignSelf: 'center',

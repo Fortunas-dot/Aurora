@@ -581,8 +581,8 @@ async function seedDatabase() {
     } else {
       await User.deleteMany({});
     }
-    // Update all existing groups to remove avatars (in case there are groups not created via seed)
-    await Group.updateMany({ avatar: { $ne: null } }, { avatar: null });
+    // Update all existing groups to remove avatars BEFORE deleting (in case there are groups not created via seed)
+    await Group.updateMany({}, { avatar: null }); // Force all groups to have null avatar
     
     await Post.deleteMany({});
     await Group.deleteMany({});
@@ -644,7 +644,7 @@ async function seedDatabase() {
         ...groupData,
         admins: [admin._id],
         members: members.map(u => u._id),
-        avatar: groupData.avatar || null,
+        avatar: null, // Always set to null - groups should not have human profile photos
         coverImage: groupData.coverImage || null,
         country: groupData.country || 'global',
         healthCondition: groupData.healthCondition || null,
@@ -652,6 +652,9 @@ async function seedDatabase() {
       createdGroups.push(group);
       console.log(`  ✓ Created group: ${group.name}`);
     }
+    
+    // Force update all groups to ensure avatar is null (safety check)
+    await Group.updateMany({}, { avatar: null });
     
     // Create posts
     console.log('📝 Creating posts...');

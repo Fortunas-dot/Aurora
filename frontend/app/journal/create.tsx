@@ -437,6 +437,10 @@ export default function CreateJournalEntryScreen() {
       console.log('Journal entry response:', response);
 
       if (response.success) {
+        // Reset saving state before navigation
+        if (isMountedRef.current) {
+          setSaving(false);
+        }
         router.back();
       } else {
         if (isMountedRef.current) {
@@ -458,6 +462,16 @@ export default function CreateJournalEntryScreen() {
         setSaving(false);
       }
     } finally {
+      // Safety net: Always reset saving state if component is still mounted and operation wasn't aborted
+      // This ensures the loading state is cleared even if something unexpected happens
+      if (isMountedRef.current && !abortController.signal.aborted) {
+        // Use setTimeout to ensure state update happens after any navigation
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setSaving(false);
+          }
+        }, 100);
+      }
       // Clear abort controller reference if this was the current operation
       if (saveAbortControllerRef.current === abortController) {
         saveAbortControllerRef.current = null;
