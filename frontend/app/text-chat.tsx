@@ -9,7 +9,7 @@ import { ChatInput } from '../src/components/chat/ChatInput';
 import { useStreamingResponse } from '../src/hooks/useStreamingResponse';
 import { useChatHistory } from '../src/hooks/useChatHistory';
 import { useChatStore } from '../src/store/chatStore';
-import { COLORS, SPACING, TYPOGRAPHY } from '../src/constants/theme';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { AuroraCore as SphereAuroraCore } from '../src/components/voice/AuroraCore.sphere';
 import { useTheme } from '../src/hooks/useTheme';
 
@@ -273,18 +273,39 @@ export default function TextChatScreen() {
 
       {/* Large Aurora symbol in center when no messages */}
       {!hasMessages && (
-        <Animated.View
-          style={[
-            styles.auroraContainer,
-            {
-              opacity: auroraOpacity,
-              transform: [{ scale: auroraScale }],
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <SphereAuroraCore state="idle" audioLevel={0} size={width * 0.7} />
-        </Animated.View>
+        <>
+          {/* Speech bubble above Aurora */}
+          <Animated.View
+            style={[
+              styles.speechBubble,
+              {
+                opacity: auroraOpacity,
+                transform: [{ scale: auroraScale }],
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <View style={[styles.speechBubbleContent, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}>
+              <Text style={[styles.speechBubbleText, { color: colors.text }]}>
+                Hi, this is Aurora, how are you feeling today?
+              </Text>
+            </View>
+            <View style={[styles.speechBubbleTail, { borderTopColor: colors.glass.background }]} />
+          </Animated.View>
+          
+          <Animated.View
+            style={[
+              styles.auroraContainer,
+              {
+                opacity: auroraOpacity,
+                transform: [{ scale: auroraScale }],
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <SphereAuroraCore state="idle" audioLevel={0} size={width * 0.7} />
+          </Animated.View>
+        </>
       )}
 
       {/* Small Aurora logo in header when messages exist */}
@@ -387,6 +408,46 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 1,
+  },
+  speechBubble: {
+    position: 'absolute',
+    top: '35%',
+    left: '50%',
+    marginLeft: -120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    width: 240,
+  },
+  speechBubbleContent: {
+    backgroundColor: COLORS.glass.background,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  speechBubbleText: {
+    ...TYPOGRAPHY.body,
+    textAlign: 'center',
+    color: COLORS.text,
+  },
+  speechBubbleTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: COLORS.glass.background,
+    marginTop: -1,
+    alignSelf: 'center',
   },
   auroraContainer: {
     position: 'absolute',
