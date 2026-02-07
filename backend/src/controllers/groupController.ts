@@ -3,6 +3,7 @@ import Group from '../models/Group';
 import Post from '../models/Post';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
+import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get all groups
 // @route   GET /api/groups
@@ -209,13 +210,20 @@ export const joinGroup = async (req: AuthRequest, res: Response): Promise<void> 
     // Notify admins
     for (const adminId of group.admins) {
       if (adminId.toString() !== req.userId) {
-        await Notification.create({
+        const notification = await Notification.create({
           user: adminId,
           type: 'group_join',
           relatedUser: req.userId,
           relatedGroup: group._id,
           message: 'joined your group',
         });
+
+        await notification.populate('relatedUser', 'username displayName avatar');
+        await notification.populate('relatedGroup', 'name');
+
+        // Send notification via WebSocket
+        await sendNotificationToUser(adminId.toString(), notification);
+        await sendUnreadCountUpdate(adminId.toString());
       }
     }
 

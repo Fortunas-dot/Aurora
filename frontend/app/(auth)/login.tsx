@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
-import { AuroraCore } from '../../src/components/voice/AuroraCore';
+import { AuroraCore as SphereAuroraCore } from '../../src/components/voice/AuroraCore.sphere';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -90,7 +90,7 @@ export default function LoginScreen() {
           {/* Logo/Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <AuroraCore state="idle" audioLevel={0} size={180} />
+              <SphereAuroraCore state="idle" audioLevel={0} size={180} />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Log in to continue with Aurora</Text>

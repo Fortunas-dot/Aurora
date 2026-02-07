@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,35 +29,91 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   const [communities, setCommunities] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [shouldShowEmptyState, setShouldShowEmptyState] = useState(false);
+  const isLoadingRef = useRef(false);
+  const hasLoadedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const loadAttemptedRef = useRef(false);
+  // Track if we've ever had communities - once we have communities, never show empty state again
+  const hasEverHadCommunitiesRef = useRef(false);
 
   const loadCommunities = useCallback(async () => {
+    // Prevent multiple simultaneous loads
+    if (isLoadingRef.current || !mountedRef.current) {
+      return;
+    }
+    
+    isLoadingRef.current = true;
     setIsLoading(true);
+    loadAttemptedRef.current = true;
+    
     try {
       const response = await groupService.getGroups(1, 100);
+      if (!mountedRef.current) return;
+      
       if (response.success && response.data) {
         // Filter to show only groups where user is a member
         const userCommunities = response.data.filter((group) => group.isMember);
         setCommunities(userCommunities);
+        // Track if we've ever had communities
+        if (userCommunities.length > 0) {
+          hasEverHadCommunitiesRef.current = true;
+          // Hide empty state if we now have communities
+          if (mountedRef.current) {
+            setShouldShowEmptyState(false);
+          }
+        } else if (mountedRef.current && !hasEverHadCommunitiesRef.current) {
+          // Show empty state only if we've never had communities
+          setShouldShowEmptyState(true);
+        }
       } else {
         setCommunities([]);
+        // Show empty state only if we've never had communities
+        if (mountedRef.current && !hasEverHadCommunitiesRef.current) {
+          setShouldShowEmptyState(true);
+        }
       }
     } catch (error) {
+      if (!mountedRef.current) return;
       console.error('Error loading communities:', error);
       setCommunities([]);
+      // Show empty state only if we've never had communities
+      if (!hasEverHadCommunitiesRef.current) {
+        setShouldShowEmptyState(true);
+      }
     } finally {
-      setIsLoading(false);
-      setHasLoaded(true);
+      if (mountedRef.current) {
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        hasLoadedRef.current = true;
+        setHasLoaded(true);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    mountedRef.current = true;
+    
+    // Only load if authenticated and not already loaded/attempted
+    if (isAuthenticated && !loadAttemptedRef.current) {
       loadCommunities();
-    } else {
-      setCommunities([]);
-      setHasLoaded(false);
+    } else if (!isAuthenticated) {
+      // Reset only if we were authenticated before
+      if (hasLoadedRef.current) {
+        setCommunities([]);
+        hasLoadedRef.current = false;
+        setHasLoaded(false);
+        loadAttemptedRef.current = false;
+        hasEverHadCommunitiesRef.current = false;
+        setShouldShowEmptyState(false);
+      }
     }
-  }, [isAuthenticated, loadCommunities]);
+    
+    return () => {
+      mountedRef.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return null;
@@ -146,14 +202,21 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           );
         })}
 
-        {/* Empty State - Only show after loading is complete */}
-        {hasLoaded && !isLoading && communities.length === 0 && (
-          <View style={styles.emptyContainer}>
+        {/* Empty State - Only show when explicitly set and not loading */}
+        {shouldShowEmptyState && !isLoading && (
+          <View style={styles.emptyContainer} key="empty-state">
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>
         )}
       </ScrollView>
     </View>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if these specific props change (ignore function references as they're usually stable)
+  return (
+    prevProps.selectedCommunity === nextProps.selectedCommunity &&
+    prevProps.isAuthenticated === nextProps.isAuthenticated &&
+    prevProps.showAllPublicPosts === nextProps.showAllPublicPosts
   );
 });
 

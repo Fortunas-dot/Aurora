@@ -10,7 +10,7 @@ import { useStreamingResponse } from '../src/hooks/useStreamingResponse';
 import { useChatHistory } from '../src/hooks/useChatHistory';
 import { useChatStore } from '../src/store/chatStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../src/constants/theme';
-import { AuroraCore } from '../src/components/voice/AuroraCore';
+import { AuroraCore as SphereAuroraCore } from '../src/components/voice/AuroraCore.sphere';
 import { useTheme } from '../src/hooks/useTheme';
 
 const { width, height } = Dimensions.get('window');
@@ -283,7 +283,7 @@ export default function TextChatScreen() {
           ]}
           pointerEvents="none"
         >
-          <AuroraCore state="idle" audioLevel={0} size={width * 0.7} />
+          <SphereAuroraCore state="idle" audioLevel={0} size={width * 0.7} />
         </Animated.View>
       )}
 
@@ -300,7 +300,7 @@ export default function TextChatScreen() {
           ]}
           pointerEvents="none"
         >
-          <AuroraCore state="idle" audioLevel={0} size={40} />
+          <SphereAuroraCore state="idle" audioLevel={0} size={40} />
         </Animated.View>
       )}
 

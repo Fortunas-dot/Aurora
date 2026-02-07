@@ -109,7 +109,7 @@ export default function NotificationsScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Notificaties</Text>
+        <Text style={styles.headerTitle}>Notifications</Text>
         {unreadCount > 0 && (
           <Pressable style={styles.markAllButton} onPress={handleMarkAllAsRead}>
             <Text style={styles.markAllText}>Mark all read</Text>

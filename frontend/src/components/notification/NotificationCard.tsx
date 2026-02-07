@@ -6,7 +6,7 @@ import { GlassCard, Avatar } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Notification, NotificationType } from '../../services/notification.service';
 import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 interface NotificationCardProps {
   notification: Notification;
@@ -104,7 +104,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
 
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
-    locale: nl,
+    locale: enUS,
   });
 
   return (

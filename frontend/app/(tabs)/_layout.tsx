@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { SPACING } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
-import { AuroraCore } from '../../src/components/voice/AuroraCore';
+import { AuroraCore as BlobsAuroraCore } from '../../src/components/voice/AuroraCore.blobs';
 import { Badge } from '../../src/components/common';
 import { useAuthStore } from '../../src/store/authStore';
 import { messageService } from '../../src/services/message.service';
@@ -135,7 +135,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <View style={styles.auroraIconContainer}>
               <View style={styles.auroraCoreWrapper}>
-                <AuroraCore state="idle" audioLevel={0} size={56} />
+                <BlobsAuroraCore state="idle" audioLevel={0} size={56} />
               </View>
             </View>
           ),
