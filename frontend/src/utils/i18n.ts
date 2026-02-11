@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from './secureStorage';
 
 export type Language = 'nl' | 'en';
 
@@ -147,7 +147,7 @@ class I18n {
   private currentLanguage: Language = 'en';
 
   async init(): Promise<void> {
-    const savedLanguage = await SecureStore.getItemAsync('app_language');
+    const savedLanguage = await secureStorage.getItemAsync('app_language');
     if (savedLanguage && (savedLanguage === 'nl' || savedLanguage === 'en')) {
       this.currentLanguage = savedLanguage as Language;
     } else {
@@ -158,7 +158,7 @@ class I18n {
 
   async setLanguage(language: Language): Promise<void> {
     this.currentLanguage = language;
-    await SecureStore.setItemAsync('app_language', language);
+    await secureStorage.setItemAsync('app_language', language);
   }
 
   getLanguage(): Language {

@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { apiService, ApiResponse } from './api.service';
 
 export interface User {
@@ -72,7 +72,7 @@ class AuthService {
 
   async saveToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync('auth_token', token);
+      await secureStorage.setItemAsync('auth_token', token);
       console.log('✅ Token saved successfully');
     } catch (error) {
       console.error('❌ Error saving token:', error);
@@ -82,11 +82,11 @@ class AuthService {
 
   async getToken(): Promise<string | null> {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await secureStorage.getItemAsync('auth_token');
       if (token) {
         console.log('✅ Token retrieved successfully');
       } else {
-        console.log('⚠️ No token found in SecureStore');
+        console.log('⚠️ No token found in storage');
       }
       return token;
     } catch (error) {
@@ -96,7 +96,7 @@ class AuthService {
   }
 
   async removeToken(): Promise<void> {
-    await SecureStore.deleteItemAsync('auth_token');
+    await secureStorage.deleteItemAsync('auth_token');
   }
 
   async isAuthenticated(): Promise<boolean> {

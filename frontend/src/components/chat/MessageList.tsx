@@ -8,11 +8,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
+import { ContextIndicator } from './ContextIndicator';
 import { useChatStore } from '../../store/chatStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants/theme';
 
 export const MessageList: React.FC = () => {
-  const { messages, isStreaming, currentStreamingMessage, setStreaming } = useChatStore();
+  const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
   const streamingStartTime = useRef<number | null>(null);
 
@@ -68,21 +69,29 @@ export const MessageList: React.FC = () => {
 
   const renderFooter = () => {
     if (isStreaming) {
-      if (currentStreamingMessage) {
-        return (
-          <ChatMessage
-            message={{
-              id: 'streaming',
-              role: 'assistant',
-              content: currentStreamingMessage,
-              timestamp: new Date().toISOString(),
-            }}
-            isStreaming
-          />
-        );
-      } else {
-        return <TypingIndicator />;
-      }
+      return (
+        <View>
+          {availableContext && (availableContext.hasHealthInfo || availableContext.hasJournalEntries) && (
+            <ContextIndicator
+              hasHealthInfo={availableContext.hasHealthInfo}
+              hasJournalEntries={availableContext.hasJournalEntries}
+            />
+          )}
+          {currentStreamingMessage ? (
+            <ChatMessage
+              message={{
+                id: 'streaming',
+                role: 'assistant',
+                content: currentStreamingMessage,
+                timestamp: new Date().toISOString(),
+              }}
+              isStreaming
+            />
+          ) : (
+            <TypingIndicator />
+          )}
+        </View>
+      );
     }
     return null;
   };

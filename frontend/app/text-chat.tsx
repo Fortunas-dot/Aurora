@@ -6,12 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MessageList } from '../src/components/chat/MessageList';
 import { ChatInput } from '../src/components/chat/ChatInput';
+import { ContextIndicator } from '../src/components/chat/ContextIndicator';
 import { useStreamingResponse } from '../src/hooks/useStreamingResponse';
 import { useChatHistory } from '../src/hooks/useChatHistory';
 import { useChatStore } from '../src/store/chatStore';
+import { useAuthStore } from '../src/store/authStore';
+import { journalService } from '../src/services/journal.service';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { AuroraCore as SphereAuroraCore } from '../src/components/voice/AuroraCore.sphere';
 import { useTheme } from '../src/hooks/useTheme';
+import { useConsentStore } from '../src/store/consentStore';
+import { AiConsentCard } from '../src/components/legal/AiConsentCard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -120,9 +125,11 @@ export default function TextChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { user } = useAuthStore();
   const { sendMessage, isLoading } = useStreamingResponse();
   const { clearHistory, isLoading: isLoadingHistory } = useChatHistory();
-  const { messages, isStreaming, error, setError, clearMessages } = useChatStore();
+  const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
+  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
   
   // Animation for Aurora logo transition
   const auroraScale = useRef(new Animated.Value(1)).current;
@@ -131,6 +138,42 @@ export default function TextChatScreen() {
   
   const hasMessages = messages.length > 0;
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Load consent + context information on mount to show on initial screen
+  useEffect(() => {
+    loadConsent().catch(console.error);
+
+    const loadContext = async () => {
+      if (!user) return;
+      
+      try {
+        // Load journal context
+        const journalResponse = await journalService.getAuroraContext(5);
+        const journalContext = journalResponse.success && journalResponse.data ? journalResponse.data : [];
+        
+        // Check for health info
+        const hasHealthInfo = !!(user?.healthInfo && (
+          (user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) ||
+          (user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) ||
+          (user.healthInfo.medications && user.healthInfo.medications.length > 0) ||
+          (user.healthInfo.therapies && user.healthInfo.therapies.length > 0)
+        ));
+        const hasJournalEntries = journalContext.length > 0;
+        
+        // Set context info for display on initial screen
+        if (hasHealthInfo || hasJournalEntries) {
+          setAvailableContext({
+            hasHealthInfo,
+            hasJournalEntries,
+          });
+        }
+      } catch (error) {
+        console.log('Could not load context:', error);
+      }
+    };
+
+    loadContext();
+  }, [user, setAvailableContext, loadConsent]);
   
   // Initialize animations on mount - always start with large Aurora
   useEffect(() => {
@@ -201,6 +244,14 @@ export default function TextChatScreen() {
   }, [hasMessages]);
 
   const handleSend = async (message: string) => {
+    if (aiConsentStatus !== 'granted') {
+      Alert.alert(
+        'AI Consent Required',
+        'To use AI-powered chat, please review how we use your data and provide consent.',
+      );
+      return;
+    }
+
     try {
       await sendMessage(message);
     } catch (err) {
@@ -293,6 +344,25 @@ export default function TextChatScreen() {
             <View style={[styles.speechBubbleTail, { borderTopColor: colors.glass.background }]} />
           </Animated.View>
           
+          {/* Context indicator - shows what data Aurora analyzes */}
+          {availableContext && (availableContext.hasHealthInfo || availableContext.hasJournalEntries) && (
+            <Animated.View
+              style={[
+                styles.contextIndicatorContainer,
+                {
+                  opacity: auroraOpacity,
+                  transform: [{ scale: auroraScale }],
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <ContextIndicator
+                hasHealthInfo={availableContext.hasHealthInfo}
+                hasJournalEntries={availableContext.hasJournalEntries}
+              />
+            </Animated.View>
+          )}
+          
           <Animated.View
             style={[
               styles.auroraContainer,
@@ -350,6 +420,16 @@ export default function TextChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
+        {/* AI Consent banner above chat when not granted */}
+        {aiConsentStatus !== 'granted' && (
+          <View style={{ paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm }}>
+            <AiConsentCard
+              onAccept={grantAiConsent}
+              onDecline={denyAiConsent}
+            />
+          </View>
+        )}
+
         <MessageList />
         <ChatInput onSend={handleSend} isDisabled={isStreaming || isLoading} />
       </KeyboardAvoidingView>
@@ -365,7 +445,7 @@ export default function TextChatScreen() {
           style={styles.menuOverlay}
           onPress={() => setShowMenu(false)}
         >
-          <View style={[styles.menuContent, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}>
+          <View style={[styles.menuContent, { backgroundColor: colors.surface, borderColor: colors.glass.border }]}>
             <Pressable
               style={styles.menuItem}
               onPress={handleClearChat}
@@ -411,7 +491,7 @@ const styles = StyleSheet.create({
   },
   speechBubble: {
     position: 'absolute',
-    top: '35%',
+    top: '28%',
     left: '50%',
     marginLeft: -120,
     alignItems: 'center',
@@ -448,6 +528,16 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.glass.background,
     marginTop: -1,
     alignSelf: 'center',
+  },
+  contextIndicatorContainer: {
+    position: 'absolute',
+    top: '65%',
+    left: '50%',
+    marginLeft: -120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    width: 240,
   },
   auroraContainer: {
     position: 'absolute',
@@ -518,7 +608,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   menuContent: {
-    backgroundColor: COLORS.glass.background,
+    backgroundColor: COLORS.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,

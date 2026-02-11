@@ -76,14 +76,33 @@ export default function PrivacyPolicyScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. Data Security</Text>
+            <Text style={styles.sectionTitle}>4. AI Features and Third-Party Services</Text>
+            <Text style={styles.sectionText}>
+              Aurora offers AI-powered features such as AI chat, voice support, and AI-generated journal insights. 
+              When you use these features, we may send the following information to our servers and to our AI technology provider (currently OpenAI):
+            </Text>
+            <Text style={styles.bulletPoint}>• The text you type in chats and journal entries</Text>
+            <Text style={styles.bulletPoint}>• Voice recordings and transcripts when you use voice support</Text>
+            <Text style={styles.bulletPoint}>• Optional health information you choose to store in Aurora (for example, mental health conditions, medications, or therapies), when you choose to include this context</Text>
+            <Text style={styles.sectionText}>
+              This information is used only to generate supportive responses, journaling prompts, and insights within Aurora. 
+              It is not used for advertising, and we do not sell your data to data brokers.
+            </Text>
+            <Text style={styles.sectionText}>
+              We ask for your permission in the app before enabling these AI features. 
+              You can continue to use Aurora without AI features if you prefer not to share this data.
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>5. Data Security</Text>
             <Text style={styles.sectionText}>
               We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet or electronic storage is 100% secure.
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>5. Your Privacy Rights</Text>
+            <Text style={styles.sectionTitle}>6. Your Privacy Rights</Text>
             <Text style={styles.sectionText}>
               You have the right to:
             </Text>
@@ -95,14 +114,14 @@ export default function PrivacyPolicyScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>6. Anonymous Mode</Text>
+            <Text style={styles.sectionTitle}>7. Anonymous Mode</Text>
             <Text style={styles.sectionText}>
               Aurora offers an anonymous mode that allows you to participate in the community without revealing your identity. When enabled, your posts and comments will not display your username or profile information.
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7. Contact Us</Text>
+            <Text style={styles.sectionTitle}>8. Contact Us</Text>
             <Text style={styles.sectionText}>
               If you have any questions about this Privacy Policy, please contact us at info@aurora.nl
             </Text>

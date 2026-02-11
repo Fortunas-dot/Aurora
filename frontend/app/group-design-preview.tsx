@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../src/utils/secureStorage';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +93,7 @@ export default function GroupDesignPreviewScreen() {
   useEffect(() => {
     const loadSavedDesign = async () => {
       try {
-        const saved = await SecureStore.getItemAsync('group_design_variant');
+        const saved = await secureStorage.getItemAsync('group_design_variant');
         if (saved && (saved === 'current' || saved === 'reddit' || saved === 'facebook' || saved === 'modern')) {
           setSelectedDesign(saved as GroupDesignVariant);
         }
@@ -109,7 +109,7 @@ export default function GroupDesignPreviewScreen() {
   const handleSelectDesign = async (designId: GroupDesignVariant) => {
     setSelectedDesign(designId);
     try {
-      await SecureStore.setItemAsync('group_design_variant', designId);
+      await secureStorage.setItemAsync('group_design_variant', designId);
     } catch (error) {
       console.error('Error saving design:', error);
     }
@@ -117,7 +117,7 @@ export default function GroupDesignPreviewScreen() {
 
   const handleApply = async () => {
     try {
-      await SecureStore.setItemAsync('group_design_variant', selectedDesign);
+      await secureStorage.setItemAsync('group_design_variant', selectedDesign);
       router.back();
     } catch (error) {
       console.error('Error applying design:', error);

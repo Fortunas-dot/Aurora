@@ -9,20 +9,35 @@ import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { containsObjectionableContent } from '../utils/contentFilter';
 
+// Debug logging - only in development
 const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
 const logDebug = (data: any) => {
+  // Only log in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+  
   try {
     const logDir = path.dirname(DEBUG_LOG_PATH);
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
-    const logData = {...data, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1'};
+    // Remove sensitive data from logs
+    const sanitizedData = { ...data };
+    if (sanitizedData.data) {
+      // Remove password fields
+      delete sanitizedData.data.password;
+      delete sanitizedData.data.passwordValue;
+      delete sanitizedData.data.hasPassword;
+    }
+    const logData = { ...sanitizedData, timestamp: Date.now() };
     const logLine = JSON.stringify(logData) + '\n';
     fs.appendFileSync(DEBUG_LOG_PATH, logLine, 'utf8');
-    // Also log to console for Railway visibility
-    console.log('[DEBUG]', JSON.stringify(logData));
   } catch (e) {
-    console.error('Debug log error:', e);
+    // Silently fail in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Debug log error:', e);
+    }
   }
 };
 
@@ -84,10 +99,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy,queryString:JSON.stringify(query)},hypothesisId:'B'});
     // #endregion
 
-    // CRITICAL DEBUG: Log the exact query being executed
-    console.log('[CRITICAL] getPosts query:', JSON.stringify(query, null, 2));
-    console.log('[CRITICAL] groupId param:', groupId);
-    console.log('[CRITICAL] query.groupId value:', query.groupId);
+    // Debug logging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DEBUG] getPosts query:', JSON.stringify(query, null, 2));
+    }
 
     // First get post IDs and author IDs without populate to save original author IDs
     const postsRaw = await Post.find(query)

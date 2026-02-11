@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
 
@@ -50,7 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         // Cache user data for persistence
-        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
         console.log('✅ User data cached after login');
         
         set({
@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         // Cache user data for persistence
-        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
         
         set({
           user: user,
@@ -252,7 +252,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         // Cache user data for persistence
-        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
         
         set({
           user: user,
@@ -316,7 +316,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Logout error:', error);
     } finally {
       // Clear cached user data
-      await SecureStore.deleteItemAsync('cached_user');
+      await secureStorage.deleteItemAsync('cached_user');
       
       // Reset user identification (BELANGRIJK: doe dit na tracking)
       posthogService.reset();
@@ -337,7 +337,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('🔐 Starting auth check...');
       
       // First, try to restore user from cache for faster startup
-      const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+      const cachedUserJson = await secureStorage.getItemAsync('cached_user');
       if (cachedUserJson) {
         try {
           const cachedUser = JSON.parse(cachedUserJson);
@@ -350,7 +350,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         } catch (e) {
           console.warn('⚠️ Invalid cached user, clearing cache');
-          await SecureStore.deleteItemAsync('cached_user');
+          await secureStorage.deleteItemAsync('cached_user');
         }
       } else {
         console.log('⚠️ No cached user found');
@@ -361,7 +361,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!token) {
         console.log('❌ No token found, user not authenticated');
         // No token found, clear cache and user is not authenticated
-        await SecureStore.deleteItemAsync('cached_user');
+        await secureStorage.deleteItemAsync('cached_user');
         set({
           user: null,
           isAuthenticated: false,
@@ -386,7 +386,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } catch (timeoutError) {
         // Network timeout or error - if we have cached user and token, assume still authenticated
         console.warn('Auth check timeout or network error, using cached user if available');
-        const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+        const cachedUserJson = await secureStorage.getItemAsync('cached_user');
         if (cachedUserJson) {
           try {
             const cachedUser = JSON.parse(cachedUserJson);
@@ -414,7 +414,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('✅ Auth verified successfully for user:', user.email || user.username);
         
         // Cache user data for faster next startup
-        await SecureStore.setItemAsync('cached_user', JSON.stringify(user));
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
         console.log('✅ User data cached');
         
         // Identify user in PostHog after successful restore
@@ -437,7 +437,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (status === 401 || status === 403) {
           console.warn('❌ Token is invalid or expired (status:', status, '), removing token and cache');
           await authService.removeToken();
-          await SecureStore.deleteItemAsync('cached_user');
+          await secureStorage.deleteItemAsync('cached_user');
         } else {
           console.warn('❌ Auth check failed:', response.message || 'Unknown error');
         }
@@ -455,7 +455,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error?.response?.status === 401 || error?.message?.includes('401')) {
         console.warn('Token is invalid, removing token and cache');
         await authService.removeToken();
-        await SecureStore.deleteItemAsync('cached_user');
+        await secureStorage.deleteItemAsync('cached_user');
         set({
           user: null,
           isAuthenticated: false,
@@ -465,7 +465,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       // For other errors (network issues, etc.), check if we have cached user
-      const cachedUserJson = await SecureStore.getItemAsync('cached_user');
+      const cachedUserJson = await secureStorage.getItemAsync('cached_user');
       const token = await authService.getToken();
       
       if (cachedUserJson && token) {
@@ -502,7 +502,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Update cached user data
       try {
-        await SecureStore.setItemAsync('cached_user', JSON.stringify(updatedUser));
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(updatedUser));
       } catch (error) {
         console.error('Error caching user data:', error);
       }

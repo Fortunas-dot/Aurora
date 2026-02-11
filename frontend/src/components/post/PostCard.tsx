@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -7,6 +7,8 @@ import { enUS } from 'date-fns/locale';
 import { GlassCard, Avatar, TagChip, LazyImage } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Post } from '../../services/post.service';
+import { postService } from '../../services/post.service';
+import { useTheme } from '../../hooks/useTheme';
 
 interface PostCardProps {
   post: Post;
@@ -17,6 +19,7 @@ interface PostCardProps {
   onSave?: () => void;
   onAuthorPress?: () => void;
   onGroupPress?: () => void;
+  onDelete?: () => void; // Callback when post is deleted
   currentUserId?: string;
   isSaved?: boolean;
   showFullContent?: boolean; // If true, show full content instead of just title
@@ -29,18 +32,23 @@ export const PostCard: React.FC<PostCardProps> = ({
   onComment,
   onShare,
   onSave,
-      onAuthorPress,
-      onGroupPress,
-      currentUserId,
-      isSaved,
-      showFullContent = false,
+  onAuthorPress,
+  onGroupPress,
+  onDelete,
+  currentUserId,
+  isSaved,
+  showFullContent = false,
 }) => {
   const router = useRouter();
+  const { colors } = useTheme();
   const [isLiked, setIsLiked] = useState(
     currentUserId ? post.likes.includes(currentUserId) : false
   );
   const [likesCount, setLikesCount] = useState(post.likes.length);
   const [saved, setSaved] = useState(isSaved ?? post.isSaved ?? false);
+  const [showMenu, setShowMenu] = useState(false);
+  
+  const isOwnPost = currentUserId === post.author._id;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -53,6 +61,92 @@ export const PostCard: React.FC<PostCardProps> = ({
       router.push(`/group/${post.groupId}`);
     }
     onGroupPress?.();
+  };
+
+  const handleDeletePost = async () => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setShowMenu(false),
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await postService.deletePost(post._id);
+              if (response.success) {
+                setShowMenu(false);
+                onDelete?.();
+                Alert.alert('Success', 'Post deleted successfully');
+              } else {
+                Alert.alert('Error', 'Failed to delete post');
+              }
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'Failed to delete post');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReportPost = () => {
+    Alert.alert(
+      'Report Post',
+      'Why are you reporting this post?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setShowMenu(false),
+        },
+        {
+          text: 'Spam',
+          onPress: async () => {
+            try {
+              await postService.reportPost(post._id, 'spam');
+              setShowMenu(false);
+              Alert.alert('Success', 'Post reported');
+            } catch (error) {
+              console.error('Error reporting post:', error);
+              Alert.alert('Error', 'Failed to report post');
+            }
+          },
+        },
+        {
+          text: 'Inappropriate',
+          onPress: async () => {
+            try {
+              await postService.reportPost(post._id, 'inappropriate');
+              setShowMenu(false);
+              Alert.alert('Success', 'Post reported');
+            } catch (error) {
+              console.error('Error reporting post:', error);
+              Alert.alert('Error', 'Failed to report post');
+            }
+          },
+        },
+        {
+          text: 'Other',
+          onPress: async () => {
+            try {
+              await postService.reportPost(post._id, 'other');
+              setShowMenu(false);
+              Alert.alert('Success', 'Post reported');
+            } catch (error) {
+              console.error('Error reporting post:', error);
+              Alert.alert('Error', 'Failed to report post');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), {
@@ -216,7 +310,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         <View style={styles.actionSpacer} />
 
-        <Pressable style={styles.actionButton}>
+        <Pressable style={styles.actionButton} onPress={() => setShowMenu(true)}>
           <Ionicons
             name="ellipsis-horizontal"
             size={20}
@@ -224,6 +318,60 @@ export const PostCard: React.FC<PostCardProps> = ({
           />
         </Pressable>
       </View>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <Pressable 
+          style={styles.menuOverlay}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={[styles.menuContent, { backgroundColor: colors.surface, borderColor: colors.glass.border }]}>
+            {isOwnPost ? (
+              <>
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={handleDeletePost}
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.error} />
+                  <Text style={[styles.menuItemText, { color: colors.error }]}>Delete Post</Text>
+                </Pressable>
+                <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
+                    router.push(`/edit-post/${post._id}`);
+                  }}
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.text} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>Edit Post</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                style={styles.menuItem}
+                onPress={handleReportPost}
+              >
+                <Ionicons name="flag-outline" size={20} color={colors.error} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>Report Post</Text>
+              </Pressable>
+            )}
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => setShowMenu(false)}
+            >
+              <Ionicons name="close" size={20} color={colors.textMuted} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </GlassCard>
   );
 };
@@ -346,6 +494,42 @@ const styles = StyleSheet.create({
   },
   actionSpacer: {
     flex: 1,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    paddingBottom: 100,
+  },
+  menuContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginHorizontal: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
+  menuItemText: {
+    ...TYPOGRAPHY.bodyMedium,
+    marginLeft: SPACING.md,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: COLORS.glass.border,
+    marginVertical: SPACING.xs,
   },
 });
 

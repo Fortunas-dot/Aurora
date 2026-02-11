@@ -569,6 +569,10 @@ export default function FeedScreen() {
     }
   };
 
+  const handleDeletePost = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p._id !== postId));
+  }, []);
+
   const renderPost = useCallback(({ item }: { item: Post }) => (
     <PostCard
       post={item}
@@ -579,10 +583,11 @@ export default function FeedScreen() {
       onSave={() => handleSavePost(item._id)}
       onAuthorPress={() => router.push(`/user/${item.author._id}`)}
       onGroupPress={() => item.groupId && router.push(`/group/${item.groupId}`)}
+      onDelete={() => handleDeletePost(item._id)}
       currentUserId={user?._id}
       isSaved={item.isSaved}
     />
-  ), [user?._id, router, handleLike, handleShare, handleSavePost]);
+  ), [user?._id, router, handleLike, handleShare, handleSavePost, handleDeletePost]);
 
   const getEmptyStateText = () => {
     if (isSearching && searchQuery) {

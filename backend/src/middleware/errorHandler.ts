@@ -11,7 +11,16 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  console.error('Error:', err.message);
+  // Log error details (but don't expose to client)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment) {
+    console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
+  } else {
+    // In production, only log error message (no stack traces)
+    console.error('Error:', err.message);
+  }
 
   // Mongoose duplicate key error
   if (err.code === 11000) {
@@ -49,9 +58,17 @@ export const errorHandler = (
   }
 
   const statusCode = err.statusCode || 500;
+  
+  // In production, don't expose error details
+  const message = isDevelopment 
+    ? (err.message || 'Server Error')
+    : 'An error occurred. Please try again later.';
+
   res.status(statusCode).json({
     success: false,
-    message: err.message || 'Server Error',
+    message,
+    // Only include error details in development
+    ...(isDevelopment && { error: err.message, stack: err.stack }),
   });
 };
 

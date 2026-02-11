@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { ChatMessage as ChatMessageType } from '../../types/chat.types';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { useChatStore } from '../../store/chatStore';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -13,7 +16,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   message, 
   isStreaming = false 
 }) => {
+  const { colors } = useTheme();
+  const { availableContext, messages } = useChatStore();
   const isUser = message.role === 'user';
+  // Show badge only on the last assistant message if context was available
+  const isLastAssistantMessage = !isUser && !isStreaming && 
+    messages.length > 0 && 
+    messages[messages.length - 1]?.id === message.id;
+  const showContextBadge = isLastAssistantMessage && availableContext && 
+    (availableContext.hasHealthInfo || availableContext.hasJournalEntries);
 
   return (
     <View style={[
@@ -37,6 +48,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             {message.content}
             {isStreaming && <Text style={styles.cursor}>▌</Text>}
           </Text>
+          {showContextBadge && (
+            <View style={[styles.contextBadge, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}>
+              <Ionicons name="analytics" size={10} color={colors.accent} />
+              <Text style={[styles.contextBadgeText, { color: colors.textMuted }]}>
+                Using your data
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -83,5 +102,20 @@ const styles = StyleSheet.create({
   cursor: {
     color: COLORS.primary,
     opacity: 0.8,
+  },
+  contextBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: SPACING.xs,
+    paddingHorizontal: SPACING.xs + 2,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+  },
+  contextBadgeText: {
+    ...TYPOGRAPHY.caption,
+    fontSize: 9,
+    marginLeft: 4,
   },
 });

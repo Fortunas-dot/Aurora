@@ -9,6 +9,7 @@ import {
   getFollowers,
   getFollowing,
   blockUser,
+  getBlockedUsers,
   deleteAccount,
 } from '../controllers/userController';
 import { protect, optionalAuth } from '../middleware/auth';
@@ -24,6 +25,7 @@ router.get('/:id/following', optionalAuth, getFollowing);
 router.get('/:id', optionalAuth, getUserProfile);
 router.get('/:id/posts', optionalAuth, getUserPosts);
 router.put('/profile', protect, updateProfile);
+router.get('/blocked', protect, getBlockedUsers);
 router.post('/:id/block', protect, blockUser);
 router.delete('/account', protect, deleteAccount);
 

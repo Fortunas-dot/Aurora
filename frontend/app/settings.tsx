@@ -12,12 +12,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard, GlassButton, LoadingSpinner } from '../src/components/common';
-import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
+import { GlassCard, GlassButton, LoadingSpinner, Avatar } from '../src/components/common';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
 import { useAuthStore } from '../src/store/authStore';
-import { userService } from '../src/services/user.service';
+import { userService, UserProfile } from '../src/services/user.service';
 import { i18n, Language } from '../src/utils/i18n';
 
 interface MenuItemProps {
@@ -107,12 +107,61 @@ export default function SettingsScreen() {
   } = useSettingsStore();
 
   const [t, setT] = useState(() => i18n.getTranslations());
+  const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
+  const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
       loadSettings();
+      loadBlockedUsers();
     }
   }, [isAuthenticated, loadSettings]);
+
+  const loadBlockedUsers = async () => {
+    setIsLoadingBlocked(true);
+    try {
+      const response = await userService.getBlockedUsers();
+      if (response.success && response.data) {
+        setBlockedUsers(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading blocked users:', error);
+    } finally {
+      setIsLoadingBlocked(false);
+    }
+  };
+
+  const handleUnblock = async (userId: string, username: string) => {
+    Alert.alert(
+      'Unblock User',
+      `Are you sure you want to unblock ${username}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Unblock',
+          style: 'default',
+          onPress: async () => {
+            try {
+              const response = await userService.blockUser(userId);
+              if (response.success) {
+                // Remove from list
+                setBlockedUsers((prev) => prev.filter((u) => u._id !== userId));
+                Alert.alert('Success', 'User unblocked successfully');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to unblock user');
+              }
+            } catch (error) {
+              console.error('Error unblocking user:', error);
+              Alert.alert('Error', 'Failed to unblock user. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Initialize translations (app is always in English)
   useEffect(() => {
@@ -298,6 +347,66 @@ export default function SettingsScreen() {
             />
           </GlassCard>
         </View>
+
+        {/* Blocked Users */}
+        <View style={styles.menuSection}>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>Blocked Users</Text>
+          <GlassCard padding={0}>
+            {isLoadingBlocked ? (
+              <View style={styles.blockedLoadingContainer}>
+                <LoadingSpinner size="sm" />
+              </View>
+            ) : blockedUsers.length === 0 ? (
+              <View style={styles.blockedEmptyContainer}>
+                <Ionicons name="ban-outline" size={32} color={colors.textMuted} />
+                <Text style={[styles.blockedEmptyText, { color: colors.textMuted }]}>
+                  No blocked users
+                </Text>
+              </View>
+            ) : (
+              blockedUsers.map((blockedUser, index) => (
+                <React.Fragment key={blockedUser._id}>
+                  <Pressable
+                    style={styles.blockedUserItem}
+                    onPress={() => router.push(`/user/${blockedUser._id}`)}
+                  >
+                    <Avatar
+                      uri={blockedUser.avatar}
+                      name={blockedUser.displayName || blockedUser.username}
+                      userId={blockedUser._id}
+                      avatarCharacter={blockedUser.avatarCharacter}
+                      avatarBackgroundColor={blockedUser.avatarBackgroundColor}
+                      size="md"
+                    />
+                    <View style={styles.blockedUserInfo}>
+                      <Text style={[styles.blockedUserName, { color: colors.text }]}>
+                        {blockedUser.displayName || blockedUser.username}
+                      </Text>
+                      <Text style={[styles.blockedUserUsername, { color: colors.textMuted }]}>
+                        @{blockedUser.username}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={[styles.unblockButton, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleUnblock(blockedUser._id, blockedUser.displayName || blockedUser.username);
+                      }}
+                    >
+                      <Ionicons name="ban" size={16} color={colors.error} />
+                      <Text style={[styles.unblockButtonText, { color: colors.error }]}>
+                        Unblock
+                      </Text>
+                    </Pressable>
+                  </Pressable>
+                  {index < blockedUsers.length - 1 && (
+                    <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+                  )}
+                </React.Fragment>
+              ))
+            )}
+          </GlassCard>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -405,6 +514,47 @@ const styles = StyleSheet.create({
   },
   menuCard: {
     marginTop: SPACING.md,
+  },
+  blockedLoadingContainer: {
+    padding: SPACING.lg,
+    alignItems: 'center',
+  },
+  blockedEmptyContainer: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  blockedEmptyText: {
+    ...TYPOGRAPHY.body,
+    marginTop: SPACING.md,
+  },
+  blockedUserItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  blockedUserInfo: {
+    flex: 1,
+    marginLeft: SPACING.md,
+  },
+  blockedUserName: {
+    ...TYPOGRAPHY.bodyMedium,
+  },
+  blockedUserUsername: {
+    ...TYPOGRAPHY.caption,
+    marginTop: 2,
+  },
+  unblockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  unblockButtonText: {
+    ...TYPOGRAPHY.small,
+    fontSize: 12,
   },
 });
 

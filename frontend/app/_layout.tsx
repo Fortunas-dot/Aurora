@@ -11,6 +11,8 @@ import { useSettingsStore } from '../src/store/settingsStore';
 import { pushNotificationService } from '../src/services/pushNotification.service';
 import { notificationWebSocketService } from '../src/services/notificationWebSocket.service';
 import { posthogService, POSTHOG_EVENTS } from '../src/services/posthog.service';
+import { useConsentStore } from '../src/store/consentStore';
+import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
@@ -28,6 +30,7 @@ export default function RootLayout() {
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
   const { colors, isDark } = useTheme();
+  const { aiConsentStatus, loadConsent } = useConsentStore();
 
   useEffect(() => {
     let isMounted = true;
@@ -39,12 +42,13 @@ export default function RootLayout() {
         
         if (!isMounted) return;
         
-        // Then load settings
+        // Then load settings + consent
         await loadSettings();
+        await loadConsent();
         
         if (!isMounted) return;
         
-        // Initialize PostHog (non-blocking)
+        // Initialize PostHog (non-blocking) - only for analytics, not tracking
         posthogService.initialize().catch((error) => {
           console.warn('PostHog initialization failed:', error);
         });
@@ -147,7 +151,9 @@ export default function RootLayout() {
     return (
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
-        <LoadingScreen colors={colors} />
+        <ResponsiveWrapper>
+          <LoadingScreen colors={colors} />
+        </ResponsiveWrapper>
       </SafeAreaProvider>
     );
   }
@@ -155,32 +161,34 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: colors.background,
-          },
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="voice"
-          options={{
-            presentation: 'fullScreenModal',
-            animation: 'slide_from_bottom',
+      <ResponsiveWrapper>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: colors.background,
+            },
+            animation: 'fade',
           }}
-        />
-        <Stack.Screen
-          name="text-chat"
-          options={{
-            presentation: 'card',
-            animation: 'slide_from_right',
-          }}
-        />
-      </Stack>
+        >
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="voice"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="text-chat"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+        </Stack>
+      </ResponsiveWrapper>
     </SafeAreaProvider>
   );
 }

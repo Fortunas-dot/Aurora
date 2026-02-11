@@ -20,11 +20,11 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: 'com.auroracommune.app',
       config: {
-        facebookAppId: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
         facebookDisplayName: 'Aurora',
       },
       infoPlist: {
-        FacebookAppID: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        FacebookAppID: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
         FacebookDisplayName: 'Aurora',
         LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
         ITSAppUsesNonExemptEncryption: false,
@@ -41,13 +41,26 @@ module.exports = {
       softwareKeyboardLayoutMode: 'resize',
       package: 'com.auroracommune.app',
       config: {
-        facebookAppId: process.env.FACEBOOK_APP_ID || '1261010692592854',
+        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
         facebookDisplayName: 'Aurora',
       },
       permissions: [],
     },
     web: {
       favicon: './assets/favicon.png',
+      bundler: 'metro',
+      // Viewport settings for proper scaling on iPad/web
+      meta: {
+        viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+      },
+      // Security headers for web
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      },
     },
     plugins: [
       'expo-router',
@@ -63,11 +76,15 @@ module.exports = {
       [
         'react-native-fbsdk-next',
         (() => {
-          const config = {
-            appID: process.env.FACEBOOK_APP_ID || '1261010692592854',
-            displayName: 'Aurora',
-            scheme: process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1261010692592854',
-          };
+        const facebookAppId = process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854');
+        if (!facebookAppId && process.env.NODE_ENV === 'production') {
+          console.warn('⚠️  FACEBOOK_APP_ID not set in production. Facebook login will not work.');
+        }
+        const config = {
+          appID: facebookAppId || '1261010692592854',
+          displayName: 'Aurora',
+          scheme: facebookAppId ? `fb${facebookAppId}` : 'fb1261010692592854',
+        };
           // Client Token is optional - only add if you have it
           if (process.env.FACEBOOK_CLIENT_TOKEN) {
             config.clientToken = process.env.FACEBOOK_CLIENT_TOKEN;

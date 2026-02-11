@@ -43,8 +43,11 @@ router.get('/following', protect, getFollowingPosts);
 router.get('/joined-groups', protect, getJoinedGroupsPosts);
 router.get('/saved', protect, getSavedPosts);
 router.get('/search', optionalAuth, searchPosts);
-router.get('/debug/logs', getDebugLogs);
-router.get('/debug/test-query', testQuery);
+// Debug endpoints - only available in development
+if (process.env.NODE_ENV === 'development') {
+  router.get('/debug/logs', getDebugLogs);
+  router.get('/debug/test-query', testQuery);
+}
 
 // Single post GET route (must be after special routes)
 router.get('/:id', optionalAuth, getPost);

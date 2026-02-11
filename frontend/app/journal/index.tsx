@@ -22,6 +22,8 @@ import { journalService, JournalEntry, JournalPrompt, JournalInsights, Journal }
 import { getFontFamily } from '../../src/utils/fontHelper';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { useConsentStore } from '../../src/store/consentStore';
+import { AiConsentCard } from '../../src/components/legal/AiConsentCard';
 
 // Mood emoji mapping
 const getMoodEmoji = (mood: number): string => {
@@ -245,7 +247,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
 export default function JournalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
+  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
   const [journals, setJournals] = useState<Journal[]>([]);
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -282,18 +284,23 @@ export default function JournalScreen() {
       setLoading(true);
       const [entriesRes, promptRes, insightsRes] = await Promise.all([
         journalService.getEntries(1, 10, { journalId }),
-        journalService.getPrompt(),
-        journalService.getInsights(30, journalId),
+        // Only load AI-powered prompt & insights when consent is granted
+        aiConsentStatus === 'granted' ? journalService.getPrompt() : Promise.resolve({ success: false }),
+        aiConsentStatus === 'granted' ? journalService.getInsights(30, journalId) : Promise.resolve({ success: false }),
       ]);
 
       if (entriesRes.success && entriesRes.data) {
         setEntries(entriesRes.data);
       }
-      if (promptRes.success && promptRes.data) {
-        setPrompt(promptRes.data);
+      if (promptRes && (promptRes as any).success && (promptRes as any).data) {
+        setPrompt((promptRes as any).data);
+      } else {
+        setPrompt(null);
       }
-      if (insightsRes.success && insightsRes.data) {
-        setInsights(insightsRes.data);
+      if (insightsRes && (insightsRes as any).success && (insightsRes as any).data) {
+        setInsights((insightsRes as any).data);
+      } else {
+        setInsights(null);
       }
     } catch (error) {
       console.error('Error loading journal data:', error);
@@ -301,12 +308,13 @@ export default function JournalScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [aiConsentStatus]);
 
   useFocusEffect(
     useCallback(() => {
+      loadConsent().catch(console.error);
       loadJournals();
-    }, [loadJournals])
+    }, [loadJournals, loadConsent])
   );
 
   useEffect(() => {
@@ -481,16 +489,24 @@ export default function JournalScreen() {
           />
         }
       >
-        {/* Daily Prompt */}
-        {prompt && (
+        {/* AI Consent (for prompts & insights) */}
+        {aiConsentStatus !== 'granted' && (
+          <AiConsentCard
+            onAccept={grantAiConsent}
+            onDecline={denyAiConsent}
+          />
+        )}
+
+        {/* Daily Prompt (AI-powered, only when consent granted) */}
+        {aiConsentStatus === 'granted' && prompt && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Today</Text>
             <PromptCard prompt={prompt} onPress={() => handleNewEntry(prompt)} />
           </View>
         )}
 
-        {/* Quick Stats */}
-        {insights && insights.totalEntries > 0 && (
+        {/* Quick Stats (AI-powered insights, only when consent granted) */}
+        {aiConsentStatus === 'granted' && insights && insights.totalEntries > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Statistics</Text>

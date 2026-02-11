@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { i18n, Language } from '../utils/i18n';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { useAuthStore } from './authStore';
 import { userService } from '../services/user.service';
 
@@ -82,27 +82,27 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Set language
   setLanguage: async (language: Language) => {
     await i18n.setLanguage(language);
-    await SecureStore.setItemAsync('app_language', language);
+    await secureStorage.setItemAsync('app_language', language);
     set({ language });
   },
 
   // Set theme (automatically saves)
   setTheme: async (theme: 'dark' | 'light' | 'system') => {
-    await SecureStore.setItemAsync('app_theme', theme);
+    await secureStorage.setItemAsync('app_theme', theme);
     set({ theme });
     // Theme is already saved to SecureStore, no need to call saveSettings
   },
 
   // Set font family (automatically saves)
   setFontFamily: async (fontFamily: string) => {
-    await SecureStore.setItemAsync('app_font_family', fontFamily);
+    await secureStorage.setItemAsync('app_font_family', fontFamily);
     set({ fontFamily });
     // Font family is already saved to SecureStore, no need to call saveSettings
   },
 
   // Set Aurora style (automatically saves)
   setAuroraStyle: async (auroraStyle: AuroraStyle) => {
-    await SecureStore.setItemAsync('app_aurora_style', auroraStyle);
+    await secureStorage.setItemAsync('app_aurora_style', auroraStyle);
     set({ auroraStyle });
   },
 
@@ -147,7 +147,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     
     // Save to secure store
     const prefs = get().notificationPreferences;
-    await SecureStore.setItemAsync('notification_preferences', JSON.stringify(prefs));
+    await secureStorage.setItemAsync('notification_preferences', JSON.stringify(prefs));
   },
 
   // Load settings
@@ -166,13 +166,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const theme = 'dark';
       
       // Load font family
-      const fontFamily = (await SecureStore.getItemAsync('app_font_family')) || 'system';
+      const fontFamily = (await secureStorage.getItemAsync('app_font_family')) || 'system';
       
       // Load Aurora style
-      const auroraStyle = ((await SecureStore.getItemAsync('app_aurora_style')) || 'sphere') as AuroraStyle;
+      const auroraStyle = ((await secureStorage.getItemAsync('app_aurora_style')) || 'sphere') as AuroraStyle;
       
       // Load notification preferences
-      const prefsJson = await SecureStore.getItemAsync('notification_preferences');
+      const prefsJson = await secureStorage.getItemAsync('notification_preferences');
       const notificationPreferences = prefsJson
         ? JSON.parse(prefsJson)
         : defaultNotificationPreferences;
@@ -208,13 +208,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Language is always English, no need to save
       
       // Save theme
-      await SecureStore.setItemAsync('app_theme', state.theme);
+      await secureStorage.setItemAsync('app_theme', state.theme);
       
       // Save font family
-      await SecureStore.setItemAsync('app_font_family', state.fontFamily);
+      await secureStorage.setItemAsync('app_font_family', state.fontFamily);
       
       // Save notification preferences
-      await SecureStore.setItemAsync('notification_preferences', JSON.stringify(state.notificationPreferences));
+      await secureStorage.setItemAsync('notification_preferences', JSON.stringify(state.notificationPreferences));
       
       // Save privacy settings to backend
       const { user } = useAuthStore.getState();

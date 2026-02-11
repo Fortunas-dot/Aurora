@@ -47,9 +47,14 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
 
     // Check if current user is following this user
     let isFollowing = false;
+    let isBlocked = false;
     if (req.userId) {
       const currentUser = await User.findById(req.userId);
       isFollowing = currentUser?.following.some(
+        (id) => id.toString() === req.params.id
+      ) || false;
+      // Check if current user has blocked this user
+      isBlocked = currentUser?.blockedUsers.some(
         (id) => id.toString() === req.params.id
       ) || false;
     }
@@ -70,6 +75,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       totalLikes: totalLikesCount,
       totalComments: totalCommentsCount,
       isFollowing,
+      isBlocked,
       // Only show email if user opted in
       ...(user.showEmail && { email: user.email }),
     };
@@ -91,9 +97,6 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:88',message:'updateProfile entry',data:{userId:req.userId,bodyKeys:Object.keys(req.body),hasPassword:'password' in req.body,passwordValue:req.body.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H4'})}).catch(()=>{});
-    // #endregion
     const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, isAnonymous, showEmail } = req.body;
 
     // Get current user first to check username change restrictions
@@ -156,20 +159,12 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (showEmail !== undefined) updateData.showEmail = showEmail;
     if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:119',message:'before updateOne',data:{updateDataKeys:Object.keys(updateData),hasPasswordInUpdate:'password' in updateData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H4'})}).catch(()=>{});
-    // #endregion
-
     // Use updateOne instead of findByIdAndUpdate to avoid triggering document middleware
     // This prevents the pre-validate hook from running
     const updateResult = await User.updateOne(
       { _id: req.userId },
       { $set: updateData }
     );
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:122',message:'after updateOne',data:{matchedCount:updateResult.matchedCount,modifiedCount:updateResult.modifiedCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
 
     if (updateResult.matchedCount === 0) {
       res.status(404).json({
@@ -180,14 +175,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Fetch the updated user
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:133',message:'before findById',data:{userId:req.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     const user = await User.findById(req.userId);
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:135',message:'after findById',data:{userFound:!!user,hasFacebookId:!!user?.facebookId,hasPassword:!!user?.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
 
     if (!user) {
       res.status(404).json({
@@ -202,9 +190,6 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       data: sanitizeUser(user),
     });
   } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:147',message:'updateProfile error',data:{errorMessage:error.message,errorStack:error.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H3,H4,H5'})}).catch(()=>{});
-    // #endregion
     res.status(500).json({
       success: false,
       message: error.message || 'Error updating profile',
@@ -333,9 +318,6 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
 // @access  Private
 export const followUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:295',message:'followUser entry',data:{currentUserId:req.userId,targetUserId:req.params.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     const targetUserId = req.params.id;
     const currentUserId = req.userId!;
 
@@ -357,10 +339,6 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
       });
       return;
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:308',message:'before user.save in followUser',data:{hasFacebookId:!!currentUser.facebookId,hasPassword:!!currentUser.password,isNew:currentUser.isNew},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
 
     const isFollowing = currentUser.following.some(
       (id) => id.toString() === targetUserId
@@ -404,9 +382,6 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
       });
     }
   } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:360',message:'followUser error',data:{errorMessage:error.message,errorStack:error.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     res.status(500).json({
       success: false,
       message: error.message || 'Error following/unfollowing user',
@@ -492,9 +467,6 @@ export const getFollowing = async (req: AuthRequest, res: Response): Promise<voi
 // @access  Private
 export const registerPushToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:444',message:'registerPushToken entry',data:{userId:req.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     const { token, deviceId, platform } = req.body;
 
     if (!token || !deviceId) {
@@ -537,18 +509,11 @@ export const registerPushToken = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:478',message:'after user.save in registerPushToken',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-
     res.json({
       success: true,
       message: 'Push token registered',
     });
   } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userController.ts:484',message:'registerPushToken error',data:{errorMessage:error.message,errorStack:error.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     res.status(500).json({
       success: false,
       message: error.message || 'Error registering push token',
@@ -597,7 +562,9 @@ export const blockUser = async (req: AuthRequest, res: Response): Promise<void> 
       res.json({
         success: true,
         message: 'User unblocked successfully',
-        isBlocked: false,
+        data: {
+          isBlocked: false,
+        },
       });
     } else {
       // Block
@@ -616,13 +583,53 @@ export const blockUser = async (req: AuthRequest, res: Response): Promise<void> 
       res.json({
         success: true,
         message: 'User blocked successfully. Their content will no longer appear in your feed.',
-        isBlocked: true,
+        data: {
+          isBlocked: true,
+        },
       });
     }
   } catch (error: any) {
     res.status(500).json({
       success: false,
       message: error.message || 'Error blocking/unblocking user',
+    });
+  }
+};
+
+// @desc    Get blocked users list
+// @route   GET /api/users/blocked
+// @access  Private
+export const getBlockedUsers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentUser = await User.findById(req.userId)
+      .populate('blockedUsers', 'username displayName avatar avatarCharacter avatarBackgroundColor')
+      .select('blockedUsers');
+
+    if (!currentUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    const blockedUsers = currentUser.blockedUsers.map((user: any) => ({
+      _id: user._id,
+      username: user.username,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      avatarCharacter: user.avatarCharacter,
+      avatarBackgroundColor: user.avatarBackgroundColor,
+    }));
+
+    res.json({
+      success: true,
+      data: blockedUsers,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching blocked users',
     });
   }
 };

@@ -1,5 +1,5 @@
 import { getApiUrl } from '../utils/apiUrl';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 
 export type ChatWebSocketEvent = 'new_message' | 'message_sent' | 'typing_start' | 'typing_stop' | 'user_status' | 'message_read' | 'conversation_updated' | 'error' | 'connected';
 
@@ -44,7 +44,7 @@ class ChatWebSocketService {
     this.isConnecting = true;
 
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await secureStorage.getItemAsync('auth_token');
       if (!token) {
         // Silently fail if no token - user might not be logged in yet
         console.log('No auth token available, skipping WebSocket connection');

@@ -19,6 +19,7 @@ export const useStreamingResponse = () => {
     updateStreamingMessage,
     setStreaming,
     setError,
+    setAvailableContext,
   } = useChatStore();
 
   // Load journal context when component mounts or user changes
@@ -60,6 +61,21 @@ export const useStreamingResponse = () => {
 
       // Format complete context (health info + journal entries) for AI
       const completeContext = formatCompleteContextForAI(user, journalContext);
+      
+      // Track available context for UI display
+      const hasHealthInfo = !!(user?.healthInfo && (
+        (user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) ||
+        (user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) ||
+        (user.healthInfo.medications && user.healthInfo.medications.length > 0) ||
+        (user.healthInfo.therapies && user.healthInfo.therapies.length > 0)
+      ));
+      const hasJournalEntries = !!(journalContext && journalContext.length > 0);
+      
+      // Set context info - will be used to show indicator during streaming and badge on message
+      setAvailableContext({
+        hasHealthInfo,
+        hasJournalEntries,
+      });
       
       // Prepare conversation history for OpenAI with A.I. mental health support companion system message
       let systemContent = 'You are Aurora, an empathetic and professional A.I. mental health companion. You listen attentively, ask thoughtful questions, and provide supportive guidance. You are warm, understanding, and non-judgmental. You help people explore their thoughts and feelings in a safe and supportive way. Speak in English.';
@@ -133,6 +149,7 @@ export const useStreamingResponse = () => {
             updateStreamingMessage('');
             setStreaming(false);
             setIsLoading(false);
+            // Keep context available for showing badge on completed message
             cleanupRef.current = null;
           },
           // On error

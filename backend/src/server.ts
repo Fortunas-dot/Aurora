@@ -22,9 +22,21 @@ import calendarRoutes from './routes/calendar';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
+import {
+  validateEnv,
+  corsOptions,
+  apiLimiter,
+  authLimiter,
+  uploadLimiter,
+  helmetConfig,
+  securityHeaders,
+} from './middleware/security';
 
 // Load environment variables
 dotenv.config();
+
+// Validate required environment variables
+validateEnv();
 
 const app: Application = express() as any;
 const PORT = process.env.PORT || 3000;
@@ -32,10 +44,17 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB
 connectDB();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security Middleware (must be first)
+app.use(helmetConfig);
+app.use(securityHeaders);
+app.use(cors(corsOptions));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Limit URL-encoded payload size
+
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
 
 // Serve static files (uploads)
 import path from 'path';
@@ -56,20 +75,23 @@ import { handleChatWebSocket } from './controllers/chatWebSocket';
 (app as any).ws('/ws/notifications', handleNotificationWebSocket);
 (app as any).ws('/ws/chat', handleChatWebSocket);
 
-// API Routes
-app.use('/api/auth', authRoutes);
+// API Routes with specific rate limiting
+app.use('/api/auth', authLimiter, authRoutes); // Stricter rate limiting for auth
+app.use('/api/upload', uploadLimiter, uploadRoutes); // Stricter rate limiting for uploads
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/journals', journalsRoutes);
 app.use('/api/ideas', ideaRoutes);
 app.use('/api/therapists', therapistRoutes);
-app.use('/api/seed', seedRoutes);
+// Seed routes should be disabled in production
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/seed', seedRoutes);
+}
 app.use('/api/calendar', calendarRoutes);
 
 // Error handling middleware

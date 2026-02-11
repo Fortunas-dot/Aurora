@@ -47,6 +47,7 @@ export default function UserProfileScreen() {
       if (response.success && response.data) {
         setProfile(response.data);
         setIsFollowing(response.data.isFollowing || false);
+        setIsBlocked(response.data.isBlocked || false);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -115,6 +116,54 @@ export default function UserProfileScreen() {
     } finally {
       setIsTogglingFollow(false);
     }
+  };
+
+  const handleBlock = async () => {
+    if (!id || !isAuthenticated || isTogglingBlock) return;
+
+    const action = isBlocked ? 'unblock' : 'block';
+    Alert.alert(
+      `${action === 'block' ? 'Block' : 'Unblock'} User`,
+      `Are you sure you want to ${action} this user? ${action === 'block' ? 'Their content will no longer appear in your feed.' : ''}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: action === 'block' ? 'Block' : 'Unblock',
+          style: action === 'block' ? 'destructive' : 'default',
+          onPress: async () => {
+            setIsTogglingBlock(true);
+            try {
+              const response = await userService.blockUser(id);
+              if (response.success && response.data) {
+                setIsBlocked(response.data.isBlocked);
+                // If blocking, also unfollow
+                if (response.data.isBlocked && isFollowing) {
+                  setIsFollowing(false);
+                }
+                // Reload profile to update counts
+                await loadProfile();
+                Alert.alert(
+                  'Success',
+                  response.data.isBlocked
+                    ? 'User blocked successfully. Their content will no longer appear in your feed.'
+                    : 'User unblocked successfully.'
+                );
+              } else {
+                Alert.alert('Error', response.message || `Failed to ${action} user`);
+              }
+            } catch (error) {
+              console.error(`Error ${action}ing user:`, error);
+              Alert.alert('Error', `Failed to ${action} user. Please try again.`);
+            } finally {
+              setIsTogglingBlock(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLoadMore = () => {
@@ -193,47 +242,49 @@ export default function UserProfileScreen() {
               avatarBackgroundColor={profile.avatarBackgroundColor}
               size="xl"
             />
-            <View style={styles.profileInfo}>
-              <Text style={styles.displayName} numberOfLines={1} ellipsizeMode="tail">
-                {profile.displayName || profile.username}
-              </Text>
-              <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">
-                @{profile.username}
-              </Text>
-            </View>
-            {!isOwnProfile && isAuthenticated && (
-              <View style={styles.actionButtons}>
-                <GlassButton
-                  title={isFollowing ? 'Unfollow' : 'Follow'}
-                  onPress={handleFollow}
-                  variant={isFollowing ? 'outline' : 'primary'}
-                  disabled={isTogglingFollow}
-                  style={styles.followButton}
-                />
-                <Pressable
-                  style={styles.blockButton}
-                  onPress={handleBlock}
-                  disabled={isTogglingBlock}
-                >
-                  <Ionicons
-                    name={isBlocked ? 'ban' : 'ban-outline'}
-                    size={20}
-                    color={isBlocked ? COLORS.error : COLORS.textSecondary}
-                  />
-                  <Text style={[styles.blockButtonText, isBlocked && { color: COLORS.error }]}>
-                    {isBlocked ? 'Blocked' : 'Block'}
-                  </Text>
-                </Pressable>
+            <View style={styles.profileInfoContainer}>
+              <View style={styles.profileInfo}>
+                <Text style={styles.displayName} numberOfLines={2} ellipsizeMode="tail">
+                  {profile.displayName || profile.username}
+                </Text>
+                <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">
+                  @{profile.username}
+                </Text>
               </View>
-            )}
-            {isOwnProfile && (
-              <Pressable
-                style={styles.editButton}
-                onPress={() => router.push('/edit-profile')}
-              >
-                <Ionicons name="pencil" size={18} color={COLORS.primary} />
-              </Pressable>
-            )}
+              {!isOwnProfile && isAuthenticated && (
+                <View style={styles.actionButtons}>
+                  <GlassButton
+                    title={isFollowing ? 'Unfollow' : 'Follow'}
+                    onPress={handleFollow}
+                    variant={isFollowing ? 'outline' : 'primary'}
+                    disabled={isTogglingFollow}
+                    style={styles.followButton}
+                  />
+                  <Pressable
+                    style={styles.blockButton}
+                    onPress={handleBlock}
+                    disabled={isTogglingBlock}
+                  >
+                    <Ionicons
+                      name={isBlocked ? 'ban' : 'ban-outline'}
+                      size={20}
+                      color={isBlocked ? COLORS.error : COLORS.textSecondary}
+                    />
+                    <Text style={[styles.blockButtonText, isBlocked && { color: COLORS.error }]}>
+                      {isBlocked ? 'Blocked' : 'Block'}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+              {isOwnProfile && (
+                <Pressable
+                  style={styles.editButton}
+                  onPress={() => router.push('/edit-profile')}
+                >
+                  <Ionicons name="pencil" size={18} color={COLORS.primary} />
+                </Pressable>
+              )}
+            </View>
           </View>
 
           {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
@@ -360,14 +411,17 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: SPACING.md,
     gap: SPACING.sm,
   },
-  profileInfo: {
+  profileInfoContainer: {
     flex: 1,
     marginLeft: SPACING.md,
-    minWidth: 0, // Allows flex item to shrink below its content size
+    minWidth: 0,
+  },
+  profileInfo: {
+    marginBottom: SPACING.sm,
   },
   displayName: {
     ...TYPOGRAPHY.h3,

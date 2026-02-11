@@ -15,6 +15,7 @@ export interface UserProfile {
   totalLikes?: number;
   totalComments?: number;
   isFollowing?: boolean;
+  isBlocked?: boolean;
   createdAt: string;
   healthInfo?: {
     mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
@@ -84,6 +85,10 @@ class UserService {
 
   async blockUser(userId: string): Promise<ApiResponse<{ isBlocked: boolean }>> {
     return apiService.post<{ isBlocked: boolean }>(`/users/${userId}/block`, {});
+  }
+
+  async getBlockedUsers(): Promise<ApiResponse<UserProfile[]>> {
+    return apiService.get<UserProfile[]>('/users/blocked');
   }
 
   async deleteAccount(): Promise<ApiResponse<void>> {

@@ -26,8 +26,12 @@ export const handleNotificationWebSocket = (ws: AuthenticatedWebSocket, req: any
   }
 
   try {
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string };
+    // Verify JWT token - JWT_SECRET must be set
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET not configured');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
     ws.userId = decoded.userId;
 
     // Store connection

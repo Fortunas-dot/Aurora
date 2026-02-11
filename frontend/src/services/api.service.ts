@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { getApiUrl } from '../utils/apiUrl';
 
 interface ApiResponse<T = any> {
@@ -21,7 +21,7 @@ class ApiService {
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await secureStorage.getItemAsync('auth_token');
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };

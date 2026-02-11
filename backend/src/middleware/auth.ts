@@ -34,11 +34,12 @@ export const protect = async (
       return;
     }
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'fallback_secret'
-    ) as JwtPayload;
+    // Verify token - JWT_SECRET must be set (validated at startup)
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET not configured');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
 
     // Get user from token
     const user = await User.findById(decoded.userId);
@@ -76,10 +77,12 @@ export const optionalAuth = async (
     }
 
     if (token) {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'fallback_secret'
-      ) as JwtPayload;
+      if (!process.env.JWT_SECRET) {
+        // Skip auth if JWT_SECRET not configured (should not happen)
+        return next();
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
 
       const user = await User.findById(decoded.userId);
       if (user) {

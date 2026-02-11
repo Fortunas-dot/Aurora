@@ -10,13 +10,21 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import { useVoiceTherapy } from '../src/hooks/useVoiceTherapy';
 import { useAuthStore } from '../src/store/authStore';
 import { useTranslation } from '../src/hooks/useTranslation';
+import { useConsentStore } from '../src/store/consentStore';
+import { AiConsentCard } from '../src/components/legal/AiConsentCard';
 
 export default function VoiceTherapyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
   const { t } = useTranslation();
-  
+  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
+
+  // Load consent status once
+  useEffect(() => {
+    loadConsent().catch(console.error);
+  }, [loadConsent]);
+
   const {
     state,
     audioLevel,
@@ -24,7 +32,7 @@ export default function VoiceTherapyScreen() {
     isMuted,
     transcript,
     toggleMute,
-  } = useVoiceTherapy({ enabled: true });
+  } = useVoiceTherapy({ enabled: aiConsentStatus === 'granted' });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -91,6 +99,14 @@ export default function VoiceTherapyScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* AI Consent */}
+        {aiConsentStatus !== 'granted' && (
+          <AiConsentCard
+            onAccept={grantAiConsent}
+            onDecline={denyAiConsent}
+          />
+        )}
+
         {/* Aurora Core */}
         <View style={styles.coreContainer}>
           <AuroraCore 

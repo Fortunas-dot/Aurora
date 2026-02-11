@@ -1,6 +1,6 @@
 import { getApiUrl } from '../utils/apiUrl';
 import { useAuthStore } from '../store/authStore';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 
 export type NotificationWebSocketEvent = 'notification' | 'unread_count' | 'error' | 'connected';
 
@@ -39,7 +39,7 @@ class NotificationWebSocketService {
     this.isConnecting = true;
 
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await secureStorage.getItemAsync('auth_token');
       if (!token) {
         // Silently fail if no token - user might not be logged in yet
         console.log('No auth token available, skipping WebSocket connection');
