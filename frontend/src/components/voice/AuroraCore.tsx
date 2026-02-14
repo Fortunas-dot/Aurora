@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
-import { AuroraCore as SphereAuroraCore } from './AuroraCore.sphere';
+import { AuroraCore as ClassicAuroraCore } from './AuroraCore.sphere.classic';
+import { AuroraCore as OrganicAuroraCore } from './AuroraCore.sphere.organic';
 import { AuroraCore as BlobsAuroraCore } from './AuroraCore.blobs';
 
 interface AuroraCoreProps {
@@ -16,6 +17,10 @@ export const AuroraCore: React.FC<AuroraCoreProps> = (props) => {
     return <BlobsAuroraCore {...props} />;
   }
 
-  // Default to sphere
-  return <SphereAuroraCore {...props} />;
+  if (auroraStyle === 'classic') {
+    return <ClassicAuroraCore {...props} />;
+  }
+
+  // Default to organic (new, more alive version)
+  return <OrganicAuroraCore {...props} />;
 };
