@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
+import { useAuthStore } from '../../src/store/authStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - SPACING.lg * 2 - SPACING.lg * 2;
@@ -33,7 +34,7 @@ const MoodTrendChart: React.FC<{
 
   // Calculate points
   const points = data.map((item, index) => {
-    const x = (index / (data.length - 1 || 1)) * CHART_WIDTH;
+    const x = data.length > 1 ? (index / (data.length - 1)) * CHART_WIDTH : CHART_WIDTH / 2;
     const y = chartHeight - ((item.mood - minMood) / (maxMood - minMood)) * chartHeight;
     return { x, y, mood: item.mood, date: item.date };
   });
@@ -219,10 +220,12 @@ const InsightItem: React.FC<{
 export default function JournalInsightsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuthStore();
 
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30>(30);
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -230,12 +233,20 @@ export default function JournalInsightsScreen() {
   const hasLoadedRef = useRef(false);
 
   const loadInsights = useCallback(async (signal?: AbortSignal) => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      setLoading(false);
+      setError('Please log in to view insights');
+      return;
+    }
+
     // Prevent multiple simultaneous calls
     if (isLoadingRef.current) {
       return;
     }
 
     isLoadingRef.current = true;
+    setError(null);
     
     // Only set loading to true if we don't have data yet
     if (!hasLoadedRef.current) {
@@ -253,15 +264,20 @@ export default function JournalInsightsScreen() {
       if (response.success && response.data) {
         setInsights(response.data);
         hasLoadedRef.current = true;
+        setError(null);
       } else {
-        // If request failed, still set loading to false
-        console.warn('Failed to load insights:', response.message);
+        // If request failed, show error message
+        const errorMessage = response.message || 'Failed to load insights';
+        setError(errorMessage);
+        console.warn('Failed to load insights:', errorMessage);
       }
     } catch (error: any) {
       // Ignore abort errors
       if (error.name === 'AbortError' || signal?.aborted) {
         return;
       }
+      const errorMessage = error.message || 'An error occurred while loading insights';
+      setError(errorMessage);
       console.error('Error loading insights:', error);
     } finally {
       // Only update state if component is still mounted and not aborted
@@ -271,7 +287,7 @@ export default function JournalInsightsScreen() {
         setRefreshing(false);
       }
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, isAuthenticated]);
 
   // Load insights on mount and when period changes
   useEffect(() => {
@@ -330,9 +346,42 @@ export default function JournalInsightsScreen() {
     return 'Excellent';
   };
 
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Insights</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <GlassCard style={styles.emptyCard} padding="xl">
+            <View style={styles.emptyContent}>
+              <Ionicons name="lock-closed-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>Authentication Required</Text>
+              <Text style={styles.emptyText}>
+                Please log in to view your journal insights.
+              </Text>
+            </View>
+          </GlassCard>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   if (loading) {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Insights</Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -402,7 +451,29 @@ export default function JournalInsightsScreen() {
           ))}
         </View>
 
-        {!insights || insights.totalEntries === 0 ? (
+        {/* Error message */}
+        {error && (
+          <GlassCard style={styles.emptyCard} padding="xl">
+            <View style={styles.emptyContent}>
+              <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+              <Text style={styles.emptyTitle}>Error</Text>
+              <Text style={styles.emptyText}>{error}</Text>
+              <Pressable
+                style={styles.retryButton}
+                onPress={() => {
+                  setError(null);
+                  hasLoadedRef.current = false;
+                  loadInsights();
+                }}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </Pressable>
+            </View>
+          </GlassCard>
+        )}
+
+        {/* No data or insights */}
+        {!error && (!insights || insights.totalEntries === 0) ? (
           <GlassCard style={styles.emptyCard} padding="xl">
             <View style={styles.emptyContent}>
               <Ionicons name="analytics-outline" size={48} color={COLORS.textMuted} />
@@ -412,7 +483,7 @@ export default function JournalInsightsScreen() {
               </Text>
             </View>
           </GlassCard>
-        ) : (
+        ) : !error ? (
           <>
             {/* Quick Stats */}
             <View style={styles.statsGrid}>
@@ -509,23 +580,25 @@ export default function JournalInsightsScreen() {
             )}
 
             {/* Tips */}
-            <View style={styles.section}>
-              <GlassCard style={styles.tipCard} padding="lg">
-                <View style={styles.tipHeader}>
-                  <Ionicons name="bulb" size={24} color={COLORS.warning} />
-                  <Text style={styles.tipTitle}>Aurora's Tip</Text>
-                </View>
-                <Text style={styles.tipText}>
-                  {insights.averageMood && insights.averageMood < 5
-                    ? 'Your mood seems lower than average. Consider talking to Aurora about how you feel, or try a gratitude exercise.'
-                    : insights.streakDays >= 7
-                    ? `Great! You've written for ${insights.streakDays} days in a row. Consistency helps with self-awareness.`
-                    : 'Try writing daily for the best insights. Even a short reflection helps.'}
-                </Text>
-              </GlassCard>
-            </View>
+            {insights && (
+              <View style={styles.section}>
+                <GlassCard style={styles.tipCard} padding="lg">
+                  <View style={styles.tipHeader}>
+                    <Ionicons name="bulb" size={24} color={COLORS.warning} />
+                    <Text style={styles.tipTitle}>Aurora's Tip</Text>
+                  </View>
+                  <Text style={styles.tipText}>
+                    {insights.averageMood && insights.averageMood < 5
+                      ? 'Your mood seems lower than average. Consider talking to Aurora about how you feel, or try a gratitude exercise.'
+                      : insights.streakDays >= 7
+                      ? `Great! You've written for ${insights.streakDays} days in a row. Consistency helps with self-awareness.`
+                      : 'Try writing daily for the best insights. Even a short reflection helps.'}
+                  </Text>
+                </GlassCard>
+              </View>
+            )}
           </>
-        )}
+        ) : null}
       </ScrollView>
     </LinearGradient>
   );
@@ -723,6 +796,19 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     lineHeight: 24,
+  },
+  retryButton: {
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.white,
+    fontWeight: '600',
   },
 });
 

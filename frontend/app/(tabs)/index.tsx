@@ -12,7 +12,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -395,6 +395,24 @@ export default function FeedScreen() {
       setIsLoading(false);
     }
   }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated, showAllPublicPosts]);
+
+  // Track if initial load has been done
+  const hasInitialLoadRef = useRef(false);
+  
+  // Initial load when screen is focused (first time opening the screen)
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && !isLoadingRef.current) {
+        // Load posts when screen is focused for the first time or if no posts
+        if (!hasInitialLoadRef.current || posts.length === 0) {
+          setPage(1);
+          setHasMore(true);
+          loadPosts(1, false);
+          hasInitialLoadRef.current = true;
+        }
+      }
+    }, [isAuthenticated, loadPosts, posts.length])
+  );
 
   // Reload posts when filters change (with debounce to prevent rapid requests)
   useEffect(() => {

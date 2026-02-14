@@ -139,6 +139,35 @@ export default function TextChatScreen() {
   const hasMessages = messages.length > 0;
   const [showMenu, setShowMenu] = useState(false);
   
+  // Typewriter effect for initial greeting
+  const initialGreeting = "Hi, this is Aurora, how are you feeling today?";
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // Typewriter effect when screen opens (only if no messages)
+  useEffect(() => {
+    if (!hasMessages && !isTyping) {
+      setIsTyping(true);
+      setDisplayedText('');
+      let currentIndex = 0;
+      
+      const typeInterval = setInterval(() => {
+        if (currentIndex < initialGreeting.length) {
+          setDisplayedText(initialGreeting.substring(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          clearInterval(typeInterval);
+          setIsTyping(false);
+        }
+      }, 30); // 30ms per character for smooth typing
+      
+      return () => clearInterval(typeInterval);
+    } else if (hasMessages) {
+      // If messages exist, show full text immediately
+      setDisplayedText(initialGreeting);
+    }
+  }, [hasMessages]);
+  
   // Load consent + context information on mount to show on initial screen
   useEffect(() => {
     loadConsent().catch(console.error);
@@ -338,7 +367,8 @@ export default function TextChatScreen() {
           >
             <View style={[styles.speechBubbleContent, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}>
               <Text style={[styles.speechBubbleText, { color: colors.text }]}>
-                Hi, this is Aurora, how are you feeling today?
+                {displayedText || initialGreeting}
+                {isTyping && <Text style={{ opacity: 0.5 }}>|</Text>}
               </Text>
             </View>
             <View style={[styles.speechBubbleTail, { borderTopColor: colors.glass.background }]} />
@@ -402,7 +432,7 @@ export default function TextChatScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora AI</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>Mental health chat</Text>
         </View>
         <Pressable 
@@ -489,7 +519,7 @@ const styles = StyleSheet.create({
   },
   speechBubble: {
     position: 'absolute',
-    top: '28%',
+    top: '20%',
     left: '50%',
     marginLeft: -120,
     alignItems: 'center',
