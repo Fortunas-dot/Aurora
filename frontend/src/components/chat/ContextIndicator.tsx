@@ -30,17 +30,13 @@ export const ContextIndicator: React.FC<ContextIndicatorProps> = ({
     }).start();
   }, []);
 
-  // Always show the indicator if at least one context is available
-  if (!hasHealthInfo && !hasJournalEntries) {
-    return null;
-  }
-
+  // Always show the 4 analyzing items regardless of available context
   // Build list of analyzing items - always show 4 items
   const analyzingItems: AnalyzingItem[] = [
     {
       label: 'Analyzing health information',
-      icon: 'medical-outline',
-      iconColor: '#60A5FA', // Blue
+      icon: 'snow-outline',
+      iconColor: '#60A5FA', // Light blue
     },
     {
       label: 'Analyzing journal',
@@ -50,12 +46,12 @@ export const ContextIndicator: React.FC<ContextIndicatorProps> = ({
     {
       label: 'Analyzing emotional patterns',
       icon: 'heart-outline',
-      iconColor: '#F87171', // Red/Pink
+      iconColor: '#F87171', // Light red/pink
     },
     {
       label: 'Analyzing latest psychology, behavior findings',
-      icon: 'brain-outline',
-      iconColor: '#A78BFA', // Purple
+      icon: 'help-circle-outline',
+      iconColor: '#A78BFA', // Light purple
     },
   ];
 
@@ -94,43 +90,45 @@ export const ContextIndicator: React.FC<ContextIndicatorProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     gap: SPACING.xs + 2,
     marginHorizontal: SPACING.md,
     marginVertical: SPACING.xs,
+    width: '100%',
   },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs + 2,
-    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 4,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     width: '100%',
-    minHeight: 45,
-    maxHeight: 50,
+    minHeight: 44,
+    maxHeight: 48,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   iconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.xs,
+    marginRight: SPACING.sm,
     flexShrink: 0,
   },
   itemText: {
-    ...TYPOGRAPHY.caption,
-    fontSize: 11,
+    ...TYPOGRAPHY.small,
+    fontSize: 12,
     textAlign: 'left',
-    lineHeight: 14,
+    lineHeight: 16,
     flex: 1,
+    fontWeight: '500',
   },
 });

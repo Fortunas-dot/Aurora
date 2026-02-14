@@ -33,61 +33,108 @@ class ApiService {
     return headers;
   }
 
-  async get<T = any>(endpoint: string, options?: { signal?: AbortSignal }): Promise<ApiResponse<T>> {
-    try {
-      const headers = await this.getAuthHeaders();
+  private async retryWithBackoff<T>(
+    fn: () => Promise<ApiResponse<T>>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<ApiResponse<T>> {
+    let lastResult: ApiResponse<T>;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      lastResult = await fn();
       
-      // Use provided signal or create a new one with timeout
-      const controller = options?.signal ? null : new AbortController();
-      const signal = options?.signal || controller!.signal;
-      const timeoutId = controller ? setTimeout(() => controller.abort(), 30000) : null; // 30 second timeout
-      
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        method: 'GET',
-        headers,
-        signal,
-      });
-      
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      // If it's a 429 error and we have retries left, wait and retry
+      if ((lastResult as any).status === 429 && attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
       }
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        // Only log non-404 errors to reduce noise
-        if (response.status !== 404) {
-          console.error('API GET Error:', response.status, errorData);
+      return lastResult;
+    }
+    
+    // If all retries failed, return the last result
+    return lastResult!;
+  }
+
+  async get<T = any>(endpoint: string, options?: { signal?: AbortSignal }): Promise<ApiResponse<T>> {
+    return this.retryWithBackoff(async () => {
+      try {
+        const headers = await this.getAuthHeaders();
+        
+        // Use provided signal or create a new one with timeout
+        const controller = options?.signal ? null : new AbortController();
+        const signal = options?.signal || controller!.signal;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 30000) : null; // 30 second timeout
+        
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+          method: 'GET',
+          headers,
+          signal,
+        });
+        
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
         
-        // For 401 errors, include status in response for token cleanup
-        const apiResponse: ApiResponse<T> = {
-          success: false,
-          message: errorData.message || `HTTP ${response.status}`,
-        };
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          
+          // For 429 errors, check rate limit headers
+          if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After') || response.headers.get('RateLimit-Reset');
+            const message = retryAfter 
+              ? `Too many requests. Please try again after ${retryAfter} seconds.`
+              : errorData.message || 'Too many requests. Please try again later.';
+            
+            // Only log in development to reduce noise
+            if (__DEV__) {
+              console.warn('API GET Rate Limit:', message);
+            }
+            
+            const apiResponse: ApiResponse<T> = {
+              success: false,
+              message,
+            };
+            (apiResponse as any).status = 429;
+            return apiResponse;
+          }
+          
+          // Only log non-404 errors to reduce noise
+          if (response.status !== 404) {
+            console.error('API GET Error:', response.status, errorData);
+          }
+          
+          // For 401 errors, include status in response for token cleanup
+          const apiResponse: ApiResponse<T> = {
+            success: false,
+            message: errorData.message || `HTTP ${response.status}`,
+          };
+          
+          // Attach status code for error handling
+          (apiResponse as any).status = response.status;
+          
+          return apiResponse;
+        }
         
-        // Attach status code for error handling
-        (apiResponse as any).status = response.status;
-        
-        return apiResponse;
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error: any) {
-      // Handle AbortError (timeout) specifically
-      if (error.name === 'AbortError') {
-        console.error('API GET Error: Request timeout');
+        const data = await response.json();
+        return data;
+      } catch (error: any) {
+        // Handle AbortError (timeout) specifically
+        if (error.name === 'AbortError') {
+          console.error('API GET Error: Request timeout');
+          return {
+            success: false,
+            message: 'Request timeout. Please try again.',
+          };
+        }
+        console.error('API GET Error:', error);
         return {
           success: false,
-          message: 'Request timeout. Please try again.',
+          message: error.message || 'Network error',
         };
       }
-      console.error('API GET Error:', error);
-      return {
-        success: false,
-        message: error.message || 'Network error',
-      };
-    }
+    });
   }
 
   async post<T = any>(endpoint: string, body: any): Promise<ApiResponse<T>> {

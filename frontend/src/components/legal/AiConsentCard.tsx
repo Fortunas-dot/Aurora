@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 
@@ -19,13 +20,18 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
   onDecline,
 }) => {
   return (
-    <GlassCard style={styles.card} padding="lg">
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="shield-checkmark" size={22} color={COLORS.primary} />
+    <View style={styles.cardContainer}>
+      <LinearGradient
+        colors={['rgba(15, 15, 25, 1)', 'rgba(20, 20, 30, 1)']}
+        style={styles.backgroundGradient}
+      />
+      <GlassCard style={styles.card} padding="lg" variant="dark">
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="shield-checkmark" size={22} color={COLORS.primary} />
+          </View>
+          <Text style={styles.title}>AI & Data Use</Text>
         </View>
-        <Text style={styles.title}>AI & Data Use</Text>
-      </View>
 
       <Text style={styles.text}>
         Aurora can use your personal input to provide AI-powered support. This may
@@ -78,14 +84,27 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
           </Text>
         </Pressable>
       </View>
-    </GlassCard>
+      </GlassCard>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
     width: '100%',
     marginBottom: SPACING.lg,
+    position: 'relative',
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+  },
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BORDER_RADIUS.xl,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: 'rgba(15, 15, 25, 1)', // Fully opaque background to block Aurora symbol
+    borderColor: COLORS.glass.border,
   },
   header: {
     flexDirection: 'row',

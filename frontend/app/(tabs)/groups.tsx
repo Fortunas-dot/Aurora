@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -176,7 +176,7 @@ export default function GroupsScreen() {
     setIsRefreshing(false);
   }, [activeTab, loadGroups, loadBuddies, groupSearchQuery, selectedCountry]);
 
-  const handleJoinGroup = async (groupId: string) => {
+  const handleJoinGroup = useCallback(async (groupId: string) => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
       return;
@@ -212,9 +212,9 @@ export default function GroupsScreen() {
     } catch (error) {
       console.error('Error joining/leaving group:', error);
     }
-  };
+  }, [isAuthenticated, groups, router]);
 
-  const handleFollowUser = async (userId: string) => {
+  const handleFollowUser = useCallback(async (userId: string) => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
       return;
@@ -258,11 +258,11 @@ export default function GroupsScreen() {
     } catch (error) {
       console.error('Error following user:', error);
     }
-  };
+  }, [isAuthenticated, searchResults, loadBuddies, router]);
 
-  const handleMessageUser = (userId: string) => {
+  const handleMessageUser = useCallback((userId: string) => {
     router.push(`/conversation/${userId}`);
-  };
+  }, [router]);
 
   const loadMore = useCallback(() => {
     if (activeTab === 'groups' && !isLoading && hasMore) {
@@ -272,143 +272,220 @@ export default function GroupsScreen() {
     }
   }, [activeTab, isLoading, hasMore, page, groupSearchQuery, selectedCountry, loadGroups]);
 
-  const filteredGroups = groups.filter((group) => {
-    const matchesFilter = selectedFilter === 'all' || group.isMember;
-    return matchesFilter;
-  });
+  const filteredGroups = useMemo(() => {
+    return groups.filter((group) => {
+      const matchesFilter = selectedFilter === 'all' || group.isMember;
+      return matchesFilter;
+    });
+  }, [groups, selectedFilter]);
 
-  const displayBuddies = buddySearchQuery.trim() ? searchResults : buddies;
+  const displayBuddies = useMemo(() => {
+    return buddySearchQuery.trim() ? searchResults : buddies;
+  }, [buddySearchQuery, searchResults, buddies]);
 
-  // Render Group Card
-  const renderGroup = useCallback(({ item }: { item: Group }) => (
-    <GlassCard style={styles.groupCard} padding={0} onPress={() => router.push(`/group/${item._id}`)}>
-      <View style={styles.groupHeader}>
-        <View style={styles.groupAvatar}>
-          {item.avatar ? (
-            <Image source={{ uri: item.avatar }} style={styles.groupAvatarImage} />
-          ) : (
-            <LinearGradient
-              colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
-              style={styles.groupAvatarGradient}
-            >
-              <Ionicons name="people" size={24} color={colors.primary} />
-            </LinearGradient>
-          )}
-        </View>
-        <View style={styles.groupInfo}>
-          <Text style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
-          <View style={styles.groupMeta}>
-            <Ionicons name="people-outline" size={14} color={colors.textMuted} />
-            <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{item.memberCount} members</Text>
-            {item.country && (
-              <>
-                <Ionicons name="globe-outline" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
-                <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{getCountryName(item.country)}</Text>
-              </>
-            )}
-            {item.isPrivate && (
-              <>
-                <Ionicons name="lock-closed" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
-                <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>Private</Text>
-              </>
-            )}
+  // Render Group Card - Memoized component
+  const GroupCard = React.memo<{ item: Group; onJoin: (id: string) => void; onPress: (id: string) => void }>(
+    ({ item, onJoin, onPress }) => {
+      const { colors } = useTheme();
+      
+      return (
+        <GlassCard style={styles.groupCard} padding={0} onPress={() => onPress(item._id)}>
+          <View style={styles.groupHeader}>
+            <View style={styles.groupAvatar}>
+              {item.avatar ? (
+                <Image 
+                  source={{ uri: item.avatar }} 
+                  style={styles.groupAvatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <LinearGradient
+                  colors={['rgba(96, 165, 250, 0.3)', 'rgba(167, 139, 250, 0.3)']}
+                  style={styles.groupAvatarGradient}
+                >
+                  <Ionicons name="people" size={24} color={colors.primary} />
+                </LinearGradient>
+              )}
+            </View>
+            <View style={styles.groupInfo}>
+              <Text style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
+              <View style={styles.groupMeta}>
+                <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+                <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{item.memberCount} members</Text>
+                {item.country && (
+                  <>
+                    <Ionicons name="globe-outline" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
+                    <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>{getCountryName(item.country)}</Text>
+                  </>
+                )}
+                {item.isPrivate && (
+                  <>
+                    <Ionicons name="lock-closed" size={14} color={colors.textMuted} style={{ marginLeft: SPACING.sm }} />
+                    <Text style={[styles.groupMetaText, { color: colors.textMuted }]}>Private</Text>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
 
-      <Text style={[styles.groupDescription, { color: colors.textSecondary }]} numberOfLines={2}>
-        {item.description}
-      </Text>
+          <Text style={[styles.groupDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+            {item.description}
+          </Text>
 
-      <View style={styles.groupTags}>
-        {item.tags.slice(0, 3).map((tag, index) => (
-          <TagChip key={index} label={tag} size="sm" />
-        ))}
-      </View>
+          <View style={styles.groupTags}>
+            {item.tags.slice(0, 3).map((tag, index) => (
+              <TagChip key={`${item._id}-tag-${index}`} label={tag} size="sm" />
+            ))}
+          </View>
 
-      <View style={styles.groupFooter}>
-        <GlassButton
-          title={item.isMember ? 'Joined' : 'Join'}
-          onPress={() => handleJoinGroup(item._id)}
-          variant={item.isMember ? 'default' : 'primary'}
-          size="sm"
-          icon={
-            <Ionicons
-              name={item.isMember ? 'checkmark' : 'add'}
-              size={16}
-              color={item.isMember ? colors.text : colors.primary}
-              style={{ marginRight: SPACING.xs }}
+          <View style={styles.groupFooter}>
+            <GlassButton
+              title={item.isMember ? 'Joined' : 'Join'}
+              onPress={() => onJoin(item._id)}
+              variant={item.isMember ? 'default' : 'primary'}
+              size="sm"
+              icon={
+                <Ionicons
+                  name={item.isMember ? 'checkmark' : 'add'}
+                  size={16}
+                  color={item.isMember ? colors.text : colors.primary}
+                  style={{ marginRight: SPACING.xs }}
+                />
+              }
             />
-          }
-        />
-      </View>
-    </GlassCard>
-  ), [router, handleJoinGroup, colors]);
+          </View>
+        </GlassCard>
+      );
+    },
+    (prevProps, nextProps) => {
+      // Only re-render if these specific properties change
+      return (
+        prevProps.item._id === nextProps.item._id &&
+        prevProps.item.isMember === nextProps.item.isMember &&
+        prevProps.item.memberCount === nextProps.item.memberCount &&
+        prevProps.item.name === nextProps.item.name &&
+        prevProps.item.description === nextProps.item.description &&
+        prevProps.item.avatar === nextProps.item.avatar
+      );
+    }
+  );
 
-  // Render Buddy Card
+  const handleGroupPress = useCallback((id: string) => {
+    router.push(`/group/${id}`);
+  }, [router]);
+
+  const renderGroup = useCallback(({ item }: { item: Group }) => (
+    <GroupCard 
+      item={item} 
+      onJoin={handleJoinGroup}
+      onPress={handleGroupPress}
+    />
+  ), [handleJoinGroup, handleGroupPress]);
+
+  // Render Buddy Card - Memoized component
+  const BuddyCard = React.memo<{ 
+    item: UserProfile; 
+    isInBuddiesList: boolean;
+    onFollow: (id: string) => void; 
+    onMessage: (id: string) => void;
+    onPress: (id: string) => void;
+  }>(
+    ({ item, isInBuddiesList, onFollow, onMessage, onPress }) => {
+      const { colors } = useTheme();
+      const isFollowing = item.isFollowing ?? false;
+      
+      return (
+        <GlassCard style={styles.buddyCard} padding="md">
+          <View style={styles.buddyHeader}>
+            <Pressable onPress={() => onPress(item._id)}>
+              <Avatar
+                uri={item.avatar}
+                name={item.displayName || item.username}
+                userId={item._id}
+                avatarCharacter={item.avatarCharacter}
+                avatarBackgroundColor={item.avatarBackgroundColor}
+                size={48}
+              />
+            </Pressable>
+            <View style={styles.buddyInfo}>
+              <Pressable 
+                onPress={() => onPress(item._id)}
+                style={styles.buddyInfoText}
+              >
+                <Text style={[styles.buddyName, { color: colors.text }]} numberOfLines={1}>
+                  {item.displayName || item.username}
+                </Text>
+                {item.bio && (
+                  <Text style={[styles.buddyBio, { color: colors.textMuted }]} numberOfLines={1}>
+                    {item.bio}
+                  </Text>
+                )}
+              </Pressable>
+              <View style={styles.buddyActions}>
+                {isInBuddiesList && (
+                  <Pressable
+                    style={styles.messageButton}
+                    onPress={() => onMessage(item._id)}
+                  >
+                    <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                  </Pressable>
+                )}
+                {!isInBuddiesList && (
+                  <>
+                    {isFollowing && (
+                      <Pressable
+                        style={styles.messageButton}
+                        onPress={() => onMessage(item._id)}
+                      >
+                        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                      </Pressable>
+                    )}
+                    <GlassButton
+                      title={isFollowing ? 'Following' : 'Follow'}
+                      onPress={() => onFollow(item._id)}
+                      variant={isFollowing ? 'default' : 'primary'}
+                      size="sm"
+                      style={styles.followButton}
+                    />
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
+        </GlassCard>
+      );
+    },
+    (prevProps, nextProps) => {
+      // Only re-render if these specific properties change
+      return (
+        prevProps.item._id === nextProps.item._id &&
+        prevProps.item.isFollowing === nextProps.item.isFollowing &&
+        prevProps.item.displayName === nextProps.item.displayName &&
+        prevProps.item.username === nextProps.item.username &&
+        prevProps.item.bio === nextProps.item.bio &&
+        prevProps.item.avatar === nextProps.item.avatar &&
+        prevProps.isInBuddiesList === nextProps.isInBuddiesList
+      );
+    }
+  );
+
+  const handleUserPress = useCallback((id: string) => {
+    router.push(`/user/${id}`);
+  }, [router]);
+
   const renderBuddy = useCallback(({ item }: { item: UserProfile }) => {
-    const isFollowing = item.isFollowing ?? false;
     const isInBuddiesList = buddies.some(b => b._id === item._id);
     
     return (
-      <GlassCard style={styles.buddyCard} padding="md">
-        <View style={styles.buddyHeader}>
-          <Pressable onPress={() => router.push(`/user/${item._id}`)}>
-            <Avatar
-              uri={item.avatar}
-              name={item.displayName || item.username}
-              userId={item._id}
-              avatarCharacter={item.avatarCharacter}
-              avatarBackgroundColor={item.avatarBackgroundColor}
-              size={48}
-            />
-          </Pressable>
-          <View style={styles.buddyInfo}>
-            <Pressable 
-              onPress={() => router.push(`/user/${item._id}`)}
-              style={styles.buddyInfoText}
-            >
-              <Text style={[styles.buddyName, { color: colors.text }]} numberOfLines={1}>{item.displayName || item.username}</Text>
-              {item.bio && (
-                <Text style={[styles.buddyBio, { color: colors.textMuted }]} numberOfLines={1}>
-                  {item.bio}
-                </Text>
-              )}
-            </Pressable>
-            <View style={styles.buddyActions}>
-              {isInBuddiesList && (
-                <Pressable
-                  style={styles.messageButton}
-                  onPress={() => handleMessageUser(item._id)}
-                >
-                  <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
-                </Pressable>
-              )}
-              {!isInBuddiesList && (
-                <>
-                  {isFollowing && (
-                    <Pressable
-                      style={styles.messageButton}
-                      onPress={() => handleMessageUser(item._id)}
-                    >
-                      <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
-                    </Pressable>
-                  )}
-                  <GlassButton
-                    title={isFollowing ? 'Following' : 'Follow'}
-                    onPress={() => handleFollowUser(item._id)}
-                    variant={isFollowing ? 'default' : 'primary'}
-                    size="sm"
-                    style={styles.followButton}
-                  />
-                </>
-              )}
-            </View>
-          </View>
-        </View>
-      </GlassCard>
+      <BuddyCard
+        item={item}
+        isInBuddiesList={isInBuddiesList}
+        onFollow={handleFollowUser}
+        onMessage={handleMessageUser}
+        onPress={handleUserPress}
+      />
     );
-  }, [router, buddies, handleFollowUser, handleMessageUser, colors]);
+  }, [buddies, handleFollowUser, handleMessageUser, handleUserPress]);
 
   return (
     <LinearGradient
@@ -639,6 +716,7 @@ export default function GroupsScreen() {
             updateCellsBatchingPeriod={50}
             scrollEventThrottle={16}
             decelerationRate="normal"
+            getItemLayout={undefined}
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
@@ -694,6 +772,7 @@ export default function GroupsScreen() {
           updateCellsBatchingPeriod={50}
           scrollEventThrottle={16}
           decelerationRate="normal"
+          getItemLayout={undefined}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

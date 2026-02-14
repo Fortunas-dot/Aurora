@@ -36,6 +36,8 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   const loadAttemptedRef = useRef(false);
   // Track if we've ever had communities - once we have communities, never show empty state again
   const hasEverHadCommunitiesRef = useRef(false);
+  // Track if we've already determined the empty state - prevent re-evaluation
+  const emptyStateDeterminedRef = useRef(false);
 
   const loadCommunities = useCallback(async () => {
     // Prevent multiple simultaneous loads
@@ -61,25 +63,34 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           // Hide empty state if we now have communities
           if (mountedRef.current) {
             setShouldShowEmptyState(false);
+            // Only mark as determined if we haven't already
+            if (!emptyStateDeterminedRef.current) {
+              emptyStateDeterminedRef.current = true;
+            }
           }
-        } else if (mountedRef.current && !hasEverHadCommunitiesRef.current) {
-          // Show empty state only if we've never had communities
-          setShouldShowEmptyState(true);
+        } else {
+          // Show empty state only if we've never had communities and haven't determined it yet
+          if (mountedRef.current && !hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
+            setShouldShowEmptyState(true);
+            emptyStateDeterminedRef.current = true;
+          }
         }
       } else {
         setCommunities([]);
-        // Show empty state only if we've never had communities
-        if (mountedRef.current && !hasEverHadCommunitiesRef.current) {
+        // Show empty state only if we've never had communities and haven't determined it yet
+        if (mountedRef.current && !hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
           setShouldShowEmptyState(true);
+          emptyStateDeterminedRef.current = true;
         }
       }
     } catch (error) {
       if (!mountedRef.current) return;
       console.error('Error loading communities:', error);
       setCommunities([]);
-      // Show empty state only if we've never had communities
-      if (!hasEverHadCommunitiesRef.current) {
+      // Show empty state only if we've never had communities and haven't determined it yet
+      if (!hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
         setShouldShowEmptyState(true);
+        emptyStateDeterminedRef.current = true;
       }
     } finally {
       if (mountedRef.current) {
@@ -105,6 +116,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
         setHasLoaded(false);
         loadAttemptedRef.current = false;
         hasEverHadCommunitiesRef.current = false;
+        emptyStateDeterminedRef.current = false;
         setShouldShowEmptyState(false);
       }
     }
@@ -202,8 +214,8 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           );
         })}
 
-        {/* Empty State - Only show when explicitly set and not loading */}
-        {shouldShowEmptyState && !isLoading && (
+        {/* Empty State - Only show when explicitly set and not loading, and only once determined */}
+        {shouldShowEmptyState && !isLoading && hasLoaded && emptyStateDeterminedRef.current && communities.length === 0 && (
           <View style={styles.emptyContainer} key="empty-state">
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>

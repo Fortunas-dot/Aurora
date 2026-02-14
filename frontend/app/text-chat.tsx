@@ -344,24 +344,22 @@ export default function TextChatScreen() {
             <View style={[styles.speechBubbleTail, { borderTopColor: colors.glass.background }]} />
           </Animated.View>
           
-          {/* Context indicator - shows what data Aurora analyzes */}
-          {availableContext && (availableContext.hasHealthInfo || availableContext.hasJournalEntries) && (
-            <Animated.View
-              style={[
-                styles.contextIndicatorContainer,
-                {
-                  opacity: auroraOpacity,
-                  transform: [{ scale: auroraScale }],
-                },
-              ]}
-              pointerEvents="none"
-            >
-              <ContextIndicator
-                hasHealthInfo={availableContext.hasHealthInfo}
-                hasJournalEntries={availableContext.hasJournalEntries}
-              />
-            </Animated.View>
-          )}
+          {/* Context indicator - always shows what data Aurora analyzes */}
+          <Animated.View
+            style={[
+              styles.contextIndicatorContainer,
+              {
+                opacity: auroraOpacity,
+                transform: [{ scale: auroraScale }],
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <ContextIndicator
+              hasHealthInfo={availableContext?.hasHealthInfo || false}
+              hasJournalEntries={availableContext?.hasJournalEntries || false}
+            />
+          </Animated.View>
           
           <Animated.View
             style={[
@@ -531,13 +529,14 @@ const styles = StyleSheet.create({
   },
   contextIndicatorContainer: {
     position: 'absolute',
-    top: '65%',
+    top: '60%',
     left: '50%',
-    marginLeft: -120,
+    marginLeft: -160,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     zIndex: 2,
-    width: 240,
+    width: 320,
+    maxHeight: '35%',
   },
   auroraContainer: {
     position: 'absolute',
