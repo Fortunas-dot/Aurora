@@ -775,6 +775,8 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     const journalId = req.query.journalId as string;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    // Set to start of day (00:00:00) to include all entries from that day
+    startDate.setHours(0, 0, 0, 0);
 
     const query: any = {
       author: req.userId,
