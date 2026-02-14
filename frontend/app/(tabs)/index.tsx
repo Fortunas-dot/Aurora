@@ -310,10 +310,15 @@ export default function FeedScreen() {
     }
   }, [showJoinedGroupsModal]);
 
+  // Track loading state with ref to prevent race conditions
+  const isLoadingRef = useRef(false);
+  
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
-    if (isLoading) return;
+    // Prevent multiple simultaneous requests
+    if (isLoadingRef.current) return;
     
+    isLoadingRef.current = true;
     setIsLoading(true);
     try {
       let response;
@@ -365,8 +370,10 @@ export default function FeedScreen() {
           setHasMore(pageNum < response.pagination.pages);
         }
       } else {
-        // Only log non-404 errors (404 means no posts found, which is normal)
-        if (response.message && !response.message.includes('not found') && !response.message.includes('Invalid post ID format')) {
+        // Don't log 429 rate limit errors - they're handled gracefully
+        const isRateLimit = response.message && response.message.includes('Too many requests');
+        // Only log non-404, non-rate-limit errors
+        if (response.message && !response.message.includes('not found') && !response.message.includes('Invalid post ID format') && !isRateLimit) {
           console.error('Error loading posts:', response.message);
         }
         if (!append) {
@@ -374,24 +381,33 @@ export default function FeedScreen() {
         }
       }
     } catch (error: any) {
-      // Only log if it's not a 404 or invalid ID format error
-      if (error.message && !error.message.includes('not found') && !error.message.includes('Invalid post ID format')) {
+      // Don't log 429 rate limit errors
+      const isRateLimit = error.message && error.message.includes('Too many requests');
+      // Only log if it's not a 404, invalid ID format, or rate limit error
+      if (error.message && !error.message.includes('not found') && !error.message.includes('Invalid post ID format') && !isRateLimit) {
         console.error('Error loading posts:', error);
       }
       if (!append) {
         setPosts([]);
       }
     } finally {
+      isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [isLoading, activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated, showAllPublicPosts]);
+  }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated, showAllPublicPosts]);
 
-  // Reload posts when filters change
+  // Reload posts when filters change (with debounce to prevent rapid requests)
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-    loadPosts(1, false);
-  }, [activeTab, selectedCommunity, sortOption, isSearching, showAllPublicPosts]);
+    
+    // Debounce to prevent rapid successive requests
+    const timeoutId = setTimeout(() => {
+      loadPosts(1, false);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, selectedCommunity, sortOption, isSearching, showAllPublicPosts, loadPosts]);
 
   // Update unread count on mount and focus
   useEffect(() => {

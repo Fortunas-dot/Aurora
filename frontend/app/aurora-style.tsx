@@ -15,7 +15,8 @@ import { GlassCard, GlassButton } from '../src/components/common';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
 import { useSettingsStore, AuroraStyle } from '../src/store/settingsStore';
-import { AuroraCore as SphereAuroraCore } from '../src/components/voice/AuroraCore.sphere';
+import { AuroraCore as ClassicAuroraCore } from '../src/components/voice/AuroraCore.sphere.classic';
+import { AuroraCore as OrganicAuroraCore } from '../src/components/voice/AuroraCore.sphere.organic';
 import { AuroraCore as BlobsAuroraCore } from '../src/components/voice/AuroraCore.blobs';
 
 const { width } = Dimensions.get('window');
@@ -79,24 +80,50 @@ export default function AuroraStyleScreen() {
           Choose your preferred Aurora visual style
         </Text>
 
-        {/* Sphere Style */}
+        {/* Organic Style (New, More Alive) */}
         <Pressable
-          onPress={() => handleSelectStyle('sphere')}
+          onPress={() => handleSelectStyle('organic')}
           style={styles.styleOption}
         >
-          <GlassCard padding={SPACING.lg} style={[styles.previewCard, auroraStyle === 'sphere' && styles.selectedCard]}>
+          <GlassCard padding={SPACING.lg} style={[styles.previewCard, auroraStyle === 'organic' && styles.selectedCard]}>
             <View style={styles.previewContainer}>
-              <SphereAuroraCore
+              <OrganicAuroraCore
                 state={previewState}
                 audioLevel={audioLevel}
                 size={PREVIEW_SIZE}
               />
             </View>
-            <Text style={[styles.styleTitle, { color: colors.text }]}>Sphere with Glow</Text>
+            <Text style={[styles.styleTitle, { color: colors.text }]}>Organic & Alive</Text>
             <Text style={[styles.styleDescription, { color: colors.textMuted }]}>
-              A perfect sphere with animated glowing edges
+              A living, breathing sphere with fluid movements and organic animations
             </Text>
-            {auroraStyle === 'sphere' && (
+            {auroraStyle === 'organic' && (
+              <View style={[styles.selectedBadge, { backgroundColor: colors.primary }]}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.white} />
+                <Text style={[styles.selectedText, { color: colors.white }]}>Selected</Text>
+              </View>
+            )}
+          </GlassCard>
+        </Pressable>
+
+        {/* Classic Style */}
+        <Pressable
+          onPress={() => handleSelectStyle('classic')}
+          style={styles.styleOption}
+        >
+          <GlassCard padding={SPACING.lg} style={[styles.previewCard, auroraStyle === 'classic' && styles.selectedCard]}>
+            <View style={styles.previewContainer}>
+              <ClassicAuroraCore
+                state={previewState}
+                audioLevel={audioLevel}
+                size={PREVIEW_SIZE}
+              />
+            </View>
+            <Text style={[styles.styleTitle, { color: colors.text }]}>Classic Sphere</Text>
+            <Text style={[styles.styleDescription, { color: colors.textMuted }]}>
+              The original sphere with animated glowing edges
+            </Text>
+            {auroraStyle === 'classic' && (
               <View style={[styles.selectedBadge, { backgroundColor: colors.primary }]}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.white} />
                 <Text style={[styles.selectedText, { color: colors.white }]}>Selected</Text>

@@ -71,10 +71,11 @@ export const corsOptions = {
 /**
  * Rate limiting for API endpoints
  * Higher limits in development to prevent issues during testing
+ * Production limits are higher to accommodate normal app usage
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit in development
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // Increased production limit
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',

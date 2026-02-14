@@ -13,7 +13,7 @@ import { useChatStore } from '../src/store/chatStore';
 import { useAuthStore } from '../src/store/authStore';
 import { journalService } from '../src/services/journal.service';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
-import { AuroraCore as SphereAuroraCore } from '../src/components/voice/AuroraCore.sphere';
+import { AuroraCore } from '../src/components/voice/AuroraCore';
 import { useTheme } from '../src/hooks/useTheme';
 import { useConsentStore } from '../src/store/consentStore';
 import { AiConsentCard } from '../src/components/legal/AiConsentCard';
@@ -371,7 +371,7 @@ export default function TextChatScreen() {
             ]}
             pointerEvents="none"
           >
-            <SphereAuroraCore state="idle" audioLevel={0} size={width * 0.7} />
+            <AuroraCore state="idle" audioLevel={0} size={width * 0.7} />
           </Animated.View>
         </>
       )}
@@ -389,7 +389,7 @@ export default function TextChatScreen() {
           ]}
           pointerEvents="none"
         >
-          <SphereAuroraCore state="idle" audioLevel={0} size={40} />
+          <AuroraCore state="idle" audioLevel={0} size={40} />
         </Animated.View>
       )}
 
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   auroraContainer: {
     position: 'absolute',
-    top: '50%',
+    top: '45%',
     left: '50%',
     marginTop: -(width * 0.7) / 2,
     marginLeft: -(width * 0.7) / 2,

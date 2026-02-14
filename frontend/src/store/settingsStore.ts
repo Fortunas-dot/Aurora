@@ -25,7 +25,7 @@ export interface AppSettings {
   fontFamily?: string;
 }
 
-export type AuroraStyle = 'sphere' | 'blobs';
+export type AuroraStyle = 'classic' | 'organic' | 'blobs';
 
 interface SettingsState {
   // App Settings
@@ -72,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   language: 'en',
   theme: 'dark',
   fontFamily: 'system',
-  auroraStyle: 'sphere',
+  auroraStyle: 'organic',
   showEmail: false,
   isAnonymous: true,
   notificationPreferences: defaultNotificationPreferences,
@@ -168,8 +168,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Load font family
       const fontFamily = (await secureStorage.getItemAsync('app_font_family')) || 'system';
       
-      // Load Aurora style
-      const auroraStyle = ((await secureStorage.getItemAsync('app_aurora_style')) || 'sphere') as AuroraStyle;
+      // Load Aurora style (backward compatibility: 'sphere' maps to 'classic')
+      const storedStyle = await secureStorage.getItemAsync('app_aurora_style');
+      let auroraStyle: AuroraStyle;
+      if (!storedStyle) {
+        auroraStyle = 'organic'; // Default to new organic style
+      } else if (storedStyle === 'sphere') {
+        // Backward compatibility: old 'sphere' becomes 'classic'
+        auroraStyle = 'classic';
+        await secureStorage.setItemAsync('app_aurora_style', 'classic');
+      } else {
+        auroraStyle = storedStyle as AuroraStyle;
+      }
       
       // Load notification preferences
       const prefsJson = await secureStorage.getItemAsync('notification_preferences');

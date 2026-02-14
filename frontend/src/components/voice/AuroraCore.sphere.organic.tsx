@@ -537,72 +537,43 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
     )), [state, audioLevel, numParticles, CORE_SIZE]
   );
 
-  // Create interpolated values with useMemo to ensure they're always defined
-  // Initialize with default values to prevent null errors
-  const rotation = useMemo(() => {
-    try {
-      return rotateZ.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-      });
-    } catch {
-      return '0deg' as any;
-    }
-  }, [rotateZ]);
+  // Create interpolated values - these should never be null, but add safety checks
+  const rotation = rotateZ.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   
-  const innerRotation = useMemo(() => {
-    try {
-      return innerRotate.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '-360deg'],
-      });
-    } catch {
-      return '0deg' as any;
-    }
-  }, [innerRotate]);
+  const innerRotation = innerRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '-360deg'],
+  });
   
-  const innerHighlightRotation = useMemo(() => {
-    try {
-      return innerRotate.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '180deg'],
-      });
-    } catch {
-      return '0deg' as any;
-    }
-  }, [innerRotate]);
+  const innerHighlightRotation = innerRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
   
-  const gradientRotation = useMemo(() => {
-    try {
-      return gradientRotate.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-      });
-    } catch {
-      return '0deg' as any;
-    }
-  }, [gradientRotate]);
+  const gradientRotation = gradientRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   
-  // Build transform array safely - filter out any null values
-  // Interpolated values can be null before first render, so we need to handle this
-  const baseTransforms: any[] = [
+  // Helper function to safely add rotateZ transform
+  const addRotateZ = (rot: any): any[] => {
+    // Check if rot is a valid Animated value (has _value or is a string)
+    if (rot == null || (typeof rot === 'object' && rot._value === undefined && typeof rot !== 'string')) {
+      return [];
+    }
+    return [{ rotateZ: rot }];
+  };
+  
+  // Build transform array safely
+  const transformArray: any[] = [
     { scale: Animated.multiply(Animated.multiply(containerScale, pulseScale), breatheScale) },
     { translateY: isSmall ? translateY : Animated.multiply(wobbleY, 2) },
     { translateX: isSmall ? translateX : Animated.multiply(wobbleX, 2) },
+    ...addRotateZ(rotation), // Always use rotation for main container
   ];
-  
-  // Only add rotateZ if rotation is valid (not null/undefined)
-  // Use rotation for both small and large spheres to avoid null issues
-  // Filter out any transforms with null values
-  const transformArray = baseTransforms.filter(transform => {
-    const values = Object.values(transform);
-    return values.every(val => val != null);
-  });
-  
-  // Add rotateZ only if rotation is valid
-  if (rotation != null && typeof rotation !== 'undefined') {
-    transformArray.push({ rotateZ: rotation });
-  }
 
   return (
     <Animated.View
@@ -678,12 +649,8 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             borderRadius: sphereSize / 2,
             transform: [
               { scale: Animated.multiply(pulseScale, breatheScale) },
-              ...(isSmall && innerRotation != null ? [{ rotateZ: innerRotation }] : []),
-              ...(!isSmall && gradientRotation != null ? [{ rotateZ: gradientRotation }] : []),
-            ].filter(t => {
-              const values = Object.values(t);
-              return values.every(val => val != null);
-            }),
+              ...addRotateZ(isSmall ? innerRotation : gradientRotation),
+            ],
             opacity: state === 'speaking' ? 1 : state === 'listening' ? 0.97 : 0.95,
           },
         ]}
@@ -729,12 +696,8 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             borderRadius: (sphereSize * 0.45) / 2,
             transform: [
               { scale: Animated.multiply(pulseScale, breatheScale) },
-              ...(isSmall && innerHighlightRotation != null ? [{ rotateZ: innerHighlightRotation }] : []),
-              ...(!isSmall && gradientRotation != null ? [{ rotateZ: gradientRotation }] : []),
-            ].filter(t => {
-              const values = Object.values(t);
-              return values.every(val => val != null);
-            }),
+              ...addRotateZ(isSmall ? innerHighlightRotation : gradientRotation),
+            ],
             opacity: state === 'speaking' ? 0.95 : state === 'listening' ? 0.75 : 0.65,
           },
         ]}
@@ -757,12 +720,8 @@ export const AuroraCore: React.FC<AuroraCoreProps> = ({
             borderRadius: (sphereSize * 0.25) / 2,
             transform: [
               { scale: Animated.multiply(pulseScale, breatheScale) },
-              ...(isSmall && innerRotation != null ? [{ rotateZ: innerRotation }] : []),
-              ...(!isSmall && gradientRotation != null ? [{ rotateZ: Animated.multiply(gradientRotation, -1) }] : []),
-            ].filter(t => {
-              const values = Object.values(t);
-              return values.every(val => val != null);
-            }),
+              ...addRotateZ(isSmall ? innerRotation : Animated.multiply(gradientRotation, -1)),
+            ],
             opacity: state === 'speaking' ? 0.8 : state === 'listening' ? 0.6 : 0.5,
           },
         ]}

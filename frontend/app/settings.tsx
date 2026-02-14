@@ -233,7 +233,11 @@ export default function SettingsScreen() {
             <MenuItem
               icon="sparkles-outline"
               title="Aurora Style"
-              subtitle={auroraStyle === 'sphere' ? 'Sphere with Glow' : 'Organic Blobs'}
+              subtitle={
+                auroraStyle === 'organic' ? 'Organic & Alive' :
+                auroraStyle === 'classic' ? 'Classic Sphere' :
+                'Organic Blobs'
+              }
               onPress={() => router.push('/aurora-style')}
             />
           </GlassCard>

@@ -49,7 +49,7 @@ export const ContextIndicator: React.FC<ContextIndicatorProps> = ({
       iconColor: '#F87171', // Light red/pink
     },
     {
-      label: 'Analyzing latest psychology, behavior findings',
+      label: 'Analyzing psychology & behavior findings',
       icon: 'help-circle-outline',
       iconColor: '#A78BFA', // Light purple
     },
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: '100%',
     minHeight: 44,
-    maxHeight: 48,
+    maxHeight: 52,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -125,9 +125,9 @@ const styles = StyleSheet.create({
   },
   itemText: {
     ...TYPOGRAPHY.small,
-    fontSize: 12,
+    fontSize: 11.5,
     textAlign: 'left',
-    lineHeight: 16,
+    lineHeight: 15,
     flex: 1,
     fontWeight: '500',
   },

@@ -43,8 +43,15 @@ class ApiService {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       lastResult = await fn();
       
-      // If it's a 429 error and we have retries left, wait and retry
-      if ((lastResult as any).status === 429 && attempt < maxRetries - 1) {
+      // NEVER retry 429 errors - retrying makes the problem worse
+      // Return immediately on rate limit errors
+      if ((lastResult as any).status === 429) {
+        return lastResult;
+      }
+      
+      // Only retry on network errors or 5xx server errors (not 4xx client errors)
+      const status = (lastResult as any).status;
+      if (status && status >= 500 && attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
@@ -87,10 +94,8 @@ class ApiService {
               ? `Too many requests. Please try again after ${retryAfter} seconds.`
               : errorData.message || 'Too many requests. Please try again later.';
             
-            // Only log in development to reduce noise
-            if (__DEV__) {
-              console.warn('API GET Rate Limit:', message);
-            }
+            // Don't log 429 errors - they're expected when rate limits are hit
+            // The error will be handled gracefully by the calling code
             
             const apiResponse: ApiResponse<T> = {
               success: false,
