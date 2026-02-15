@@ -400,8 +400,10 @@ export default function AuroraScreen() {
                 onPress={() => router.push('/journal/create')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="add-circle" size={28} color={colors.primary} />
-                  <Text style={[styles.quickActionText, { color: colors.text }]}>Quick Entry</Text>
+                  <View style={styles.quickActionContent}>
+                    <Ionicons name="add-circle" size={28} color={colors.primary} />
+                    <Text style={[styles.quickActionText, { color: colors.text }]}>Quick Entry</Text>
+                  </View>
                 </GlassCard>
               </Pressable>
               
@@ -410,8 +412,10 @@ export default function AuroraScreen() {
                 onPress={() => router.push('/journal/insights')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="analytics" size={28} color={colors.accent} />
-                  <Text style={[styles.quickActionText, { color: colors.text }]}>Insights</Text>
+                  <View style={styles.quickActionContent}>
+                    <Ionicons name="analytics" size={28} color={colors.accent} />
+                    <Text style={[styles.quickActionText, { color: colors.text }]}>Insights</Text>
+                  </View>
                 </GlassCard>
               </Pressable>
               
@@ -420,8 +424,10 @@ export default function AuroraScreen() {
                 onPress={() => router.push('/ideas')}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
-                  <Ionicons name="bulb" size={28} color={colors.warning} />
-                  <Text style={[styles.quickActionText, { color: colors.text }]}>Submit Idea</Text>
+                  <View style={styles.quickActionContent}>
+                    <Ionicons name="bulb" size={28} color={colors.warning} />
+                    <Text style={[styles.quickActionText, { color: colors.text }]}>Submit Idea</Text>
+                  </View>
                 </GlassCard>
               </Pressable>
             </View>
@@ -802,9 +808,13 @@ const styles = StyleSheet.create({
     minWidth: '30%',
   },
   quickActionCard: {
+    minHeight: 100,
+  },
+  quickActionContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
+    flex: 1,
+    width: '100%',
   },
   quickActionText: {
     ...TYPOGRAPHY.captionMedium,

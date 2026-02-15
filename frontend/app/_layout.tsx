@@ -15,6 +15,13 @@ import { useConsentStore } from '../src/store/consentStore';
 import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
+// #region agent log
+fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:18',message:'Importing trackingTransparencyService',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+// #endregion
+import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
+// #region agent log
+fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:19',message:'Import completed',data:{hasService:!!trackingTransparencyService},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+// #endregion
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
@@ -51,7 +58,41 @@ export default function RootLayout() {
         
         if (!isMounted) return;
         
+        // Request App Tracking Transparency permission (iOS only, required before analytics)
+        // This should be done before initializing analytics services like PostHog
+        // Wrap in try-catch to handle any module loading errors gracefully
+        try {
+          // Use a setTimeout to defer the call and avoid bundling issues
+          // This allows the app to start even if the module has issues
+          const trackingAllowed = await Promise.race([
+            trackingTransparencyService.requestPermission(),
+            new Promise<boolean>((resolve) => {
+              // Timeout after 1 second - if module loading takes too long, assume it's not available
+              setTimeout(() => resolve(true), 1000);
+            }),
+          ]);
+          
+          if (trackingAllowed) {
+            console.log('✅ Tracking permission granted, initializing analytics');
+          } else {
+            console.log('⚠️ Tracking permission denied, analytics will be limited');
+          }
+        } catch (error: any) {
+          // Handle any errors gracefully - module may not be available in dev/web
+          if (
+            error?.message?.includes('native module') ||
+            error?.message?.includes('Cannot find') ||
+            error?.message?.includes('ExpoTrackingTransparency') ||
+            error?.code === 'MODULE_NOT_FOUND'
+          ) {
+            console.log('⚠️ Tracking transparency not available (expected in dev/web)');
+          } else {
+            console.warn('⚠️ Error requesting tracking permission:', error);
+          }
+        }
+        
         // Initialize PostHog (non-blocking) - only for analytics, not tracking
+        // PostHog will respect the tracking permission status
         posthogService.initialize().catch((error) => {
           console.warn('PostHog initialization failed:', error);
         });

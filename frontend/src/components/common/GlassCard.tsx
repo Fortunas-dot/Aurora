@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
   },
   innerContainer: {
     position: 'relative',
+    flex: 1,
   },
   blur: {
     flex: 1,

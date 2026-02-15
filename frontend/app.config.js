@@ -28,6 +28,7 @@ module.exports = {
         FacebookDisplayName: 'Aurora',
         LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
         ITSAppUsesNonExemptEncryption: false,
+        NSUserTrackingUsageDescription: 'We use your data to improve your experience and provide personalized mental health support. Your privacy is important to us.',
         ...(process.env.FACEBOOK_CLIENT_TOKEN ? { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN } : {}),
       },
     },
@@ -65,6 +66,9 @@ module.exports = {
     plugins: [
       'expo-router',
       'expo-secure-store',
+      // Note: expo-tracking-transparency plugin removed to prevent bundling errors in dev/web
+      // The NSUserTrackingUsageDescription in ios.infoPlist is sufficient for iOS builds
+      // The module is loaded dynamically in trackingTransparency.service.ts when needed
       [
         'expo-notifications',
         {
