@@ -238,49 +238,61 @@ export default function SubscriptionScreen() {
               });
             }
             
-            // Find monthly package - try multiple strategies
+            // Find monthly package - try multiple strategies with priority
             if (currentPackages && currentPackages.length > 0) {
-              // Strategy 1: Find by product identifier
+              // Strategy 1: Find by exact product identifier (PREFERRED)
               let monthly = currentPackages.find(
                 (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
               );
               
               if (monthly) {
-                console.log('✅ Found package by product identifier:', monthly.identifier);
+                console.log('✅ Found package by exact product identifier:', monthly.identifier);
+                const priceString = monthly.product?.priceString || '';
+                if (!priceString.includes('4.99') && !priceString.includes('4,99')) {
+                  console.warn('⚠️ WARNING: Product price does not match expected €4.99. Current price:', priceString);
+                  console.warn('⚠️ Please check RevenueCat dashboard - product "com.aurora.app.monthly" should be priced at €4.99');
+                }
               } else {
-                // Strategy 2: Find by package type
+                // Strategy 2: Find by package type MONTHLY (fallback)
                 monthly = currentPackages.find(
                   (pkg) => pkg.packageType === 'MONTHLY'
                 );
                 
                 if (monthly) {
-                  console.log('✅ Found package by package type MONTHLY:', monthly.identifier);
+                  console.warn('⚠️ Using package by type MONTHLY (fallback):', monthly.identifier);
+                  console.warn('⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
+                  console.warn('⚠️ RECOMMENDED: Configure product "com.aurora.app.monthly" in RevenueCat for correct pricing');
                 } else {
-                  // Strategy 3: Find by package identifier
+                  // Strategy 3: Find by package identifier (fallback)
                   monthly = currentPackages.find(
                     (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
                   );
                   
                   if (monthly) {
-                    console.log('✅ Found package by identifier:', monthly.identifier);
+                    console.warn('⚠️ Using package by identifier (fallback):', monthly.identifier);
+                    console.warn('⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
+                    console.warn('⚠️ RECOMMENDED: Configure product "com.aurora.app.monthly" in RevenueCat for correct pricing');
                   } else {
-                    // Strategy 4: Use first available package as fallback
+                    // Strategy 4: Use first available package as last resort (with strong warning)
                     monthly = currentPackages[0];
-                    console.log('✅ Using first available package as fallback:', monthly.identifier, monthly.product?.identifier);
+                    console.warn('⚠️⚠️ Using first available package as last resort (fallback):', monthly.identifier);
+                    console.warn('⚠️⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
+                    console.warn('⚠️⚠️ STRONGLY RECOMMENDED: Configure product "com.aurora.app.monthly" with price €4.99 in RevenueCat dashboard');
                   }
                 }
               }
               
               if (monthly) {
                 setMonthlyPackage(monthly);
-                console.log('✅ Monthly package set successfully:', {
+                console.log('✅ Monthly package set:', {
                   identifier: monthly.identifier,
                   packageType: monthly.packageType,
                   productId: monthly.product?.identifier,
                   productPrice: monthly.product?.priceString,
+                  productTitle: monthly.product?.title,
                 });
               } else {
-                console.warn('⚠️ No monthly package found after all strategies');
+                console.error('❌ No monthly package found after all strategies');
                 setMonthlyPackage(null);
               }
             } else {
@@ -331,7 +343,7 @@ export default function SubscriptionScreen() {
       if (currentPackages && currentPackages.length > 0 && !monthlyPackage) {
         console.log('🔄 Retrying to find monthly package...');
         
-        // Try to find package again
+        // Try to find package again - try multiple strategies
         let monthly = currentPackages.find(
           (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
         ) || currentPackages.find(
@@ -374,14 +386,14 @@ export default function SubscriptionScreen() {
           // Wait a bit for state to update
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Check again after reload
+          // Check again after reload - try multiple strategies
           if (availablePackages.length > 0) {
             const monthly = availablePackages.find(
-              (pkg) => 
-                pkg.product.identifier === 'com.aurora.app.monthly' ||
-                pkg.packageType === 'MONTHLY' ||
-                pkg.identifier === 'monthly' ||
-                pkg.identifier === '$rc_monthly'
+              (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
+            ) || availablePackages.find(
+              (pkg) => pkg.packageType === 'MONTHLY'
+            ) || availablePackages.find(
+              (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
             ) || availablePackages[0];
             
             if (monthly) {
