@@ -61,6 +61,12 @@ export default function PrivacyPolicyScreen() {
             <Text style={styles.bulletPoint}>• Journal entries and content you create</Text>
             <Text style={styles.bulletPoint}>• Messages and communications</Text>
             <Text style={styles.bulletPoint}>• Usage data and analytics</Text>
+            <Text style={[styles.sectionText, { marginTop: SPACING.md }]}>
+              <Text style={{ fontWeight: '600' }}>How we collect data:</Text> We collect this information directly from you when you:
+            </Text>
+            <Text style={styles.bulletPoint}>• Create an account or update your profile</Text>
+            <Text style={styles.bulletPoint}>• Use features like journaling, chat, or voice support</Text>
+            <Text style={styles.bulletPoint}>• Interact with the app (usage analytics are collected automatically)</Text>
           </View>
 
           <View style={styles.section}>
@@ -89,7 +95,14 @@ export default function PrivacyPolicyScreen() {
               It is not used for advertising, and we do not sell your data to data brokers.
             </Text>
             <Text style={styles.sectionText}>
-              We ask for your permission in the app before enabling these AI features. 
+              <Text style={{ fontWeight: '600' }}>Third-Party Data Sharing:</Text> We share the data listed above with OpenAI, our AI technology provider, 
+              solely for the purpose of generating AI-powered responses and insights. OpenAI is contractually obligated to protect your data 
+              and provides the same or equal protection of personal data as we do. OpenAI does not use your data to train their models 
+              (when using their API with appropriate settings) and is bound by their privacy policy and our data processing agreement. 
+              You can review OpenAI's privacy policy at https://openai.com/privacy.
+            </Text>
+            <Text style={styles.sectionText}>
+              We ask for your explicit permission in the app before enabling these AI features. 
               You can continue to use Aurora without AI features if you prefer not to share this data.
             </Text>
           </View>

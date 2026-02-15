@@ -64,6 +64,12 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
         OpenAI, only to generate supportive responses and insights. It is not used
         for advertising or sold to data brokers.
       </Text>
+      <Text style={styles.text}>
+        OpenAI is contractually obligated to protect your data and provides the same 
+        or equal protection of personal data as we do. OpenAI does not use your data 
+        to train their models and is bound by their privacy policy and our data 
+        processing agreement.
+      </Text>
 
       <Text style={styles.text}>
         You can continue to use Aurora without AI features if you prefer not to
