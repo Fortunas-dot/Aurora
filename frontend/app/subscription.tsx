@@ -83,6 +83,7 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
+  const userId = user?._id || '';
   const {
     isPremium,
     isLoading,
@@ -165,90 +166,189 @@ export default function SubscriptionScreen() {
   useEffect(() => {
     if (!isAuthenticated) {
       setIsLoadingProducts(false);
+      setMonthlyPackage(null);
       return;
     }
 
-    const loadOfferingsData = async () => {
-      let timeoutId: NodeJS.Timeout | null = null;
-      
-      try {
-        setIsLoadingProducts(true);
-        
-        // Add timeout to prevent infinite loading (8 seconds)
-        timeoutId = setTimeout(() => {
-          console.warn('⚠️ Offerings load timeout after 8s, setting loading to false');
-          setIsLoadingProducts(false);
-        }, 8000);
-        
-        if (Platform.OS === 'ios' || Platform.OS === 'android') {
-          // Check if RevenueCat is available first
-          if (!revenueCatService.isAvailable()) {
-            console.warn('⚠️ RevenueCat not available (likely Expo Go). Setting loading to false.');
-            if (timeoutId) clearTimeout(timeoutId);
-            setIsLoadingProducts(false);
-            return;
-          }
-          
-          await loadOfferings();
-          
-          // Wait a bit for state to update after loadOfferings
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          // Get fresh availablePackages from store
-          const currentPackages = usePremiumStore.getState().availablePackages;
-          
-          // Find monthly package - try multiple strategies
-          if (currentPackages && currentPackages.length > 0) {
-            // Strategy 1: Find by product identifier
-            let monthly = currentPackages.find(
-              (pkg) => pkg.product.identifier === 'com.aurora.app.monthly'
-            );
-            
-            // Strategy 2: Find by package type
-            if (!monthly) {
-              monthly = currentPackages.find(
-                (pkg) => pkg.packageType === 'MONTHLY'
-              );
-            }
-            
-            // Strategy 3: Find by package identifier
-            if (!monthly) {
-              monthly = currentPackages.find(
-                (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
-              );
-            }
-            
-            // Strategy 4: Use first available package as fallback
-            if (!monthly && currentPackages.length > 0) {
-              monthly = currentPackages[0];
-              console.log('Using first available package as fallback:', monthly.identifier);
-            }
-            
-            if (monthly) {
-              setMonthlyPackage(monthly);
-              console.log('✅ Monthly package found:', monthly.identifier, monthly.product.identifier);
-            } else {
-              console.warn('⚠️ No monthly package found in available packages');
-            }
-          } else {
-            console.warn('⚠️ No packages available from RevenueCat');
-            // Still set loading to false even if no packages found
-          }
-        } else {
-          console.log('Platform not iOS/Android, skipping RevenueCat');
-          // For web/other platforms, set loading to false immediately
+    // Immediately check if RevenueCat is available (for web/Expo Go)
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      setIsLoadingProducts(false);
+      setMonthlyPackage(null);
+      return;
+    }
+
+    const initializeAndLoad = async () => {
+      // First, try to initialize RevenueCat if not already initialized
+      if (!revenueCatService.initialized) {
+        console.log('🔄 Initializing RevenueCat for subscription page...');
+        try {
+          await revenueCatService.initialize(userId);
+          // Wait a bit for initialization to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error('❌ Failed to initialize RevenueCat:', error);
         }
-      } catch (error) {
-        console.error('❌ Error loading offerings:', error);
-      } finally {
-        // Clear timeout and always set loading to false
-        if (timeoutId) clearTimeout(timeoutId);
-        setIsLoadingProducts(false);
       }
+
+      // Check availability after initialization attempt
+      if (!revenueCatService.isAvailableCheck()) {
+        console.warn('⚠️ RevenueCat not available after initialization attempt.');
+        console.warn('⚠️ RevenueCat requires native modules. If using Expo Go, create a development build.');
+        setIsLoadingProducts(false);
+        setMonthlyPackage(null);
+        return;
+      }
+
+      const loadOfferingsData = async () => {
+        let timeoutId: NodeJS.Timeout | null = null;
+        let isCompleted = false;
+        
+        try {
+          setIsLoadingProducts(true);
+          
+          // Add timeout to prevent infinite loading (5 seconds - shorter timeout)
+          timeoutId = setTimeout(() => {
+            if (!isCompleted) {
+              console.warn('⚠️ Offerings load timeout after 5s, setting loading to false');
+              setIsLoadingProducts(false);
+              setMonthlyPackage(null);
+              isCompleted = true;
+            }
+          }, 5000);
+          
+          try {
+            await loadOfferings();
+            
+            // Wait a bit for state to update after loadOfferings
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Get fresh availablePackages from store
+            const currentPackages = usePremiumStore.getState().availablePackages;
+            
+            console.log('📦 Available packages from store:', currentPackages?.length || 0);
+            if (currentPackages && currentPackages.length > 0) {
+              console.log('📦 Package details:');
+              currentPackages.forEach((pkg, index) => {
+                console.log(`  Package ${index + 1}:`, {
+                  identifier: pkg.identifier,
+                  packageType: pkg.packageType,
+                  productId: pkg.product?.identifier,
+                  productPrice: pkg.product?.priceString,
+                });
+              });
+            }
+            
+            // Find monthly package - try multiple strategies
+            if (currentPackages && currentPackages.length > 0) {
+              // Strategy 1: Find by product identifier
+              let monthly = currentPackages.find(
+                (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
+              );
+              
+              if (monthly) {
+                console.log('✅ Found package by product identifier:', monthly.identifier);
+              } else {
+                // Strategy 2: Find by package type
+                monthly = currentPackages.find(
+                  (pkg) => pkg.packageType === 'MONTHLY'
+                );
+                
+                if (monthly) {
+                  console.log('✅ Found package by package type MONTHLY:', monthly.identifier);
+                } else {
+                  // Strategy 3: Find by package identifier
+                  monthly = currentPackages.find(
+                    (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
+                  );
+                  
+                  if (monthly) {
+                    console.log('✅ Found package by identifier:', monthly.identifier);
+                  } else {
+                    // Strategy 4: Use first available package as fallback
+                    monthly = currentPackages[0];
+                    console.log('✅ Using first available package as fallback:', monthly.identifier, monthly.product?.identifier);
+                  }
+                }
+              }
+              
+              if (monthly) {
+                setMonthlyPackage(monthly);
+                console.log('✅ Monthly package set successfully:', {
+                  identifier: monthly.identifier,
+                  packageType: monthly.packageType,
+                  productId: monthly.product?.identifier,
+                  productPrice: monthly.product?.priceString,
+                });
+              } else {
+                console.warn('⚠️ No monthly package found after all strategies');
+                setMonthlyPackage(null);
+              }
+            } else {
+              console.warn('⚠️ No packages available from RevenueCat');
+              setMonthlyPackage(null);
+            }
+          } catch (offeringsError) {
+            console.error('❌ Error loading offerings:', offeringsError);
+            setMonthlyPackage(null);
+          }
+        } catch (error) {
+          console.error('❌ Error in loadOfferingsData:', error);
+          setIsLoadingProducts(false);
+          setMonthlyPackage(null);
+        } finally {
+          // Mark as completed and clear timeout
+          isCompleted = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          // Always set loading to false in finally block
+          setIsLoadingProducts(false);
+        }
+      };
+
+      loadOfferingsData();
     };
 
-    loadOfferingsData();
-  }, [isAuthenticated, loadOfferings]);
+    initializeAndLoad();
+    
+    // Cleanup on unmount
+    return () => {
+      setIsLoadingProducts(false);
+    };
+  }, [isAuthenticated, loadOfferings, userId]);
+  
+  // Retry mechanism: if no package found after initial load, try again after a delay
+  useEffect(() => {
+    if (!isAuthenticated || isLoadingProducts) return;
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
+    if (!revenueCatService.isAvailableCheck()) return;
+    if (monthlyPackage) return; // Already have package
+    
+    // Wait a bit and retry if no package found
+    const retryTimer = setTimeout(() => {
+      const currentPackages = usePremiumStore.getState().availablePackages;
+      if (currentPackages && currentPackages.length > 0 && !monthlyPackage) {
+        console.log('🔄 Retrying to find monthly package...');
+        
+        // Try to find package again
+        let monthly = currentPackages.find(
+          (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
+        ) || currentPackages.find(
+          (pkg) => pkg.packageType === 'MONTHLY'
+        ) || currentPackages.find(
+          (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
+        ) || currentPackages[0];
+        
+        if (monthly) {
+          setMonthlyPackage(monthly);
+          console.log('✅ Monthly package found on retry:', monthly.identifier);
+        }
+      }
+    }, 2000);
+    
+    return () => clearTimeout(retryTimer);
+  }, [isAuthenticated, isLoadingProducts, monthlyPackage]);
 
   // Handlers
   const handlePurchase = async () => {
@@ -543,7 +643,7 @@ export default function SubscriptionScreen() {
               <Text style={styles.ctaButtonText}>You are already subscribed ✓</Text>
             ) : isLoadingProducts && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
+            ) : !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (
               <Text style={styles.ctaButtonText}>Coming Soon</Text>
             ) : !monthlyPackage ? (
               <Text style={styles.ctaButtonText}>Coming Soon</Text>

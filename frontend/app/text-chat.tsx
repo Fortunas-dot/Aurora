@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, KeyboardAvoidingView, Platform, Pressable, Animated, Dimensions, Easing, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -465,6 +465,46 @@ export default function TextChatScreen() {
             try {
               await clearHistory();
               clearMessages();
+              
+              // Reset all animations to initial state with smooth animation
+              Animated.parallel([
+                Animated.timing(auroraScale, {
+                  toValue: 1,
+                  duration: 600,
+                  easing: Easing.out(Easing.ease),
+                  useNativeDriver: true,
+                }),
+                Animated.timing(auroraOpacity, {
+                  toValue: 1,
+                  duration: 600,
+                  easing: Easing.out(Easing.ease),
+                  useNativeDriver: true,
+                }),
+                Animated.timing(starsOpacity, {
+                  toValue: 0,
+                  duration: 400,
+                  easing: Easing.out(Easing.ease),
+                  useNativeDriver: true,
+                }),
+                Animated.timing(floatingAuroraOpacity, {
+                  toValue: 0,
+                  duration: 400,
+                  easing: Easing.in(Easing.ease),
+                  useNativeDriver: true,
+                }),
+              ]).start();
+              
+              // Reset floating Aurora position immediately
+              floatingAuroraX.setValue(width * 0.2);
+              floatingAuroraY.setValue(height * 0.3);
+              
+              // Clear border glows
+              setBorderGlows([]);
+              
+              // Reset typewriter effect - will trigger automatically via useEffect when hasMessages becomes false
+              setDisplayedText('');
+              setIsTyping(false);
+              
               setShowMenu(false);
             } catch (err) {
               console.error('Failed to clear chat history:', err);

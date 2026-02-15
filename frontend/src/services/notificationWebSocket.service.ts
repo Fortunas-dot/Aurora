@@ -114,10 +114,35 @@ class NotificationWebSocketService {
         this.isConnecting = false;
         this.callbacks.onDisconnected?.();
         
-        // Only attempt reconnect if it wasn't a manual close (code 1000)
-        // and if we haven't exceeded max attempts
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // Don't reconnect on:
+        // - Code 1000: Normal closure (manual disconnect)
+        // - Code 1005: No status received (server timeout/network issue - don't spam reconnect)
+        // - Code 1002: Protocol error (don't reconnect)
+        // - Code 1003: Unsupported data (don't reconnect)
+        // - Code 1007: Invalid data (don't reconnect)
+        // - Code 1008: Policy violation (don't reconnect)
+        // - Code 1009: Message too big (don't reconnect)
+        // - Code 1010: Extension error (don't reconnect)
+        // - Code 1015: TLS handshake failure (don't reconnect)
+        
+        const shouldReconnect = 
+          event.code !== 1000 && // Not manual close
+          event.code !== 1005 && // Not no status (server timeout - wait for user action)
+          event.code !== 1002 && // Not protocol error
+          event.code !== 1003 && // Not unsupported data
+          event.code !== 1007 && // Not invalid data
+          event.code !== 1008 && // Not policy violation
+          event.code !== 1009 && // Not message too big
+          event.code !== 1010 && // Not extension error
+          event.code !== 1015 && // Not TLS handshake failure
+          this.reconnectAttempts < this.maxReconnectAttempts;
+        
+        if (shouldReconnect) {
           this.attemptReconnect();
+        } else if (event.code === 1005) {
+          // Code 1005 means server closed without close frame (likely timeout)
+          // Don't spam reconnect, just log it
+          console.log('Notification WebSocket closed by server (likely timeout). Will reconnect on next user action.');
         }
       };
     } catch (error) {
@@ -183,7 +208,7 @@ class NotificationWebSocketService {
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached');
+      console.log('Max reconnection attempts reached for notification WebSocket');
       return;
     }
 
@@ -196,11 +221,11 @@ class NotificationWebSocketService {
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 30000); // Max 30 seconds
 
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    console.log(`Attempting to reconnect notification WebSocket in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
-      // Check again before reconnecting
-      if (!this.isConnecting && this.ws?.readyState !== WebSocket.OPEN) {
+      // Check again before reconnecting - make sure we still need to reconnect
+      if (!this.isConnecting && this.ws?.readyState !== WebSocket.OPEN && this.ws?.readyState !== WebSocket.CONNECTING) {
         if (this.callbacks.onConnected || this.callbacks.onNotification) {
           this.connect(this.callbacks);
         }

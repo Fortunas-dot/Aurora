@@ -42,6 +42,13 @@ class RevenueCatServiceImpl implements RevenueCatService {
   private isAvailable = false;
 
   /**
+   * Public method to check if RevenueCat is available
+   */
+  public isAvailableCheck(): boolean {
+    return this.isAvailable;
+  }
+
+  /**
    * Check if RevenueCat native module is available
    */
   private checkAvailability(): boolean {

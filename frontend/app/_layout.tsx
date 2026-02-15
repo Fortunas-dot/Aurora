@@ -173,12 +173,18 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isAuthenticated && user?._id) {
-      // Connect with stable callbacks
-      notificationWebSocketService.connect(wsCallbacksRef.current);
+      // Only connect if not already connected to prevent duplicate connections
+      if (!notificationWebSocketService.isConnected()) {
+        notificationWebSocketService.connect(wsCallbacksRef.current);
+      }
 
       return () => {
+        // Only disconnect on unmount or when auth/user changes
         notificationWebSocketService.disconnect();
       };
+    } else {
+      // Disconnect if not authenticated
+      notificationWebSocketService.disconnect();
     }
   }, [isAuthenticated, user?._id]); // Only depend on auth state and user ID
 

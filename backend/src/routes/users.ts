@@ -17,17 +17,19 @@ import { protect, optionalAuth } from '../middleware/auth';
 const router = Router();
 
 // Routes
+// IMPORTANT: Specific routes (like /blocked) must come BEFORE parameterized routes (like /:id)
+// Otherwise Express will match /blocked as /:id with id="blocked"
 router.get('/search', searchUsers);
 router.post('/push-token', protect, registerPushToken);
+router.get('/blocked', protect, getBlockedUsers); // Must be before /:id
+router.put('/profile', protect, updateProfile);
+router.delete('/account', protect, deleteAccount);
 router.post('/:id/follow', protect, followUser);
 router.get('/:id/followers', optionalAuth, getFollowers);
 router.get('/:id/following', optionalAuth, getFollowing);
-router.get('/:id', optionalAuth, getUserProfile);
 router.get('/:id/posts', optionalAuth, getUserPosts);
-router.put('/profile', protect, updateProfile);
-router.get('/blocked', protect, getBlockedUsers);
 router.post('/:id/block', protect, blockUser);
-router.delete('/account', protect, deleteAccount);
+router.get('/:id', optionalAuth, getUserProfile); // Must be last
 
 export default router;
 
