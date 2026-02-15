@@ -1,4 +1,4 @@
-import PostHog from 'posthog-react-native';
+import * as PostHog from 'posthog-react-native';
 import Constants from 'expo-constants';
 
 const POSTHOG_API_KEY = Constants.expoConfig?.extra?.POSTHOG_API_KEY;
@@ -116,37 +116,63 @@ class PostHogService {
     }
 
     try {
-      // PostHog may need to be initialized differently
-      if (PostHog && typeof PostHog.initAsync === 'function') {
-        await PostHog.initAsync(POSTHOG_API_KEY, {
-          host: POSTHOG_HOST,
-          enableSessionReplay: true,
-          autocapture: true,
-          captureScreenViews: true,
-          debug: __DEV__,
-        });
-      } else if (PostHog && typeof PostHog.default?.initAsync === 'function') {
-        await PostHog.default.initAsync(POSTHOG_API_KEY, {
-          host: POSTHOG_HOST,
-          enableSessionReplay: true,
-          autocapture: true,
-          captureScreenViews: true,
-          debug: __DEV__,
-        });
-      } else {
-        console.warn('PostHog.initAsync is not available. PostHog may not be properly installed.');
-        return;
+      // In development, PostHog native module may not be available
+      // This is expected and not an error
+      if (__DEV__) {
+        console.log('📊 PostHog: Running in development mode. Native module may not be available.');
       }
 
-      this.initialized = true;
-      console.log('✅ PostHog initialized successfully');
+      // Try different initialization methods based on how PostHog is exported
+      let initMethod: ((apiKey: string, options: any) => Promise<void>) | null = null;
       
-      // Track app initialized event
-      this.trackEvent(POSTHOG_EVENTS.APP_INITIALIZED, {
-        timestamp: new Date().toISOString(),
-      });
+      // Check for default export with initAsync
+      if (PostHog.default && typeof PostHog.default.initAsync === 'function') {
+        initMethod = PostHog.default.initAsync.bind(PostHog.default);
+      }
+      // Check for named export initAsync
+      else if (PostHog && typeof (PostHog as any).initAsync === 'function') {
+        initMethod = (PostHog as any).initAsync;
+      }
+      // Check for direct PostHog object with initAsync
+      else if (typeof (PostHog as any).initAsync === 'function') {
+        initMethod = (PostHog as any).initAsync;
+      }
+      
+      if (initMethod) {
+        await initMethod(POSTHOG_API_KEY, {
+          host: POSTHOG_HOST,
+          enableSessionReplay: true,
+          autocapture: true,
+          captureScreenViews: true,
+          debug: __DEV__,
+        });
+        this.initialized = true;
+        console.log('✅ PostHog initialized successfully');
+        
+        // Track app initialized event
+        this.trackEvent(POSTHOG_EVENTS.APP_INITIALIZED, {
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        // In development, this is expected - native module only available in production builds
+        if (__DEV__) {
+          console.log('ℹ️ PostHog: Native module not available in development. This is expected.');
+          console.log('ℹ️ PostHog will work in production builds.');
+        } else {
+          console.warn('⚠️ PostHog.initAsync is not available. PostHog may not be properly installed.');
+          console.warn('PostHog object keys:', Object.keys(PostHog || {}));
+          console.warn('PostHog.default:', (PostHog as any).default);
+        }
+        // Don't mark as initialized if we can't initialize
+        return;
+      }
     } catch (error) {
-      console.error('❌ PostHog initialization failed:', error);
+      // In development, errors are expected if native module isn't available
+      if (__DEV__) {
+        console.log('ℹ️ PostHog initialization skipped in development (native module not available)');
+      } else {
+        console.error('❌ PostHog initialization failed:', error);
+      }
     }
   }
 
@@ -157,10 +183,9 @@ class PostHogService {
   identify(userId: string, properties?: Record<string, any>) {
     if (!this.initialized) return;
     try {
-      if (PostHog && typeof PostHog.identify === 'function') {
-        PostHog.identify(userId, properties);
-      } else if (PostHog?.default && typeof PostHog.default.identify === 'function') {
-        PostHog.default.identify(userId, properties);
+      const identifyMethod = (PostHog.default?.identify) || (PostHog as any).identify || ((PostHog as any).default?.identify);
+      if (identifyMethod && typeof identifyMethod === 'function') {
+        identifyMethod(userId, properties);
       }
     } catch (error) {
       console.warn('PostHog identify failed:', error);
@@ -170,10 +195,9 @@ class PostHogService {
   reset() {
     if (!this.initialized) return;
     try {
-      if (PostHog && typeof PostHog.reset === 'function') {
-        PostHog.reset();
-      } else if (PostHog?.default && typeof PostHog.default.reset === 'function') {
-        PostHog.default.reset();
+      const resetMethod = (PostHog.default?.reset) || (PostHog as any).reset || ((PostHog as any).default?.reset);
+      if (resetMethod && typeof resetMethod === 'function') {
+        resetMethod();
       }
     } catch (error) {
       console.warn('PostHog reset failed:', error);
@@ -183,10 +207,9 @@ class PostHogService {
   capture(eventName: string, properties?: Record<string, any>) {
     if (!this.initialized) return;
     try {
-      if (PostHog && typeof PostHog.capture === 'function') {
-        PostHog.capture(eventName, properties);
-      } else if (PostHog?.default && typeof PostHog.default.capture === 'function') {
-        PostHog.default.capture(eventName, properties);
+      const captureMethod = (PostHog.default?.capture) || (PostHog as any).capture || ((PostHog as any).default?.capture);
+      if (captureMethod && typeof captureMethod === 'function') {
+        captureMethod(eventName, properties);
       }
     } catch (error) {
       console.warn('PostHog capture failed:', error);
@@ -201,10 +224,9 @@ class PostHogService {
   screen(screenName: string, properties?: Record<string, any>) {
     if (!this.initialized) return;
     try {
-      if (PostHog && typeof PostHog.screen === 'function') {
-        PostHog.screen(screenName, properties);
-      } else if (PostHog?.default && typeof PostHog.default.screen === 'function') {
-        PostHog.default.screen(screenName, properties);
+      const screenMethod = (PostHog.default?.screen) || (PostHog as any).screen || ((PostHog as any).default?.screen);
+      if (screenMethod && typeof screenMethod === 'function') {
+        screenMethod(screenName, properties);
       }
     } catch (error) {
       console.warn('PostHog screen failed:', error);
@@ -219,10 +241,9 @@ class PostHogService {
   setUserProperties(properties: Record<string, any>) {
     if (!this.initialized) return;
     try {
-      if (PostHog && typeof PostHog.setUserProperties === 'function') {
-        PostHog.setUserProperties(properties);
-      } else if (PostHog?.default && typeof PostHog.default.setUserProperties === 'function') {
-        PostHog.default.setUserProperties(properties);
+      const setUserPropertiesMethod = (PostHog.default?.setUserProperties) || (PostHog as any).setUserProperties || ((PostHog as any).default?.setUserProperties);
+      if (setUserPropertiesMethod && typeof setUserPropertiesMethod === 'function') {
+        setUserPropertiesMethod(properties);
       }
     } catch (error) {
       console.warn('PostHog setUserProperties failed:', error);

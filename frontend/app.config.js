@@ -75,9 +75,8 @@ module.exports = {
       'expo-router',
       'expo-secure-store',
       'expo-updates', // Required for OTA updates
-      // Note: expo-tracking-transparency plugin removed to prevent bundling errors in dev/web
-      // The NSUserTrackingUsageDescription in ios.infoPlist is sufficient for iOS builds
-      // The module is loaded dynamically in trackingTransparency.service.ts when needed
+      'expo-tracking-transparency', // Required for iOS App Tracking Transparency
+      // Note: Metro config replaces this module with stub for non-iOS platforms to prevent bundling errors
       [
         'expo-notifications',
         {
