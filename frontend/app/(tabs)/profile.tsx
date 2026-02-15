@@ -26,7 +26,7 @@ interface MenuItemProps {
   danger?: boolean;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({
+const MenuItem: React.FC<MenuItemProps> = React.memo(({
   icon,
   title,
   subtitle,
@@ -55,7 +55,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
       )}
     </Pressable>
   );
-};
+});
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -174,6 +174,11 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>

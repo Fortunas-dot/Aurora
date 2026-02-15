@@ -773,14 +773,33 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
   try {
     const days = parseInt(req.query.days as string) || 30;
     const journalId = req.query.journalId as string;
-    const startDate = new Date();
+    
+    // Calculate start date more reliably
+    // We want to include entries from the last N days INCLUDING today
+    // So if days=7, we want entries from 7 days ago (at 00:00:00) until now
+    const now = new Date();
+    const startDate = new Date(now);
+    // Subtract days to get the start date (e.g., 7 days ago for 7-day period)
     startDate.setDate(startDate.getDate() - days);
     // Set to start of day (00:00:00) to include all entries from that day
     startDate.setHours(0, 0, 0, 0);
+    startDate.setMinutes(0);
+    startDate.setSeconds(0);
+    startDate.setMilliseconds(0);
+
+    // Also set end date to end of today to ensure we include all of today's entries
+    const endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Debug logging
+    console.log(`[Insights] Fetching insights for ${days} days. Start date: ${startDate.toISOString()}, End date: ${endDate.toISOString()}, Now: ${now.toISOString()}`);
 
     const query: any = {
       author: req.userId,
-      createdAt: { $gte: startDate },
+      createdAt: { 
+        $gte: startDate,
+        $lte: endDate,
+      },
     };
 
     if (journalId) {
@@ -788,6 +807,19 @@ export const getInsights = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const entries = await JournalEntry.find(query).sort({ createdAt: 1 });
+
+    // Debug logging to help diagnose the issue
+    if (days === 7) {
+      console.log(`[Insights Debug] 7 days query:`, {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        startDateLocal: startDate.toLocaleString(),
+        endDateLocal: endDate.toLocaleString(),
+        query: JSON.stringify(query),
+        entriesFound: entries.length,
+        entryDates: entries.slice(0, 5).map(e => e.createdAt?.toISOString()),
+      });
+    }
 
     if (entries.length === 0) {
       res.json({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ interface MenuItemProps {
   rightComponent?: React.ReactNode;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({
+const MenuItem: React.FC<MenuItemProps> = React.memo(({
   icon,
   title,
   subtitle,
@@ -53,7 +53,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
       )}
     </Pressable>
   );
-};
+});
 
 interface SwitchItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -63,7 +63,7 @@ interface SwitchItemProps {
   onValueChange: (value: boolean) => void;
 }
 
-const SwitchItem: React.FC<SwitchItemProps> = ({
+const SwitchItem: React.FC<SwitchItemProps> = React.memo(({
   icon,
   title,
   subtitle,
@@ -88,7 +88,7 @@ const SwitchItem: React.FC<SwitchItemProps> = ({
       />
     </View>
   );
-};
+});
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -218,6 +218,11 @@ export default function SettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       >
         {/* App Settings */}
         <View style={styles.menuSection}>
@@ -239,6 +244,19 @@ export default function SettingsScreen() {
                 'Organic Blobs'
               }
               onPress={() => router.push('/aurora-style')}
+            />
+          </GlassCard>
+        </View>
+
+        {/* Subscription */}
+        <View style={styles.menuSection}>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>Subscription</Text>
+          <GlassCard padding={0}>
+            <MenuItem
+              icon="diamond-outline"
+              title="Premium"
+              subtitle="7-day free trial, then €4.99/month"
+              onPress={() => router.push('/subscription')}
             />
           </GlassCard>
         </View>

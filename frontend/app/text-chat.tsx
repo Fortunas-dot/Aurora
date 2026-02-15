@@ -136,6 +136,20 @@ export default function TextChatScreen() {
   const auroraOpacity = useRef(new Animated.Value(1)).current;
   const starsOpacity = useRef(new Animated.Value(0)).current;
   
+  // Floating Aurora animation when messages exist
+  const floatingAuroraX = useRef(new Animated.Value(width * 0.2)).current;
+  const floatingAuroraY = useRef(new Animated.Value(height * 0.3)).current;
+  const floatingAuroraOpacity = useRef(new Animated.Value(0.15)).current; // Low opacity for readability
+  
+  // Bioluminescent border glow effects
+  const [borderGlows, setBorderGlows] = useState<Array<{
+    id: number;
+    side: 'top' | 'bottom' | 'left' | 'right';
+    position: number;
+    opacity: Animated.Value;
+  }>>([]);
+  const glowIdRef = useRef(0);
+  
   const hasMessages = messages.length > 0;
   const [showMenu, setShowMenu] = useState(false);
   
@@ -246,6 +260,12 @@ export default function TextChatScreen() {
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
+        Animated.timing(floatingAuroraOpacity, {
+          toValue: 0.15, // Low opacity for readability
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]).start();
     } else {
       // Expand Aurora and fade out stars
@@ -268,9 +288,149 @@ export default function TextChatScreen() {
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
+        Animated.timing(floatingAuroraOpacity, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]).start();
     }
   }, [hasMessages]);
+
+  // Helper function to create border glow effect
+  const createBorderGlow = useCallback((side: 'top' | 'bottom' | 'left' | 'right', position: number) => {
+    const id = glowIdRef.current++;
+    const opacity = new Animated.Value(0);
+    
+    setBorderGlows(prev => [...prev, { id, side, position, opacity }]);
+    
+    // Animate glow in and out
+    Animated.sequence([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Remove glow after animation
+      setBorderGlows(prev => prev.filter(g => g.id !== id));
+    });
+  }, []);
+
+  // Floating animation for tiny Aurora with boundary detection and bounce
+  useEffect(() => {
+    if (!hasMessages) {
+      floatingAuroraX.setValue(width * 0.2);
+      floatingAuroraY.setValue(height * 0.3);
+      return;
+    }
+
+    const auroraSize = 60;
+    const margin = 30; // Safe margin from edges
+    const headerHeight = insets.top + 60;
+    const inputAreaHeight = 100;
+    
+    // Boundaries
+    const minX = margin;
+    const maxX = width - margin - auroraSize;
+    const minY = headerHeight + margin;
+    const maxY = height - inputAreaHeight - margin - auroraSize;
+
+    // Random starting position within bounds
+    const startX = Math.random() * (maxX - minX) + minX;
+    const startY = Math.random() * (maxY - minY) + minY;
+    
+    floatingAuroraX.setValue(startX);
+    floatingAuroraY.setValue(startY);
+
+    let currentX = startX;
+    let currentY = startY;
+    let velocityX = (Math.random() - 0.5) * 0.5; // Random initial velocity
+    let velocityY = (Math.random() - 0.5) * 0.5;
+
+    let animationFrameId: number | null = null;
+
+    // Animation loop with boundary detection
+    const animate = () => {
+      const speed = 0.3; // Movement speed
+      
+      const updatePosition = () => {
+        // Update position
+        currentX += velocityX * speed;
+        currentY += velocityY * speed;
+
+        // Boundary detection and bounce
+        // Left boundary
+        if (currentX < minX) {
+          currentX = minX;
+          velocityX = Math.abs(velocityX); // Bounce right
+          createBorderGlow('left', currentY);
+        }
+        // Right boundary
+        else if (currentX > maxX) {
+          currentX = maxX;
+          velocityX = -Math.abs(velocityX); // Bounce left
+          createBorderGlow('right', currentY);
+        }
+
+        // Top boundary
+        if (currentY < minY) {
+          currentY = minY;
+          velocityY = Math.abs(velocityY); // Bounce down
+          createBorderGlow('top', currentX);
+        }
+        // Bottom boundary
+        else if (currentY > maxY) {
+          currentY = maxY;
+          velocityY = -Math.abs(velocityY); // Bounce up
+          createBorderGlow('bottom', currentX);
+        }
+
+        // Add slight random variation to prevent getting stuck
+        if (Math.random() < 0.02) {
+          velocityX += (Math.random() - 0.5) * 0.1;
+          velocityY += (Math.random() - 0.5) * 0.1;
+        }
+
+        // Normalize velocity to prevent too fast movement
+        const maxVelocity = 1.5;
+        const velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+        if (velocityMagnitude > maxVelocity) {
+          velocityX = (velocityX / velocityMagnitude) * maxVelocity;
+          velocityY = (velocityY / velocityMagnitude) * maxVelocity;
+        }
+
+        // Update animated values
+        floatingAuroraX.setValue(currentX);
+        floatingAuroraY.setValue(currentY);
+
+        // Continue animation
+        animationFrameId = requestAnimationFrame(updatePosition);
+      };
+
+      updatePosition();
+    };
+
+    // Start animation after small delay
+    const timeoutId = setTimeout(() => {
+      animate();
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [hasMessages, width, height, insets.top, createBorderGlow]);
 
   const handleSend = async (message: string) => {
     if (aiConsentStatus !== 'granted') {
@@ -422,6 +582,78 @@ export default function TextChatScreen() {
           <AuroraCore state="idle" audioLevel={0} size={40} />
         </Animated.View>
       )}
+
+      {/* Floating tiny Aurora sphere when messages exist */}
+      {hasMessages && (
+        <Animated.View
+          style={[
+            styles.floatingAurora,
+            {
+              opacity: floatingAuroraOpacity,
+              transform: [
+                { translateX: floatingAuroraX },
+                { translateY: floatingAuroraY },
+              ],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <AuroraCore state="idle" audioLevel={0} size={60} />
+        </Animated.View>
+      )}
+
+      {/* Bioluminescent border glow effects */}
+      {hasMessages && borderGlows.map((glow) => (
+        <Animated.View
+          key={glow.id}
+          style={[
+            styles.borderGlow,
+            glow.side === 'top' && {
+              top: 0,
+              left: glow.position - 40,
+              width: 80,
+              height: 3,
+            },
+            glow.side === 'bottom' && {
+              bottom: 100, // Above input area
+              left: glow.position - 40,
+              width: 80,
+              height: 3,
+            },
+            glow.side === 'left' && {
+              left: 0,
+              top: glow.position - 40,
+              width: 3,
+              height: 80,
+            },
+            glow.side === 'right' && {
+              right: 0,
+              top: glow.position - 40,
+              width: 3,
+              height: 80,
+            },
+            { opacity: glow.opacity },
+          ]}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={[colors.primary, `${colors.primary}CC`, `${colors.primary}80`, 'transparent']}
+            start={
+              glow.side === 'top' ? { x: 0.5, y: 0 } :
+              glow.side === 'bottom' ? { x: 0.5, y: 1 } :
+              glow.side === 'left' ? { x: 0, y: 0.5 } :
+              { x: 1, y: 0.5 }
+            }
+            end={
+              glow.side === 'top' ? { x: 0.5, y: 1 } :
+              glow.side === 'bottom' ? { x: 0.5, y: 0 } :
+              glow.side === 'left' ? { x: 1, y: 0.5 } :
+              { x: 0, y: 0.5 }
+            }
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      ))}
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm, borderBottomColor: colors.glass.border }]}>
@@ -582,6 +814,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: SPACING.md + 20,
     zIndex: 2,
+  },
+  floatingAurora: {
+    position: 'absolute',
+    zIndex: 0, // Behind messages but visible
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  borderGlow: {
+    position: 'absolute',
+    zIndex: 1, // Above Aurora but below messages
+    borderRadius: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

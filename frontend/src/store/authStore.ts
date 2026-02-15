@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
+import { revenueCatService } from '../services/revenuecat.service';
 
 interface AuthState {
   user: User | null;
@@ -320,6 +321,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Reset user identification (BELANGRIJK: doe dit na tracking)
       posthogService.reset();
+      
+      // Reset RevenueCat user
+      revenueCatService.resetUser().catch((error) => {
+        console.warn('RevenueCat reset user failed:', error);
+      });
       
       set({
         user: null,

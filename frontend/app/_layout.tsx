@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,8 @@ import { notificationWebSocketService } from '../src/services/notificationWebSoc
 import { posthogService, POSTHOG_EVENTS } from '../src/services/posthog.service';
 import { useConsentStore } from '../src/store/consentStore';
 import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
+import { revenueCatService } from '../src/services/revenuecat.service';
+import { usePremiumStore } from '../src/store/premiumStore';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
@@ -31,6 +33,7 @@ export default function RootLayout() {
   const { loadSettings } = useSettingsStore();
   const { colors, isDark } = useTheme();
   const { aiConsentStatus, loadConsent } = useConsentStore();
+  const { checkPremiumStatus } = usePremiumStore();
 
   useEffect(() => {
     let isMounted = true;
@@ -51,6 +54,11 @@ export default function RootLayout() {
         // Initialize PostHog (non-blocking) - only for analytics, not tracking
         posthogService.initialize().catch((error) => {
           console.warn('PostHog initialization failed:', error);
+        });
+
+        // Initialize RevenueCat (non-blocking)
+        revenueCatService.initialize().catch((error) => {
+          console.warn('RevenueCat initialization failed:', error);
         });
       } catch (error) {
         console.error('Initialization error:', error);
@@ -95,7 +103,7 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user, updateUnreadCount]);
 
-  // Identify user in PostHog when authenticated (for app restarts)
+  // Identify user in PostHog and RevenueCat when authenticated (for app restarts)
   useEffect(() => {
     if (isAuthenticated && user) {
       posthogService.identify(user._id, {
@@ -109,43 +117,70 @@ export default function RootLayout() {
       posthogService.trackEvent(POSTHOG_EVENTS.APP_OPENED, {
         timestamp: new Date().toISOString(),
       });
+
+      // Identify user in RevenueCat
+      revenueCatService.identifyUser(user._id).catch((error) => {
+        console.warn('RevenueCat identify user failed:', error);
+      });
+
+      // Check premium status
+      checkPremiumStatus().catch((error) => {
+        console.warn('Failed to check premium status:', error);
+      });
     } else if (!isAuthenticated) {
-      // Don't reset here - let logout handle it
+      // Reset RevenueCat user on logout
+      revenueCatService.resetUser().catch((error) => {
+        console.warn('RevenueCat reset user failed:', error);
+      });
+      // Don't reset PostHog here - let logout handle it
       // posthogService.reset();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, checkPremiumStatus]);
 
   // Setup WebSocket connection for real-time notifications
+  // Use refs to store stable callbacks that don't cause re-renders
+  const wsCallbacksRef = useRef({
+    onNotification: (notification: any) => {
+      console.log('WebSocket notification received:', notification);
+      // Add notification to store
+      useNotificationStore.getState().loadNotifications(1, false);
+      useNotificationStore.getState().updateUnreadCount();
+    },
+    onUnreadCount: (count: number) => {
+      console.log('WebSocket unread count:', count);
+      // Update store with new count
+      useNotificationStore.setState({ unreadCount: count });
+    },
+    onConnected: () => {
+      console.log('✅ Notification WebSocket connected');
+    },
+    onDisconnected: () => {
+      console.log('❌ Notification WebSocket disconnected');
+    },
+    onError: (error: Error) => {
+      console.error('Notification WebSocket error:', error);
+    },
+  });
+
+  // Update callbacks ref when store actions might change (though they shouldn't)
   useEffect(() => {
-    if (isAuthenticated && user) {
-      notificationWebSocketService.connect({
-        onNotification: (notification) => {
-          console.log('WebSocket notification received:', notification);
-          // Add notification to store
-          loadNotifications(1, false);
-          updateUnreadCount();
-        },
-        onUnreadCount: (count) => {
-          console.log('WebSocket unread count:', count);
-          // Update store with new count
-          useNotificationStore.setState({ unreadCount: count });
-        },
-        onConnected: () => {
-          console.log('✅ Notification WebSocket connected');
-        },
-        onDisconnected: () => {
-          console.log('❌ Notification WebSocket disconnected');
-        },
-        onError: (error) => {
-          console.error('Notification WebSocket error:', error);
-        },
-      });
+    wsCallbacksRef.current.onNotification = (notification: any) => {
+      console.log('WebSocket notification received:', notification);
+      useNotificationStore.getState().loadNotifications(1, false);
+      useNotificationStore.getState().updateUnreadCount();
+    };
+  }, []); // Empty deps - these are stable Zustand actions
+
+  useEffect(() => {
+    if (isAuthenticated && user?._id) {
+      // Connect with stable callbacks
+      notificationWebSocketService.connect(wsCallbacksRef.current);
 
       return () => {
         notificationWebSocketService.disconnect();
       };
     }
-  }, [isAuthenticated, user, loadNotifications, updateUnreadCount]);
+  }, [isAuthenticated, user?._id]); // Only depend on auth state and user ID
 
   if (isLoading) {
     return (

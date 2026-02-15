@@ -30,14 +30,28 @@ class ChatWebSocketService {
    * Connect to chat WebSocket
    */
   async connect(callbacks: ChatWebSocketCallbacks): Promise<void> {
+    // If already connected, just update callbacks
     if (this.ws?.readyState === WebSocket.OPEN) {
       console.log('Chat WebSocket already connected');
+      this.callbacks = callbacks;
       return;
     }
 
+    // If connecting, wait a bit and check again
     if (this.isConnecting) {
       console.log('Chat WebSocket connection already in progress');
+      this.callbacks = callbacks; // Update callbacks anyway
       return;
+    }
+
+    // Clean up any existing connection that's not open
+    if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+      try {
+        this.ws.close();
+      } catch (error) {
+        // Ignore close errors
+      }
+      this.ws = null;
     }
 
     this.callbacks = callbacks;
@@ -70,23 +84,16 @@ class ChatWebSocketService {
 
       this.ws.onmessage = (event) => {
         try {
-          // Handle plain text ping messages
-          if (typeof event.data === 'string' && event.data.trim() === 'ping') {
-            if (this.ws?.readyState === WebSocket.OPEN) {
-              this.ws.send('pong');
-            }
-            return;
-          }
-
+          // Parse message - backend sends JSON
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          // If parsing fails, check if it's a plain text ping/pong
+          // If parsing fails, check if it's a plain text ping/pong (fallback)
           if (typeof event.data === 'string') {
             const text = event.data.trim();
             if (text === 'ping') {
               if (this.ws?.readyState === WebSocket.OPEN) {
-                this.ws.send('pong');
+                this.ws.send(JSON.stringify({ type: 'pong' }));
               }
               return;
             }
@@ -94,7 +101,10 @@ class ChatWebSocketService {
               return; // Ignore pong silently
             }
           }
-          console.error('Error parsing chat WebSocket message:', error);
+          // Only log non-ping/pong parsing errors
+          if (__DEV__) {
+            console.warn('Error parsing chat WebSocket message:', error);
+          }
         }
       };
 
@@ -104,11 +114,16 @@ class ChatWebSocketService {
         this.callbacks.onError?.(new Error('WebSocket connection error'));
       };
 
-      this.ws.onclose = () => {
-        console.log('Chat WebSocket disconnected');
+      this.ws.onclose = (event) => {
+        console.log('Chat WebSocket disconnected', event.code, event.reason);
         this.isConnecting = false;
         this.callbacks.onDisconnected?.();
-        this.attemptReconnect();
+        
+        // Only attempt reconnect if it wasn't a manual close (code 1000)
+        // and if we haven't exceeded max attempts
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnect();
+        }
       };
     } catch (error) {
       // Only log non-token errors as errors, token errors are expected
@@ -152,7 +167,11 @@ class ChatWebSocketService {
       case 'ping':
         // Respond to ping with pong if WebSocket is open
         if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: 'pong' }));
+          try {
+            this.ws.send(JSON.stringify({ type: 'pong' }));
+          } catch (error) {
+            console.warn('Failed to send pong response:', error);
+          }
         }
         break;
       case 'pong':
@@ -238,19 +257,33 @@ class ChatWebSocketService {
    * Attempt to reconnect to WebSocket
    */
   private attemptReconnect(): void {
+    // Don't reconnect if already connecting or if WebSocket is still open
+    if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log('Max reconnection attempts reached');
       return;
     }
 
+    // Clear any existing reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * this.reconnectAttempts;
+    const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 30000); // Max 30 seconds
 
     console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
-      if (this.callbacks.onConnected || this.callbacks.onNewMessage) {
-        this.connect(this.callbacks);
+      // Check again before reconnecting
+      if (!this.isConnecting && this.ws?.readyState !== WebSocket.OPEN) {
+        if (this.callbacks.onConnected || this.callbacks.onNewMessage) {
+          this.connect(this.callbacks);
+        }
       }
     }, delay);
   }
@@ -259,18 +292,26 @@ class ChatWebSocketService {
    * Disconnect from WebSocket
    */
   disconnect(): void {
+    // Clear reconnect timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
+    // Clear typing timeout
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
       this.typingTimeout = null;
     }
 
+    // Close WebSocket connection
     if (this.ws) {
-      this.ws.close();
+      try {
+        // Use code 1000 (normal closure) to indicate manual disconnect
+        this.ws.close(1000, 'Manual disconnect');
+      } catch (error) {
+        // Ignore close errors
+      }
       this.ws = null;
     }
 
