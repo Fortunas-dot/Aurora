@@ -22,6 +22,7 @@ import { trackingTransparencyService } from '../src/services/trackingTransparenc
 // #region agent log
 fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:19',message:'Import completed',data:{hasService:!!trackingTransparencyService},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
 // #endregion
+import * as Updates from 'expo-updates';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
@@ -55,6 +56,24 @@ export default function RootLayout() {
         // Then load settings + consent
         await loadSettings();
         await loadConsent();
+        
+        if (!isMounted) return;
+        
+        // Check for OTA updates (only in production builds, not in development)
+        if (!__DEV__ && Updates.isEnabled) {
+          try {
+            const update = await Updates.checkForUpdateAsync();
+            if (update.isAvailable) {
+              console.log('📦 OTA update available, downloading...');
+              await Updates.fetchUpdateAsync();
+              // Reload the app to apply the update
+              await Updates.reloadAsync();
+            }
+          } catch (error) {
+            console.warn('⚠️ Error checking for OTA updates:', error);
+            // Don't block app initialization if update check fails
+          }
+        }
         
         if (!isMounted) return;
         

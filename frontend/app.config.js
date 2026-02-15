@@ -6,6 +6,14 @@ module.exports = {
     slug: 'aurora',
     owner: 'pawbuddies',
     version: '1.0.0',
+    runtimeVersion: {
+      policy: 'appVersion', // Use app version as runtime version
+    },
+    updates: {
+      url: 'https://u.expo.dev/3e76b1de-69b1-45db-ab68-c957d25e4002',
+      fallbackToCacheTimeout: 0,
+      checkAutomatically: 'ON_LOAD',
+    },
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -66,6 +74,7 @@ module.exports = {
     plugins: [
       'expo-router',
       'expo-secure-store',
+      'expo-updates', // Required for OTA updates
       // Note: expo-tracking-transparency plugin removed to prevent bundling errors in dev/web
       // The NSUserTrackingUsageDescription in ios.infoPlist is sufficient for iOS builds
       // The module is loaded dynamically in trackingTransparency.service.ts when needed
