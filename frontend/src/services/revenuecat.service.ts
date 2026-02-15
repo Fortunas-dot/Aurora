@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
 import { useAuthStore } from '../store/authStore';
 
 // RevenueCat API Key
-const REVENUECAT_API_KEY = 'test_yYRUjzZYwhwcCQuMjtwlfAbTCMI';
+const REVENUECAT_API_KEY = 'appl_sWTFSjeziQTCKynmANwKPTmDOFp';
 
 // Entitlement identifier
 export const PREMIUM_ENTITLEMENT = 'Aurora Premium';
