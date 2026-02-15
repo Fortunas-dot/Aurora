@@ -401,8 +401,8 @@ export default function AuroraScreen() {
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
-                    <Ionicons name="add-circle" size={28} color={colors.primary} />
-                    <Text style={[styles.quickActionText, { color: colors.text }]}>Quick Entry</Text>
+                  <Ionicons name="add-circle" size={28} color={colors.primary} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Quick Entry</Text>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -413,8 +413,8 @@ export default function AuroraScreen() {
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
-                    <Ionicons name="analytics" size={28} color={colors.accent} />
-                    <Text style={[styles.quickActionText, { color: colors.text }]}>Insights</Text>
+                  <Ionicons name="analytics" size={28} color={colors.accent} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Insights</Text>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -425,8 +425,8 @@ export default function AuroraScreen() {
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
-                    <Ionicons name="bulb" size={28} color={colors.warning} />
-                    <Text style={[styles.quickActionText, { color: colors.text }]}>Submit Idea</Text>
+                  <Ionicons name="bulb" size={28} color={colors.warning} />
+                  <Text style={[styles.quickActionText, { color: colors.text }]}>Submit Idea</Text>
                   </View>
                 </GlassCard>
               </Pressable>
