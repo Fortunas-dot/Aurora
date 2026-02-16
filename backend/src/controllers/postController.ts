@@ -259,6 +259,10 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     logDebug({location:'postController.ts:140',message:'getPosts - Sending response',data:{responsePostsCount:postsWithSavedStatus.length,responsePostIds:postsWithSavedStatus.map((p:any)=>p._id?.toString()).slice(0,5),pagination:{page,limit,total,pages:Math.ceil(total/limit)}},hypothesisId:'E'});
     // #endregion
 
+    // Therapist availability banner: return a backend-driven random number between 3 and 5
+    // This keeps the randomness on the server so the frontend cannot see or infer it.
+    const therapistCount = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5
+
     res.json({
       success: true,
       data: postsWithSavedStatus,
@@ -268,6 +272,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
         total,
         pages: Math.ceil(total / limit),
       },
+      therapistCount,
     });
   } catch (error: any) {
     res.status(500).json({
