@@ -985,7 +985,6 @@ const styles = StyleSheet.create({
   entryCardWrapper: {
     position: 'relative',
     marginBottom: SPACING.lg,
-    marginLeft: SPACING.md,
   },
   timelineConnector: {
     position: 'absolute',

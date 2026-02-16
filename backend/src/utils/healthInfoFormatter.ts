@@ -1,5 +1,6 @@
 import { IUser } from '../models/User';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
+import ChatContext from '../models/ChatContext';
 
 type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
@@ -154,17 +155,52 @@ export const formatCalendarContextForAI = (events: any[]): string => {
 };
 
 /**
- * Combine health info, journal context, and calendar context for complete AI context
+ * Format chat context (important points from past sessions) for AI
+ */
+export const formatChatContextForAI = (chatContexts: Array<{
+  importantPoints: string[];
+  summary?: string;
+  sessionDate: Date | string;
+}>): string => {
+  if (!chatContexts || chatContexts.length === 0) {
+    return '';
+  }
+
+  const contextParts = chatContexts.map((ctx, idx) => {
+    const date = new Date(ctx.sessionDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const points = ctx.importantPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n');
+    let summary = `Session ${idx + 1} (${date}):\n${points}`;
+    if (ctx.summary) {
+      summary += `\n  Summary: ${ctx.summary}`;
+    }
+    return summary;
+  }).join('\n\n');
+
+  return `\n\nImportant points from previous chat sessions:\n${contextParts}\n\nUse these points to provide continuity and personalized support. Reference them naturally when relevant to the conversation.`;
+};
+
+/**
+ * Combine health info, journal context, calendar context, and chat context for complete AI context
  */
 export const formatCompleteContextForAI = (
   user: IUser | null,
   journalEntries?: IJournalEntry[],
-  calendarEvents?: any[]
+  calendarEvents?: any[],
+  chatContexts?: Array<{
+    importantPoints: string[];
+    summary?: string;
+    sessionDate: Date | string;
+  }>
 ): string => {
   const healthContext = formatHealthInfoForAI(user);
   const journalContext = journalEntries ? formatJournalContextForAI(journalEntries) : '';
   const calendarContext = calendarEvents ? formatCalendarContextForAI(calendarEvents) : '';
+  const chatContext = chatContexts ? formatChatContextForAI(chatContexts) : '';
   
-  return healthContext + journalContext + calendarContext;
+  return healthContext + journalContext + calendarContext + chatContext;
 };
 

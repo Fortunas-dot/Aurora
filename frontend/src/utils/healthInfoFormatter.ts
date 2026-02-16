@@ -97,15 +97,50 @@ export const formatJournalContextForAI = (entries?: AuroraJournalContext[] | nul
 };
 
 /**
- * Combine health info and journal context for complete AI context
+ * Format chat context (important points from past sessions) for AI
+ */
+export const formatChatContextForAI = (chatContexts?: Array<{
+  importantPoints: string[];
+  summary?: string;
+  sessionDate: string;
+}>): string => {
+  if (!chatContexts || chatContexts.length === 0) {
+    return '';
+  }
+
+  const contextParts = chatContexts.map((ctx, idx) => {
+    const date = new Date(ctx.sessionDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const points = ctx.importantPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n');
+    let summary = `Session ${idx + 1} (${date}):\n${points}`;
+    if (ctx.summary) {
+      summary += `\n  Summary: ${ctx.summary}`;
+    }
+    return summary;
+  }).join('\n\n');
+
+  return `\n\nImportant points from previous chat sessions:\n${contextParts}\n\nUse these points to provide continuity and personalized support. Reference them naturally when relevant to the conversation.`;
+};
+
+/**
+ * Combine health info, journal context, and chat context for complete AI context
  */
 export const formatCompleteContextForAI = (
   user: User | null,
-  journalEntries?: AuroraJournalContext[]
+  journalEntries?: AuroraJournalContext[],
+  chatContexts?: Array<{
+    importantPoints: string[];
+    summary?: string;
+    sessionDate: string;
+  }>
 ): string => {
   const healthContext = formatHealthInfoForAI(user);
   const journalContext = journalEntries ? formatJournalContextForAI(journalEntries) : '';
+  const chatContext = chatContexts ? formatChatContextForAI(chatContexts) : '';
   
-  return healthContext + journalContext;
+  return healthContext + journalContext + chatContext;
 };
 

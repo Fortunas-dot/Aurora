@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,15 +21,15 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import { ideaService, Idea } from '../src/services/idea.service';
 import { useAuthStore } from '../src/store/authStore';
 import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 const CATEGORIES = [
-  { id: 'all', label: 'Alle', icon: 'apps-outline' },
+  { id: 'all', label: 'All', icon: 'apps-outline' },
   { id: 'feature', label: 'Feature', icon: 'sparkles-outline' },
-  { id: 'improvement', label: 'Verbetering', icon: 'trending-up-outline' },
+  { id: 'improvement', label: 'Improvement', icon: 'trending-up-outline' },
   { id: 'bug-fix', label: 'Bug Fix', icon: 'bug-outline' },
   { id: 'design', label: 'Design', icon: 'color-palette-outline' },
-  { id: 'other', label: 'Anders', icon: 'ellipse-outline' },
+  { id: 'other', label: 'Other', icon: 'ellipse-outline' },
 ];
 
 const STATUSES = [
@@ -230,27 +231,33 @@ export default function IdeasScreen() {
     }
   }, [isLoading, hasMore, page, loadIdeas]);
 
-  const renderIdea = ({ item }: { item: Idea }) => (
-    <GlassCard style={styles.ideaCard} padding="md">
-      <View style={styles.ideaHeader}>
-        <View style={styles.ideaAuthor}>
-          <Avatar
-            uri={item.author.avatar}
-            name={item.author.displayName || item.author.username}
-            userId={item.author._id}
-            avatarCharacter={item.author.avatarCharacter}
-            avatarBackgroundColor={item.author.avatarBackgroundColor}
-            size={32}
-          />
-          <View style={styles.ideaAuthorInfo}>
-            <Text style={styles.ideaAuthorName}>
-              {item.author.displayName || item.author.username}
-            </Text>
-            <Text style={styles.ideaDate}>
-              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: nl })}
-            </Text>
+  const renderIdea = ({ item }: { item: Idea }) => {
+    // Ensure author is an object, not a string
+    const author = typeof item.author === 'object' && item.author !== null 
+      ? item.author 
+      : { _id: '', username: 'Unknown', displayName: 'Unknown' };
+    
+    return (
+      <GlassCard style={styles.ideaCard} padding="md">
+        <View style={styles.ideaHeader}>
+          <View style={styles.ideaAuthor}>
+            <Avatar
+              uri={author.avatar}
+              name={author.displayName || author.username}
+              userId={author._id}
+              avatarCharacter={(author as any).avatarCharacter}
+              avatarBackgroundColor={(author as any).avatarBackgroundColor}
+              size={32}
+            />
+            <View style={styles.ideaAuthorInfo}>
+              <Text style={styles.ideaAuthorName}>
+                {author.displayName || author.username}
+              </Text>
+              <Text style={styles.ideaDate}>
+                {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: enUS })}
+              </Text>
+            </View>
           </View>
-        </View>
         <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
             {getStatusLabel(item.status)}
@@ -288,7 +295,9 @@ export default function IdeasScreen() {
                 item.hasUpvoted && styles.voteCountActive,
               ]}
             >
-              {item.voteScore ?? item.upvotes.length - item.downvotes.length}
+              {item.voteScore ?? (Array.isArray(item.upvotes) && Array.isArray(item.downvotes) 
+                ? item.upvotes.length - item.downvotes.length 
+                : 0)}
             </Text>
           </Pressable>
           <Pressable
@@ -305,7 +314,8 @@ export default function IdeasScreen() {
         </View>
       </View>
     </GlassCard>
-  );
+    );
+  };
 
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
@@ -392,9 +402,9 @@ export default function IdeasScreen() {
 
       {/* Ideas List */}
       <FlatList
-        data={ideas}
+        data={ideas.filter(item => item && item._id)}
         renderItem={renderIdea}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) => item._id || Math.random().toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -436,7 +446,12 @@ export default function IdeasScreen() {
       />
 
       {/* Create Idea Modal */}
-      {showCreateModal && (
+      <Modal
+        visible={showCreateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
@@ -521,7 +536,7 @@ export default function IdeasScreen() {
             </ScrollView>
           </GlassCard>
         </KeyboardAvoidingView>
-      )}
+      </Modal>
     </LinearGradient>
   );
 }
@@ -754,11 +769,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

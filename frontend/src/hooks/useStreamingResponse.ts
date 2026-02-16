@@ -11,6 +11,11 @@ export const useStreamingResponse = () => {
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [journalContext, setJournalContext] = useState<AuroraJournalContext[]>([]);
+  const [chatContext, setChatContext] = useState<Array<{
+    importantPoints: string[];
+    summary?: string;
+    sessionDate: string;
+  }>>([]);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const {
@@ -28,7 +33,8 @@ export const useStreamingResponse = () => {
       try {
         const response = await journalService.getAuroraContext(5);
         if (response.success && response.data) {
-          setJournalContext(response.data);
+          setJournalContext(response.data.journalEntries || []);
+          setChatContext(response.data.chatContext || []);
         }
       } catch (error) {
         console.log('Could not load journal context:', error);
@@ -59,8 +65,8 @@ export const useStreamingResponse = () => {
       setIsLoading(true);
       setError(null);
 
-      // Format complete context (health info + journal entries) for AI
-      const completeContext = formatCompleteContextForAI(user, journalContext);
+      // Format complete context (health info + journal entries + chat context) for AI
+      const completeContext = formatCompleteContextForAI(user, journalContext, chatContext);
       
       // Track available context for UI display
       const hasHealthInfo = !!(user?.healthInfo && (

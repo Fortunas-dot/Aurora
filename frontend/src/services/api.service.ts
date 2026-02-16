@@ -177,7 +177,16 @@ class ApiService {
         } else {
           // If not JSON, read as text to avoid parse errors
           const text = await response.text();
-          errorData = { message: text || response.statusText || `HTTP ${response.status}` };
+          // Check if response is HTML (usually means route not found or server error)
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            errorData = { 
+              message: response.status === 404 
+                ? 'Endpoint not found. Please check if the backend is running and up to date.'
+                : `Server error (${response.status}). Please try again later.`
+            };
+          } else {
+            errorData = { message: text || response.statusText || `HTTP ${response.status}` };
+          }
         }
         
         // Special-case 429 rate limit errors: don't spam console, give clear message

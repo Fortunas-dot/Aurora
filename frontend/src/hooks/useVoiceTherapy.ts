@@ -16,6 +16,11 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
   const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState<string>('');
   const [journalContext, setJournalContext] = useState<AuroraJournalContext[]>([]);
+  const [chatContext, setChatContext] = useState<Array<{
+    importantPoints: string[];
+    summary?: string;
+    sessionDate: string;
+  }>>([]);
 
   const isMutedRef = useRef(false);
   const stateRef = useRef<VoiceState>('idle');
@@ -35,7 +40,8 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
       try {
         const response = await journalService.getAuroraContext(5);
         if (response.success && response.data) {
-          setJournalContext(response.data);
+          setJournalContext(response.data.journalEntries || []);
+          setChatContext(response.data.chatContext || []);
         }
       } catch (error) {
         console.log('Could not load journal context:', error);
@@ -64,7 +70,7 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
     return () => {
       cleanup();
     };
-  }, [enabled, user?.healthInfo, journalContext]); // Reconnect when enabled/health info/journal changes
+  }, [enabled, user?.healthInfo, journalContext, chatContext]); // Reconnect when enabled/health info/journal/chat changes
 
   const initializeRealtime = useCallback(async () => {
     try {
@@ -74,8 +80,8 @@ export const useVoiceTherapy = ({ enabled = true }: { enabled?: boolean } = {}) 
 
       console.log('Connecting to Realtime API...');
 
-      // Format complete context (health info + journal entries) for AI
-      const completeContext = formatCompleteContextForAI(user, journalContext);
+      // Format complete context (health info + journal entries + chat context) for AI
+      const completeContext = formatCompleteContextForAI(user, journalContext, chatContext);
       if (completeContext) {
         console.log('📋 Including health information and journal context in AI');
       }

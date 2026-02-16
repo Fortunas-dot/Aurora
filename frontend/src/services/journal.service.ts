@@ -78,6 +78,18 @@ export interface AuroraJournalContext {
   sentiment?: string;
 }
 
+export interface ChatContext {
+  importantPoints: string[];
+  summary?: string;
+  sessionDate: string;
+}
+
+export interface AuroraContextResponse {
+  journalEntries: AuroraJournalContext[];
+  calendarEvents?: any[];
+  chatContext?: ChatContext[];
+}
+
 export interface CreateEntryData {
   content: string;
   mood: number;
@@ -253,8 +265,17 @@ class JournalService {
   }
 
   // Get journal context for Aurora
-  async getAuroraContext(limit: number = 5): Promise<ApiResponse<AuroraJournalContext[]>> {
-    return apiService.get<AuroraJournalContext[]>(`/journal/aurora-context?limit=${limit}`);
+  async getAuroraContext(limit: number = 5): Promise<ApiResponse<AuroraContextResponse>> {
+    return apiService.get<AuroraContextResponse>(`/journal/aurora-context?limit=${limit}`);
+  }
+
+  // Finish chat session and extract important points
+  async finishChatSession(messages: Array<{ role: string; content: string }>): Promise<ApiResponse<{
+    importantPoints: string[];
+    summary: string;
+    sessionDate: string;
+  }>> {
+    return apiService.post('/journal/finish-session', { messages });
   }
 }
 

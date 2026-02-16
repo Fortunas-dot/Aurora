@@ -130,6 +130,7 @@ export default function TextChatScreen() {
   const { clearHistory, isLoading: isLoadingHistory } = useChatHistory();
   const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
   const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
+  const [isFinishingSession, setIsFinishingSession] = useState(false);
   
   // Animation for Aurora logo transition
   const auroraScale = useRef(new Animated.Value(1)).current;
@@ -353,14 +354,15 @@ export default function TextChatScreen() {
 
     let currentX = startX;
     let currentY = startY;
-    let velocityX = (Math.random() - 0.5) * 0.5; // Random initial velocity
-    let velocityY = (Math.random() - 0.5) * 0.5;
+    // Initial velocity for smooth, random movement
+    let velocityX = (Math.random() - 0.5) * 1.5; // Reduced from 2.5 to 1.5
+    let velocityY = (Math.random() - 0.5) * 1.5;
 
     let animationFrameId: number | null = null;
 
     // Animation loop with boundary detection
     const animate = () => {
-      const speed = 0.3; // Movement speed
+      const speed = 0.7; // Reduced from 1.2 to 0.7 for slower movement
       
       const updatePosition = () => {
         // Update position
@@ -371,37 +373,41 @@ export default function TextChatScreen() {
         // Left boundary
         if (currentX < minX) {
           currentX = minX;
-          velocityX = Math.abs(velocityX); // Bounce right
+          // More random bounce direction
+          velocityX = Math.abs((Math.random() - 0.3) * 2.5);
           createBorderGlow('left', currentY);
         }
         // Right boundary
         else if (currentX > maxX) {
           currentX = maxX;
-          velocityX = -Math.abs(velocityX); // Bounce left
+          // More random bounce direction
+          velocityX = -Math.abs((Math.random() - 0.3) * 1.5);
           createBorderGlow('right', currentY);
         }
 
         // Top boundary
         if (currentY < minY) {
           currentY = minY;
-          velocityY = Math.abs(velocityY); // Bounce down
+          // More random bounce direction
+          velocityY = Math.abs((Math.random() - 0.3) * 1.5);
           createBorderGlow('top', currentX);
         }
         // Bottom boundary
         else if (currentY > maxY) {
           currentY = maxY;
-          velocityY = -Math.abs(velocityY); // Bounce up
+          // More random bounce direction
+          velocityY = -Math.abs((Math.random() - 0.3) * 1.5);
           createBorderGlow('bottom', currentX);
         }
 
-        // Add slight random variation to prevent getting stuck
-        if (Math.random() < 0.02) {
-          velocityX += (Math.random() - 0.5) * 0.1;
-          velocityY += (Math.random() - 0.5) * 0.1;
+        // More frequent random variation for more random movement
+        if (Math.random() < 0.15) { // Increased from 0.02 to 0.15 (15% chance)
+          velocityX += (Math.random() - 0.5) * 0.4; // Reduced variation from 0.8 to 0.4
+          velocityY += (Math.random() - 0.5) * 0.4;
         }
 
         // Normalize velocity to prevent too fast movement
-        const maxVelocity = 1.5;
+        const maxVelocity = 2.5; // Reduced from 4.0 to 2.5
         const velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
         if (velocityMagnitude > maxVelocity) {
           velocityX = (velocityX / velocityMagnitude) * maxVelocity;
@@ -419,10 +425,10 @@ export default function TextChatScreen() {
       updatePosition();
     };
 
-    // Start animation after small delay
+    // Start animation after small delay (reduced for faster start)
     const timeoutId = setTimeout(() => {
       animate();
-    }, 500);
+    }, 200);
 
     return () => {
       clearTimeout(timeoutId);
@@ -445,6 +451,47 @@ export default function TextChatScreen() {
       await sendMessage(message);
     } catch (err) {
       console.error('Failed to send message:', err);
+    }
+  };
+
+  const handleFinishSession = async () => {
+    if (isStreaming || isLoading || isFinishingSession || messages.length === 0) {
+      return;
+    }
+
+    setIsFinishingSession(true);
+    try {
+      // Transform messages to only include role and content (backend expects this format)
+      const messagesForBackend = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      
+      const response = await journalService.finishChatSession(messagesForBackend);
+      
+      if (response.success) {
+        Alert.alert(
+          'Session Finished',
+          `Important points have been saved:\n\n${response.data?.importantPoints?.map((p, i) => `${i + 1}. ${p}`).join('\n') || 'No points extracted'}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Optionally clear chat after finishing
+                // clearMessages();
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Could not finish session');
+      }
+    } catch (error: any) {
+      console.error('Error finishing session:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Something went wrong while finishing the session';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsFinishingSession(false);
     }
   };
 
@@ -731,6 +778,26 @@ export default function TextChatScreen() {
         )}
 
         <MessageList />
+        {/* Toolbar with action buttons */}
+        {hasMessages && (
+          <View style={[styles.toolbar, { borderBottomColor: colors.glass.border }]}>
+            <View style={styles.toolbarSpacer} />
+            <Pressable
+              style={[styles.toolbarButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
+              onPress={handleFinishSession}
+              disabled={isStreaming || isLoading || isFinishingSession}
+            >
+              {isFinishingSession ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+              )}
+              <Text style={[styles.toolbarButtonText, { color: colors.text }]}>
+                {isFinishingSession ? 'Processing...' : 'Finish Session'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
         <ChatInput onSend={handleSend} isDisabled={isStreaming || isLoading} />
       </KeyboardAvoidingView>
 
@@ -956,6 +1023,32 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.glass.border,
     marginVertical: SPACING.xs,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    backgroundColor: COLORS.surface,
+    gap: SPACING.sm,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  toolbarSpacer: {
+    flex: 1,
+  },
+  toolbarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    gap: SPACING.xs,
+  },
+  toolbarButtonText: {
+    ...TYPOGRAPHY.small,
+    fontWeight: '500',
   },
 });
 

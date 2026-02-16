@@ -4,6 +4,7 @@ import JournalEntry, { IJournalEntry, IAIInsights } from '../models/JournalEntry
 import Journal, { IJournal } from '../models/Journal';
 import User from '../models/User';
 import CalendarEvent from '../models/Calendar';
+import ChatContext from '../models/ChatContext';
 import { AuthRequest } from '../middleware/auth';
 import OpenAI from 'openai';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
@@ -157,7 +158,12 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Check access - owners always have access, even for private journals
-    const isOwner = journal.owner.toString() === req.userId;
+    // Handle both populated (object) and unpopulated (ObjectId) owner
+    const ownerId = typeof journal.owner === 'object' && journal.owner !== null && '_id' in journal.owner
+      ? journal.owner._id.toString()
+      : journal.owner.toString();
+    const isOwner = ownerId === req.userId;
+    
     if (!journal.isPublic && !isOwner) {
       res.status(403).json({
         success: false,
@@ -167,7 +173,12 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const journalObj = journal.toObject();
-    const isFollowing = req.userId ? journal.followers.some((followerId) => followerId.toString() === req.userId) : false;
+    const isFollowing = req.userId ? journal.followers.some((followerId) => {
+      const followerIdStr = typeof followerId === 'object' && followerId !== null && '_id' in followerId
+        ? followerId._id.toString()
+        : followerId.toString();
+      return followerIdStr === req.userId;
+    }) : false;
 
     res.json({
       success: true,
@@ -1081,8 +1092,24 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
       .limit(10)
       .lean();
 
+    // Get chat context for AI
+    const chatContexts = await ChatContext.find({ user: req.userId })
+      .sort({ sessionDate: -1 })
+      .limit(3)
+      .select('importantPoints summary sessionDate')
+      .lean();
+
     // Format context for AI
-    const context = formatCompleteContextForAI(user, undefined, upcomingEvents);
+    const context = formatCompleteContextForAI(
+      user, 
+      undefined, 
+      upcomingEvents,
+      chatContexts.map(ctx => ({
+        importantPoints: ctx.importantPoints,
+        summary: ctx.summary,
+        sessionDate: ctx.sessionDate,
+      }))
+    );
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -1206,17 +1233,166 @@ export const getAuroraContext = async (req: AuthRequest, res: Response): Promise
       sentiment: entry.aiInsights?.sentiment,
     }));
 
+    // Get chat context (important points from past sessions)
+    const chatContexts = await ChatContext.find({ user: req.userId })
+      .sort({ sessionDate: -1 })
+      .limit(3)
+      .select('importantPoints summary sessionDate')
+      .lean();
+
     res.json({
       success: true,
       data: {
         journalEntries: context,
         calendarEvents: upcomingEvents,
+        chatContext: chatContexts.length > 0 ? chatContexts.map((ctx) => ({
+          importantPoints: ctx.importantPoints,
+          summary: ctx.summary,
+          sessionDate: ctx.sessionDate,
+        })) : [],
       },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching journal context',
+    });
+  }
+};
+
+// @desc    Finish chat session and extract important points
+// @route   POST /api/journal/finish-session
+// @access  Private
+export const finishChatSession = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Messages are required',
+      });
+      return;
+    }
+
+    if (!openai.apiKey) {
+      res.status(500).json({
+        success: false,
+        message: 'AI analysis not configured',
+      });
+      return;
+    }
+
+    // Format conversation history for AI
+    const conversationText = messages
+      .map((msg: any) => {
+        const role = msg.role === 'user' ? 'User' : 'Aurora';
+        return `${role}: ${msg.content}`;
+      })
+      .join('\n\n');
+
+    // Get user's existing context for better extraction
+    const user = await User.findById(req.userId).select('healthInfo');
+    const existingContext = await ChatContext.find({ user: req.userId })
+      .sort({ sessionDate: -1 })
+      .limit(5)
+      .select('importantPoints summary')
+      .lean();
+
+    const existingContextText = existingContext.length > 0
+      ? `Previous important points from past sessions:\n${existingContext.map((ctx, idx) => `${idx + 1}. ${ctx.importantPoints.join(', ')}`).join('\n')}`
+      : '';
+
+    // Use AI to extract important points
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
+
+Extract 3-7 key points that are:
+- Important for understanding the user's mental health state
+- Relevant for future conversations
+- Specific and actionable (not generic)
+- Related to the user's concerns, goals, or progress
+
+Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 100 characters each).
+
+Example format:
+{"points": ["User struggles with anxiety in social situations", "User is working on building self-confidence", "User mentioned feeling overwhelmed at work"]}
+
+${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured.` : ''}`,
+        },
+        {
+          role: 'user',
+          content: `Extract important points from this conversation:\n\n${conversationText}`,
+        },
+      ],
+      temperature: 0.5,
+      max_tokens: 500,
+      response_format: { type: 'json_object' },
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '{}';
+    let importantPoints: string[] = [];
+
+    try {
+      const parsed = JSON.parse(responseText);
+      if (parsed.points && Array.isArray(parsed.points)) {
+        importantPoints = parsed.points.filter((p: any) => typeof p === 'string' && p.trim().length > 0);
+      } else if (Array.isArray(parsed)) {
+        importantPoints = parsed.filter((p: any) => typeof p === 'string' && p.trim().length > 0);
+      }
+    } catch (parseError) {
+      // Fallback: try to extract points from text
+      const lines = responseText.split('\n').filter((line: string) => line.trim().startsWith('-') || line.trim().match(/^\d+\./));
+      importantPoints = lines
+        .map((line: string) => line.replace(/^[-•\d.\s]+/, '').trim())
+        .filter((p: string) => p.length > 0 && p.length <= 100)
+        .slice(0, 7);
+    }
+
+    // Generate a brief summary
+    const summaryCompletion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are Aurora. Create a brief 1-2 sentence summary of this chat session. Keep it concise and focused on the main topics discussed.',
+        },
+        {
+          role: 'user',
+          content: `Summarize this conversation in 1-2 sentences:\n\n${conversationText}`,
+        },
+      ],
+      temperature: 0.5,
+      max_tokens: 150,
+    });
+
+    const summary = summaryCompletion.choices[0]?.message?.content?.trim() || '';
+
+    // Save to database
+    const chatContext = await ChatContext.create({
+      user: req.userId,
+      importantPoints: importantPoints.slice(0, 7), // Limit to 7 points
+      summary: summary.substring(0, 1000),
+      sessionDate: new Date(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        importantPoints: chatContext.importantPoints,
+        summary: chatContext.summary,
+        sessionDate: chatContext.sessionDate,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error finishing chat session:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error finishing chat session',
     });
   }
 };

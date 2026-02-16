@@ -136,25 +136,33 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const trailOpacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   
   const startX = Math.random() * 100; // Random starting X position (0-100%)
   const fallDistance = 120; // Fall from top to bottom + extra
-  const fallDuration = 1000 + Math.random() * 1500; // 1-2.5 seconds
-  const horizontalDrift = (Math.random() - 0.5) * 30; // Slight horizontal movement
+  const fallDuration = 800 + Math.random() * 1200; // 0.8-2 seconds (faster)
+  const horizontalDrift = (Math.random() - 0.5) * 40; // More horizontal movement
   
   useEffect(() => {
     // Fade in quickly
-    Animated.sequence([
+    const animation = Animated.sequence([
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 200,
+          duration: 150,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(trailOpacity, {
-          toValue: 0.6,
-          duration: 200,
+          toValue: 0.8,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 150,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
@@ -175,21 +183,41 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
         }),
         Animated.timing(opacity, {
           toValue: 0,
-          duration: fallDuration * 0.8,
+          duration: fallDuration * 0.7,
           easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(trailOpacity, {
           toValue: 0,
-          duration: fallDuration * 0.8,
+          duration: fallDuration * 0.7,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.8,
+          duration: fallDuration,
           easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
-    ]).start(() => {
-      onComplete();
+    ]);
+    
+    animationRef.current = animation;
+    
+    animation.start((finished) => {
+      if (finished) {
+        onComplete();
+      }
     });
-  }, []);
+    
+    // Cleanup: stop animation if component unmounts
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+        animationRef.current = null;
+      }
+    };
+  }, [onComplete]);
   
   return (
     <Animated.View
@@ -201,12 +229,13 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
           transform: [
             { translateX },
             { translateY },
+            { scale },
           ],
         },
       ]}
       pointerEvents="none"
     >
-      {/* Trail */}
+      {/* Trail with gradient effect - wrapped in Animated.View for opacity */}
       <Animated.View
         style={[
           feedStyles.fallingStarTrail,
@@ -214,7 +243,14 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
             opacity: trailOpacity,
           },
         ]}
-      />
+      >
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0.9)', 'rgba(96, 165, 250, 0.6)', 'transparent']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
       {/* Star */}
       <View style={feedStyles.fallingStar} />
     </Animated.View>
@@ -458,14 +494,14 @@ export default function FeedScreen() {
       setFallingStars((prev) => [...prev, { id, key: Date.now() + id }]);
     };
     
-    // Create first falling star after a random delay (3-8 seconds)
-    const initialDelay = 3000 + Math.random() * 5000;
+    // Create first falling star after a random delay (2-5 seconds)
+    const initialDelay = 2000 + Math.random() * 3000;
     const initialTimeout = setTimeout(createFallingStar, initialDelay);
     
-    // Then create falling stars at random intervals (5-15 seconds)
+    // Then create falling stars at random intervals (3-8 seconds) - more frequent
     let currentTimeout: NodeJS.Timeout;
     const scheduleNext = () => {
-      const delay = 5000 + Math.random() * 10000; // 5-15 seconds
+      const delay = 3000 + Math.random() * 5000; // 3-8 seconds
       currentTimeout = setTimeout(() => {
         createFallingStar();
         scheduleNext();
@@ -1052,29 +1088,28 @@ const feedStyles = StyleSheet.create({
   fallingStarContainer: {
     position: 'absolute',
     top: -20,
-    width: 4,
-    height: 20,
+    width: 6,
+    height: 30,
     zIndex: 1,
   },
   fallingStar: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#FFFFFF',
     shadowColor: '#60A5FA',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 6,
   },
   fallingStarTrail: {
     position: 'absolute',
-    top: 4,
-    left: 1,
-    width: 2,
-    height: 16,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.6,
+    top: 6,
+    left: 1.5,
+    width: 3,
+    height: 24,
+    borderRadius: 1.5,
   },
 });
 
