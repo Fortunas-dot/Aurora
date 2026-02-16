@@ -219,11 +219,26 @@ class JournalService {
   }
 
   // Get insights and patterns
-  async getInsights(days: number = 30, journalId?: string, signal?: AbortSignal): Promise<ApiResponse<JournalInsights>> {
-    let endpoint = `/journal/insights?days=${days}`;
-    if (journalId) {
-      endpoint += `&journalId=${journalId}`;
+  // days: number of days to look back. Use 'all' to fetch insights for all time.
+  async getInsights(
+    days: number | 'all' = 30,
+    journalId?: string,
+    signal?: AbortSignal
+  ): Promise<ApiResponse<JournalInsights>> {
+    let endpoint = '/journal/insights';
+    const params: string[] = [];
+
+    if (days !== 'all') {
+      params.push(`days=${days}`);
     }
+    if (journalId) {
+      params.push(`journalId=${journalId}`);
+    }
+
+    if (params.length > 0) {
+      endpoint += `?${params.join('&')}`;
+    }
+
     return apiService.get<JournalInsights>(endpoint, { signal });
   }
 

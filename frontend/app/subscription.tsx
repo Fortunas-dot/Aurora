@@ -599,7 +599,7 @@ export default function SubscriptionScreen() {
               ) : (
                 <View>
                   <Text style={[styles.planNote, { color: '#9B59B6' }]}>
-                    💜 7-day free trial, then €4.99/month
+                    💜 3-day free trial, then €4.99/month
                   </Text>
                   <Text style={[styles.planNote, styles.planCoffeeNote]}>
                     ☕ Just 2 coffees per month
@@ -663,7 +663,7 @@ export default function SubscriptionScreen() {
             ) : !monthlyPackage ? (
               <Text style={styles.ctaButtonText}>Coming Soon</Text>
             ) : (
-              <Text style={styles.ctaButtonText}>Start Free Trial</Text>
+              <Text style={styles.ctaButtonText}>Start 3-day Free Trial</Text>
             )}
           </TouchableOpacity>
 

@@ -329,7 +329,7 @@ export default function ProfileScreen() {
             <MenuItem
               icon="diamond-outline"
               title="Premium"
-              subtitle="7-day free trial, then €4.99/month"
+              subtitle="3-day free trial, then €4.99/month"
               onPress={() => router.push('/subscription')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />

@@ -249,7 +249,6 @@ export default function FeedScreen() {
   
   // Online therapists state
   const [onlineTherapistsCount, setOnlineTherapistsCount] = useState<number | null>(null);
-  const [onlineTherapistsMessage, setOnlineTherapistsMessage] = useState<string>('');
   
   // Falling star state
   const [fallingStars, setFallingStars] = useState<Array<{ id: number; key: number }>>([]);
@@ -446,7 +445,25 @@ export default function FeedScreen() {
         const response = await therapistService.getOnlineCount();
         if (response.success && response.data) {
           setOnlineTherapistsCount(response.data.count);
-          setOnlineTherapistsMessage(response.data.message);
+
+          // #region agent log - online therapists response
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              runId: 'therapists-banner',
+              hypothesisId: 'H1-backend-count',
+              location: 'app/(tabs)/index.tsx:loadOnlineTherapists',
+              message: 'Loaded online therapists count from backend',
+              data: {
+                success: response.success,
+                count: response.data?.count ?? null,
+                message: response.data?.message ?? null,
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
         }
       } catch (error) {
         console.error('Error loading online therapists count:', error);
@@ -677,6 +694,35 @@ export default function FeedScreen() {
 
   const emptyState = getEmptyStateText();
 
+  // Freshly built online therapists banner text – no backend message involved.
+  const therapistsBannerText =
+    isAuthenticated && onlineTherapistsCount !== null && onlineTherapistsCount > 0
+      ? onlineTherapistsCount === 1
+        ? 'There is 1 certified therapist online who can answer questions under posts.'
+        : `There are ${onlineTherapistsCount} certified therapists online who can answer questions under posts.`
+      : '';
+
+  // #region agent log - therapists banner render
+  if (onlineTherapistsCount !== null) {
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'therapists-banner',
+        hypothesisId: 'H2-render-conditions',
+        location: 'app/(tabs)/index.tsx:render',
+        message: 'Therapists banner render state',
+        data: {
+          onlineTherapistsCount,
+          hasText: !!therapistsBannerText,
+          text: therapistsBannerText,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return (
     <View style={styles.container}>
       {/* Base gradient */}
@@ -758,15 +804,15 @@ export default function FeedScreen() {
         />
       )}
 
-      {/* Online Therapists Banner - visible for everyone (guests + logged in) */}
-      {onlineTherapistsCount !== null && onlineTherapistsCount > 0 && (
+      {/* Online Therapists Banner - visible for logged-in users only */}
+      {isAuthenticated && onlineTherapistsCount !== null && onlineTherapistsCount > 0 && therapistsBannerText && (
         <View style={styles.listHeader}>
           <GlassCard style={styles.therapistsBanner} padding="md">
             <View style={styles.therapistsBannerContent}>
               <View style={styles.therapistsBannerLeft}>
                 <View style={styles.onlineIndicator} />
                 <Text style={styles.therapistsBannerText}>
-                  {onlineTherapistsMessage}
+                  {therapistsBannerText}
                 </Text>
               </View>
               <Ionicons name="medical-outline" size={20} color={COLORS.primary} />

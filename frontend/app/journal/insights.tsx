@@ -17,6 +17,7 @@ import { GlassCard } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { usePremium } from '../../src/hooks/usePremium';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - SPACING.lg * 2 - SPACING.lg * 2;
@@ -221,12 +222,13 @@ export default function JournalInsightsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30>(30);
+  const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30 | 'all'>(30);
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -254,7 +256,11 @@ export default function JournalInsightsScreen() {
     }
     
     try {
-      const response = await journalService.getInsights(selectedPeriod, undefined, signal);
+      const response = await journalService.getInsights(
+        selectedPeriod === 'all' ? 'all' : selectedPeriod,
+        undefined,
+        signal
+      );
       
       // Check if request was aborted or component unmounted
       if (signal?.aborted || !isMountedRef.current) {
@@ -346,6 +352,12 @@ export default function JournalInsightsScreen() {
     return 'Excellent';
   };
 
+  // If user is premium, show insights normally. If not premium but logged in, redirect to subscription.
+  if (isAuthenticated && !isPremium && !isPremiumLoading) {
+    router.replace('/subscription');
+    return null;
+  }
+
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
     return (
@@ -371,6 +383,8 @@ export default function JournalInsightsScreen() {
       </LinearGradient>
     );
   }
+
+  // (Non‑premium redirect is handled above)
 
   if (loading) {
     return (
@@ -430,7 +444,7 @@ export default function JournalInsightsScreen() {
       >
         {/* Period Selector */}
         <View style={styles.periodSelector}>
-          {([7, 14, 30] as const).map((period) => (
+        {([7, 14, 30, 'all'] as const).map((period) => (
             <Pressable
               key={period}
               style={[
@@ -445,7 +459,7 @@ export default function JournalInsightsScreen() {
                   selectedPeriod === period && styles.periodTextActive,
                 ]}
               >
-                {period} days
+                {period === 'all' ? 'All' : `${period} days`}
               </Text>
             </Pressable>
           ))}
@@ -490,7 +504,7 @@ export default function JournalInsightsScreen() {
               <StatCard
                 icon="flame"
                 label="Streak"
-                value={`${insights.streakDays} dagen`}
+                value={`${insights.streakDays} days`}
                 color={COLORS.warning}
               />
               <StatCard
@@ -685,6 +699,19 @@ const styles = StyleSheet.create({
   emptyText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  upgradeButton: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.primary,
+  },
+  upgradeButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.white,
+    fontWeight: '600',
     textAlign: 'center',
   },
   statsGrid: {
