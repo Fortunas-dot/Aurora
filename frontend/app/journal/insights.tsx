@@ -352,9 +352,15 @@ export default function JournalInsightsScreen() {
     return 'Excellent';
   };
 
-  // If user is premium, show insights normally. If not premium but logged in, redirect to subscription.
+  // Redirect non‑premium users to subscription via effect (avoid navigation in render)
+  useEffect(() => {
+    if (isAuthenticated && !isPremium && !isPremiumLoading) {
+      router.replace('/subscription');
+    }
+  }, [isAuthenticated, isPremium, isPremiumLoading, router]);
+
+  // While redirecting, render nothing to avoid flicker
   if (isAuthenticated && !isPremium && !isPremiumLoading) {
-    router.replace('/subscription');
     return null;
   }
 
