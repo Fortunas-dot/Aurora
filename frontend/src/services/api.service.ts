@@ -105,12 +105,14 @@ class ApiService {
             return apiResponse;
           }
           
-          // Only log non-404 errors to reduce noise
-          if (response.status !== 404) {
+          // Only log non-404 and non-403 errors to reduce noise
+          // 403 errors are expected when users don't have permission
+          // 401 errors are expected when tokens are invalid/expired
+          if (response.status !== 404 && response.status !== 403 && response.status !== 401) {
             console.error('API GET Error:', response.status, errorData);
           }
           
-          // For 401 errors, include status in response for token cleanup
+          // For 401 and 403 errors, include status in response for token cleanup/auth handling
           const apiResponse: ApiResponse<T> = {
             success: false,
             message: errorData.message || `HTTP ${response.status}`,
@@ -193,8 +195,10 @@ class ApiService {
           return apiResponse;
         }
         
-        // Only log non-404 errors to reduce noise
-        if (response.status !== 404) {
+        // Only log non-404, non-403, and non-401 errors to reduce noise
+        // 403 errors are expected when users don't have permission
+        // 401 errors are expected when tokens are invalid/expired
+        if (response.status !== 404 && response.status !== 403 && response.status !== 401) {
           console.error('API POST Error:', response.status, errorData);
         }
         
@@ -265,7 +269,8 @@ class ApiService {
           errorData = { message: text || response.statusText || `HTTP ${response.status}` };
         }
         
-        if (response.status !== 404) {
+        // Only log non-404, non-403, and non-401 errors to reduce noise
+        if (response.status !== 404 && response.status !== 403 && response.status !== 401) {
           console.error('API PUT Error:', response.status, errorData);
         }
         
@@ -322,7 +327,8 @@ class ApiService {
           errorData = { message: text || response.statusText || `HTTP ${response.status}` };
         }
         
-        if (response.status !== 404) {
+        // Only log non-404, non-403, and non-401 errors to reduce noise
+        if (response.status !== 404 && response.status !== 403 && response.status !== 401) {
           console.error('API DELETE Error:', response.status, errorData);
         }
         

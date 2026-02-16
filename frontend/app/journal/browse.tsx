@@ -406,15 +406,17 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   emptyCard: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xxl,
+    width: '100%',
   },
   emptyTitle: {
     ...TYPOGRAPHY.h3,

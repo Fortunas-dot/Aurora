@@ -37,44 +37,52 @@ const TypewriterText: React.FC<{
   const [isTyping, setIsTyping] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
+    // Cleanup any existing timers
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     if (!shouldStart) {
       setDisplayedText('');
       setIsTyping(false);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
+      hasStartedRef.current = false;
       return;
     }
 
-    setIsTyping(true);
-    setDisplayedText('');
-    
-    timeoutRef.current = setTimeout(() => {
-      let currentIndex = 0;
+    // Start typewriter if shouldStart is true and we haven't started yet
+    if (shouldStart && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      setIsTyping(true);
+      setDisplayedText('');
       
-      intervalRef.current = setInterval(() => {
-        if (currentIndex < text.length) {
-          setDisplayedText(text.substring(0, currentIndex + 1));
-          currentIndex++;
-        } else {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+      timeoutRef.current = setTimeout(() => {
+        let currentIndex = 0;
+        
+        intervalRef.current = setInterval(() => {
+          if (currentIndex < text.length) {
+            setDisplayedText(text.substring(0, currentIndex + 1));
+            currentIndex++;
+          } else {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            setIsTyping(false);
+            if (onComplete) {
+              onComplete();
+            }
           }
-          setIsTyping(false);
-          if (onComplete) {
-            onComplete();
-          }
-        }
-      }, 50); // 50ms per character
-    }, delay);
+        }, 50); // 50ms per character
+      }, delay);
+    }
     
     return () => {
       if (intervalRef.current) {
@@ -353,17 +361,20 @@ export default function JournalScreen() {
         setJournals(response.data);
         // Auto-select first journal if available and no journal is selected
         if (response.data.length > 0) {
-          setSelectedJournal((prev) => prev || response.data[0]);
-        } else {
-          setSelectedJournal(null);
-          if (!skipLoadingState) {
+          const newSelectedJournal = response.data[0];
+          setSelectedJournal((prev) => prev || newSelectedJournal);
+          // If we're skipping loading state (subsequent loads), don't change loading
+          // Otherwise, loadData will handle setting loading to false
+          if (skipLoadingState) {
             setLoading(false);
           }
-        }
-      } else {
-        if (!skipLoadingState) {
+        } else {
+          setSelectedJournal(null);
           setLoading(false);
         }
+      } else {
+        setSelectedJournal(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error loading journals:', error);
@@ -403,6 +414,13 @@ export default function JournalScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      // Trigger typewriter effect after data is loaded (only on initial load)
+      if (!hasTriggeredTypewriterRef.current) {
+        setTimeout(() => {
+          setShowTypewriter(true);
+          hasTriggeredTypewriterRef.current = true;
+        }, 500);
+      }
     }
   }, [aiConsentStatus]);
 
@@ -412,17 +430,16 @@ export default function JournalScreen() {
       // Only load journals on initial focus, not every time we navigate back
       if (!hasInitialLoadRef.current) {
         hasInitialLoadRef.current = true;
+        hasTriggeredTypewriterRef.current = false; // Reset typewriter trigger for initial load
+        setShowTypewriter(false); // Reset typewriter state
         loadJournals(false);
-        // Reset typewriter effect for initial load
-        setShowTypewriter(false);
       } else {
         // On subsequent focuses, only refresh data if we have a selected journal
         // Don't reload journals list to avoid unnecessary loading state
         if (selectedJournal) {
           loadData(selectedJournal._id);
         }
-        // Reset typewriter effect when navigating back
-        setShowTypewriter(false);
+        // Don't reset typewriter on subsequent focuses - keep it showing
       }
     }, [loadJournals, loadConsent, selectedJournal, loadData])
   );
@@ -435,16 +452,8 @@ export default function JournalScreen() {
     }
   }, [selectedJournal, loadData, journals.length]);
 
-  // Trigger typewriter effect when data is loaded
-  useEffect(() => {
-    if (!loading && selectedJournal) {
-      // Small delay before starting typewriter effect
-      const timer = setTimeout(() => {
-        setShowTypewriter(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, selectedJournal]);
+  // Trigger typewriter effect when data is loaded (only on initial load)
+  const hasTriggeredTypewriterRef = useRef(false);
 
   const onRefresh = useCallback(() => {
     if (selectedJournal) {
@@ -475,6 +484,7 @@ export default function JournalScreen() {
       });
     }
   };
+
 
   const handleEntryPress = (entry: JournalEntry) => {
     router.push(`/journal/${entry._id}`);
@@ -622,6 +632,7 @@ export default function JournalScreen() {
         {aiConsentStatus === 'granted' && prompt && (
           <View style={styles.section}>
             <TypewriterText 
+              key={`today-${showTypewriter}`}
               text="Today" 
               delay={0}
               style={styles.sectionTitle}
@@ -636,6 +647,7 @@ export default function JournalScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <TypewriterText 
+                key={`statistics-${showTypewriter}`}
                 text="Statistics" 
                 delay={800}
                 style={styles.sectionTitle}
@@ -653,6 +665,7 @@ export default function JournalScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <TypewriterText 
+              key={`recent-entries-${showTypewriter}`}
               text="Recent Entries" 
               delay={1600}
               style={styles.sectionTitle}

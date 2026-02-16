@@ -44,13 +44,37 @@ export default function JournalSettingsScreen() {
   useEffect(() => {
     if (params.journalId) {
       loadJournal();
+    } else {
+      // If no journalId is provided, go back
+      Alert.alert(
+        'Error',
+        'No journal ID provided'
+      );
+      router.back();
     }
   }, [params.journalId]);
 
   const loadJournal = async () => {
+    if (!params.journalId) {
+      Alert.alert(
+        'Error',
+        'No journal ID provided'
+      );
+      router.back();
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await journalService.getJournal(params.journalId!);
+      const response = await journalService.getJournal(params.journalId);
+      
+      console.log('Journal settings load response:', {
+        success: response.success,
+        hasData: !!response.data,
+        message: response.message,
+        status: (response as any).status,
+      });
+
       if (response.success && response.data) {
         const journalData = response.data;
         setJournal(journalData);
@@ -59,19 +83,39 @@ export default function JournalSettingsScreen() {
         setIsPublic(journalData.isPublic);
         setCoverImageUrl(journalData.coverImage || null);
       } else {
+        // Check if it's a 403 or 404 error
+        const status = (response as any).status;
+        let errorMessage = response.message || 'Could not load journal';
+        
+        if (status === 403) {
+          errorMessage = 'You do not have permission to access this journal';
+        } else if (status === 404) {
+          errorMessage = 'Journal not found';
+        }
+        
         Alert.alert(
           'Error',
-          'Could not load journal'
+          errorMessage,
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
         );
-        router.back();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading journal:', error);
       Alert.alert(
         'Error',
-        'Something went wrong'
+        error.message || 'Something went wrong while loading the journal',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
       );
-      router.back();
     } finally {
       setLoading(false);
     }

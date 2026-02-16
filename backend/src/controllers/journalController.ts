@@ -156,8 +156,9 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Check access
-    if (!journal.isPublic && journal.owner.toString() !== req.userId) {
+    // Check access - owners always have access, even for private journals
+    const isOwner = journal.owner.toString() === req.userId;
+    if (!journal.isPublic && !isOwner) {
       res.status(403).json({
         success: false,
         message: 'Access denied',
@@ -167,7 +168,6 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
 
     const journalObj = journal.toObject();
     const isFollowing = req.userId ? journal.followers.some((followerId) => followerId.toString() === req.userId) : false;
-    const isOwner = journal.owner.toString() === req.userId;
 
     res.json({
       success: true,
