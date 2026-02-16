@@ -97,7 +97,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, isAnonymous, showEmail } = req.body;
+    const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, isAnonymous, showEmail, email, phoneNumber } = req.body;
 
     // Get current user first to check username change restrictions
     const currentUser = await User.findById(req.userId);
@@ -158,6 +158,37 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
     if (showEmail !== undefined) updateData.showEmail = showEmail;
     if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;
+    
+    // Handle email update
+    if (email !== undefined && email !== currentUser.email) {
+      // Check if new email is already taken
+      const existingEmailUser = await User.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: req.userId },
+      });
+
+      if (existingEmailUser) {
+        res.status(400).json({
+          success: false,
+          message: 'Email already registered',
+        });
+        return;
+      }
+      updateData.email = email.toLowerCase().trim();
+    }
+    
+    // Handle phone number update
+    if (phoneNumber !== undefined) {
+      // Validate E.164 format
+      if (phoneNumber && !/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number must be in E.164 format (e.g., +31612345678)',
+        });
+        return;
+      }
+      updateData.phoneNumber = phoneNumber || null;
+    }
 
     // Use updateOne instead of findByIdAndUpdate to avoid triggering document middleware
     // This prevents the pre-validate hook from running

@@ -137,3 +137,11 @@ export const COUNTRIES: Country[] = [
   { code: 'ZW', name: 'Zimbabwe', dialCode: '+263', flag: '🇿🇼' },
 ];
 
+export const getCountryName = (code: string | null | undefined): string => {
+  if (!code || code === 'global') {
+    return 'Global';
+  }
+
+  const country = COUNTRIES.find((c) => c.code === code);
+  return country ? country.name : code;
+};

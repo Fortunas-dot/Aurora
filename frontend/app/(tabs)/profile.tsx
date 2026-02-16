@@ -320,6 +320,20 @@ export default function ProfileScreen() {
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
+              icon="mail-outline"
+              title="Account Settings"
+              subtitle="Email & phone number"
+              onPress={() => router.push('/account-settings')}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
+              icon="diamond-outline"
+              title="Premium"
+              subtitle="7-day free trial, then €4.99/month"
+              onPress={() => router.push('/subscription')}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
               icon="heart-outline"
               title="Health Information"
               subtitle="Mental & physical health"

@@ -178,6 +178,21 @@ class ApiService {
           errorData = { message: text || response.statusText || `HTTP ${response.status}` };
         }
         
+        // Special-case 429 rate limit errors: don't spam console, give clear message
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || response.headers.get('RateLimit-Reset');
+          const message = retryAfter
+            ? `Too many requests. Please try again after ${retryAfter} seconds.`
+            : errorData.message || 'Too many requests. Please try again later.';
+          
+          const apiResponse: ApiResponse<T> = {
+            success: false,
+            message,
+          };
+          (apiResponse as any).status = 429;
+          return apiResponse;
+        }
+        
         // Only log non-404 errors to reduce noise
         if (response.status !== 404) {
           console.error('API POST Error:', response.status, errorData);

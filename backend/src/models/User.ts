@@ -20,6 +20,7 @@ export interface IUser extends Document {
   lastUsernameChange?: Date; // Track when username was last changed
   isAnonymous: boolean;
   showEmail: boolean;
+  phoneNumber?: string; // Phone number in E.164 format (e.g., +31612345678)
   facebookId?: string;
   isProtected?: boolean; // Protected accounts cannot be deleted (e.g., Apple review account)
   following: Types.ObjectId[];
@@ -106,6 +107,12 @@ const UserSchema = new Schema<IUser>(
     showEmail: {
       type: Boolean,
       default: false,
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      match: [/^\+[1-9]\d{1,14}$/, 'Phone number must be in E.164 format (e.g., +31612345678)'],
     },
     isProtected: {
       type: Boolean,

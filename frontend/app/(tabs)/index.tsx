@@ -656,21 +656,6 @@ export default function FeedScreen() {
 
   const ListHeader = () => (
     <View style={styles.listHeader}>
-      {/* Online Therapists Banner */}
-      {onlineTherapistsCount !== null && onlineTherapistsCount > 0 && (
-        <GlassCard style={styles.therapistsBanner} padding="md">
-          <View style={styles.therapistsBannerContent}>
-            <View style={styles.therapistsBannerLeft}>
-              <View style={styles.onlineIndicator} />
-              <Text style={styles.therapistsBannerText}>
-                {onlineTherapistsMessage}
-              </Text>
-            </View>
-            <Ionicons name="medical-outline" size={20} color={COLORS.primary} />
-          </View>
-        </GlassCard>
-      )}
-
       {/* Filter Bar */}
       <View style={styles.filterBar}>
         <CommunityFilter
@@ -771,6 +756,23 @@ export default function FeedScreen() {
           onTabChange={handleTabChange}
           isAuthenticated={isAuthenticated}
         />
+      )}
+
+      {/* Online Therapists Banner - visible for everyone (guests + logged in) */}
+      {onlineTherapistsCount !== null && onlineTherapistsCount > 0 && (
+        <View style={styles.listHeader}>
+          <GlassCard style={styles.therapistsBanner} padding="md">
+            <View style={styles.therapistsBannerContent}>
+              <View style={styles.therapistsBannerLeft}>
+                <View style={styles.onlineIndicator} />
+                <Text style={styles.therapistsBannerText}>
+                  {onlineTherapistsMessage}
+                </Text>
+              </View>
+              <Ionicons name="medical-outline" size={20} color={COLORS.primary} />
+            </View>
+          </GlassCard>
+        </View>
       )}
 
       {/* Feed */}

@@ -248,19 +248,6 @@ export default function SettingsScreen() {
           </GlassCard>
         </View>
 
-        {/* Subscription */}
-        <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>Subscription</Text>
-          <GlassCard padding={0}>
-            <MenuItem
-              icon="diamond-outline"
-              title="Premium"
-              subtitle="7-day free trial, then €4.99/month"
-              onPress={() => router.push('/subscription')}
-            />
-          </GlassCard>
-        </View>
-
         {/* Privacy Settings */}
         <View style={styles.menuSection}>
           <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.privacySettings}</Text>

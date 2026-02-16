@@ -28,7 +28,6 @@ export default function PhoneVerificationScreen() {
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  const buildFullPhoneNumber = () => {
   const filteredCountries = COUNTRIES.filter((country) => {
     if (!countrySearch.trim()) return true;
     const term = countrySearch.toLowerCase();
@@ -38,6 +37,8 @@ export default function PhoneVerificationScreen() {
       country.code.toLowerCase().includes(term)
     );
   });
+
+  const buildFullPhoneNumber = () => {
     const digitsOnly = phoneLocal.replace(/\D/g, '');
     if (!digitsOnly) return '';
     return `${selectedCountry.dialCode}${digitsOnly}`;
@@ -364,12 +365,14 @@ const styles = StyleSheet.create({
   },
   phoneRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: SPACING.sm,
   },
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,

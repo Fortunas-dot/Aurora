@@ -21,6 +21,7 @@ export default function RegisterScreen() {
   const [validationError, setValidationError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [usernameError, setUsernameError] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState('');
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
   const validateUsernameLocally = (value: string): string | null => {
@@ -44,6 +45,7 @@ export default function RegisterScreen() {
     const localError = validateUsernameLocally(value);
     if (localError) {
       setUsernameError(localError);
+      setUsernameStatus('');
       return false;
     }
 
@@ -55,6 +57,7 @@ export default function RegisterScreen() {
         // On API error, don't hard-block registration, just show message
         if (response.message) {
           setUsernameError(response.message);
+          setUsernameStatus('');
         }
         return true;
       }
@@ -62,10 +65,12 @@ export default function RegisterScreen() {
       const available = (response.data as any)?.available;
       if (available === false) {
         setUsernameError('Username already taken');
+        setUsernameStatus('');
         return false;
       }
 
       setUsernameError('');
+      setUsernameStatus('Username is available');
       return true;
     } catch (e: any) {
       // Network error – allow user to try to register anyway
@@ -78,6 +83,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     setValidationError('');
     setUsernameError('');
+    setUsernameStatus('');
     clearError();
 
     // Validation
@@ -194,6 +200,9 @@ export default function RegisterScreen() {
                 if (usernameError) {
                   setUsernameError('');
                 }
+                if (usernameStatus) {
+                  setUsernameStatus('');
+                }
               }}
               placeholder="Username"
               label="Username"
@@ -203,9 +212,21 @@ export default function RegisterScreen() {
               icon="person-outline"
               textContentType="username"
               autoComplete="username"
+              style={styles.usernameInput}
               error={usernameError}
+              hideErrorText
               onBlur={checkUsernameAvailability}
             />
+            {!!usernameError && (
+              <View style={[styles.usernamePillBase, styles.usernamePillError]}>
+                <Text style={styles.usernamePillErrorText}>{usernameError}</Text>
+              </View>
+            )}
+            {!!usernameStatus && !usernameError && (
+              <View style={[styles.usernamePillBase, styles.usernamePillSuccess]}>
+                <Text style={styles.usernamePillSuccessText}>{usernameStatus}</Text>
+              </View>
+            )}
 
             <GlassInput
               value={password}
@@ -426,6 +447,32 @@ const styles = StyleSheet.create({
   termsLink: {
     color: COLORS.primary,
     textDecorationLine: 'underline',
+  },
+  usernameInput: {
+    marginBottom: 0,
+  },
+  usernamePillBase: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginTop: -8,
+    marginLeft: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  usernamePillError: {
+    backgroundColor: COLORS.errorGlass,
+  },
+  usernamePillErrorText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.error,
+  },
+  usernamePillSuccess: {
+    backgroundColor: COLORS.successGlass,
+  },
+  usernamePillSuccessText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.success,
   },
 });
 

@@ -601,7 +601,7 @@ export default function SubscriptionScreen() {
                   <Text style={[styles.planNote, { color: '#9B59B6' }]}>
                     💜 7-day free trial, then €4.99/month
                   </Text>
-                  <Text style={[styles.planNote, { color: '#6C757D', marginTop: 4, fontSize: 11 }]}>
+                  <Text style={[styles.planNote, styles.planCoffeeNote]}>
                     ☕ Just 2 coffees per month
                   </Text>
                 </View>
@@ -631,6 +631,9 @@ export default function SubscriptionScreen() {
                 <View style={styles.featureTextContainer}>
                   <Text style={[styles.featureTitle, { color: '#1A1F2E' }]}>{feature.title}</Text>
                   <Text style={[styles.featureDesc, { color: '#6C757D' }]}>{feature.desc}</Text>
+                </View>
+                <View style={styles.featureCheckContainer}>
+                  <Ionicons name="checkmark-circle" size={18} color="#27AE60" />
                 </View>
               </View>
             ))}
@@ -882,6 +885,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  planCoffeeNote: {
+    fontSize: 13,
+    color: '#6C757D',
+  },
   featuresSection: {
     marginTop: 16,
     marginBottom: 16,
@@ -902,7 +909,7 @@ const styles = StyleSheet.create({
   },
   featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
@@ -916,6 +923,7 @@ const styles = StyleSheet.create({
   },
   featureTextContainer: {
     flex: 1,
+    paddingRight: 8,
   },
   featureTitle: {
     fontSize: 13,
@@ -926,6 +934,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     marginTop: 1,
+  },
+  featureCheckContainer: {
+    alignSelf: 'flex-start',
+    marginLeft: 4,
+    paddingTop: 4,
   },
   ctaButton: {
     paddingVertical: 16,

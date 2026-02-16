@@ -38,6 +38,7 @@ interface GlassInputProps {
   passwordRules?: string;
   onBlur?: () => void;
   onFocus?: () => void;
+  hideErrorText?: boolean;
 }
 
 export const GlassInput: React.FC<GlassInputProps> = ({
@@ -66,6 +67,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   passwordRules,
   onBlur,
   onFocus,
+  hideErrorText,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -162,7 +164,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
         )}
       </View>
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && !hideErrorText && <Text style={styles.error}>{error}</Text>}
       
       {maxLength && (
         <Text style={styles.charCount}>
