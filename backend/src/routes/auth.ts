@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, logout, facebookAuth } from '../controllers/authController';
+import { register, login, getMe, logout, facebookAuth, checkUsername } from '../controllers/authController';
+import { sendVerificationCode, verifyPhoneCode } from '../controllers/phoneVerificationController';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -27,6 +28,14 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.post('/facebook', facebookAuth);
+
+// Username availability
+router.get('/check-username', checkUsername);
+
+// SMS phone verification
+router.post('/send-verification-code', sendVerificationCode);
+router.post('/verify-phone', verifyPhoneCode);
+
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
 

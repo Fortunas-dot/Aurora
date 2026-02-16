@@ -106,7 +106,7 @@ export default function RootLayout() {
           ) {
             console.log('⚠️ Tracking transparency not available (expected in dev/web)');
           } else {
-            console.warn('⚠️ Error requesting tracking permission:', error);
+          console.warn('⚠️ Error requesting tracking permission:', error);
           }
         }
         

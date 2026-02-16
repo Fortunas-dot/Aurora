@@ -53,6 +53,54 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// @desc    Check username availability
+// @route   GET /api/auth/check-username?username=foo
+// @access  Public
+export const checkUsername = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const username = (req.query.username as string | undefined)?.trim();
+
+    if (!username) {
+      res.status(400).json({
+        success: false,
+        message: 'Username is required',
+      });
+      return;
+    }
+
+    // Basic validation should mirror registration rules
+    if (username.length < 3 || username.length > 30) {
+      res.status(400).json({
+        success: false,
+        message: 'Username must be between 3 and 30 characters',
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      res.status(400).json({
+        success: false,
+        message: 'Username can only contain letters, numbers, and underscores',
+      });
+      return;
+    }
+
+    const existingUser = await User.findOne({ username }).select('_id').lean();
+
+    res.json({
+      success: true,
+      data: {
+        available: !existingUser,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error while checking username',
+    });
+  }
+};
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public

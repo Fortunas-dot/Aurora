@@ -36,6 +36,8 @@ interface GlassInputProps {
   returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
   onSubmitEditing?: () => void;
   passwordRules?: string;
+  onBlur?: () => void;
+  onFocus?: () => void;
 }
 
 export const GlassInput: React.FC<GlassInputProps> = ({
@@ -62,6 +64,8 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   returnKeyType,
   onSubmitEditing,
   passwordRules,
+  onBlur,
+  onFocus,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -108,8 +112,18 @@ export const GlassInput: React.FC<GlassInputProps> = ({
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           passwordRules={passwordRules}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={() => {
+            setIsFocused(true);
+            if (onFocus) {
+              onFocus();
+            }
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            if (onBlur) {
+              onBlur();
+            }
+          }}
           style={[
             styles.input,
             !multiline && styles.inputSingleLine,

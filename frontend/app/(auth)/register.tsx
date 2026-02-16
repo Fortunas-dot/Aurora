@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
+import { apiService } from '../../src/services/api.service';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -19,9 +20,64 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+
+  const validateUsernameLocally = (value: string): string | null => {
+    if (!value.trim()) {
+      return 'Username is required';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (value.length > 30) {
+      return 'Username cannot exceed 30 characters';
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+      return 'Username can only contain letters, numbers, and underscores';
+    }
+    return null;
+  };
+
+  const checkUsernameAvailability = async (): Promise<boolean> => {
+    const value = username.trim();
+    const localError = validateUsernameLocally(value);
+    if (localError) {
+      setUsernameError(localError);
+      return false;
+    }
+
+    setIsCheckingUsername(true);
+    try {
+      const response = await apiService.get<{ available: boolean }>('/auth/check-username?username=' + encodeURIComponent(value));
+
+      if (!response.success) {
+        // On API error, don't hard-block registration, just show message
+        if (response.message) {
+          setUsernameError(response.message);
+        }
+        return true;
+      }
+
+      const available = (response.data as any)?.available;
+      if (available === false) {
+        setUsernameError('Username already taken');
+        return false;
+      }
+
+      setUsernameError('');
+      return true;
+    } catch (e: any) {
+      // Network error – allow user to try to register anyway
+      return true;
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
 
   const handleRegister = async () => {
     setValidationError('');
+    setUsernameError('');
     clearError();
 
     // Validation
@@ -29,16 +85,10 @@ export default function RegisterScreen() {
       setValidationError('Email is required');
       return;
     }
-    if (!username.trim()) {
-      setValidationError('Username is required');
-      return;
-    }
-    if (username.length < 3) {
-      setValidationError('Username must be at least 3 characters');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setValidationError('Username can only contain letters, numbers, and underscores');
+    const usernameValidation = validateUsernameLocally(username);
+    if (usernameValidation) {
+      setValidationError(usernameValidation);
+      setUsernameError(usernameValidation);
       return;
     }
     if (!password) {
@@ -58,6 +108,13 @@ export default function RegisterScreen() {
       return;
     }
 
+    // Final username availability check before submit
+    const usernameOk = await checkUsernameAvailability();
+    if (!usernameOk) {
+      // Error is shown inline via usernameError
+      return;
+    }
+
     const success = await register(
       email.trim(),
       password,
@@ -65,7 +122,11 @@ export default function RegisterScreen() {
     );
     
     if (success) {
-      router.replace('/(tabs)');
+      // After successful registration, go to phone verification flow
+      router.replace({
+        pathname: '/(auth)/phone-verification',
+        params: { from: 'register' },
+      });
     }
   };
 
@@ -128,7 +189,12 @@ export default function RegisterScreen() {
 
             <GlassInput
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(text) => {
+                setUsername(text);
+                if (usernameError) {
+                  setUsernameError('');
+                }
+              }}
               placeholder="Username"
               label="Username"
               autoCapitalize="none"
@@ -137,6 +203,8 @@ export default function RegisterScreen() {
               icon="person-outline"
               textContentType="username"
               autoComplete="username"
+              error={usernameError}
+              onBlur={checkUsernameAvailability}
             />
 
             <GlassInput
