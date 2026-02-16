@@ -508,8 +508,13 @@ export default function CreateJournalEntryScreen() {
                 saveAbortControllerRef.current = null;
               }
               // Reset saving state before navigating back
-              setSaving(false);
-              router.back();
+              if (isMountedRef.current) {
+                setSaving(false);
+              }
+              // Use setTimeout to ensure state is reset before navigation
+              setTimeout(() => {
+                router.back();
+              }, 0);
             }}
           >
             <Ionicons name="close" size={28} color={COLORS.text} />

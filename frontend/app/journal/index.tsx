@@ -25,6 +25,82 @@ import { enUS } from 'date-fns/locale';
 import { useConsentStore } from '../../src/store/consentStore';
 import { AiConsentCard } from '../../src/components/legal/AiConsentCard';
 
+// Typewriter effect component
+const TypewriterText: React.FC<{
+  text: string;
+  delay?: number;
+  style?: any;
+  onComplete?: () => void;
+  shouldStart?: boolean;
+}> = ({ text, delay = 0, style, onComplete, shouldStart = true }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!shouldStart) {
+      setDisplayedText('');
+      setIsTyping(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
+    }
+
+    setIsTyping(true);
+    setDisplayedText('');
+    
+    timeoutRef.current = setTimeout(() => {
+      let currentIndex = 0;
+      
+      intervalRef.current = setInterval(() => {
+        if (currentIndex < text.length) {
+          setDisplayedText(text.substring(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setIsTyping(false);
+          if (onComplete) {
+            onComplete();
+          }
+        }
+      }, 50); // 50ms per character
+    }, delay);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [text, delay, onComplete, shouldStart]);
+
+  // If not starting, show full text immediately
+  if (!shouldStart) {
+    return <Text style={style}>{text}</Text>;
+  }
+
+  return (
+    <Text style={style}>
+      {displayedText}
+      {isTyping && <Text style={{ opacity: 0.5 }}>|</Text>}
+    </Text>
+  );
+};
+
 // Mood emoji mapping
 const getMoodEmoji = (mood: number): string => {
   if (mood <= 2) return '😢';
@@ -157,7 +233,7 @@ const PromptCard: React.FC<{
   onPress: () => void;
 }> = ({ prompt, onPress }) => (
   <Pressable onPress={onPress}>
-    <GlassCard style={styles.promptCard} padding="lg">
+    <GlassCard style={styles.promptCard} padding="md">
       <LinearGradient
         colors={['rgba(96, 165, 250, 0.2)', 'rgba(167, 139, 250, 0.15)', 'rgba(94, 234, 212, 0.1)']}
         start={{ x: 0, y: 0 }}
@@ -200,7 +276,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
     : COLORS.textMuted;
 
   return (
-    <GlassCard style={styles.statsCard} padding="lg">
+    <GlassCard style={styles.statsCard} padding="md">
       <LinearGradient
         colors={['rgba(96, 165, 250, 0.1)', 'rgba(167, 139, 250, 0.05)', 'transparent']}
         start={{ x: 0, y: 0 }}
@@ -256,10 +332,22 @@ export default function JournalScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
+  const hasInitialLoadRef = useRef(false);
+  const isLoadingJournalsRef = useRef(false);
+  const [showTypewriter, setShowTypewriter] = useState(false);
 
-  const loadJournals = useCallback(async () => {
+  const loadJournals = useCallback(async (skipLoadingState = false) => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingJournalsRef.current) {
+      return;
+    }
+    
+    isLoadingJournalsRef.current = true;
+    
     try {
-      setLoading(true);
+      if (!skipLoadingState) {
+        setLoading(true);
+      }
       const response = await journalService.getUserJournals(1, 100);
       if (response.success && response.data) {
         setJournals(response.data);
@@ -268,14 +356,22 @@ export default function JournalScreen() {
           setSelectedJournal((prev) => prev || response.data[0]);
         } else {
           setSelectedJournal(null);
-          setLoading(false);
+          if (!skipLoadingState) {
+            setLoading(false);
+          }
         }
       } else {
-        setLoading(false);
+        if (!skipLoadingState) {
+          setLoading(false);
+        }
       }
     } catch (error) {
       console.error('Error loading journals:', error);
-      setLoading(false);
+      if (!skipLoadingState) {
+        setLoading(false);
+      }
+    } finally {
+      isLoadingJournalsRef.current = false;
     }
   }, []);
 
@@ -313,8 +409,22 @@ export default function JournalScreen() {
   useFocusEffect(
     useCallback(() => {
       loadConsent().catch(console.error);
-      loadJournals();
-    }, [loadJournals, loadConsent])
+      // Only load journals on initial focus, not every time we navigate back
+      if (!hasInitialLoadRef.current) {
+        hasInitialLoadRef.current = true;
+        loadJournals(false);
+        // Reset typewriter effect for initial load
+        setShowTypewriter(false);
+      } else {
+        // On subsequent focuses, only refresh data if we have a selected journal
+        // Don't reload journals list to avoid unnecessary loading state
+        if (selectedJournal) {
+          loadData(selectedJournal._id);
+        }
+        // Reset typewriter effect when navigating back
+        setShowTypewriter(false);
+      }
+    }, [loadJournals, loadConsent, selectedJournal, loadData])
   );
 
   useEffect(() => {
@@ -324,6 +434,17 @@ export default function JournalScreen() {
       setLoading(false);
     }
   }, [selectedJournal, loadData, journals.length]);
+
+  // Trigger typewriter effect when data is loaded
+  useEffect(() => {
+    if (!loading && selectedJournal) {
+      // Small delay before starting typewriter effect
+      const timer = setTimeout(() => {
+        setShowTypewriter(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, selectedJournal]);
 
   const onRefresh = useCallback(() => {
     if (selectedJournal) {
@@ -500,7 +621,12 @@ export default function JournalScreen() {
         {/* Daily Prompt (AI-powered, only when consent granted) */}
         {aiConsentStatus === 'granted' && prompt && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today</Text>
+            <TypewriterText 
+              text="Today" 
+              delay={0}
+              style={styles.sectionTitle}
+              shouldStart={showTypewriter}
+            />
             <PromptCard prompt={prompt} onPress={() => handleNewEntry(prompt)} />
           </View>
         )}
@@ -509,7 +635,12 @@ export default function JournalScreen() {
         {aiConsentStatus === 'granted' && insights && insights.totalEntries > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Statistics</Text>
+              <TypewriterText 
+                text="Statistics" 
+                delay={800}
+                style={styles.sectionTitle}
+                shouldStart={showTypewriter}
+              />
               <Pressable onPress={handleInsightsPress}>
                 <Text style={styles.sectionLink}>View all</Text>
               </Pressable>
@@ -521,7 +652,12 @@ export default function JournalScreen() {
         {/* Recent Entries */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Entries</Text>
+            <TypewriterText 
+              text="Recent Entries" 
+              delay={1600}
+              style={styles.sectionTitle}
+              shouldStart={showTypewriter}
+            />
           </View>
 
           {entries.length === 0 ? (
@@ -560,7 +696,7 @@ export default function JournalScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.fabGradient}
         >
-          <Ionicons name="add" size={28} color={COLORS.white} />
+          <Ionicons name="create" size={28} color={COLORS.white} />
         </LinearGradient>
       </Pressable>
 
@@ -717,12 +853,12 @@ const styles = StyleSheet.create({
   promptCard: {
     position: 'relative',
     overflow: 'hidden',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   promptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   promptIconContainer: {
     width: 40,
@@ -766,14 +902,14 @@ const styles = StyleSheet.create({
   promptText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text,
-    marginBottom: SPACING.lg,
-    lineHeight: 26,
-    fontSize: 16,
+    marginBottom: SPACING.md,
+    lineHeight: 24,
+    fontSize: 15,
   },
   promptAction: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingTop: SPACING.md,
+    paddingTop: SPACING.sm,
   },
   promptActionContent: {
     flexDirection: 'row',
@@ -793,7 +929,7 @@ const styles = StyleSheet.create({
   statsTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     fontWeight: '600',
   },
   statsGrid: {
@@ -807,12 +943,12 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   statEmoji: {
     fontSize: 24,
