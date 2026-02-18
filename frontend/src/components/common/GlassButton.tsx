@@ -12,9 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY, SHADOWS } from '../../constants/theme';
 
-// TEST: Temporarily using Times New Roman for large UI elements to verify font changes work
+// SF Pro Display for large UI elements
 const getTitleFontFamily = () => {
-  return 'Times New Roman';
+  if (Platform.OS === 'ios') {
+    return 'SF Pro Display';
+  }
+  return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
 interface GlassButtonProps {
