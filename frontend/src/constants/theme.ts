@@ -196,22 +196,23 @@ export const TYPOGRAPHY = {
   h1: {
     fontFamily: FONT_FAMILY,
     fontSize: 32,
-    fontWeight: '700' as const,
+    fontWeight: '800' as const, // Bolder to accentuate letterforms (J curve, double-storey a, r shoulder)
     lineHeight: 40,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8, // Tighter spacing to emphasize letter shapes
   },
   h2: {
     fontFamily: FONT_FAMILY,
     fontSize: 24,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const, // Bolder for better letterform definition
     lineHeight: 32,
-    letterSpacing: -0.3,
+    letterSpacing: -0.6, // Tighter spacing
   },
   h3: {
     fontFamily: FONT_FAMILY,
     fontSize: 20,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const, // Bolder for consistency
     lineHeight: 28,
+    letterSpacing: -0.4, // Tighter spacing
   },
   body: {
     fontFamily: FONT_FAMILY_TEXT,
