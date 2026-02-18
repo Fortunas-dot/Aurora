@@ -3,14 +3,10 @@ import { Platform } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
 import { getFontFamily } from '../utils/fontHelper';
 
-// SF Pro Display for titles and large UI elements
+// Unbounded Regular for titles and large UI elements
 const getTitleFontFamily = (): string => {
-  if (Platform.OS === 'ios') {
-    // On iOS, SF Pro Display is optimized for large text/headers
-    return 'SF Pro Display';
-  }
-  // Android fallback - use Roboto for headings
-  return Platform.OS === 'android' ? 'Roboto' : 'System';
+  // Use Unbounded Regular for all platforms
+  return 'Unbounded-Regular';
 };
 
 // SF Pro Text for body text

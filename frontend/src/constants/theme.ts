@@ -178,14 +178,10 @@ const getBodyFontFamily = (): string => {
   return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
-// SF Pro Display for titles and large UI elements (iOS native, fallback for others)
+// Unbounded Regular for titles and large UI elements
 const getTitleFontFamily = (): string => {
-  if (Platform.OS === 'ios') {
-    // On iOS, SF Pro Display is optimized for large text/headers
-    return 'SF Pro Display';
-  }
-  // Android fallback - use Roboto for headings
-  return Platform.OS === 'android' ? 'Roboto' : 'System';
+  // Use Unbounded Regular for all platforms
+  return 'Unbounded-Regular';
 };
 
 // Evaluate fonts once at module load, but with error handling

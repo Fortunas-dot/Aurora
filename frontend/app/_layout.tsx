@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFonts } from 'expo-font';
 import { useTheme } from '../src/hooks/useTheme';
 import { useAuthStore } from '../src/store/authStore';
 import { useNotificationStore } from '../src/store/notificationStore';
@@ -42,6 +43,19 @@ export default function RootLayout() {
   const { colors, isDark } = useTheme();
   const { aiConsentStatus, loadConsent } = useConsentStore();
   const { checkPremiumStatus } = usePremiumStore();
+
+  // Load Unbounded Regular font for headers
+  // Note: Make sure Unbounded-Regular.ttf is in frontend/assets/fonts/
+  const [fontsLoaded, fontError] = useFonts({
+    'Unbounded-Regular': require('../assets/fonts/Unbounded-Regular.ttf'),
+  });
+
+  // Log font loading errors (non-blocking)
+  useEffect(() => {
+    if (fontError) {
+      console.warn('⚠️ Font loading error:', fontError);
+    }
+  }, [fontError]);
 
   useEffect(() => {
     let isMounted = true;
@@ -248,7 +262,8 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user?._id]); // Only depend on auth state and user ID
 
-  if (isLoading) {
+  // Show loading screen while fonts are loading or app is initializing
+  if (isLoading || !fontsLoaded) {
     return (
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
