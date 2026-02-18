@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   RefreshControl,
   FlatList,
@@ -36,6 +35,7 @@ export default function BrowseJournalsScreen() {
   const loadJournals = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!isAuthenticated) {
       setIsLoading(false);
+      setJournals([]);
       return;
     }
 
@@ -50,10 +50,23 @@ export default function BrowseJournalsScreen() {
 
         if (response.pagination) {
           setHasMore(pageNum < response.pagination.pages);
+        } else {
+          setHasMore(false);
         }
+      } else {
+        // If response is not successful, clear journals if not appending
+        if (!append) {
+          setJournals([]);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error('Error loading journals:', error);
+      // Clear journals on error if not appending
+      if (!append) {
+        setJournals([]);
+      }
+      setHasMore(false);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -244,56 +257,58 @@ export default function BrowseJournalsScreen() {
       </View>
 
       {/* Journals List */}
-      {isLoading && journals.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size="lg" />
-        </View>
-      ) : journals.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <GlassCard style={styles.emptyCard} padding="xl">
-            <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>
-              No journals found
-            </Text>
-            <Text style={styles.emptyText}>
-              No public journals available yet
-            </Text>
-          </GlassCard>
-        </View>
-      ) : (
-        <FlatList
-          data={journals}
-          renderItem={renderJournalCard}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + SPACING.xl },
-          ]}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          initialNumToRender={10}
-          updateCellsBatchingPeriod={50}
-          scrollEventThrottle={16}
-          decelerationRate="normal"
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor={COLORS.primary}
-            />
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            hasMore && isLoading ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              </View>
-            ) : null
-          }
-        />
-      )}
+      <FlatList
+        data={journals}
+        renderItem={renderJournalCard}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={[
+          styles.listContent,
+          journals.length === 0 && !isLoading ? styles.emptyListContent : undefined,
+          { paddingBottom: insets.bottom + SPACING.xl },
+        ]}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner size="lg" />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <GlassCard style={styles.emptyCard} padding="xl">
+                <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.emptyTitle}>
+                  No journals found
+                </Text>
+                <Text style={styles.emptyText}>
+                  No public journals available yet
+                </Text>
+              </GlassCard>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          hasMore && isLoading && journals.length > 0 ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            </View>
+          ) : null
+        }
+      />
     </LinearGradient>
   );
 }
@@ -342,6 +357,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: SPACING.lg,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   journalCard: {
     marginBottom: SPACING.md,

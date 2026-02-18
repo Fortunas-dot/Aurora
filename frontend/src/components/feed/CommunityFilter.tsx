@@ -46,7 +46,12 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
     }
     
     isLoadingRef.current = true;
-    setIsLoading(true);
+    // Only show the loading spinner on the very first load.
+    // After we've determined the empty state once, keep the UI stable
+    // so "No communities yet" doesn't visibly reappear/reload.
+    if (!hasLoadedRef.current) {
+      setIsLoading(true);
+    }
     loadAttemptedRef.current = true;
     
     try {
@@ -95,9 +100,14 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
     } finally {
       if (mountedRef.current) {
         isLoadingRef.current = false;
+        // Ensure we always mark that an initial load has happened
+        if (!hasLoadedRef.current) {
+          hasLoadedRef.current = true;
+          setHasLoaded(true);
+        }
+        // Always clear the loading state; if it was never set (subsequent calls),
+        // this is a no-op and keeps the UI from flickering.
         setIsLoading(false);
-        hasLoadedRef.current = true;
-        setHasLoaded(true);
       }
     }
   }, []);

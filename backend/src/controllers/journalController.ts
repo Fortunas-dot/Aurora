@@ -145,9 +145,8 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
 // @access  Private (if private) or Public (if public)
 export const getJournal = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const journal = await Journal.findById(req.params.id)
-      .populate('owner', 'username displayName avatar')
-      .populate('followers', 'username displayName avatar');
+    // First, get the journal without populate to check ownership
+    const journal = await Journal.findById(req.params.id);
 
     if (!journal) {
       res.status(404).json({
@@ -158,11 +157,10 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Check access - owners always have access, even for private journals
-    // Handle both populated (object) and unpopulated (ObjectId) owner
-    const ownerId = typeof journal.owner === 'object' && journal.owner !== null && '_id' in journal.owner
-      ? journal.owner._id.toString()
-      : journal.owner.toString();
-    const isOwner = ownerId === req.userId;
+    // Compare owner ObjectId directly with userId string
+    const ownerIdStr = journal.owner.toString();
+    const userIdStr = String(req.userId || '');
+    const isOwner = ownerIdStr === userIdStr;
     
     if (!journal.isPublic && !isOwner) {
       res.status(403).json({
@@ -171,6 +169,10 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
       });
       return;
     }
+
+    // Now populate for the response
+    await journal.populate('owner', 'username displayName avatar');
+    await journal.populate('followers', 'username displayName avatar');
 
     const journalObj = journal.toObject();
     const isFollowing = req.userId ? journal.followers.some((followerId) => {
