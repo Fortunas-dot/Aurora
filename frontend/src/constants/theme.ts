@@ -178,8 +178,17 @@ const getDefaultFontFamily = () => {
   }) || 'System';
 };
 
-const FONT_FAMILY = getDefaultFontFamily();
-const FONT_FAMILY_TEXT = getDefaultFontFamily();
+// SF Pro Display for titles and large UI elements (iOS native, fallback for others)
+const getTitleFontFamily = () => {
+  return Platform.select({
+    ios: 'SF Pro Display',
+    android: 'Roboto', // Android fallback
+    default: 'System',
+  }) || 'System';
+};
+
+const FONT_FAMILY = getTitleFontFamily(); // Use SF Pro Display for headings
+const FONT_FAMILY_TEXT = getDefaultFontFamily(); // Use system font for body text
 
 export const TYPOGRAPHY = {
   h1: {

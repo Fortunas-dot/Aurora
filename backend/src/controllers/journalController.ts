@@ -176,9 +176,12 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
 
     const journalObj = journal.toObject();
     const isFollowing = req.userId ? journal.followers.some((followerId) => {
-      const followerIdStr = typeof followerId === 'object' && followerId !== null && '_id' in followerId
-        ? followerId._id.toString()
-        : followerId.toString();
+      let followerIdStr: string;
+      if (typeof followerId === 'object' && followerId !== null && '_id' in followerId) {
+        followerIdStr = followerId._id.toString();
+      } else {
+        followerIdStr = String(followerId);
+      }
       return followerIdStr === req.userId;
     }) : false;
 

@@ -6,10 +6,20 @@ import {
   ViewStyle,
   TextStyle,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY, SHADOWS } from '../../constants/theme';
+
+// SF Pro Display for large UI elements
+const getTitleFontFamily = () => {
+  return Platform.select({
+    ios: 'SF Pro Display',
+    android: 'Roboto',
+    default: 'System',
+  }) || 'System';
+};
 
 interface GlassButtonProps {
   title: string;
@@ -52,7 +62,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
       case 'lg':
         return {
           container: { paddingVertical: SPACING.md + 4, paddingHorizontal: SPACING.xl },
-          text: { fontSize: 18 },
+          text: { fontSize: 18, fontFamily: getTitleFontFamily() },
         };
       default:
         return {

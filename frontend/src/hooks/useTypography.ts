@@ -3,28 +3,38 @@ import { Platform } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
 import { getFontFamily } from '../utils/fontHelper';
 
+// SF Pro Display for titles and large UI elements
+const getTitleFontFamily = () => {
+  return Platform.select({
+    ios: 'SF Pro Display',
+    android: 'Roboto', // Android fallback
+    default: 'System',
+  }) || 'System';
+};
+
 export const useTypography = () => {
   const { fontFamily } = useSettingsStore();
   
   const selectedFont = getFontFamily(fontFamily);
+  const titleFont = getTitleFontFamily(); // Always use SF Pro Display for headings
   
   return useMemo(() => ({
     h1: {
-      fontFamily: selectedFont,
+      fontFamily: titleFont,
       fontSize: 32,
       fontWeight: '700' as const,
       lineHeight: 40,
       letterSpacing: -0.5,
     },
     h2: {
-      fontFamily: selectedFont,
+      fontFamily: titleFont,
       fontSize: 24,
       fontWeight: '600' as const,
       lineHeight: 32,
       letterSpacing: -0.3,
     },
     h3: {
-      fontFamily: selectedFont,
+      fontFamily: titleFont,
       fontSize: 20,
       fontWeight: '600' as const,
       lineHeight: 28,
@@ -59,5 +69,5 @@ export const useTypography = () => {
       fontWeight: '400' as const,
       lineHeight: 20,
     },
-  }), [selectedFont]);
+  }), [selectedFont, titleFont]);
 };
