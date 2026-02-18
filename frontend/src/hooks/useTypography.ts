@@ -4,9 +4,14 @@ import { useSettingsStore } from '../store/settingsStore';
 import { getFontFamily } from '../utils/fontHelper';
 
 // Unbounded Regular for titles and large UI elements
+// Falls back to SF Pro Display (iOS) or Roboto (Android) if font not loaded
 const getTitleFontFamily = (): string => {
-  // Use Unbounded Regular for all platforms
-  return 'Unbounded-Regular';
+  // Try to use Unbounded Regular, but fallback to system fonts if not available
+  // The font will be available once Unbounded-Regular.ttf is added to frontend/assets/fonts/
+  if (Platform.OS === 'ios') {
+    return 'Unbounded-Regular'; // Will fallback to system font if not loaded
+  }
+  return Platform.OS === 'android' ? 'Unbounded-Regular' : 'System'; // Will fallback to Roboto if not loaded
 };
 
 // SF Pro Text for body text
