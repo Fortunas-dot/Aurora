@@ -14,11 +14,10 @@ import { COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY, SHADOWS } from '../../const
 
 // SF Pro Display for large UI elements
 const getTitleFontFamily = () => {
-  return Platform.select({
-    ios: 'SF Pro Display',
-    android: 'Roboto',
-    default: 'System',
-  }) || 'System';
+  if (Platform.OS === 'ios') {
+    return 'SF Pro Display';
+  }
+  return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
 interface GlassButtonProps {

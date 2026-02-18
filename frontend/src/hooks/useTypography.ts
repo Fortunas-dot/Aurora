@@ -5,18 +5,34 @@ import { getFontFamily } from '../utils/fontHelper';
 
 // SF Pro Display for titles and large UI elements
 const getTitleFontFamily = () => {
-  return Platform.select({
-    ios: 'SF Pro Display',
-    android: 'Roboto', // Android fallback
-    default: 'System',
-  }) || 'System';
+  if (Platform.OS === 'ios') {
+    // On iOS, SF Pro Display is optimized for large text/headers
+    return 'SF Pro Display';
+  }
+  // Android fallback - use Roboto for headings
+  return Platform.OS === 'android' ? 'Roboto' : 'System';
+};
+
+// SF Pro Text for body text
+const getBodyFontFamily = () => {
+  if (Platform.OS === 'ios') {
+    // On iOS, SF Pro Text is optimized for body text
+    return 'SF Pro Text';
+  }
+  // Android fallback - use Roboto for body text
+  return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
 export const useTypography = () => {
   const { fontFamily } = useSettingsStore();
   
-  const selectedFont = getFontFamily(fontFamily);
+  // Use user's selected font, but fallback to SF Pro Text on iOS if system is selected
+  const selectedFont = fontFamily && fontFamily !== 'system' 
+    ? getFontFamily(fontFamily) 
+    : getBodyFontFamily();
+  
   const titleFont = getTitleFontFamily(); // Always use SF Pro Display for headings
+  const bodyFont = getBodyFontFamily(); // Use SF Pro Text for body text (unless user selected different font)
   
   return useMemo(() => ({
     h1: {
