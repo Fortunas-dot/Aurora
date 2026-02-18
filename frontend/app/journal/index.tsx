@@ -354,7 +354,7 @@ export default function JournalScreen() {
     
     try {
       if (!skipLoadingState) {
-        setLoading(true);
+      setLoading(true);
       }
       const response = await journalService.getUserJournals(1, 100);
       if (response.success && response.data) {
@@ -379,7 +379,7 @@ export default function JournalScreen() {
     } catch (error) {
       console.error('Error loading journals:', error);
       if (!skipLoadingState) {
-        setLoading(false);
+      setLoading(false);
       }
     } finally {
       isLoadingJournalsRef.current = false;

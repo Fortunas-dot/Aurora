@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/
 import { useTheme } from '../../src/hooks/useTheme';
 import { postService, Post } from '../../src/services/post.service';
 import { groupService, Group } from '../../src/services/group.service';
+import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 
@@ -647,8 +648,13 @@ export default function FeedScreen() {
   };
 
   const handleShare = async (post: Post) => {
-    // Share functionality - can be implemented later with expo-sharing or native share
-    // For now, this is a placeholder
+    try {
+      const authorName = post.author?.displayName || post.author?.username || 'Someone';
+      const content = post.content || '';
+      await shareService.sharePost(post._id, content, authorName);
+    } catch (error) {
+      console.error('Error sharing post:', error);
+    }
   };
 
   const handleSavePost = async (postId: string) => {
@@ -718,57 +724,71 @@ export default function FeedScreen() {
     }
   };
 
-  const ListHeader = () => (
-    <View style={styles.listHeader}>
-      {/* Therapist availability banner */}
-      {typeof therapistCount === 'number' && (
-        <GlassCard variant="primary" gradient padding="sm" style={styles.therapistBanner}>
-          <View style={styles.therapistBannerContent}>
-            <View style={styles.therapistIconContainer}>
-              <LinearGradient
-                colors={['rgba(96, 165, 250, 0.9)', 'rgba(167, 139, 250, 0.9)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.therapistIconGradient}
-              >
-                <Ionicons name="medical" size={16} color={colors.white} />
-              </LinearGradient>
+  // IMPORTANT: ListHeaderComponent must be referentially stable.
+  // If we pass an inline component (function) here, FlatList can remount the header frequently,
+  // which makes CommunityFilter re-fetch and causes the "No communities yet" flicker.
+  const listHeader = useMemo(() => {
+    return (
+      <View style={styles.listHeader}>
+        {/* Therapist availability banner */}
+        {typeof therapistCount === 'number' && (
+          <GlassCard variant="primary" gradient padding="sm" style={styles.therapistBanner}>
+            <View style={styles.therapistBannerContent}>
+              <View style={styles.therapistIconContainer}>
+                <LinearGradient
+                  colors={['rgba(96, 165, 250, 0.9)', 'rgba(167, 139, 250, 0.9)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.therapistIconGradient}
+                >
+                  <Ionicons name="medical" size={16} color={colors.white} />
+                </LinearGradient>
+              </View>
+              <View style={styles.therapistTextContainer}>
+                <Text style={styles.therapistBannerTitle}>
+                  {therapistCount === 1
+                    ? 'There is 1 certified therapist online'
+                    : `There are ${therapistCount} certified therapists online`}
+                </Text>
+                <Text style={styles.therapistBannerSubtitle}>
+                  They can answer questions and give guidance under posts.
+                </Text>
+              </View>
+              <View style={styles.therapistStatusDotContainer}>
+                <View style={styles.therapistStatusDot} />
+              </View>
             </View>
-            <View style={styles.therapistTextContainer}>
-              <Text style={styles.therapistBannerTitle}>
-                {therapistCount === 1
-                  ? 'There is 1 certified therapist online'
-                  : `There are ${therapistCount} certified therapists online`}
-              </Text>
-              <Text style={styles.therapistBannerSubtitle}>
-                They can answer questions and give guidance under posts.
-              </Text>
-            </View>
-            <View style={styles.therapistStatusDotContainer}>
-              <View style={styles.therapistStatusDot} />
-            </View>
-          </View>
-        </GlassCard>
-      )}
+          </GlassCard>
+        )}
 
-      {/* Filter Bar */}
-      <View style={styles.filterBar}>
-        <CommunityFilter
-          selectedCommunity={selectedCommunity}
-          onCommunityChange={handleCommunityChange}
-          isAuthenticated={isAuthenticated}
-          showAllPublicPosts={showAllPublicPosts}
-          onShowAllPublicPostsChange={setShowAllPublicPosts}
-        />
-        <View style={styles.sortContainer}>
-          <SortDropdown
-            selectedSort={sortOption}
-            onSortChange={handleSortChange}
+        {/* Filter Bar */}
+        <View style={styles.filterBar}>
+          <CommunityFilter
+            selectedCommunity={selectedCommunity}
+            onCommunityChange={handleCommunityChange}
+            isAuthenticated={isAuthenticated}
+            showAllPublicPosts={showAllPublicPosts}
+            onShowAllPublicPostsChange={setShowAllPublicPosts}
           />
+          <View style={styles.sortContainer}>
+            <SortDropdown
+              selectedSort={sortOption}
+              onSortChange={handleSortChange}
+            />
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  }, [
+    therapistCount,
+    colors.white,
+    selectedCommunity,
+    handleCommunityChange,
+    isAuthenticated,
+    showAllPublicPosts,
+    sortOption,
+    handleSortChange,
+  ]);
 
   const emptyState = getEmptyStateText();
 
@@ -859,7 +879,7 @@ export default function FeedScreen() {
         renderItem={renderPost}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.feedContent}
-        ListHeaderComponent={!isSearching ? ListHeader : undefined}
+        ListHeaderComponent={!isSearching ? listHeader : null}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}

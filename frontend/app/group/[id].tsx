@@ -19,6 +19,7 @@ import { PostCard } from '../../src/components/post/PostCard';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { groupService, Group } from '../../src/services/group.service';
 import { postService, Post } from '../../src/services/post.service';
+import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { getCountryName } from '../../src/constants/countries';
 
@@ -205,6 +206,16 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleSharePost = async (post: Post) => {
+    try {
+      const authorName = post.author?.displayName || post.author?.username || 'Someone';
+      const content = post.content || '';
+      await shareService.sharePost(post._id, content, authorName);
+    } catch (error) {
+      console.error('Error sharing post:', error);
+    }
+  };
+
   const loadMore = useCallback(() => {
     if (!isLoading && hasMore) {
       const nextPage = page + 1;
@@ -359,6 +370,7 @@ export default function GroupDetailScreen() {
             onPress={() => router.push(`/post/${item._id}`)}
             onLike={() => handleLikePost(item._id)}
             onComment={() => router.push(`/post/${item._id}`)}
+            onShare={() => handleSharePost(item)}
             currentUserId={user?._id}
           />
         )}

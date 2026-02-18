@@ -18,6 +18,7 @@ import { CommentCard } from '../../src/components/post/CommentCard';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
 import { postService, Post } from '../../src/services/post.service';
 import { commentService, Comment } from '../../src/services/comment.service';
+import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 
 export default function PostDetailsScreen() {
@@ -109,6 +110,17 @@ export default function PostDetailsScreen() {
       }
     } catch (error) {
       console.error('Error liking post:', error);
+    }
+  };
+
+  const handleSharePost = async () => {
+    if (!post) return;
+    try {
+      const authorName = post.author?.displayName || post.author?.username || 'Someone';
+      const content = post.content || '';
+      await shareService.sharePost(post._id, content, authorName);
+    } catch (error) {
+      console.error('Error sharing post:', error);
     }
   };
 
@@ -208,7 +220,7 @@ export default function PostDetailsScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={insets.top}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
@@ -255,6 +267,7 @@ export default function PostDetailsScreen() {
                 post={post}
                 onLike={handleLikePost}
                 onComment={() => {}}
+                onShare={handleSharePost}
                 onAuthorPress={() => router.push(`/user/${post.author._id}`)}
                 currentUserId={user?._id}
                 showFullContent={true}
@@ -304,7 +317,7 @@ export default function PostDetailsScreen() {
 
         {/* Comment Input */}
         {isAuthenticated && (
-          <View style={[styles.commentInputContainer, { paddingBottom: SPACING.md + insets.bottom }]}>
+          <View style={[styles.commentInputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : SPACING.sm }]}>
             <GlassInput
               value={commentText}
               onChangeText={setCommentText}
@@ -387,7 +400,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: SPACING.md,
-    paddingBottom: 100,
+    paddingBottom: SPACING.md,
   },
   commentsHeader: {
     paddingVertical: SPACING.md,
@@ -418,8 +431,9 @@ const styles = StyleSheet.create({
   commentInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: 0,
     borderTopWidth: 1,
     borderTopColor: COLORS.glass.border,
     backgroundColor: COLORS.background,

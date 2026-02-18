@@ -16,6 +16,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     const search = req.query.search as string;
     const tag = req.query.tag as string;
     const country = req.query.country as string;
+    const healthCondition = req.query.healthCondition as string;
 
     const query: any = {};
 
@@ -53,6 +54,10 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
         const normalizedCountry = country.toUpperCase();
         andConditions.push({ country: normalizedCountry });
       }
+    }
+
+    if (healthCondition) {
+      andConditions.push({ healthCondition: healthCondition });
     }
 
     if (andConditions.length > 1) {

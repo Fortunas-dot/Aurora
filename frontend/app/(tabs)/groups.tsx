@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +27,264 @@ import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { COUNTRIES, getCountryName } from '../../src/constants/countries';
 
+// Health conditions list (same as in create-group.tsx)
+const HEALTH_CONDITIONS = [
+  'Depression',
+  'Anxiety Disorder',
+  'PTSD',
+  'ADHD',
+  'Autism',
+  'Eating Disorder',
+  'Addiction',
+  'Borderline',
+  'OCD',
+  'Burnout',
+  'Stress',
+  'Sleep Problems',
+  'Chronic Pain',
+  'Fibromyalgia',
+  'Rheumatism',
+  'Diabetes',
+  'Heart Problems',
+  'Asthma',
+  'Migraine',
+  'Epilepsy',
+  'MS',
+  'Other',
+];
+
 type TabType = 'groups' | 'buddies';
+
+const { width, height } = Dimensions.get('window');
+
+// Animated star component
+const AnimatedStar = ({ index }: { index: number }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const initialX = Math.random() * 100;
+  const initialY = Math.random() * 100;
+  const speed = 20 + Math.random() * 30; // Different speeds for each star
+  const direction = Math.random() * Math.PI * 2; // Random direction
+  const distance = 30 + Math.random() * 50; // How far the star moves
+
+  useEffect(() => {
+    const duration = 3000 + Math.random() * 4000; // 3-7 seconds
+
+    // Create a looping animation
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.cos(direction) * distance,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: duration,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: Math.sin(direction) * distance,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: duration * 1.1,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(opacity, {
+              toValue: 0.1,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0.3 + Math.random() * 0.4,
+              duration: duration * 0.8,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 0.5,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration * 0.6,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.star,
+        {
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+    />
+  );
+};
+
+// Falling star component that appears randomly
+const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const trailOpacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  
+  const startX = Math.random() * 100; // Random starting X position (0-100%)
+  const fallDistance = 120; // Fall from top to bottom + extra
+  const fallDuration = 800 + Math.random() * 1200; // 0.8-2 seconds (faster)
+  const horizontalDrift = (Math.random() - 0.5) * 40; // More horizontal movement
+  
+  useEffect(() => {
+    // Fade in quickly
+    const animation = Animated.sequence([
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(trailOpacity, {
+          toValue: 0.8,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Fall down
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: fallDistance,
+          duration: fallDuration,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: horizontalDrift,
+          duration: fallDuration,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: fallDuration * 0.7,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(trailOpacity, {
+          toValue: 0,
+          duration: fallDuration * 0.7,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.8,
+          duration: fallDuration,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
+    
+    animationRef.current = animation;
+    
+    animation.start((finished) => {
+      if (finished) {
+        onComplete();
+      }
+    });
+    
+    // Cleanup: stop animation if component unmounts
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+        animationRef.current = null;
+      }
+    };
+  }, [onComplete]);
+  
+  return (
+    <Animated.View
+      style={[
+        styles.fallingStarContainer,
+        {
+          left: `${startX}%`,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY },
+            { scale },
+          ],
+        },
+      ]}
+      pointerEvents="none"
+    >
+      {/* Trail with gradient effect - wrapped in Animated.View for opacity */}
+      <Animated.View
+        style={[
+          styles.fallingStarTrail,
+          {
+            opacity: trailOpacity,
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0.9)', 'rgba(96, 165, 250, 0.6)', 'transparent']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      {/* Star */}
+      <View style={styles.fallingStar} />
+    </Animated.View>
+  );
+};
 
 export default function GroupsScreen() {
   const router = useRouter();
@@ -41,6 +301,10 @@ export default function GroupsScreen() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null); // null = all, country code = specific country
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
   const [showCountrySearch, setShowCountrySearch] = useState(false);
+  const [selectedHealthCondition, setSelectedHealthCondition] = useState<string | null>(null);
+  const [healthConditionSearchQuery, setHealthConditionSearchQuery] = useState('');
+  const [showHealthConditionSearch, setShowHealthConditionSearch] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false); // Combined filter modal
   
   // Buddies state
   const [buddies, setBuddies] = useState<UserProfile[]>([]);
@@ -52,6 +316,10 @@ export default function GroupsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  
+  // Falling star state
+  const [fallingStars, setFallingStars] = useState<Array<{ id: number; key: number }>>([]);
+  const fallingStarIdRef = useRef(0);
 
   // Load groups
   const loadGroups = useCallback(async (pageNum: number = 1, append: boolean = false, search?: string, country?: string | null) => {
@@ -136,21 +404,21 @@ export default function GroupsScreen() {
 
   useEffect(() => {
     if (activeTab === 'groups') {
-      loadGroups(1, false, groupSearchQuery, selectedCountry);
+      loadGroups(1, false, groupSearchQuery, selectedCountry, selectedHealthCondition);
     } else if (activeTab === 'buddies') {
       loadBuddies();
     }
-  }, [activeTab, selectedCountry, loadGroups, loadBuddies, groupSearchQuery]);
+  }, [activeTab, selectedCountry, selectedHealthCondition, loadGroups, loadBuddies, groupSearchQuery]);
 
   // Search effect for groups
   useEffect(() => {
     if (activeTab === 'groups') {
       const timeoutId = setTimeout(() => {
-        loadGroups(1, false, groupSearchQuery, selectedCountry);
+        loadGroups(1, false, groupSearchQuery, selectedCountry, selectedHealthCondition);
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [groupSearchQuery, selectedCountry, activeTab, loadGroups]);
+  }, [groupSearchQuery, selectedCountry, selectedHealthCondition, activeTab, loadGroups]);
 
   // Search effect for buddies
   useEffect(() => {
@@ -168,13 +436,13 @@ export default function GroupsScreen() {
     setHasMore(true);
     
     if (activeTab === 'groups') {
-      await loadGroups(1, false, groupSearchQuery, selectedCountry);
+      await loadGroups(1, false, groupSearchQuery, selectedCountry, selectedHealthCondition);
     } else {
       await loadBuddies();
     }
     
     setIsRefreshing(false);
-  }, [activeTab, loadGroups, loadBuddies, groupSearchQuery, selectedCountry]);
+  }, [activeTab, loadGroups, loadBuddies, groupSearchQuery, selectedCountry, selectedHealthCondition]);
 
   const handleJoinGroup = useCallback(async (groupId: string) => {
     if (!isAuthenticated) {
@@ -264,13 +532,48 @@ export default function GroupsScreen() {
     router.push(`/conversation/${userId}`);
   }, [router]);
 
+  // Random falling star effect
+  useEffect(() => {
+    const createFallingStar = () => {
+      const id = fallingStarIdRef.current++;
+      setFallingStars((prev) => [...prev, { id, key: Date.now() + id }]);
+    };
+    
+    // Create first falling star after a random delay (2-5 seconds)
+    const initialDelay = 2000 + Math.random() * 3000;
+    const initialTimeout = setTimeout(createFallingStar, initialDelay);
+    
+    // Then create falling stars at random intervals (3-8 seconds) - more frequent
+    let currentTimeout: NodeJS.Timeout;
+    const scheduleNext = () => {
+      const delay = 3000 + Math.random() * 5000; // 3-8 seconds
+      currentTimeout = setTimeout(() => {
+        createFallingStar();
+        scheduleNext();
+      }, delay);
+    };
+    
+    scheduleNext();
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+    };
+  }, []);
+  
+  const removeFallingStar = useCallback((id: number) => {
+    setFallingStars((prev) => prev.filter((star) => star.id !== id));
+  }, []);
+
   const loadMore = useCallback(() => {
     if (activeTab === 'groups' && !isLoading && hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
-      loadGroups(nextPage, true, groupSearchQuery, selectedCountry);
+      loadGroups(nextPage, true, groupSearchQuery, selectedCountry, selectedHealthCondition);
     }
-  }, [activeTab, isLoading, hasMore, page, groupSearchQuery, selectedCountry, loadGroups]);
+  }, [activeTab, isLoading, hasMore, page, groupSearchQuery, selectedCountry, selectedHealthCondition, loadGroups]);
 
   const filteredGroups = useMemo(() => {
     return groups.filter((group) => {
@@ -339,6 +642,7 @@ export default function GroupsScreen() {
           </View>
 
           <View style={styles.groupFooter}>
+            <View style={styles.groupFooterSpacer} />
             <GlassButton
               title={item.isMember ? 'Joined' : 'Join'}
               onPress={() => onJoin(item._id)}
@@ -492,6 +796,21 @@ export default function GroupsScreen() {
       colors={colors.backgroundGradient as readonly [string, string, string]}
       style={styles.container}
     >
+      {/* Star field effect */}
+      <View style={styles.starField}>
+        {Array.from({ length: 50 }).map((_, i) => (
+          <AnimatedStar key={i} index={i} />
+        ))}
+      </View>
+      
+      {/* Falling stars */}
+      {fallingStars.map((star) => (
+        <FallingStar
+          key={star.key}
+          onComplete={() => removeFallingStar(star.id)}
+        />
+      ))}
+      
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Groups / Buddies</Text>
@@ -511,7 +830,7 @@ export default function GroupsScreen() {
         )}
       </View>
 
-      {/* Tabs */}
+      {/* Tabs - More prominent with better spacing */}
       <View style={styles.tabsContainer}>
         <Pressable
           style={[styles.tab, activeTab === 'groups' && [styles.tabActive, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]]}
@@ -541,134 +860,161 @@ export default function GroupsScreen() {
         </Pressable>
       </View>
 
-      {/* Search */}
+      {/* Search Bar - More prominent with better spacing */}
       <View style={styles.searchContainer}>
         <GlassInput
           value={activeTab === 'groups' ? groupSearchQuery : buddySearchQuery}
           onChangeText={activeTab === 'groups' ? setGroupSearchQuery : setBuddySearchQuery}
           placeholder={activeTab === 'groups' ? 'Search groups...' : 'Search users...'}
           style={styles.searchInput}
+          icon="search"
         />
       </View>
 
       {/* Groups Tab Content */}
       {activeTab === 'groups' && (
         <>
-          {/* Filter Tabs */}
-          <View style={styles.filterTabs}>
+          {/* Filters Row - Compact with filter button */}
+          <View style={styles.filtersRow}>
+            <View style={styles.filterChipsContainer}>
+              <Pressable
+                style={[styles.filterChip, selectedFilter === 'all' && styles.filterChipActive]}
+                onPress={() => setSelectedFilter('all')}
+              >
+                <Text style={[styles.filterChipText, selectedFilter === 'all' && styles.filterChipTextActive]}>
+                  All Groups
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.filterChip, selectedFilter === 'joined' && styles.filterChipActive]}
+                onPress={() => setSelectedFilter('joined')}
+              >
+                <Text style={[styles.filterChipText, selectedFilter === 'joined' && styles.filterChipTextActive]}>
+                  My Groups
+                </Text>
+              </Pressable>
+              {selectedCountry && (
+                <Pressable
+                  style={[styles.filterChip, styles.filterChipCountry]}
+                  onPress={() => {
+                    setShowFilterModal(true);
+                  }}
+                >
+                  <Ionicons name="location" size={14} color={colors.primary} />
+                  <Text style={[styles.filterChipText, { color: colors.primary }]}>
+                    {getCountryName(selectedCountry)}
+                  </Text>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setSelectedCountry(null);
+                    }}
+                    style={styles.filterChipClose}
+                  >
+                    <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+                  </Pressable>
+                </Pressable>
+              )}
+              {selectedHealthCondition && (
+                <Pressable
+                  style={[styles.filterChip, styles.filterChipCountry]}
+                  onPress={() => {
+                    setShowFilterModal(true);
+                  }}
+                >
+                  <Ionicons name="medical" size={14} color={colors.primary} />
+                  <Text style={[styles.filterChipText, { color: colors.primary }]}>
+                    {selectedHealthCondition}
+                  </Text>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setSelectedHealthCondition(null);
+                    }}
+                    style={styles.filterChipClose}
+                  >
+                    <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+                  </Pressable>
+                </Pressable>
+              )}
+            </View>
             <Pressable
-              style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
-              onPress={() => setSelectedFilter('all')}
+              style={[styles.filterButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
+              onPress={() => setShowFilterModal(true)}
             >
-              <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
-                All Groups
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.filterTab, selectedFilter === 'joined' && styles.filterTabActive]}
-              onPress={() => setSelectedFilter('joined')}
-            >
-              <Text style={[styles.filterTabText, selectedFilter === 'joined' && styles.filterTabTextActive]}>
-                My Groups
-              </Text>
+              <Ionicons name="options" size={20} color={colors.text} />
             </Pressable>
           </View>
 
-          {/* Country Filter */}
-          <View style={styles.countryFilterContainer}>
-            <View style={styles.countryFilterHeader}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.countryFilterScroll}
-                removeClippedSubviews={true}
-                scrollEventThrottle={16}
-                decelerationRate="fast"
-              >
+          {/* Inline Filter Section - Appears between filter chips and groups list */}
+          {showFilterModal && (
+            <View style={[styles.inlineFilterContainer, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}>
+              <View style={styles.inlineFilterHeader}>
+                <Text style={[styles.inlineFilterTitle, { color: colors.text }]}>Filters</Text>
                 <Pressable
-                  style={[styles.countryFilterChip, selectedCountry === null && styles.countryFilterChipActive]}
                   onPress={() => {
-                    setSelectedCountry(null);
+                    setShowFilterModal(false);
                     setCountrySearchQuery('');
-                    setShowCountrySearch(false);
+                    setHealthConditionSearchQuery('');
                   }}
+                  style={styles.inlineFilterClose}
                 >
-                  <Text style={[styles.countryFilterText, selectedCountry === null && styles.countryFilterTextActive]}>
-                    All Countries
-                  </Text>
+                  <Ionicons name="close" size={24} color={colors.text} />
                 </Pressable>
-                <Pressable
-                  style={[styles.countryFilterChip, styles.countryFilterChipSearch, showCountrySearch && styles.countryFilterChipSearchActive]}
-                  onPress={() => {
-                    setShowCountrySearch(!showCountrySearch);
-                    if (!showCountrySearch) {
-                      setCountrySearchQuery('');
-                    }
-                  }}
-                >
-                  <Ionicons name="search" size={16} color={showCountrySearch ? colors.white : colors.primary} />
-                  <Text style={[styles.countryFilterText, { color: showCountrySearch ? colors.white : colors.primary, marginLeft: SPACING.xs, fontWeight: '600' }]}>
-                    Search Country
-                  </Text>
-                </Pressable>
-                {!showCountrySearch && COUNTRIES.filter(c => c.code !== 'global').slice(0, 5).map((country) => (
-                  <Pressable
-                    key={country.code}
-                    style={[styles.countryFilterChip, selectedCountry === country.code && styles.countryFilterChipActive]}
-                    onPress={() => setSelectedCountry(country.code)}
-                  >
-                    <Text style={[styles.countryFilterText, selectedCountry === country.code && styles.countryFilterTextActive]}>
-                      {country.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
+              </View>
 
-            {/* Country Search Input and Results */}
-            {showCountrySearch && (
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={insets.top + 100}
-              >
-                <View style={styles.countrySearchContainer}>
-                  <GlassInput
-                    value={countrySearchQuery}
-                    onChangeText={setCountrySearchQuery}
-                    placeholder="Search for a country..."
-                    icon="search"
-                    style={styles.countrySearchInput}
-                    autoFocus={true}
-                  />
-                  
-                  {countrySearchQuery.trim() && (
-                    <View style={[styles.countryResultsContainer, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]}>
-                      <FlatList
-                        data={COUNTRIES.filter((country) => {
+              <ScrollView style={styles.inlineFilterScroll} showsVerticalScrollIndicator={false}>
+                  {/* Country Filter Section */}
+                  <View style={styles.filterSection}>
+                    <View style={styles.filterSectionTitleContainer}>
+                      <Ionicons name="location" size={18} color={colors.primary} />
+                      <Text style={[styles.filterSectionTitle, { color: colors.text }]}>
+                        Filter by Country
+                      </Text>
+                    </View>
+                    <View style={styles.filterSearchContainer}>
+                      <GlassInput
+                        value={countrySearchQuery}
+                        onChangeText={setCountrySearchQuery}
+                        placeholder="Search for a country..."
+                        icon="search"
+                        style={styles.filterSearchInput}
+                      />
+                    </View>
+                    <View style={[styles.filterResultsContainer, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]}>
+                      {COUNTRIES.filter((country) => {
+                        if (country.code === 'global') return false;
+                        if (!countrySearchQuery.trim()) return true;
+                        const query = countrySearchQuery.toLowerCase();
+                        return (
+                          country.name.toLowerCase().includes(query) ||
+                          country.code.toLowerCase().includes(query)
+                        );
+                      }).length > 0 ? (
+                        COUNTRIES.filter((country) => {
                           if (country.code === 'global') return false;
+                          if (!countrySearchQuery.trim()) return true;
                           const query = countrySearchQuery.toLowerCase();
                           return (
                             country.name.toLowerCase().includes(query) ||
                             country.code.toLowerCase().includes(query)
                           );
-                        })}
-                        keyExtractor={(item) => item.code}
-                        renderItem={({ item }) => (
+                        }).map((item) => (
                           <Pressable
+                            key={item.code}
                             style={[
-                              styles.countryResultItem,
+                              styles.filterResultItem,
                               { borderBottomColor: colors.glass.border },
-                              selectedCountry === item.code && [styles.countryResultItemActive, { backgroundColor: 'rgba(96, 165, 250, 0.1)' }],
+                              selectedCountry === item.code && [styles.filterResultItemActive, { backgroundColor: 'rgba(96, 165, 250, 0.1)' }],
                             ]}
                             onPress={() => {
                               setSelectedCountry(item.code);
                               setCountrySearchQuery('');
-                              setShowCountrySearch(false);
                             }}
                           >
                             <Text
                               style={[
-                                styles.countryResultText,
+                                styles.filterResultText,
                                 { color: colors.text },
                                 selectedCountry === item.code && { color: colors.primary, fontWeight: '600' },
                               ]}
@@ -679,28 +1025,88 @@ export default function GroupsScreen() {
                               <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                             )}
                           </Pressable>
-                        )}
-                        style={styles.countryResultsList}
-                        contentContainerStyle={styles.countryResultsListContent}
-                        keyboardShouldPersistTaps="handled"
-                        removeClippedSubviews={true}
-                        maxToRenderPerBatch={20}
-                        windowSize={10}
-                        initialNumToRender={20}
-                        updateCellsBatchingPeriod={50}
-                        scrollEventThrottle={16}
-                        ListEmptyComponent={
-                          <View style={styles.countryResultsEmpty}>
-                            <Text style={[styles.countryResultsEmptyText, { color: colors.textMuted }]}>No countries found</Text>
-                          </View>
-                        }
+                        ))
+                      ) : (
+                        <View style={styles.filterResultsEmpty}>
+                          <Text style={[styles.filterResultsEmptyText, { color: colors.textMuted }]}>
+                            {countrySearchQuery.trim() ? 'No countries found' : 'Select a country'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Health Condition Filter Section */}
+                  <View style={styles.filterSection}>
+                    <View style={styles.filterSectionTitleContainer}>
+                      <Ionicons name="medical" size={18} color={colors.primary} />
+                      <Text style={[styles.filterSectionTitle, { color: colors.text }]}>
+                        Filter by Health Condition
+                      </Text>
+                    </View>
+                    <View style={styles.filterSearchContainer}>
+                      <GlassInput
+                        value={healthConditionSearchQuery}
+                        onChangeText={setHealthConditionSearchQuery}
+                        placeholder="Search for a health condition..."
+                        icon="search"
+                        style={styles.filterSearchInput}
                       />
                     </View>
-                  )}
-                </View>
-              </KeyboardAvoidingView>
-            )}
-          </View>
+                    <View style={[styles.filterResultsContainer, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]}>
+                      {HEALTH_CONDITIONS.filter((condition) => {
+                        if (!healthConditionSearchQuery.trim()) return true;
+                        const query = healthConditionSearchQuery.toLowerCase();
+                        return condition.toLowerCase().includes(query);
+                      }).length > 0 ? (
+                        HEALTH_CONDITIONS.filter((condition) => {
+                          if (!healthConditionSearchQuery.trim()) return true;
+                          const query = healthConditionSearchQuery.toLowerCase();
+                          return condition.toLowerCase().includes(query);
+                        }).map((item) => (
+                          <Pressable
+                            key={item}
+                            style={[
+                              styles.filterResultItem,
+                              { borderBottomColor: colors.glass.border },
+                              selectedHealthCondition === item && [styles.filterResultItemActive, { backgroundColor: 'rgba(96, 165, 250, 0.1)' }],
+                            ]}
+                            onPress={() => {
+                              setSelectedHealthCondition(item);
+                              setHealthConditionSearchQuery('');
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.filterResultText,
+                                { color: colors.text },
+                                selectedHealthCondition === item && { color: colors.primary, fontWeight: '600' },
+                              ]}
+                            >
+                              {item}
+                            </Text>
+                            {selectedHealthCondition === item && (
+                              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                            )}
+                          </Pressable>
+                        ))
+                      ) : (
+                        <View style={styles.filterResultsEmpty}>
+                          <Text style={[styles.filterResultsEmptyText, { color: colors.textMuted }]}>
+                            {healthConditionSearchQuery.trim() ? 'No health conditions found' : 'Select a health condition'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Divider line between filters and groups */}
+          {showFilterModal && (
+            <View style={[styles.filterDivider, { borderBottomColor: colors.glass.border }]} />
+          )}
 
           {/* Groups List */}
           <FlatList
@@ -847,7 +1253,8 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   tab: {
@@ -877,37 +1284,99 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   searchInput: {
     marginBottom: 0,
   },
-  filterTabs: {
+  filtersRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xs,
+    paddingBottom: SPACING.md,
     gap: SPACING.sm,
   },
-  countryFilterContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.glass.border,
+  filterChipsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
   },
-  countryFilterHeader: {
-    paddingVertical: SPACING.sm,
-  },
-  countrySearchContainer: {
+  filterChip: {
+    paddingVertical: SPACING.xs + 2,
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  countrySearchInput: {
-    marginBottom: SPACING.sm,
-  },
-  countryResultsContainer: {
-    maxHeight: 300,
+    borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.glass.backgroundDark,
-    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(96, 165, 250, 0.4)',
+  },
+  filterChipCountry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+  },
+  filterChipClose: {
+    marginLeft: SPACING.xs,
+  },
+  filterChipText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+  },
+  filterChipTextActive: {
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  countryFilterContainer: {
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    padding: SPACING.md,
+    maxHeight: 400,
+  },
+  countryFilterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  countryFilterTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  countryFilterClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  countrySearchContainer: {
+    marginBottom: SPACING.md,
+  },
+  countrySearchInput: {
+    marginBottom: 0,
+  },
+  countryResultsContainer: {
+    maxHeight: 250,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   countryResultsList: {
@@ -978,10 +1447,138 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(96, 165, 250, 0.1)',
     borderColor: COLORS.primary,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  inlineFilterContainer: {
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    borderTopWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    maxHeight: 400,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  inlineFilterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  inlineFilterTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  inlineFilterClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inlineFilterScroll: {
+    maxHeight: 350,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+  },
+  filterDivider: {
+    borderBottomWidth: 1,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+  },
+  filterSection: {
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  filterSectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  filterSectionTitle: {
+    ...TYPOGRAPHY.h3,
+  },
+  filterSearchContainer: {
+    marginBottom: SPACING.md,
+  },
+  filterSearchInput: {
+    marginBottom: 0,
+  },
+  filterResultsContainer: {
+    maxHeight: 200,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  filterResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+  },
+  filterResultItemActive: {
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+  },
+  filterResultText: {
+    ...TYPOGRAPHY.body,
+  },
+  filterResultsEmpty: {
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  filterResultsEmptyText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+  },
+  starField: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  fallingStarContainer: {
+    position: 'absolute',
+    top: -20,
+    width: 6,
+    height: 30,
+    zIndex: 1,
+  },
+  fallingStar: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#60A5FA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  fallingStarTrail: {
+    position: 'absolute',
+    top: 6,
+    left: 1.5,
+    width: 3,
+    height: 24,
+    borderRadius: 1.5,
   },
   modalContent: {
     backgroundColor: COLORS.background,
@@ -1117,10 +1714,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   groupFooter: {
+    flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: COLORS.glass.border,
     padding: SPACING.md,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  groupFooterSpacer: {
+    flex: 1,
   },
   buddyCard: {
     marginBottom: SPACING.md,
@@ -1202,5 +1804,47 @@ const styles = StyleSheet.create({
   createGroupButtonText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
+  },
+  starField: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  fallingStarContainer: {
+    position: 'absolute',
+    top: -20,
+    width: 6,
+    height: 30,
+    zIndex: 1,
+  },
+  fallingStar: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#60A5FA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  fallingStarTrail: {
+    position: 'absolute',
+    top: 6,
+    left: 1.5,
+    width: 3,
+    height: 24,
+    borderRadius: 1.5,
   },
 });

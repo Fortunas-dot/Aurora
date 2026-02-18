@@ -184,7 +184,6 @@ export default function CreateGroupScreen() {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
   const [country, setCountry] = useState<string>('global');
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -343,7 +342,7 @@ export default function CreateGroupScreen() {
         name.trim(),
         description.trim(),
         tags,
-        isPrivate,
+        false, // Always public - private groups removed
         country,
         avatarUrl,
         coverImageUrl,
@@ -519,24 +518,6 @@ export default function CreateGroupScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
             </Pressable>
-          </GlassCard>
-
-          {/* Privacy Toggle */}
-          <GlassCard style={styles.inputCard} padding="lg">
-            <View style={styles.privacyRow}>
-              <View style={styles.privacyInfo}>
-                <Text style={styles.label}>Private group</Text>
-                <Text style={styles.privacyDescription}>
-                  Only members can see the group and view posts
-                </Text>
-              </View>
-              <Switch
-                value={isPrivate}
-                onValueChange={setIsPrivate}
-                trackColor={{ false: COLORS.glass.border, true: COLORS.primary }}
-                thumbColor={COLORS.white}
-              />
-            </View>
           </GlassCard>
 
           {/* Tags Section */}
@@ -854,23 +835,9 @@ const styles = StyleSheet.create({
   descriptionInput: {
     minHeight: 100,
     textAlignVertical: 'top',
-    paddingTop: 38,
+    paddingTop: SPACING.sm,
     ...TYPOGRAPHY.body,
     color: COLORS.text,
-  },
-  privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  privacyInfo: {
-    flex: 1,
-    marginRight: SPACING.md,
-  },
-  privacyDescription: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginTop: SPACING.xs,
   },
   tagsCard: {
     marginBottom: SPACING.md,

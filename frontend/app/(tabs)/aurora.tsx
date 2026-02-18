@@ -344,12 +344,14 @@ export default function AuroraScreen() {
         {/* Welcome Section */}
         <View style={[styles.welcomeSection, { paddingTop: insets.top + SPACING.xl + SPACING.md }]}>
           <Text style={[styles.greeting, { color: colors.text }]}>{greeting}, {userName} 👋</Text>
-          <GlassCard style={styles.quoteCard} padding="md" gradient>
-            <View style={styles.quoteContainer}>
-              <Ionicons name="quote" size={24} color={colors.primary} style={styles.quoteIcon} />
-              <Text style={[styles.quoteText, { color: colors.text }]}>{dailyQuote}</Text>
-            </View>
-          </GlassCard>
+          {dailyQuote && (
+            <GlassCard style={styles.quoteCard} padding="md" gradient>
+              <View style={styles.quoteContainer}>
+                <Ionicons name="quote" size={24} color={colors.primary} style={styles.quoteIcon} />
+                <Text style={[styles.quoteText, { color: colors.text }]}>{dailyQuote}</Text>
+              </View>
+            </GlassCard>
+          )}
         </View>
 
         {/* Quick Stats */}
@@ -730,6 +732,7 @@ const styles = StyleSheet.create({
   welcomeSection: {
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.lg,
+    alignItems: 'center',
     // paddingTop is set inline to include safe area insets
   },
   greeting: {
@@ -740,17 +743,22 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     color: COLORS.text,
     marginBottom: SPACING.md,
+    textAlign: 'center',
   },
   quoteCard: {
     marginTop: SPACING.sm,
+    width: '100%',
+    maxWidth: '100%',
   },
   quoteContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    width: '100%',
   },
   quoteIcon: {
     marginRight: SPACING.sm,
     marginTop: 2,
+    flexShrink: 0,
   },
   quoteText: {
     ...TYPOGRAPHY.body,
@@ -758,6 +766,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontStyle: 'italic',
     lineHeight: 24,
+    flexShrink: 1,
   },
   statsSection: {
     paddingHorizontal: SPACING.md,

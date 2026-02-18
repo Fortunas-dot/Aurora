@@ -333,7 +333,7 @@ export default function ChatScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Berichten</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
         <Pressable style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={handleCreateNewChat}>
           <Ionicons name="create-outline" size={24} color={colors.text} />
         </Pressable>

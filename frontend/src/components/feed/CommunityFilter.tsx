@@ -38,8 +38,17 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   const hasEverHadCommunitiesRef = useRef(false);
   // Track if we've already determined the empty state - prevent re-evaluation
   const emptyStateDeterminedRef = useRef(false);
+  // Track communities length to avoid dependency issues
+  const communitiesLengthRef = useRef(0);
 
   const loadCommunities = useCallback(async () => {
+    // CRITICAL FIX: If we've already determined there are no communities, NEVER load again
+    // This prevents any reloading attempts, even if the function is called
+    if (emptyStateDeterminedRef.current && communitiesLengthRef.current === 0 && !hasEverHadCommunitiesRef.current) {
+      console.log('🚫 Skipping loadCommunities - already determined no communities exist');
+      return;
+    }
+    
     // Prevent multiple simultaneous loads
     if (isLoadingRef.current || !mountedRef.current) {
       return;
@@ -61,6 +70,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
       if (response.success && response.data) {
         // Filter to show only groups where user is a member
         const userCommunities = response.data.filter((group) => group.isMember);
+        communitiesLengthRef.current = userCommunities.length;
         setCommunities(userCommunities);
         // Track if we've ever had communities
         if (userCommunities.length > 0) {
@@ -78,24 +88,32 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           if (mountedRef.current && !hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
             setShouldShowEmptyState(true);
             emptyStateDeterminedRef.current = true;
+            // CRITICAL: Mark loadAttempted as true to prevent any future loads
+            loadAttemptedRef.current = true;
           }
         }
       } else {
+        communitiesLengthRef.current = 0;
         setCommunities([]);
         // Show empty state only if we've never had communities and haven't determined it yet
         if (mountedRef.current && !hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
           setShouldShowEmptyState(true);
           emptyStateDeterminedRef.current = true;
+          // CRITICAL: Mark loadAttempted as true to prevent any future loads
+          loadAttemptedRef.current = true;
         }
       }
     } catch (error) {
       if (!mountedRef.current) return;
       console.error('Error loading communities:', error);
+      communitiesLengthRef.current = 0;
       setCommunities([]);
       // Show empty state only if we've never had communities and haven't determined it yet
       if (!hasEverHadCommunitiesRef.current && !emptyStateDeterminedRef.current) {
         setShouldShowEmptyState(true);
         emptyStateDeterminedRef.current = true;
+        // CRITICAL: Mark loadAttempted as true to prevent any future loads
+        loadAttemptedRef.current = true;
       }
     } finally {
       if (mountedRef.current) {
@@ -115,12 +133,22 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   useEffect(() => {
     mountedRef.current = true;
     
+    // CRITICAL: If we've already determined there are no communities, NEVER load again
+    // This is the key fix - once we know there are no communities, stop all loading attempts
+    if (emptyStateDeterminedRef.current && communitiesLengthRef.current === 0 && !hasEverHadCommunitiesRef.current) {
+      // We already know there are no communities - do NOTHING, don't reload
+      return () => {
+        mountedRef.current = false;
+      };
+    }
+    
     // Only load if authenticated and not already loaded/attempted
     if (isAuthenticated && !loadAttemptedRef.current) {
       loadCommunities();
     } else if (!isAuthenticated) {
       // Reset only if we were authenticated before
       if (hasLoadedRef.current) {
+        communitiesLengthRef.current = 0;
         setCommunities([]);
         hasLoadedRef.current = false;
         setHasLoaded(false);
@@ -128,6 +156,7 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
         hasEverHadCommunitiesRef.current = false;
         emptyStateDeterminedRef.current = false;
         setShouldShowEmptyState(false);
+        setIsLoading(false);
       }
     }
     
@@ -190,15 +219,15 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           </Text>
         </Pressable>
 
-        {/* Loading State for Communities */}
-        {isLoading && (
+        {/* Loading State for Communities - Only show on initial load, never after empty state is determined */}
+        {isLoading && !emptyStateDeterminedRef.current && (
           <View style={styles.loadingChip}>
             <LoadingSpinner size="sm" />
           </View>
         )}
 
         {/* Community Chips */}
-        {!isLoading && communities.map((community) => {
+        {(!isLoading || emptyStateDeterminedRef.current) && communities.map((community) => {
           const isSelected = selectedCommunity === community._id;
           return (
             <Pressable
@@ -224,8 +253,8 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
           );
         })}
 
-        {/* Empty State - Only show when explicitly set and not loading, and only once determined */}
-        {shouldShowEmptyState && !isLoading && hasLoaded && emptyStateDeterminedRef.current && communities.length === 0 && (
+        {/* Empty State - Only show when explicitly set, stable and never reloads */}
+        {shouldShowEmptyState && emptyStateDeterminedRef.current && communities.length === 0 && (
           <View style={styles.emptyContainer} key="empty-state">
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>
@@ -235,11 +264,15 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Only re-render if these specific props change (ignore function references as they're usually stable)
-  return (
+  // This prevents unnecessary re-renders that could trigger useEffect
+  const propsEqual = (
     prevProps.selectedCommunity === nextProps.selectedCommunity &&
     prevProps.isAuthenticated === nextProps.isAuthenticated &&
     prevProps.showAllPublicPosts === nextProps.showAllPublicPosts
   );
+  
+  // If props are equal, don't re-render (return true means "skip render")
+  return propsEqual;
 });
 
 const styles = StyleSheet.create({

@@ -18,6 +18,7 @@ import { PostCard } from '../../src/components/post/PostCard';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { userService, UserProfile } from '../../src/services/user.service';
 import { postService, Post } from '../../src/services/post.service';
+import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 
@@ -347,7 +348,21 @@ export default function UserProfileScreen() {
           ) : (
             <FlatList
               data={posts}
-              renderItem={({ item }) => <PostCard post={item} />}
+              renderItem={({ item }) => (
+                <PostCard
+                  post={item}
+                  onPress={() => router.push(`/post/${item._id}`)}
+                  onShare={async () => {
+                    try {
+                      const authorName = item.author?.displayName || item.author?.username || 'Someone';
+                      const content = item.content || '';
+                      await shareService.sharePost(item._id, content, authorName);
+                    } catch (error) {
+                      console.error('Error sharing post:', error);
+                    }
+                  }}
+                />
+              )}
               keyExtractor={(item) => item._id}
               scrollEnabled={false}
               onEndReached={handleLoadMore}

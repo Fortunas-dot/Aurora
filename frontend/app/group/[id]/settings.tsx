@@ -75,7 +75,6 @@ export default function GroupSettingsScreen() {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
   const [country, setCountry] = useState<string>('global');
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,7 +107,6 @@ export default function GroupSettingsScreen() {
         setName(groupData.name);
         setDescription(groupData.description || '');
         setTags(groupData.tags || []);
-        setIsPrivate(groupData.isPrivate || false);
         setCountry(groupData.country || 'global');
         setAvatarUri(groupData.avatar || null);
         if (groupData.coverImage) {
@@ -206,7 +204,7 @@ export default function GroupSettingsScreen() {
         name: name.trim(),
         description: description.trim(),
         tags,
-        isPrivate,
+        isPrivate: false, // Always public - private groups removed
         country,
         avatar: avatarUri || undefined,
         coverImage: coverImageUrl,
@@ -316,24 +314,6 @@ export default function GroupSettingsScreen() {
               maxLength={1000}
               style={styles.descriptionInput}
             />
-          </GlassCard>
-
-          {/* Privacy */}
-          <GlassCard style={styles.card} padding="lg">
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Private Group</Text>
-                <Text style={styles.switchHint}>
-                  Only members can see and join this group
-                </Text>
-              </View>
-              <Switch
-                value={isPrivate}
-                onValueChange={setIsPrivate}
-                trackColor={{ false: COLORS.glass.border, true: COLORS.primary }}
-                thumbColor={COLORS.white}
-              />
-            </View>
           </GlassCard>
 
           {/* Location */}

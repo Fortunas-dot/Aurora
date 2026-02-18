@@ -121,7 +121,7 @@ export default function SearchUsersScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Zoek gebruikers</Text>
+          <Text style={styles.headerTitle}>Search users</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -130,7 +130,7 @@ export default function SearchUsersScreen() {
           <GlassInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Zoek op gebruikersnaam..."
+            placeholder="Search by username..."
             autoFocus
             style={styles.searchInput}
           />
@@ -140,9 +140,9 @@ export default function SearchUsersScreen() {
         {searchQuery.length < 2 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Begin met typen om te zoeken</Text>
+            <Text style={styles.emptyText}>Start typing to search</Text>
             <Text style={styles.emptySubtext}>
-              Zoek minimaal 2 karakters
+              Search at least 2 characters
             </Text>
           </View>
         ) : isLoading ? (

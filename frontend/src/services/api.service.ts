@@ -185,7 +185,7 @@ class ApiService {
                 : `Server error (${response.status}). Please try again later.`
             };
           } else {
-            errorData = { message: text || response.statusText || `HTTP ${response.status}` };
+          errorData = { message: text || response.statusText || `HTTP ${response.status}` };
           }
         }
         

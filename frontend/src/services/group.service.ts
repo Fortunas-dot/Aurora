@@ -25,12 +25,14 @@ class GroupService {
     limit: number = 20,
     search?: string,
     tag?: string,
-    country?: string
+    country?: string,
+    healthCondition?: string
   ): Promise<ApiResponse<Group[]>> {
     let endpoint = `/groups?page=${page}&limit=${limit}`;
     if (search) endpoint += `&search=${encodeURIComponent(search)}`;
     if (tag) endpoint += `&tag=${encodeURIComponent(tag)}`;
     if (country) endpoint += `&country=${encodeURIComponent(country)}`;
+    if (healthCondition) endpoint += `&healthCondition=${encodeURIComponent(healthCondition)}`;
     
     return apiService.get<Group[]>(endpoint);
   }

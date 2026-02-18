@@ -354,8 +354,8 @@ export default function JournalInsightsScreen() {
 
   // Redirect non‑premium users to subscription via effect (avoid navigation in render)
   useEffect(() => {
-    if (isAuthenticated && !isPremium && !isPremiumLoading) {
-      router.replace('/subscription');
+  if (isAuthenticated && !isPremium && !isPremiumLoading) {
+    router.replace('/subscription');
     }
   }, [isAuthenticated, isPremium, isPremiumLoading, router]);
 
