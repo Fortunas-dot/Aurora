@@ -385,21 +385,6 @@ export default function IdeasScreen() {
         </View>
       </View>
 
-      {/* Info Banner */}
-      <View style={styles.infoBannerContainer}>
-        <GlassCard style={styles.infoBanner} padding="md" gradient>
-          <View style={styles.infoBannerContent}>
-            <Ionicons name="eye" size={24} color={COLORS.primary} />
-            <View style={styles.infoBannerText}>
-              <Text style={styles.infoBannerTitle}>Your Voice Matters</Text>
-              <Text style={styles.infoBannerDescription}>
-                We watch this page 24/7 and listen to our users. You decide what we'll add next to Aurora.
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
-      </View>
-
       {/* Ideas List */}
       <FlatList
         data={ideas.filter(item => item && item._id)}
@@ -416,6 +401,23 @@ export default function IdeasScreen() {
         }
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          ideas.length === 0 && !isLoading ? (
+            <View style={styles.infoBannerContainer}>
+              <GlassCard style={styles.infoBanner} padding="md" gradient>
+                <View style={styles.infoBannerContent}>
+                  <Ionicons name="eye" size={24} color={COLORS.primary} />
+                  <View style={styles.infoBannerText}>
+                    <Text style={styles.infoBannerTitle}>Your Voice Matters</Text>
+                    <Text style={styles.infoBannerDescription}>
+                      We watch this page 24/7 and listen to our users. You decide what we'll add next to Aurora.
+                    </Text>
+                  </View>
+                </View>
+              </GlassCard>
+            </View>
+          ) : null
+        }
         ListFooterComponent={
           isLoading && ideas.length > 0 ? (
             <View style={styles.loadingFooter}>

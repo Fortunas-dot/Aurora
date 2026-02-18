@@ -412,7 +412,7 @@ export default function JournalSettingsScreen() {
                   />
                   <View style={styles.privacyTextContainer}>
                     <Text style={styles.privacyTitle}>
-                      {isPublic ? 'Public' : 'Private'}
+                      {isPublic ? 'Public Journal' : 'Private Journal'}
                     </Text>
                     <Text style={styles.privacyDescription}>
                       {isPublic
@@ -421,15 +421,20 @@ export default function JournalSettingsScreen() {
                     </Text>
                   </View>
                 </View>
-                <Switch
-                  value={isPublic}
-                  onValueChange={setIsPublic}
-                  trackColor={{
-                    false: COLORS.glass.border,
-                    true: COLORS.primary + '40',
-                  }}
-                  thumbColor={isPublic ? COLORS.primary : COLORS.textMuted}
-                />
+                <View style={styles.switchContainer}>
+                  <Text style={[styles.switchLabel, { color: COLORS.textMuted }]}>
+                    {isPublic ? 'Public' : 'Private'}
+                  </Text>
+                  <Switch
+                    value={isPublic}
+                    onValueChange={setIsPublic}
+                    trackColor={{
+                      false: COLORS.glass.border,
+                      true: COLORS.primary + '40',
+                    }}
+                    thumbColor={isPublic ? COLORS.primary : COLORS.textMuted}
+                  />
+                </View>
               </View>
             </GlassCard>
           </View>
@@ -629,6 +634,16 @@ const styles = StyleSheet.create({
   privacyDescription: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  switchContainer: {
+    alignItems: 'flex-end',
+    gap: SPACING.xs,
+  },
+  switchLabel: {
+    ...TYPOGRAPHY.caption,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   infoCard: {
     paddingVertical: SPACING.md,

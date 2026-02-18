@@ -73,11 +73,11 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
       case 'primary':
         return {
           container: {
-            backgroundColor: 'rgba(96, 165, 250, 0.2)',
-            borderColor: 'rgba(96, 165, 250, 0.4)',
+            backgroundColor: COLORS.primary,
+            borderColor: COLORS.primary,
           },
-          text: { color: COLORS.primary },
-          gradient: ['rgba(96, 165, 250, 0.3)', 'rgba(96, 165, 250, 0.1)'],
+          text: { color: COLORS.white },
+          gradient: ['rgba(96, 165, 250, 0.9)', 'rgba(96, 165, 250, 0.8)'],
         };
       case 'secondary':
         return {

@@ -199,23 +199,29 @@ export default function AuroraScreen() {
             duration: duration,
             delay: delay,
             useNativeDriver: false, // Cannot use native driver with percentage-based transforms
-            easing: Easing.inOut(Easing.ease),
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Smoother easing
           }),
           Animated.timing(animValue, {
             toValue: 0,
             duration: duration,
             useNativeDriver: false,
-            easing: Easing.inOut(Easing.ease),
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Smoother easing
           }),
         ])
       );
     };
 
-    Animated.parallel([
-      createAuroraAnimation(auroraAnim1, 12000, 0), // Slower for better performance
-      createAuroraAnimation(auroraAnim2, 15000, 2000),
-      createAuroraAnimation(auroraAnim3, 18000, 4000),
-    ]).start();
+    const animations = Animated.parallel([
+      createAuroraAnimation(auroraAnim1, 15000, 0), // Slower for better performance
+      createAuroraAnimation(auroraAnim2, 18000, 2000),
+      createAuroraAnimation(auroraAnim3, 20000, 4000),
+    ]);
+    
+    animations.start();
+    
+    return () => {
+      animations.stop();
+    };
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -317,9 +323,9 @@ export default function AuroraScreen() {
       </Animated.View>
       
       {/* Star field effect - Reduced for better performance */}
-      <View style={styles.starField} pointerEvents="none">
-        {Array.from({ length: 30 }).map((_, i) => (
-          <AnimatedStar key={i} index={i} />
+      <View style={styles.starField} pointerEvents="none" collapsable={false}>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <AnimatedStar key={`star-${i}`} index={i} />
         ))}
       </View>
 
@@ -331,8 +337,13 @@ export default function AuroraScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
-        scrollEventThrottle={16}
+        scrollEventThrottle={32}
         decelerationRate="normal"
+        nestedScrollEnabled={true}
+        overScrollMode="never"
+        bounces={true}
+        alwaysBounceVertical={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -634,6 +645,7 @@ const styles = StyleSheet.create({
     opacity: 0.5, // Slightly reduced for better performance
     overflow: 'hidden',
     pointerEvents: 'none',
+    ...(Platform.OS === 'android' && { renderToHardwareTextureAndroid: true }),
   },
   starField: {
     position: 'absolute',
@@ -653,6 +665,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    ...(Platform.OS === 'android' && { nestedScrollEnabled: true }),
   },
   scrollContent: {
     paddingBottom: SPACING.xxl, // Base padding, wordt dynamisch aangepast met safe area

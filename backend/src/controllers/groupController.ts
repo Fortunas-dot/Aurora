@@ -70,6 +70,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
 
     const groups = await Group.find(query)
       .populate('admins', 'username displayName avatar')
+      .populate('members', 'username displayName avatar avatarCharacter avatarBackgroundColor')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

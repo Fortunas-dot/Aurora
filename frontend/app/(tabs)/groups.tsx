@@ -642,6 +642,45 @@ export default function GroupsScreen() {
           </View>
 
           <View style={styles.groupFooter}>
+            {/* Member Avatars Stack */}
+            {item.members && item.members.length > 0 && (
+              <View style={styles.memberAvatarsContainer}>
+                {item.members.slice(0, 4).map((member, index) => (
+                  <View
+                    key={member._id || index}
+                    style={[
+                      styles.memberAvatarWrapper,
+                      { marginLeft: index > 0 ? -8 : 0 },
+                    ]}
+                  >
+                    <Avatar
+                      uri={member.avatar}
+                      name={member.displayName || member.username}
+                      userId={member._id}
+                      avatarCharacter={member.avatarCharacter}
+                      avatarBackgroundColor={member.avatarBackgroundColor}
+                      size="sm"
+                      showBorder={true}
+                    />
+                  </View>
+                ))}
+                {item.memberCount > 4 && (
+                  <View
+                    style={[
+                      styles.memberAvatarWrapper,
+                      styles.memberAvatarMore,
+                      { marginLeft: -8 },
+                    ]}
+                  >
+                    <View style={[styles.memberAvatarMoreContainer, { backgroundColor: colors.glass.backgroundDark, borderColor: colors.glass.border }]}>
+                      <Text style={[styles.memberAvatarMoreText, { color: colors.text }]}>
+                        +{item.memberCount - 4}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
             <View style={styles.groupFooterSpacer} />
             <GlassButton
               title={item.isMember ? 'Joined' : 'Join'}
@@ -652,7 +691,7 @@ export default function GroupsScreen() {
                 <Ionicons
                   name={item.isMember ? 'checkmark' : 'add'}
                   size={16}
-                  color={item.isMember ? colors.text : colors.primary}
+                  color={item.isMember ? colors.text : COLORS.white}
                   style={{ marginRight: SPACING.xs }}
                 />
               }
@@ -1720,6 +1759,39 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  memberAvatarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
+  },
+  memberAvatarWrapper: {
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: COLORS.glass.background,
+    backgroundColor: COLORS.glass.background,
+  },
+  memberAvatarMore: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: COLORS.glass.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memberAvatarMoreContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  memberAvatarMoreText: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '600',
+    fontSize: 10,
   },
   groupFooterSpacer: {
     flex: 1,
