@@ -322,10 +322,6 @@ export default function AuroraScreen() {
           <AnimatedStar key={i} index={i} />
         ))}
       </View>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora AI</Text>
-      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -652,15 +648,6 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 1,
-  },
-  header: {
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.h2,
-    color: COLORS.text,
   },
   scrollView: {
     flex: 1,
