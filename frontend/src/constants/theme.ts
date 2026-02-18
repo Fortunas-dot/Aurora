@@ -168,36 +168,14 @@ export const SPACING = {
 
 import { getFontFamily } from '../utils/fontHelper';
 
-// SF Pro Text for body text (iOS native, fallback for others)
-// Wrapped in try-catch to prevent hot reload crashes
+// TEST: Temporarily using Times New Roman for all text to verify font changes work
 const getBodyFontFamily = (): string => {
-  try {
-    if (Platform.OS === 'ios') {
-      // On iOS, SF Pro Text is optimized for body text
-      return 'SF Pro Text';
-    }
-    // Android fallback - use Roboto for body text
-    return Platform.OS === 'android' ? 'Roboto' : 'System';
-  } catch {
-    // Fallback to system font if anything goes wrong
-    return Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) || 'System';
-  }
+  return 'Times New Roman';
 };
 
-// SF Pro Display for titles and large UI elements (iOS native, fallback for others)
-// Wrapped in try-catch to prevent hot reload crashes
+// TEST: Temporarily using Times New Roman for all headers to verify font changes work
 const getTitleFontFamily = (): string => {
-  try {
-    if (Platform.OS === 'ios') {
-      // On iOS, SF Pro Display is optimized for large text/headers
-      return 'SF Pro Display';
-    }
-    // Android fallback - use Roboto for headings
-    return Platform.OS === 'android' ? 'Roboto' : 'System';
-  } catch {
-    // Fallback to system font if anything goes wrong
-    return Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) || 'System';
-  }
+  return 'Times New Roman';
 };
 
 // Evaluate fonts once at module load, but with error handling

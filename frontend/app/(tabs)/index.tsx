@@ -206,7 +206,7 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
     
     animation.start((finished) => {
       if (finished) {
-        onComplete();
+      onComplete();
       }
     });
     
@@ -249,7 +249,7 @@ const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFill}
-        />
+      />
       </Animated.View>
       {/* Star */}
       <View style={feedStyles.fallingStar} />
@@ -345,6 +345,9 @@ export default function FeedScreen() {
   // Track loading state with ref to prevent race conditions
   const isLoadingRef = useRef(false);
   
+  // Store loadPosts function in ref to prevent infinite loops
+  const loadPostsRef = useRef<((pageNum?: number, append?: boolean) => Promise<void>) | null>(null);
+  
   // Load posts based on current filters
   const loadPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     // Prevent multiple simultaneous requests
@@ -389,7 +392,7 @@ export default function FeedScreen() {
           const postId = post._id.toString();
           return /^[0-9a-fA-F]{24}$/.test(postId);
         });
-
+        
         // Update therapist count banner:
         // 1) Prefer explicit value from backend when available
         // 2) Fallback: derive a stable 3–5 value from backend data (first post ID),
@@ -406,7 +409,7 @@ export default function FeedScreen() {
           const derivedCount = 3 + Math.abs(hash) % 3; // 3, 4, or 5
           setTherapistCount(derivedCount);
         }
-
+        
         if (append) {
           setPosts((prev) => [...prev, ...validPosts]);
         } else {
@@ -444,6 +447,11 @@ export default function FeedScreen() {
     }
   }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, isAuthenticated, showAllPublicPosts]);
 
+  // Update ref whenever loadPosts changes
+  useEffect(() => {
+    loadPostsRef.current = loadPosts;
+  }, [loadPosts]);
+
   // Track if initial load has been done
   const hasInitialLoadRef = useRef(false);
   
@@ -455,25 +463,31 @@ export default function FeedScreen() {
         if (!hasInitialLoadRef.current || posts.length === 0) {
           setPage(1);
           setHasMore(true);
-          loadPosts(1, false);
+          if (loadPostsRef.current) {
+            loadPostsRef.current(1, false);
+          }
           hasInitialLoadRef.current = true;
         }
       }
-    }, [isAuthenticated, loadPosts, posts.length])
+    }, [isAuthenticated, posts.length])
   );
 
   // Reload posts when filters change (with debounce to prevent rapid requests)
+  // NOTE: loadPosts is NOT in dependencies to prevent infinite loops
+  // We use loadPostsRef.current instead
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     
     // Debounce to prevent rapid successive requests
     const timeoutId = setTimeout(() => {
-      loadPosts(1, false);
+      if (loadPostsRef.current) {
+        loadPostsRef.current(1, false);
+      }
     }, 300);
     
     return () => clearTimeout(timeoutId);
-  }, [activeTab, selectedCommunity, sortOption, isSearching, showAllPublicPosts, loadPosts]);
+  }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, showAllPublicPosts]);
 
   // Update unread count on mount and focus
   useEffect(() => {
@@ -526,9 +540,11 @@ export default function FeedScreen() {
     setIsRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadPosts(1, false);
+    if (loadPostsRef.current) {
+      await loadPostsRef.current(1, false);
+    }
     setIsRefreshing(false);
-  }, [loadPosts]);
+  }, []); // No dependencies to prevent infinite loops
 
   const handleTabChange = (tab: FeedTab) => {
     if (tab === activeTab) return;
@@ -554,7 +570,7 @@ export default function FeedScreen() {
     setIsSearching(true);
     setPage(1);
     setHasMore(true);
-    loadPosts(1, false);
+    // loadPosts will be called automatically by the useEffect that watches searchQuery
   };
 
   const handleSearchExpandChange = (expanded: boolean) => {
@@ -598,9 +614,11 @@ export default function FeedScreen() {
     if (!isLoading && hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
-      loadPosts(nextPage, true);
+      if (loadPostsRef.current) {
+        loadPostsRef.current(nextPage, true);
+      }
     }
-  }, [isLoading, hasMore, page, loadPosts]);
+  }, [isLoading, hasMore, page]); // Removed loadPosts from dependencies
 
   const handleCreatePost = () => {
     if (!isAuthenticated) {
