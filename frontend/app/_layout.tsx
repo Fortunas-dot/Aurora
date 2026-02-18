@@ -46,21 +46,18 @@ export default function RootLayout() {
 
   // Load Unbounded Regular font for headers
   // Note: Make sure Unbounded-Regular.ttf is in frontend/assets/fonts/
-  // For now, we'll use an empty font map until the font file is added
-  // Once you add Unbounded-Regular.ttf to frontend/assets/fonts/, uncomment the line below
   const [fontsLoaded, fontError] = useFonts({
-    // 'Unbounded-Regular': require('../assets/fonts/Unbounded-Regular.ttf'),
-    // Uncomment the line above once you've added the font file
+    'Unbounded-Regular': require('../assets/fonts/Unbounded-Regular.ttf'),
   });
 
-  // Log font loading errors (non-blocking)
+  // Log font loading status
   useEffect(() => {
     if (fontError) {
       console.warn('⚠️ Font loading error:', fontError);
-    } else if (Object.keys({}).length === 0) {
-      console.log('ℹ️ Unbounded-Regular font not loaded. Using fallback. Add Unbounded-Regular.ttf to frontend/assets/fonts/ to enable it.');
+    } else if (fontsLoaded) {
+      console.log('✅ Unbounded-Regular font loaded successfully');
     }
-  }, [fontError]);
+  }, [fontError, fontsLoaded]);
 
   useEffect(() => {
     let isMounted = true;
@@ -267,9 +264,8 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user?._id]); // Only depend on auth state and user ID
 
-  // Show loading screen while app is initializing
-  // Font loading is optional, so we don't wait for it
-  if (isLoading) {
+  // Show loading screen while fonts are loading or app is initializing
+  if (isLoading || !fontsLoaded) {
     return (
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
