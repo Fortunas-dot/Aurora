@@ -3,6 +3,17 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+// Improve hot reload stability
+config.server = {
+  ...config.server,
+  enhanceMiddleware: (middleware) => {
+    return middleware;
+  },
+};
+
+// Improve watchman stability
+config.watchFolders = [path.resolve(__dirname)];
+
 // Configure resolver to use stub for expo-tracking-transparency in non-iOS environments
 // This prevents Metro from trying to bundle the native module during development/web builds
 

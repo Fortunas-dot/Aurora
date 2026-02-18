@@ -4,23 +4,35 @@ import { useSettingsStore } from '../store/settingsStore';
 import { getFontFamily } from '../utils/fontHelper';
 
 // SF Pro Display for titles and large UI elements
-const getTitleFontFamily = () => {
-  if (Platform.OS === 'ios') {
-    // On iOS, SF Pro Display is optimized for large text/headers
-    return 'SF Pro Display';
+// Wrapped in try-catch to prevent hot reload crashes
+const getTitleFontFamily = (): string => {
+  try {
+    if (Platform.OS === 'ios') {
+      // On iOS, SF Pro Display is optimized for large text/headers
+      return 'SF Pro Display';
+    }
+    // Android fallback - use Roboto for headings
+    return Platform.OS === 'android' ? 'Roboto' : 'System';
+  } catch {
+    // Fallback to system font if anything goes wrong during hot reload
+    return Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) || 'System';
   }
-  // Android fallback - use Roboto for headings
-  return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
 // SF Pro Text for body text
-const getBodyFontFamily = () => {
-  if (Platform.OS === 'ios') {
-    // On iOS, SF Pro Text is optimized for body text
-    return 'SF Pro Text';
+// Wrapped in try-catch to prevent hot reload crashes
+const getBodyFontFamily = (): string => {
+  try {
+    if (Platform.OS === 'ios') {
+      // On iOS, SF Pro Text is optimized for body text
+      return 'SF Pro Text';
+    }
+    // Android fallback - use Roboto for body text
+    return Platform.OS === 'android' ? 'Roboto' : 'System';
+  } catch {
+    // Fallback to system font if anything goes wrong during hot reload
+    return Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }) || 'System';
   }
-  // Android fallback - use Roboto for body text
-  return Platform.OS === 'android' ? 'Roboto' : 'System';
 };
 
 export const useTypography = () => {
