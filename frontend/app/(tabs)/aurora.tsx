@@ -342,7 +342,7 @@ export default function AuroraScreen() {
         }
       >
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
+        <View style={[styles.welcomeSection, { paddingTop: insets.top + SPACING.xl + SPACING.md }]}>
           <Text style={[styles.greeting, { color: colors.text }]}>{greeting}, {userName} 👋</Text>
           <GlassCard style={styles.quoteCard} padding="md" gradient>
             <View style={styles.quoteContainer}>
@@ -729,8 +729,8 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
     paddingBottom: SPACING.lg,
+    // paddingTop is set inline to include safe area insets
   },
   greeting: {
     fontFamily: 'Unbounded-Regular',
