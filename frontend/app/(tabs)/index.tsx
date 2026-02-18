@@ -316,12 +316,18 @@ export default function FeedScreen() {
     }
   }, [isAuthenticated]);
 
+  // Store loadJoinedGroups in ref to prevent infinite loops
+  const loadJoinedGroupsRef = useRef(loadJoinedGroups);
+  useEffect(() => {
+    loadJoinedGroupsRef.current = loadJoinedGroups;
+  }, [loadJoinedGroups]);
+
   // Load joined groups when modal opens
   useEffect(() => {
     if (showJoinedGroupsModal && isAuthenticated) {
-      loadJoinedGroups();
+      loadJoinedGroupsRef.current();
     }
-  }, [showJoinedGroupsModal, isAuthenticated, loadJoinedGroups]);
+  }, [showJoinedGroupsModal, isAuthenticated]); // Removed loadJoinedGroups from dependencies
 
   // Animate sidebar
   useEffect(() => {
@@ -454,13 +460,19 @@ export default function FeedScreen() {
 
   // Track if initial load has been done
   const hasInitialLoadRef = useRef(false);
+  const postsLengthRef = useRef(0);
+  
+  // Update posts length ref whenever posts change
+  useEffect(() => {
+    postsLengthRef.current = posts.length;
+  }, [posts.length]);
   
   // Initial load when screen is focused (first time opening the screen)
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated && !isLoadingRef.current) {
         // Load posts when screen is focused for the first time or if no posts
-        if (!hasInitialLoadRef.current || posts.length === 0) {
+        if (!hasInitialLoadRef.current || postsLengthRef.current === 0) {
           setPage(1);
           setHasMore(true);
           if (loadPostsRef.current) {
@@ -469,7 +481,7 @@ export default function FeedScreen() {
           hasInitialLoadRef.current = true;
         }
       }
-    }, [isAuthenticated, posts.length])
+    }, [isAuthenticated]) // Removed posts.length from dependencies
   );
 
   // Reload posts when filters change (with debounce to prevent rapid requests)
@@ -489,17 +501,23 @@ export default function FeedScreen() {
     return () => clearTimeout(timeoutId);
   }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, showAllPublicPosts]);
 
+  // Store updateUnreadCount in ref to prevent infinite loops
+  const updateUnreadCountRef = useRef(updateUnreadCount);
+  useEffect(() => {
+    updateUnreadCountRef.current = updateUnreadCount;
+  }, [updateUnreadCount]);
+
   // Update unread count on mount and focus
   useEffect(() => {
     if (isAuthenticated) {
-      updateUnreadCount();
+      updateUnreadCountRef.current();
       // Poll for unread count every 30 seconds
       const interval = setInterval(() => {
-        updateUnreadCount();
+        updateUnreadCountRef.current();
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, updateUnreadCount]);
+  }, [isAuthenticated]); // Removed updateUnreadCount from dependencies
 
   // Random falling star effect
   useEffect(() => {

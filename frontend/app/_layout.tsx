@@ -264,8 +264,9 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user?._id]); // Only depend on auth state and user ID
 
-  // Show loading screen while fonts are loading or app is initializing
-  if (isLoading || !fontsLoaded) {
+  // Show loading screen while app is initializing
+  // Don't block on font loading - fonts will load in background and apply when ready
+  if (isLoading) {
     return (
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
