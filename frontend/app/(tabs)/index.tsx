@@ -12,7 +12,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +28,8 @@ import { groupService, Group } from '../../src/services/group.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
+import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 
 // Animated star component
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -264,6 +266,16 @@ export default function FeedScreen() {
   const { user, isAuthenticated } = useAuthStore();
   const { unreadCount, updateUnreadCount } = useNotificationStore();
   const { colors } = useTheme();
+  const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
+  
+  // Debug: Log onboarding state when component mounts or state changes
+  useEffect(() => {
+    console.log('🔵 Feed Screen - Onboarding State:', {
+      isOnboardingActive,
+      currentStep,
+      shouldShowOverlay: isOnboardingActive && (currentStep === 3 || currentStep >= 3),
+    });
+  }, [isOnboardingActive, currentStep]);
   
   // Feed state
   const [posts, setPosts] = useState<Post[]>([]);
@@ -792,6 +804,17 @@ export default function FeedScreen() {
 
   const emptyState = getEmptyStateText();
 
+  // Force overlay to show if onboarding is active (for debugging)
+  // Show overlay if onboarding is active and we're on step 3 or higher
+  // OR if onboarding is active and we're on the Feed page (in case step got stuck)
+  const shouldShowOverlay = isOnboardingActive && (currentStep >= 3 || isOnboardingActive);
+  
+  console.log('🔵 Feed Screen Render - Onboarding:', {
+    isOnboardingActive,
+    currentStep,
+    shouldShowOverlay,
+  });
+
   return (
     <View style={styles.container}>
       {/* Base gradient */}
@@ -889,11 +912,13 @@ export default function FeedScreen() {
         getItemLayout={undefined}
         scrollEventThrottle={16}
         decelerationRate="normal"
+        scrollEnabled={!isOnboardingActive || (currentStep !== 3 && currentStep < 3)}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
+            enabled={!isOnboardingActive || currentStep !== 3}
           />
         }
         onEndReached={loadMore}
@@ -934,17 +959,41 @@ export default function FeedScreen() {
         }
       />
 
-      {/* FAB */}
-      <Pressable style={styles.fab} onPress={handleCreatePost}>
-        <LinearGradient
-          colors={['rgba(96, 165, 250, 0.9)', 'rgba(167, 139, 250, 0.9)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fabGradient}
-        >
-          <Ionicons name="add" size={28} color={colors.white} />
-        </LinearGradient>
-      </Pressable>
+      {/* FAB - Hide during onboarding */}
+      {(!isOnboardingActive || currentStep !== 3) && (
+        <Pressable style={styles.fab} onPress={handleCreatePost}>
+          <LinearGradient
+            colors={['rgba(96, 165, 250, 0.9)', 'rgba(167, 139, 250, 0.9)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <Ionicons name="add" size={28} color={colors.white} />
+          </LinearGradient>
+        </Pressable>
+      )}
+
+      {/* Onboarding Overlay for Feed - Always render if onboarding is active */}
+      {isOnboardingActive && (
+        <OnboardingOverlay
+          visible={shouldShowOverlay}
+          title="Feed"
+          description="Discover posts, share your thoughts, and connect with a supportive community. Find inspiration and support from others on similar journeys."
+          onNext={() => {
+            console.log('🔵 Feed Overlay - Next clicked, currentStep:', currentStep);
+            nextStep();
+            // Navigate to Aurora tab after a short delay to ensure state is updated
+            setTimeout(() => {
+              router.push('/(tabs)/aurora');
+            }, 100);
+          }}
+          onSkip={() => {
+            console.log('🔵 Feed Overlay - Skip clicked');
+            finishOnboarding();
+          }}
+          showSkip={true}
+        />
+      )}
 
       {/* Joined Groups Sidebar Modal */}
       <Modal

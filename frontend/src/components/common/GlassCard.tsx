@@ -62,7 +62,9 @@ export const GlassCard: React.FC<GlassCardProps> = ({
           style={styles.gradient}
         />
       )}
-      {children}
+      <View style={styles.contentWrapper}>
+        {children}
+      </View>
     </View>
   );
 
@@ -116,7 +118,10 @@ const styles = StyleSheet.create({
   },
   innerContainer: {
     position: 'relative',
-    flex: 1,
+  },
+  contentWrapper: {
+    position: 'relative',
+    zIndex: 1,
   },
   blur: {
     flex: 1,

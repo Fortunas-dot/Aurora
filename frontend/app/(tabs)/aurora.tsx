@@ -9,6 +9,8 @@ import { GlassCard, GlassButton } from '../../src/components/common';
 import { SPACING, TYPOGRAPHY, COLORS } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
+import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
 
 const { width, height } = Dimensions.get('window');
@@ -157,6 +159,7 @@ export default function AuroraScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { user, isAuthenticated } = useAuthStore();
+  const { isActive: isOnboardingActive, currentStep, nextStep } = useOnboardingStore();
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -625,6 +628,23 @@ export default function AuroraScreen() {
           </GlassCard>
         </View>
       </ScrollView>
+
+      {/* Onboarding Overlay for Aurora */}
+      {isOnboardingActive && currentStep === 4 && (
+        <OnboardingOverlay
+          visible={true}
+          title="Aurora"
+          description="Chat with your AI companion through voice or text. Get personalized support, insights, and guidance tailored to your mental health needs."
+          onNext={() => {
+            nextStep();
+            // Navigate to Connect tab after a short delay to ensure state is updated
+            setTimeout(() => {
+              router.push('/(tabs)/groups');
+            }, 100);
+          }}
+          showSkip={false}
+        />
+      )}
     </View>
   );
 }

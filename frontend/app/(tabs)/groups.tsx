@@ -25,6 +25,8 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { groupService, Group } from '../../src/services/group.service';
 import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
+import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { COUNTRIES, getCountryName } from '../../src/constants/countries';
 
 // Health conditions list (same as in create-group.tsx)
@@ -291,6 +293,7 @@ export default function GroupsScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { isAuthenticated, user: currentUser } = useAuthStore();
+  const { isActive: isOnboardingActive, currentStep, nextStep } = useOnboardingStore();
   
   const [activeTab, setActiveTab] = useState<TabType>('groups');
   
@@ -1258,6 +1261,23 @@ export default function GroupsScreen() {
               </View>
             )
           }
+        />
+      )}
+
+      {/* Onboarding Overlay for Connect */}
+      {isOnboardingActive && currentStep === 5 && (
+        <OnboardingOverlay
+          visible={true}
+          title="Connect"
+          description="Join communities and find like-minded people. Connect with others who understand your experiences and build meaningful relationships."
+          onNext={() => {
+            nextStep();
+            // Navigate to Chats tab after a short delay to ensure state is updated
+            setTimeout(() => {
+              router.push('/(tabs)/chat');
+            }, 100);
+          }}
+          showSkip={false}
         />
       )}
     </LinearGradient>

@@ -245,6 +245,13 @@ export default function SettingsScreen() {
               }
               onPress={() => router.push('/aurora-style')}
             />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="school-outline"
+              title="View Onboarding"
+              subtitle="Learn about Aurora's features"
+              onPress={() => router.push('/onboarding')}
+            />
           </GlassCard>
         </View>
 

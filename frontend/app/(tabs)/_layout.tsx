@@ -8,6 +8,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { AuroraCore as BlobsAuroraCore } from '../../src/components/voice/AuroraCore.blobs';
 import { Badge } from '../../src/components/common';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { messageService } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { useCallback } from 'react';
@@ -15,6 +16,7 @@ import { useCallback } from 'react';
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuthStore();
+  const { isActive: isOnboardingActive } = useOnboardingStore();
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
   // Load total unread messages count
@@ -91,6 +93,7 @@ export default function TabsLayout() {
           {
             backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.tabBar,
             borderTopColor: colors.tabBarBorder,
+            display: isOnboardingActive ? 'none' : 'flex', // Hide tab bar during onboarding
           },
         ],
         tabBarBackground: () => (

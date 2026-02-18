@@ -19,6 +19,8 @@ import { GlassCard, Avatar, GlassInput, LoadingSpinner } from '../../src/compone
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
+import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { messageService, Conversation } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
@@ -129,6 +131,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { isAuthenticated } = useAuthStore();
+  const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -386,6 +389,20 @@ export default function ChatScreen() {
           )
         }
       />
+
+      {/* Onboarding Overlay for Chats */}
+      {isOnboardingActive && currentStep === 6 && (
+        <OnboardingOverlay
+          visible={true}
+          title="Chats"
+          description="Message with friends and community members. Stay connected and build your support network through private conversations."
+          onNext={() => {
+            finishOnboarding();
+            router.push('/subscription');
+          }}
+          showSkip={false}
+        />
+      )}
     </LinearGradient>
   );
 }

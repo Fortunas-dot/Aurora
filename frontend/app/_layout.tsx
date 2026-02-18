@@ -306,6 +306,13 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
+          <Stack.Screen
+            name="onboarding"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
       </ResponsiveWrapper>
     </SafeAreaProvider>

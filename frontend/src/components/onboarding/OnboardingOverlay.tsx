@@ -1,0 +1,163 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  Animated,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassCard, GlassButton } from '../common';
+import { SPACING, TYPOGRAPHY, COLORS } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+
+interface OnboardingOverlayProps {
+  visible: boolean;
+  title: string;
+  description: string;
+  onNext: () => void;
+  onSkip?: () => void;
+  showSkip?: boolean;
+}
+
+export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
+  visible,
+  title,
+  description,
+  onNext,
+  onSkip,
+  showSkip = false,
+}) => {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔵 OnboardingOverlay - Render state:', {
+      visible,
+      title,
+    });
+  }, [visible, title]);
+
+  if (!visible) {
+    console.log('🔵 OnboardingOverlay - Not visible, returning null');
+    return null;
+  }
+
+  console.log('🔵 OnboardingOverlay - Rendering Modal');
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      statusBarTranslucent={true}
+      onRequestClose={() => {}} // Prevent back button from closing during onboarding
+      presentationStyle="overFullScreen"
+    >
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            opacity: fadeAnim,
+          },
+        ]}
+      >
+        {/* Backdrop */}
+        <Pressable 
+          style={styles.backdrop}
+          onPress={() => {}} // Prevent closing by tapping backdrop
+          activeOpacity={1}
+        />
+
+        {/* Content Card */}
+        <View style={[styles.contentContainer, { paddingBottom: insets.bottom + SPACING.md }]}>
+          <GlassCard padding="lg" style={styles.card} gradient>
+            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              {description}
+            </Text>
+            
+            <View style={styles.buttonContainer}>
+              {showSkip && onSkip && (
+                <GlassButton
+                  title="Skip"
+                  onPress={onSkip}
+                  variant="outline"
+                  style={styles.skipButton}
+                />
+              )}
+              <GlassButton
+                title="Next"
+                onPress={onNext}
+                variant="primary"
+                style={styles.nextButton}
+              />
+            </View>
+          </GlassCard>
+        </View>
+      </Animated.View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  contentContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
+  },
+  card: {
+    width: '100%',
+  },
+  title: {
+    ...TYPOGRAPHY.h2,
+    fontSize: 24,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  description: {
+    ...TYPOGRAPHY.bodyLarge,
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: SPACING.xl,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  skipButton: {
+    flex: 1,
+  },
+  nextButton: {
+    flex: 1,
+  },
+});
