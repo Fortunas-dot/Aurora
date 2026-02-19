@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { WebSocket } from 'ws';
 import Notification from '../models/Notification';
+import { sendPushNotification, notificationMessages } from '../services/pushNotification.service';
+import { NotificationType } from '../models/Notification';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
@@ -8,6 +10,14 @@ interface AuthenticatedWebSocket extends WebSocket {
 
 // Store active WebSocket connections
 const activeConnections = new Map<string, AuthenticatedWebSocket>();
+
+/**
+ * Check if user is currently connected via WebSocket
+ */
+export const isUserOnline = (userId: string): boolean => {
+  const ws = activeConnections.get(userId);
+  return ws !== undefined && ws.readyState === 1; // OPEN
+};
 
 /**
  * WebSocket handler for notifications
@@ -85,23 +95,95 @@ export const handleNotificationWebSocket = (ws: AuthenticatedWebSocket, req: any
 };
 
 /**
- * Send notification to user via WebSocket
+ * Send notification to user via WebSocket and/or push notification
+ * If user is online (WebSocket connected), sends via WebSocket
+ * If user is offline, sends push notification to their device
  */
 export const sendNotificationToUser = async (userId: string, notification: any): Promise<void> => {
   const ws = activeConnections.get(userId);
+  const notificationData = notification.toObject ? notification.toObject() : notification;
+  
+  // Ensure createdAt exists
+  if (!notificationData.createdAt) {
+    notificationData.createdAt = new Date();
+  }
+
+  // Try to send via WebSocket if user is online
   if (ws && ws.readyState === 1) { // OPEN
     try {
-      // Ensure createdAt exists before sending
-      const notificationData = notification.toObject ? notification.toObject() : notification;
-      if (!notificationData.createdAt) {
-        notificationData.createdAt = new Date();
-      }
       ws.send(JSON.stringify({
         type: 'notification',
         notification: notificationData,
       }));
+      console.log(`Notification sent via WebSocket to user ${userId}`);
     } catch (error) {
       console.error('Error sending notification via WebSocket:', error);
+    }
+  } else {
+    // User is offline, send push notification
+    try {
+      const notificationType = notificationData.type as NotificationType;
+      const relatedUser = notificationData.relatedUser;
+      const relatedGroup = notificationData.relatedGroup;
+      
+      // Get username for the notification message
+      const username = relatedUser?.displayName || relatedUser?.username || 'Someone';
+      const groupName = relatedGroup?.name || 'a group';
+      
+      // Get title and body based on notification type
+      let title = 'Aurora';
+      let body = notificationData.message || 'You have a new notification';
+      
+      switch (notificationType) {
+        case 'like':
+          const likeMsg = notificationMessages.like(username);
+          title = likeMsg.title;
+          body = likeMsg.body;
+          break;
+        case 'comment':
+          const commentMsg = notificationMessages.comment(username);
+          title = commentMsg.title;
+          body = commentMsg.body;
+          break;
+        case 'message':
+          const messageMsg = notificationMessages.message(username);
+          title = messageMsg.title;
+          body = messageMsg.body;
+          break;
+        case 'follow':
+          const followMsg = notificationMessages.follow(username);
+          title = followMsg.title;
+          body = followMsg.body;
+          break;
+        case 'group_invite':
+          const inviteMsg = notificationMessages.group_invite(username, groupName);
+          title = inviteMsg.title;
+          body = inviteMsg.body;
+          break;
+        case 'group_join':
+          const joinMsg = notificationMessages.group_join(username, groupName);
+          title = joinMsg.title;
+          body = joinMsg.body;
+          break;
+      }
+      
+      // Send push notification
+      await sendPushNotification({
+        userId,
+        title,
+        body,
+        data: {
+          notificationId: notificationData._id?.toString(),
+          type: notificationType,
+          relatedUserId: relatedUser?._id?.toString(),
+          relatedPostId: notificationData.relatedPost?._id?.toString(),
+          relatedGroupId: relatedGroup?._id?.toString(),
+        },
+      });
+      
+      console.log(`Push notification sent to user ${userId} (offline)`);
+    } catch (error) {
+      console.error('Error sending push notification:', error);
     }
   }
 };
