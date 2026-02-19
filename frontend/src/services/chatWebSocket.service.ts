@@ -227,6 +227,9 @@ class ChatWebSocketService {
       case 'message_read':
         this.emit('message_read', data.messageId, new Date(data.readAt));
         break;
+      case 'message_reaction':
+        this.emit('message_reaction', data.message);
+        break;
       case 'conversation_updated':
         this.emit('conversation_updated', data.conversation);
         break;

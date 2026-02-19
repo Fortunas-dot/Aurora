@@ -2,6 +2,7 @@ import { Response } from 'express';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
+import { broadcastMessageReaction } from './chatWebSocket';
 import mongoose from 'mongoose';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
@@ -113,8 +114,8 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('sender', 'username displayName avatar')
-      .populate('receiver', 'username displayName avatar');
+      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor')
+      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
 
     const total = await Message.countDocuments({
       $or: [
@@ -133,9 +134,18 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
       { readAt: new Date() }
     );
 
+    // Ensure attachments are properly serialized
+    const serializedMessages = messages.reverse().map((msg: any) => {
+      const msgObj = msg.toObject ? msg.toObject() : msg;
+      return {
+        ...msgObj,
+        attachments: msgObj.attachments || [], // Ensure attachments is always an array
+      };
+    });
+
     res.json({
       success: true,
-      data: messages.reverse(), // Return in chronological order
+      data: serializedMessages, // Return in chronological order
       pagination: {
         page,
         limit,
@@ -202,9 +212,16 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     await sendNotificationToUser(receiverId, notification);
     await sendUnreadCountUpdate(receiverId);
 
+    // Ensure attachments are included in response
+    const messageObj = message.toObject ? message.toObject() : message;
+    const responseMessage = {
+      ...messageObj,
+      attachments: messageObj.attachments || [], // Ensure attachments is always an array
+    };
+
     res.status(201).json({
       success: true,
-      data: message,
+      data: responseMessage,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -293,8 +310,13 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
 
     await message.save();
 
-    // Populate users for response
-    await message.populate('reactions.users', 'username displayName avatar');
+    // Populate all necessary fields for response
+    await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+    await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+    await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+
+    // Broadcast reaction update via WebSocket to both users
+    await broadcastMessageReaction(message);
 
     res.json({
       success: true,

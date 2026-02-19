@@ -38,18 +38,36 @@ import { userService, UserProfile } from '../../src/services/user.service';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
+  // #region agent log
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:40',message:'AnimatedStar render',data:{index,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  const initialX = Math.random() * 100;
-  const initialY = Math.random() * 100;
+  // #region agent log
+  const initialXValue = Math.random() * 100;
+  const initialYValue = Math.random() * 100;
+  const directionValue = Math.random() * Math.PI * 2;
+  const distanceValue = 30 + Math.random() * 50;
+  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:50',message:'Random values recalculated',data:{index,initialX:initialXValue,initialY:initialYValue,direction:directionValue,distance:distanceValue,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
+  const initialX = initialXValue;
+  const initialY = initialYValue;
   const speed = 20 + Math.random() * 30;
-  const direction = Math.random() * Math.PI * 2;
-  const distance = 30 + Math.random() * 50;
+  const direction = directionValue;
+  const distance = distanceValue;
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:60',message:'useEffect called',data:{index,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     const duration = 3000 + Math.random() * 4000;
 
     const animate = () => {
@@ -191,6 +209,11 @@ export default function ConversationScreen() {
       const response = await messageService.getConversation(userId, pageNum, 50);
       
       if (response.success && response.data) {
+        // #region agent log
+        const messagesWithAttachments = response.data.filter(m => m.attachments && m.attachments.length > 0);
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:211',message:'Loading messages',data:{totalMessages:response.data.length,messagesWithAttachments:messagesWithAttachments.length,attachmentsSample:messagesWithAttachments.slice(0,3).map(m=>({id:m._id,attachments:m.attachments}))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         if (append) {
           setMessages((prev) => [...response.data!, ...prev]);
         } else {
@@ -331,6 +354,16 @@ export default function ConversationScreen() {
       );
     });
 
+    const unsubMessageReaction = chatWebSocketService.on('message_reaction', (message: any) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === message._id
+            ? { ...msg, reactions: message.reactions, updatedAt: message.updatedAt }
+            : msg
+        )
+      );
+    });
+
     // Cleanup: only remove listeners, do NOT disconnect the WebSocket
     return () => {
       unsubConnected();
@@ -340,6 +373,7 @@ export default function ConversationScreen() {
       unsubTypingStop();
       unsubUserStatus();
       unsubMessageRead();
+      unsubMessageReaction();
       unsubError();
     };
   }, [isAuthenticated, userId]);
@@ -403,11 +437,15 @@ export default function ConversationScreen() {
   };
 
   const handleVoiceRecordingComplete = async (uri: string, duration: number) => {
+    console.log('handleVoiceRecordingComplete called', { uri, duration });
     setIsUploading(true);
     setShowVoiceRecorder(false);
 
     try {
+      console.log('Uploading audio...', uri);
       const uploadResult = await uploadService.uploadAudio(uri);
+      console.log('Upload result:', uploadResult);
+      
       if (uploadResult.success && uploadResult.data) {
         const attachments = [{
           type: 'audio' as const,
@@ -415,15 +453,21 @@ export default function ConversationScreen() {
           duration,
         }];
 
+        console.log('Sending message with audio attachment...', attachments);
         // Send message with audio attachment
         if (chatWebSocketService.isConnected()) {
           chatWebSocketService.sendMessage(userId, '', attachments);
+          console.log('Message sent via WebSocket');
         } else {
           const response = await messageService.sendMessage(userId, '', attachments);
+          console.log('Message sent via API:', response);
           if (response.success && response.data) {
             setMessages((prev) => [...prev, response.data!]);
           }
         }
+      } else {
+        console.error('Upload failed:', uploadResult.message);
+        Alert.alert('Error', uploadResult.message || 'Could not upload audio');
       }
     } catch (error) {
       console.error('Error uploading voice message:', error);
@@ -529,11 +573,20 @@ export default function ConversationScreen() {
       const response = await messageService.sendMessage(userId, messageContent, attachmentsToSend);
       
       if (response.success && response.data) {
-        // Replace temp message with real message
+        // Replace temp message with real message, preserving attachments if they exist
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === tempMessage._id ? response.data! : msg
-          )
+          prev.map((msg) => {
+            if (msg._id === tempMessage._id) {
+              const newMessage = response.data!;
+              // Preserve attachments from temp message if new message doesn't have them
+              if (tempMessage.attachments && tempMessage.attachments.length > 0 && 
+                  (!newMessage.attachments || newMessage.attachments.length === 0)) {
+                return { ...newMessage, attachments: tempMessage.attachments };
+              }
+              return newMessage;
+            }
+            return msg;
+          })
         );
       } else {
         // Remove temp message on error and show alert
@@ -552,6 +605,10 @@ export default function ConversationScreen() {
 
   // Handle typing indicator
   const handleTextChange = (text: string) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:555',message:'Text changed',data:{textLength:text.length,textPreview:text.substring(0,20)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     setMessageText(text);
     
     if (text.trim() && userId && chatWebSocketService.isConnected()) {
@@ -582,11 +639,18 @@ export default function ConversationScreen() {
     try {
       const response = await messageService.reactToMessage(messageId, emoji);
       if (response.success && response.data) {
-        // Update message in list
+        // Update only reactions to preserve sender/receiver data
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === messageId ? response.data! : msg
-          )
+          prev.map((msg) => {
+            if (msg._id === messageId) {
+              return {
+                ...msg,
+                reactions: response.data!.reactions,
+                updatedAt: response.data!.updatedAt,
+              };
+            }
+            return msg;
+          })
         );
       }
     } catch (error) {
@@ -615,7 +679,7 @@ export default function ConversationScreen() {
     return (
       <Pressable
         onPress={() => Keyboard.dismiss()}
-        onLongPress={() => handleLongPressMessage(item._id)}
+        onLongPress={!isOwn ? () => handleLongPressMessage(item._id) : undefined}
         style={[
           styles.messageContainer,
           isOwn ? styles.messageContainerOwn : styles.messageContainerOther,
@@ -669,8 +733,8 @@ export default function ConversationScreen() {
             </Text>
           )}
           
-          {/* Reactions */}
-          {item.reactions && item.reactions.length > 0 && (
+          {/* Reactions - only show for messages from other users */}
+          {!isOwn && item.reactions && item.reactions.length > 0 && (
             <View style={styles.reactionsContainer}>
               {item.reactions.map((reaction, index) => (
                 <Pressable
@@ -748,7 +812,10 @@ export default function ConversationScreen() {
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
           {otherUser && (
-            <View style={styles.headerUser}>
+            <Pressable
+              style={styles.headerUser}
+              onPress={() => router.push(`/user/${otherUser._id}`)}
+            >
               <Avatar
                 uri={otherUser.avatar}
                 name={otherUser.displayName || otherUser.username}
@@ -769,7 +836,7 @@ export default function ConversationScreen() {
                   {isTyping ? 'typing...' : isOnline ? 'Online' : 'Offline'}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           )}
           <View style={styles.headerSpacer} />
         </View>

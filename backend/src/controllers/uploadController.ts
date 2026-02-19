@@ -22,34 +22,47 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Accept images and videos
-  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+  // Accept images, videos, and audio (including x-m4a for iOS recordings)
+  if (
+    file.mimetype.startsWith('image/') || 
+    file.mimetype.startsWith('video/') || 
+    file.mimetype.startsWith('audio/') ||
+    file.mimetype === 'audio/x-m4a' // iOS audio recordings
+  ) {
     cb(null, true);
   } else {
-    cb(new Error('Only images and videos are allowed'));
+    console.error('File upload rejected - invalid MIME type:', file.mimetype);
+    cb(new Error('Only images, videos, and audio files are allowed'));
   }
 };
 
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 50 * 1024 * 1024, // 50MB (supports images, videos, and audio files)
   },
   fileFilter,
 });
 
-// @desc    Upload image/video
+// @desc    Upload image/video/audio
 // @route   POST /api/upload
 // @access  Private
 export const uploadFile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.file) {
+      console.error('Upload error: No file in request');
       res.status(400).json({
         success: false,
         message: 'No file uploaded',
       });
       return;
     }
+
+    console.log('Upload successful:', {
+      filename: req.file.filename,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+    });
 
     // Return file URL (in production, this would be a CDN URL)
     const fileUrl = `/uploads/${req.file.filename}`;
@@ -64,6 +77,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       },
     });
   } catch (error: any) {
+    console.error('Upload error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error uploading file',

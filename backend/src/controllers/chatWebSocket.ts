@@ -363,3 +363,41 @@ export const isUserOnline = (userId: string): boolean => {
   return ws !== undefined && ws.readyState === 1;
 };
 
+/**
+ * Broadcast message reaction update to both users in conversation
+ */
+export const broadcastMessageReaction = async (message: any): Promise<void> => {
+  try {
+    // Get sender and receiver IDs
+    const senderId = message.sender._id?.toString() || message.sender.toString();
+    const receiverId = message.receiver._id?.toString() || message.receiver.toString();
+
+    // Send to sender if online
+    const senderWs = activeChatConnections.get(senderId);
+    if (senderWs && senderWs.readyState === 1) {
+      senderWs.send(JSON.stringify({
+        type: 'message_reaction',
+        message: {
+          _id: message._id,
+          reactions: message.reactions,
+          updatedAt: message.updatedAt,
+        },
+      }));
+    }
+
+    // Send to receiver if online
+    const receiverWs = activeChatConnections.get(receiverId);
+    if (receiverWs && receiverWs.readyState === 1) {
+      receiverWs.send(JSON.stringify({
+        type: 'message_reaction',
+        message: {
+          _id: message._id,
+          reactions: message.reactions,
+          updatedAt: message.updatedAt,
+        },
+      }));
+    }
+  } catch (error) {
+    console.error('Error broadcasting message reaction:', error);
+  }
+};

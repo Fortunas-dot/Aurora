@@ -56,18 +56,22 @@ var storage = multer_1.default.diskStorage({
     },
 });
 var fileFilter = function (req, file, cb) {
-    // Accept images and videos
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    // Accept images, videos, and audio (including x-m4a for iOS recordings)
+    if (file.mimetype.startsWith('image/') || 
+        file.mimetype.startsWith('video/') || 
+        file.mimetype.startsWith('audio/') ||
+        file.mimetype === 'audio/x-m4a') {
         cb(null, true);
     }
     else {
-        cb(new Error('Only images and videos are allowed'));
+        console.error('File upload rejected - invalid MIME type:', file.mimetype);
+        cb(new Error('Only images, videos, and audio files are allowed'));
     }
 };
 exports.upload = (0, multer_1.default)({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        fileSize: 50 * 1024 * 1024, // 50MB (supports images, videos, and audio files)
     },
     fileFilter: fileFilter,
 });
@@ -79,12 +83,18 @@ var uploadFile = function (req, res) { return __awaiter(void 0, void 0, void 0, 
     return __generator(this, function (_a) {
         try {
             if (!req.file) {
+                console.error('Upload error: No file in request');
                 res.status(400).json({
                     success: false,
                     message: 'No file uploaded',
                 });
                 return [2 /*return*/];
             }
+            console.log('Upload successful:', {
+                filename: req.file.filename,
+                mimetype: req.file.mimetype,
+                size: req.file.size,
+            });
             fileUrl = "/uploads/".concat(req.file.filename);
             res.json({
                 success: true,
@@ -97,6 +107,7 @@ var uploadFile = function (req, res) { return __awaiter(void 0, void 0, void 0, 
             });
         }
         catch (error) {
+            console.error('Upload error:', error);
             res.status(500).json({
                 success: false,
                 message: error.message || 'Error uploading file',
