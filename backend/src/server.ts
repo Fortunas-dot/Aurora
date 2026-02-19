@@ -47,6 +47,7 @@ connectDB();
 
 // Trust proxy (required for Railway and other platforms that use reverse proxies)
 // This allows express-rate-limit to correctly identify users behind proxies
+// Updated: 2026-02-19 - Fix for Railway deployment
 app.set('trust proxy', true);
 
 // Security Middleware (must be first)
