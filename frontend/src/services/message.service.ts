@@ -63,9 +63,27 @@ class MessageService {
       content,
     };
     
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'message.service.ts:60',message:'Building payload',data:{receiverId,content,attachmentsCount:attachments?.length||0,hasAttachments:!!attachments&&attachments.length>0},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
       payload.attachments = attachments;
     }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'message.service.ts:70',message:'Final payload before API call',data:{hasContent:!!payload.content,contentLength:payload.content?.length||0,hasAttachments:!!payload.attachments,attachmentsCount:payload.attachments?.length||0},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    
+    // Console fallback logging
+    console.log('📦 messageService payload:', {
+      receiverId: payload.receiverId,
+      content: payload.content || '(empty)',
+      contentLength: payload.content?.length || 0,
+      hasAttachments: !!payload.attachments,
+      attachmentsCount: payload.attachments?.length || 0,
+      payloadKeys: Object.keys(payload),
+    });
     
     return apiService.post<Message>('/messages', payload);
   }

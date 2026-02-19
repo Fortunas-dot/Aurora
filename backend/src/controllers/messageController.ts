@@ -158,6 +158,17 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
   try {
     const { receiverId, content, attachments } = req.body;
 
+    // Debug logging
+    console.log('📨 sendMessage received:', {
+      receiverId,
+      content: content || '(empty)',
+      contentType: typeof content,
+      contentLength: content?.length || 0,
+      attachments: attachments || '(undefined)',
+      attachmentsType: Array.isArray(attachments) ? 'array' : typeof attachments,
+      attachmentsLength: Array.isArray(attachments) ? attachments.length : 'N/A',
+    });
+
     if (receiverId === req.userId) {
       res.status(400).json({
         success: false,
@@ -169,6 +180,12 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     // Validate that we have either content or attachments
     const hasContent = content && typeof content === 'string' && content.trim().length > 0;
     const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    
+    console.log('📨 Validation check:', {
+      hasContent,
+      hasAttachments,
+      willFail: !hasContent && !hasAttachments,
+    });
     
     if (!hasContent && !hasAttachments) {
       res.status(400).json({

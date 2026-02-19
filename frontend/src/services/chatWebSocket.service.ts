@@ -298,6 +298,10 @@ class ChatWebSocketService {
    * Send message via WebSocket
    */
   sendMessage(receiverId: string, content: string, attachments?: Array<{ type: 'image' | 'file' | 'audio'; url: string; duration?: number }>): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatWebSocket.service.ts:300',message:'WebSocket sendMessage called',data:{receiverId,content,attachmentsCount:attachments?.length||0,hasAttachments:!!attachments&&attachments.length>0,wsReady:this.ws?.readyState===WebSocket.OPEN},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     if (this.ws?.readyState === WebSocket.OPEN) {
       const payload: any = {
         type: 'message',
@@ -309,6 +313,10 @@ class ChatWebSocketService {
       if (attachments && Array.isArray(attachments) && attachments.length > 0) {
         payload.attachments = attachments;
       }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatWebSocket.service.ts:313',message:'WebSocket payload before send',data:{hasContent:!!payload.content,contentLength:payload.content?.length||0,hasAttachments:!!payload.attachments,attachmentsCount:payload.attachments?.length||0},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       
       this.ws.send(JSON.stringify(payload));
     } else {
