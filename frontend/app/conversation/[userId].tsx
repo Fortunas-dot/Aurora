@@ -808,28 +808,49 @@ export default function ConversationScreen() {
         )}
 
         {/* Input */}
-        {!showVoiceRecorder && (
-          <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom + SPACING.xs : SPACING.sm }]}>
-            <View style={styles.inputRow}>
-              <View style={[styles.inputWrapper, styles.inputWrapperMultiline]}>
-                <View style={[styles.inputFieldContainer, styles.inputFieldContainerMultiline]}>
-                  <GlassInput
-                    value={messageText}
-                    onChangeText={handleTextChange}
-                    placeholder="Type a message..."
-                    multiline={true}
-                    returnKeyType="default"
-                    style={styles.messageInput}
-                    inputStyle={[
-                      styles.messageInputTextMultiline,
-                      !messageText.includes('\n') && messageText.length <= 40 && { textAlignVertical: 'center', paddingTop: SPACING.sm, paddingBottom: SPACING.sm },
-                      messageText.length > 0 && { paddingRight: 60 },
-                    ]}
-                    maxLength={2000}
-                    showCharCount={false}
-                  />
+        {!showVoiceRecorder && (() => {
+          // Calculate number of lines in messageText
+          const lineCount = messageText.split('\n').length;
+          const maxLines = 4;
+          const baseHeight = 48; // Minimum height for single line (includes padding)
+          const lineHeight = 24; // Additional height per extra line
+          
+          // Calculate dynamic height: base height + (lines - 1) * lineHeight, max 4 lines
+          // The baseHeight already includes padding from the style
+          const calculatedHeight = Math.min(
+            baseHeight + (lineCount - 1) * lineHeight,
+            baseHeight + (maxLines - 1) * lineHeight
+          );
+          
+          // Max height for scrolling after 4 lines (48 + 3*24 = 120)
+          const maxHeight = baseHeight + (maxLines - 1) * lineHeight;
+          
+          return (
+            <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom + SPACING.xs : SPACING.sm }]}>
+              <View style={styles.inputRow}>
+                <View style={[styles.inputWrapper, styles.inputWrapperMultiline]}>
+                  <View style={[styles.inputFieldContainer, styles.inputFieldContainerMultiline]}>
+                    <GlassInput
+                      value={messageText}
+                      onChangeText={handleTextChange}
+                      placeholder="Type a message..."
+                      multiline={true}
+                      returnKeyType="default"
+                      style={styles.messageInput}
+                      inputStyle={[
+                        styles.messageInputTextMultiline,
+                        {
+                          height: calculatedHeight,
+                          maxHeight: maxHeight,
+                        },
+                        !messageText.includes('\n') && messageText.length <= 40 && { textAlignVertical: 'center', paddingTop: SPACING.sm, paddingBottom: SPACING.sm },
+                        messageText.length > 0 && { paddingRight: 60 },
+                      ]}
+                      maxLength={2000}
+                      showCharCount={false}
+                    />
+                  </View>
                 </View>
-              </View>
               <Pressable
                 style={styles.attachButton}
                 onPress={handlePickImage}
@@ -872,7 +893,8 @@ export default function ConversationScreen() {
               </Pressable>
             </View>
           </View>
-        )}
+          );
+        })()}
 
         {/* Emoji Picker */}
         <EmojiPicker
@@ -1026,16 +1048,15 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   inputFieldContainerMultiline: {
-    minHeight: 'auto',
+    minHeight: 48,
+    maxHeight: 120, // 4 lines max: 48 + (3 * 24) = 120
   },
   messageInput: {
     flex: 1,
     minHeight: 48,
-    maxHeight: 120,
   },
   messageInputTextMultiline: {
     minHeight: 48,
-    maxHeight: 120,
     textAlignVertical: 'top',
     ...TYPOGRAPHY.body,
     color: COLORS.text,
@@ -1043,6 +1064,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
     paddingRight: SPACING.md,
     paddingLeft: SPACING.md,
+    lineHeight: 24,
   },
   messageInputTextCentered: {
     height: 48,
