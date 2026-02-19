@@ -277,12 +277,91 @@ class JournalService {
   }
 
   // Finish chat session and extract important points
+  // Uses frontend OpenAI directly (same as regular chat) to avoid backend API key issues
   async finishChatSession(messages: Array<{ role: string; content: string }>): Promise<ApiResponse<{
     importantPoints: string[];
     summary: string;
     sessionDate: string;
   }>> {
-    return apiService.post('/journal/finish-session', { messages });
+    try {
+      // Format conversation for analysis
+      const conversationText = messages
+        .map((msg) => {
+          const role = msg.role === 'user' ? 'User' : 'Aurora';
+          return `${role}: ${msg.content}`;
+        })
+        .join('\n\n');
+
+      // Import OpenAI service dynamically to use the same API key as regular chat
+      const { openAIService } = await import('./openai.service');
+
+      // Extract important points using frontend OpenAI
+      const extractionPrompt = `You are Aurora, a compassionate AI mental health assistant. Extract the most important points from this chat conversation that should be remembered for future sessions.
+
+Extract 3-7 key points that are:
+- Important for understanding the user's mental health state
+- Relevant for future conversations
+- Specific and actionable (not generic)
+- Related to the user's concerns, goals, or progress
+
+Format your response as a JSON object with a "points" array of strings and a "summary" string (1-2 sentences summarizing the session).
+
+Example format:
+{"points": ["User struggles with anxiety in social situations", "User is working on building self-confidence"], "summary": "The user discussed their anxiety and explored coping strategies."}
+
+Conversation:
+${conversationText}`;
+
+      const response = await openAIService.sendMessage([
+        { role: 'system', content: 'You are Aurora, a mental health assistant. Respond only with valid JSON.' },
+        { role: 'user', content: extractionPrompt }
+      ], { model: 'gpt-4o-mini', temperature: 0.5 });
+
+      // Parse the response
+      let importantPoints: string[] = [];
+      let summary = '';
+
+      try {
+        const parsed = JSON.parse(response);
+        importantPoints = parsed.points || [];
+        summary = parsed.summary || '';
+      } catch {
+        // Fallback parsing
+        importantPoints = ['Session completed'];
+        summary = 'Chat session finished.';
+      }
+
+      // Save to backend
+      const saveResponse = await apiService.post<{
+        importantPoints: string[];
+        summary: string;
+        sessionDate: string;
+      }>('/journal/save-chat-context', {
+        importantPoints,
+        summary,
+        sessionDate: new Date().toISOString(),
+      });
+
+      if (saveResponse.success) {
+        return saveResponse;
+      }
+
+      // Even if save fails, return the extracted data
+      return {
+        success: true,
+        data: {
+          importantPoints,
+          summary,
+          sessionDate: new Date().toISOString(),
+        }
+      };
+    } catch (error: any) {
+      console.error('Error finishing chat session:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to finish session',
+      };
+    }
   }
 }
 

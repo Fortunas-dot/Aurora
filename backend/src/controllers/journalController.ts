@@ -1401,3 +1401,43 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
     });
   }
 };
+
+// @desc    Save chat context (important points already extracted on frontend)
+// @route   POST /api/journal/save-chat-context
+// @access  Private
+export const saveChatContext = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { importantPoints, summary, sessionDate } = req.body;
+
+    if (!importantPoints || !Array.isArray(importantPoints) || importantPoints.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Important points are required',
+      });
+      return;
+    }
+
+    // Save the chat context
+    const chatContext = await ChatContext.create({
+      user: req.userId,
+      importantPoints: importantPoints.filter((p: string) => typeof p === 'string' && p.trim().length > 0),
+      summary: summary || '',
+      sessionDate: sessionDate ? new Date(sessionDate) : new Date(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        importantPoints: chatContext.importantPoints,
+        summary: chatContext.summary,
+        sessionDate: chatContext.sessionDate,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saving chat context:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error saving chat context',
+    });
+  }
+};

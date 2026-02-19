@@ -11,6 +11,7 @@ import {
   getPrompt,
   getAuroraContext,
   finishChatSession,
+  saveChatContext,
 } from '../controllers/journalController';
 import { protect } from '../middleware/auth';
 
@@ -47,6 +48,7 @@ router.get('/insights', getInsights);
 router.get('/prompt', getPrompt);
 router.get('/aurora-context', getAuroraContext);
 router.post('/finish-session', finishChatSession);
+router.post('/save-chat-context', saveChatContext);
 
 // CRUD routes
 router.get('/', getEntries);
