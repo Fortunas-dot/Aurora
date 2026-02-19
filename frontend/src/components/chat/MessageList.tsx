@@ -71,7 +71,8 @@ export const MessageList: React.FC = () => {
     if (isStreaming) {
       return (
         <View>
-          {availableContext && (availableContext.hasHealthInfo || availableContext.hasJournalEntries) && (
+          {/* Only show ContextIndicator when there are no messages yet (initial state) */}
+          {messages.length === 0 && availableContext && (availableContext.hasHealthInfo || availableContext.hasJournalEntries) && (
             <ContextIndicator
               hasHealthInfo={availableContext.hasHealthInfo}
               hasJournalEntries={availableContext.hasJournalEntries}

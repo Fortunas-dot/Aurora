@@ -21,14 +21,32 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
   const [position, setPosition] = useState(0);
 
   // Calculate container width based on duration
-  // Base width: 120px, add ~8px per second, max 75% of screen width (to match message bubble)
+  // Message bubble has maxWidth: 75% and paddingHorizontal: SPACING.md
+  // Audio player container width (which includes its padding) must fit within bubble
+  // So max container width = (screenWidth * 0.75) - (SPACING.md * 2)
   const containerWidth = useMemo(() => {
     const baseWidth = 120;
     const pixelsPerSecond = 8;
     const calculatedWidth = baseWidth + (duration * pixelsPerSecond);
-    const maxWidth = screenWidth * 0.75 - (SPACING.md * 2); // Account for message bubble padding
+    
+    // Max width = bubble max width - bubble padding (left and right)
+    // The container width includes its own padding, so this is the total width
+    const bubbleMaxWidth = screenWidth * 0.75;
+    const bubblePadding = SPACING.md * 2; // Left and right padding of message bubble
+    const maxWidth = bubbleMaxWidth - bubblePadding;
+    
     return Math.min(Math.max(calculatedWidth, baseWidth), maxWidth);
   }, [duration, screenWidth]);
+
+  // Calculate progress container width
+  // Container has padding: SPACING.sm on all sides
+  // So available width = containerWidth - (SPACING.sm * 2) - playButtonWidth - gap
+  const progressContainerWidth = useMemo(() => {
+    const playButtonWidth = 40;
+    const gap = SPACING.sm;
+    const containerPadding = SPACING.sm * 2; // Left and right padding of container
+    return containerWidth - containerPadding - playButtonWidth - gap;
+  }, [containerWidth]);
 
   useEffect(() => {
     return () => {
@@ -113,7 +131,7 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
           color={isOwn ? COLORS.primary : COLORS.white}
         />
       </View>
-      <View style={styles.progressContainer}>
+      <View style={[styles.progressContainer, { width: progressContainerWidth }]}>
         <View style={styles.progressBar}>
           <View
             style={[
@@ -166,7 +184,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   progressContainer: {
-    flex: 1,
+    // Width is set dynamically via inline style
+    minWidth: 0, // Allow shrinking if needed
   },
   progressBar: {
     height: 2,
