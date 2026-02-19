@@ -535,18 +535,21 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   followButton: {
-    minWidth: 100,
-    flexShrink: 0, // Prevents button from shrinking
+    minWidth: 80,
+    flex: 1,
+    maxWidth: 120,
   },
   blockButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.md,
+    gap: 4,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.glass.background,
