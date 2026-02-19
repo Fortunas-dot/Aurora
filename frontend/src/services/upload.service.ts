@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { API_CONFIG } from './api.service';
 
 export interface UploadResponse {
@@ -22,9 +22,10 @@ class UploadService {
    */
   async uploadFile(uri: string, type: 'image' | 'video'): Promise<UploadResponse> {
     try {
-      const token = await SecureStore.getItemAsync('token');
+      const token = await secureStorage.getItemAsync('auth_token');
       
       if (!token) {
+        console.error('📤 No auth token found for upload');
         return {
           success: false,
           message: 'Not authenticated',
