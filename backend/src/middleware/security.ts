@@ -49,9 +49,22 @@ export const corsOptions = {
       // Add production URLs here
       process.env.FRONTEND_URL,
       process.env.API_URL?.replace('/api', ''),
+      // Railway production URLs
+      'https://aurora-production.up.railway.app',
+      'https://*.up.railway.app', // Allow all Railway subdomains
     ].filter(Boolean) as string[];
 
-    if (allowedOrigins.includes(origin)) {
+    // Check if origin matches any allowed origin (including wildcard patterns)
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed.includes('*')) {
+        // Handle wildcard patterns (e.g., *.up.railway.app)
+        const pattern = allowed.replace('*', '');
+        return origin.includes(pattern);
+      }
+      return allowed === origin;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       // In production, reject unknown origins

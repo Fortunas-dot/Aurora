@@ -45,6 +45,10 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB
 connectDB();
 
+// Trust proxy (required for Railway and other platforms that use reverse proxies)
+// This allows express-rate-limit to correctly identify users behind proxies
+app.set('trust proxy', true);
+
 // Security Middleware (must be first)
 app.use(helmetConfig);
 app.use(securityHeaders);
