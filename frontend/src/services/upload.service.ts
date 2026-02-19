@@ -25,7 +25,6 @@ class UploadService {
       const token = await secureStorage.getItemAsync('auth_token');
       
       if (!token) {
-        console.error('📤 No auth token found for upload');
         return {
           success: false,
           message: 'Not authenticated',
@@ -61,7 +60,6 @@ class UploadService {
       // Upload to server
       const baseUrl = apiService.getBaseUrl();
       const uploadUrl = `${baseUrl}/upload`;
-      console.log('📤 Uploading file to:', uploadUrl);
       
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -72,11 +70,8 @@ class UploadService {
         body: formData,
       });
 
-      console.log('📤 Upload response status:', response.status, response.statusText);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('📤 Upload failed:', response.status, errorText);
         let errorData;
         try {
           errorData = JSON.parse(errorText);
@@ -90,7 +85,6 @@ class UploadService {
       }
 
       const result = await response.json();
-      console.log('📤 Upload result:', result);
 
       if (result.success && result.data?.url) {
         // Convert relative URL to absolute URL

@@ -128,30 +128,11 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
   try {
     const { receiverId, content, attachments } = data;
 
-    // Debug logging
-    console.log('📨 WebSocket handleChatMessage received:', {
-      senderId,
-      receiverId,
-      content: content || '(empty)',
-      contentType: typeof content,
-      contentLength: content?.length || 0,
-      attachments: attachments || '(undefined)',
-      attachmentsType: Array.isArray(attachments) ? 'array' : typeof attachments,
-      attachmentsLength: Array.isArray(attachments) ? attachments.length : 'N/A',
-    });
-
     // Validate: must have receiverId AND (content OR attachments)
     const hasContent = content && content.trim().length > 0;
     const hasAttachments = attachments && attachments.length > 0;
     
-    console.log('📨 WebSocket validation check:', {
-      hasContent,
-      hasAttachments,
-      willFail: !receiverId || (!hasContent && !hasAttachments),
-    });
-    
     if (!receiverId || (!hasContent && !hasAttachments)) {
-      console.log('❌ WebSocket message validation failed, sending error to client');
       // Send error back to sender
       const senderWs = activeChatConnections.get(senderId);
       if (senderWs && senderWs.readyState === 1) {

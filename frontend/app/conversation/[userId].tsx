@@ -272,14 +272,6 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
-      console.log('📨 WebSocket message_sent received:', {
-        id: message._id,
-        content: message.content,
-        attachments: message.attachments,
-        attachmentsCount: message.attachments?.length || 0,
-        hasAttachments: !!message.attachments && message.attachments.length > 0,
-      });
-      
       setMessages((prev) => {
         if (prev.some((m) => m._id === message._id)) return prev;
 
@@ -297,7 +289,6 @@ export default function ConversationScreen() {
         });
 
         if (isDuplicate) return prev;
-        console.log('📨 Adding message to list:', message);
         return [...prev, message];
       });
 
@@ -445,10 +436,6 @@ export default function ConversationScreen() {
   const handleSendMessage = async () => {
     if ((!messageText.trim() && selectedImages.length === 0) || !userId || isSending) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:427',message:'handleSendMessage called',data:{selectedImagesCount:selectedImages.length,messageTextLength:messageText.trim().length,userId,isSending},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-    // #endregion
-
     setIsSending(true);
     setIsUploading(true);
 
@@ -457,62 +444,29 @@ export default function ConversationScreen() {
     // Upload images if any
     if (selectedImages.length > 0) {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:437',message:'Starting image upload',data:{selectedImagesCount:selectedImages.length},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
-        // #endregion
-
         const uploadPromises = selectedImages.map(async (uri) => {
-          console.log('📤 Starting upload for image:', uri.substring(0, 50));
           const uploadResult = await uploadService.uploadImage(uri);
-          console.log('📤 Upload result:', {
-            success: uploadResult.success,
-            hasData: !!uploadResult.data,
-            message: uploadResult.message,
-            data: uploadResult.data,
-          });
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:440',message:'Single image upload result',data:{success:uploadResult.success,hasData:!!uploadResult.data,uri:uri.substring(0,50)},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
-          // #endregion
           if (uploadResult.success && uploadResult.data) {
-            console.log('✅ Upload successful, URL:', uploadResult.data.url);
             return {
               type: 'image' as const,
               url: uploadResult.data.url,
             };
           }
-          console.error('❌ Upload failed:', uploadResult.message || 'Unknown error');
           return null;
         });
 
         const uploadedAttachments = await Promise.all(uploadPromises);
-        console.log('📤 All uploads completed:', {
-          total: uploadedAttachments.length,
-          successful: uploadedAttachments.filter(a => a !== null).length,
-          failed: uploadedAttachments.filter(a => a === null).length,
-        });
-        
         attachments = uploadedAttachments.filter((a) => a !== null) as Array<{ type: 'image'; url: string }>;
-        console.log('📤 Final attachments:', attachments.length);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:451',message:'After upload and filter',data:{uploadedAttachmentsCount:uploadedAttachments.length,filteredAttachmentsCount:attachments.length,selectedImagesCount:selectedImages.length},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
-        // #endregion
         
         // Critical fix: If we had images to upload but ended up with no attachments, that's an error
         const hadImagesToUpload = selectedImages.length > 0;
         if (hadImagesToUpload && attachments.length === 0) {
-          console.error('❌ All image uploads failed or returned no data');
-          console.error('Selected images count:', selectedImages.length);
-          console.error('Uploaded attachments:', uploadedAttachments);
           Alert.alert('Error', 'Could not upload images. Please try again.');
           setIsSending(false);
           setIsUploading(false);
           return;
         }
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:453',message:'Upload error caught',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.error('Error uploading images:', error);
         Alert.alert('Error', 'Could not upload images');
         setIsSending(false);
@@ -525,16 +479,11 @@ export default function ConversationScreen() {
     
     // Final validation: must have either content or attachments before sending
     if (!messageContent && attachments.length === 0) {
-      console.error('Cannot send message: no content and no attachments');
       Alert.alert('Error', 'Message must have either text or an attachment');
       setIsSending(false);
       setIsUploading(false);
       return;
     }
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:460',message:'Before sending message',data:{messageContent,attachmentsCount:attachments.length,hasContent:!!messageContent,hasAttachments:attachments.length>0,isWebSocketConnected:chatWebSocketService.isConnected()},timestamp:Date.now(),runId:'run1',hypothesisId:'C,D,E'})}).catch(()=>{});
-    // #endregion
     
     // Clear input immediately for better UX
     setMessageText('');
@@ -544,18 +493,12 @@ export default function ConversationScreen() {
     // Send via WebSocket (preferred) or fallback to REST API
     if (chatWebSocketService.isConnected()) {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:471',message:'Sending via WebSocket',data:{messageContent,attachmentsCount:attachments.length},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         // Send via WebSocket - will trigger onMessageSent callback when successful
         chatWebSocketService.sendMessage(userId, messageContent, attachments);
         // Reset sending state immediately - WebSocket handles async delivery
         setIsSending(false);
         return; // Exit early if WebSocket send succeeds
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:476',message:'WebSocket send error',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.error('Error sending via WebSocket, falling back to REST API:', error);
         // Fall through to REST API fallback below
       }
@@ -582,20 +525,6 @@ export default function ConversationScreen() {
     try {
       // Ensure attachments is always an array (even if empty)
       const attachmentsToSend = Array.isArray(attachments) && attachments.length > 0 ? attachments : undefined;
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:502',message:'Sending via REST API',data:{messageContent,attachmentsToSend:attachmentsToSend?attachmentsToSend.length:0,hasContent:!!messageContent,hasAttachments:!!attachmentsToSend},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
-      // Console fallback logging
-      console.log('📤 Frontend sending message:', {
-        messageContent: messageContent || '(empty)',
-        messageContentLength: messageContent?.length || 0,
-        attachments: attachments,
-        attachmentsCount: attachments.length,
-        attachmentsToSend: attachmentsToSend,
-        attachmentsToSendCount: attachmentsToSend?.length || 0,
-      });
       
       const response = await messageService.sendMessage(userId, messageContent, attachmentsToSend);
       
