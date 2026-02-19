@@ -482,11 +482,47 @@ export default function TextChatScreen() {
                   await clearHistory();
                   clearMessages();
                   
+                  // Clear border glows
+                  setBorderGlows([]);
+                  
+                  // Reset floating Aurora position immediately
+                  floatingAuroraX.setValue(width * 0.2);
+                  floatingAuroraY.setValue(height * 0.3);
+                  
                   // Reset UI state
                   setDisplayedText('');
                   setIsTyping(false);
                   setShowMenu(false);
-                  setBorderGlows([]);
+                  
+                  // Force animation reset - animate Aurora back to full size
+                  setTimeout(() => {
+                    Animated.parallel([
+                      Animated.timing(auroraScale, {
+                        toValue: 1,
+                        duration: 600,
+                        easing: Easing.out(Easing.ease),
+                        useNativeDriver: true,
+                      }),
+                      Animated.timing(auroraOpacity, {
+                        toValue: 1,
+                        duration: 600,
+                        easing: Easing.out(Easing.ease),
+                        useNativeDriver: true,
+                      }),
+                      Animated.timing(starsOpacity, {
+                        toValue: 0,
+                        duration: 400,
+                        easing: Easing.out(Easing.ease),
+                        useNativeDriver: true,
+                      }),
+                      Animated.timing(floatingAuroraOpacity, {
+                        toValue: 0,
+                        duration: 400,
+                        easing: Easing.in(Easing.ease),
+                        useNativeDriver: true,
+                      }),
+                    ]).start();
+                  }, 50);
                 } catch (err) {
                   console.error('Failed to clear chat after session:', err);
                 }
