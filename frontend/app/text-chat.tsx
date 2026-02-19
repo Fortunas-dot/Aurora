@@ -476,9 +476,20 @@ export default function TextChatScreen() {
           [
             {
               text: 'OK',
-              onPress: () => {
-                // Optionally clear chat after finishing
-                // clearMessages();
+              onPress: async () => {
+                // Clear chat after finishing session
+                try {
+                  await clearHistory();
+                  clearMessages();
+                  
+                  // Reset UI state
+                  setDisplayedText('');
+                  setIsTyping(false);
+                  setShowMenu(false);
+                  setBorderGlows([]);
+                } catch (err) {
+                  console.error('Failed to clear chat after session:', err);
+                }
               },
             },
           ]
