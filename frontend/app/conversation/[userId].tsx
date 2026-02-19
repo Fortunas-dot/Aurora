@@ -812,6 +812,7 @@ export default function ConversationScreen() {
                       messageText.length > 0 && (messageText.includes('\n') || messageText.length > 40) && { paddingBottom: 20, paddingRight: 60 },
                     ]}
                     maxLength={2000}
+                    showCharCount={false}
                     onSubmitEditing={handleSendMessage}
                   />
                 </View>
