@@ -57,11 +57,17 @@ class MessageService {
       filename?: string;
     }>
   ): Promise<ApiResponse<Message>> {
-    return apiService.post<Message>('/messages', {
+    // Only include attachments if array is not empty
+    const payload: any = {
       receiverId,
       content,
-      attachments,
-    });
+    };
+    
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      payload.attachments = attachments;
+    }
+    
+    return apiService.post<Message>('/messages', payload);
   }
 
   async markAsRead(messageId: string): Promise<ApiResponse<Message>> {

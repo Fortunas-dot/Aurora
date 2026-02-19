@@ -495,7 +495,9 @@ export default function ConversationScreen() {
     }, 100);
     
     try {
-      const response = await messageService.sendMessage(userId, messageContent, attachments);
+      // Ensure attachments is always an array (even if empty)
+      const attachmentsToSend = Array.isArray(attachments) && attachments.length > 0 ? attachments : undefined;
+      const response = await messageService.sendMessage(userId, messageContent, attachmentsToSend);
       
       if (response.success && response.data) {
         // Replace temp message with real message

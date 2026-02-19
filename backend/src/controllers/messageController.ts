@@ -166,11 +166,23 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    // Validate that we have either content or attachments
+    const hasContent = content && typeof content === 'string' && content.trim().length > 0;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    
+    if (!hasContent && !hasAttachments) {
+      res.status(400).json({
+        success: false,
+        message: 'Message must have either content or attachments',
+      });
+      return;
+    }
+
     const message = await Message.create({
       sender: req.userId,
       receiver: receiverId,
       content: content || '',
-      attachments: attachments || [],
+      attachments: Array.isArray(attachments) ? attachments : [],
     });
 
     await message.populate('sender', 'username displayName avatar');

@@ -299,12 +299,18 @@ class ChatWebSocketService {
    */
   sendMessage(receiverId: string, content: string, attachments?: Array<{ type: 'image' | 'file' | 'audio'; url: string; duration?: number }>): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
+      const payload: any = {
         type: 'message',
         receiverId,
         content,
-        attachments: attachments || [],
-      }));
+      };
+      
+      // Only include attachments if array is not empty
+      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        payload.attachments = attachments;
+      }
+      
+      this.ws.send(JSON.stringify(payload));
     } else {
       console.warn('WebSocket not connected, cannot send message');
     }

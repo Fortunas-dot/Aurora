@@ -76,11 +76,23 @@ const MessageSchema = new Schema<IMessage>(
 
 // Pre-save validation: message must have either content or attachments
 MessageSchema.pre('save', function(next) {
-  const message = this as IMessage;
-  const hasContent = message.content && message.content.trim().length > 0;
-  const hasAttachments = message.attachments && message.attachments.length > 0;
+  const message = this as any;
+  const content = message.content || '';
+  const hasContent = typeof content === 'string' && content.trim().length > 0;
   
+  // Check attachments - can be array or undefined
+  const attachments = message.attachments;
+  const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+  
+  // Debug logging (can be removed in production)
   if (!hasContent && !hasAttachments) {
+    console.log('Message validation failed:', {
+      content: content,
+      contentLength: content?.length,
+      attachments: attachments,
+      attachmentsLength: attachments?.length,
+      attachmentsIsArray: Array.isArray(attachments),
+    });
     const error = new Error('Message must have either content or attachments');
     return next(error);
   }

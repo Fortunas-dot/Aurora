@@ -141,7 +141,7 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
       sender: senderId,
       receiver: receiverId,
       content: content || '', // Empty string is OK if attachments exist
-      attachments: attachments || [],
+      attachments: Array.isArray(attachments) && attachments.length > 0 ? attachments : [],
     });
 
     await message.populate('sender', 'username displayName avatar');
