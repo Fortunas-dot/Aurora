@@ -42,12 +42,19 @@ const OrganicBlob = ({
   const opacity = useRef(new Animated.Value(config.opacity)).current;
   const translateX = useRef(new Animated.Value(config.offsetX)).current;
   const translateY = useRef(new Animated.Value(config.offsetY)).current;
+  const animationsStarted = useRef(false);
 
+  // Start animations only once on mount - use empty dependency array
   useEffect(() => {
+    // Prevent restarting animations
+    if (animationsStarted.current) return;
+    animationsStarted.current = true;
+
     const isSmall = coreSize < 100;
     const baseDuration = isSmall ? 8000 + index * 1000 : 12000 + index * 1500;
-    const smoothEasing = Easing.bezier(0.4, 0.0, 0.2, 1.0);
+    const smoothEasing = Easing.inOut(Easing.sin); // Smoother sine wave easing
 
+    // Scale X/Y breathing animation - smooth infinite loop
     Animated.loop(
       Animated.sequence([
         Animated.parallel([
@@ -66,20 +73,6 @@ const OrganicBlob = ({
         ]),
         Animated.parallel([
           Animated.timing(scaleX, {
-            toValue: 1.0,
-            duration: baseDuration * 0.3,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleY, {
-            toValue: 1.0,
-            duration: baseDuration * 0.3,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(scaleX, {
             toValue: 0.9,
             duration: baseDuration,
             easing: smoothEasing,
@@ -92,39 +85,25 @@ const OrganicBlob = ({
             useNativeDriver: true,
           }),
         ]),
-        Animated.parallel([
-          Animated.timing(scaleX, {
-            toValue: 1.0,
-            duration: baseDuration * 0.3,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleY, {
-            toValue: 1.0,
-            duration: baseDuration * 0.3,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-        ]),
       ])
     ).start();
 
-    const rotationSpeed = isSmall 
-      ? (state === 'speaking' ? 15000 : state === 'listening' ? 20000 : 40000)
-      : (state === 'speaking' ? 20000 : state === 'listening' ? 30000 : 50000);
-    
+    // Continuous rotation - never stops, no abrupt changes
     const rotationDirection = index % 2 === 0 ? 1 : -1;
+    const rotationSpeed = isSmall ? 40000 + index * 5000 : 60000 + index * 8000;
+    
     Animated.loop(
       Animated.timing(rotation, {
         toValue: rotationDirection,
-        duration: rotationSpeed + index * (isSmall ? 3000 : 5000),
-        easing: Easing.linear,
+        duration: rotationSpeed,
+        easing: Easing.linear, // Linear for continuous smooth rotation
         useNativeDriver: true,
       })
     ).start();
 
+    // Drift animation - smooth sinusoidal movement
     const driftAmount = isSmall ? 6 + index * 1.5 : 12 + index * 3;
-    const driftDuration = isSmall ? 6000 + index * 800 : 8000 + index * 1200;
+    const driftDuration = isSmall ? 8000 + index * 1000 : 12000 + index * 1500;
     
     Animated.loop(
       Animated.sequence([
@@ -135,20 +114,8 @@ const OrganicBlob = ({
           useNativeDriver: true,
         }),
         Animated.timing(translateX, {
-          toValue: config.offsetX,
-          duration: driftDuration * 0.4,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateX, {
           toValue: config.offsetX - driftAmount * Math.sin(index * 0.7),
           duration: driftDuration,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateX, {
-          toValue: config.offsetX,
-          duration: driftDuration * 0.4,
           easing: smoothEasing,
           useNativeDriver: true,
         }),
@@ -164,27 +131,16 @@ const OrganicBlob = ({
           useNativeDriver: true,
         }),
         Animated.timing(translateY, {
-          toValue: config.offsetY,
-          duration: driftDuration * 0.44,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
           toValue: config.offsetY - driftAmount * Math.cos(index * 0.5),
           duration: driftDuration * 1.1,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: config.offsetY,
-          duration: driftDuration * 0.44,
           easing: smoothEasing,
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    const breathDuration = isSmall ? 5000 + index * 600 : 7000 + index * 1000;
+    // Breathing scale animation
+    const breathDuration = isSmall ? 6000 + index * 800 : 9000 + index * 1200;
     
     Animated.loop(
       Animated.sequence([
@@ -195,26 +151,14 @@ const OrganicBlob = ({
           useNativeDriver: true,
         }),
         Animated.timing(scale, {
-          toValue: 1.0,
-          duration: breathDuration * 0.3,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
           toValue: 0.94,
           duration: breathDuration,
           easing: smoothEasing,
           useNativeDriver: true,
         }),
-        Animated.timing(scale, {
-          toValue: 1.0,
-          duration: breathDuration * 0.3,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
       ])
     ).start();
-  }, [state, coreSize]);
+  }, []); // Empty dependency - animations start once and loop forever
 
   useEffect(() => {
     if (state === 'speaking' || state === 'listening') {
@@ -290,81 +234,60 @@ const FloatingParticle = ({
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0.4)).current;
   const scale = useRef(new Animated.Value(1)).current;
+  const animationsStarted = useRef(false);
 
   const angle = (index / numParticles) * Math.PI * 2;
   const baseRadius = coreSize * 0.32;
   const x = Math.cos(angle) * baseRadius;
   const y = Math.sin(angle) * baseRadius;
 
+  // Start animations only once on mount
   useEffect(() => {
+    if (animationsStarted.current) return;
+    animationsStarted.current = true;
+
     const isSmall = coreSize < 100;
-    const duration = isSmall ? 4000 + index * 500 : 6000 + index * 800;
+    const duration = isSmall ? 5000 + index * 600 : 7000 + index * 900;
     const amplitude = isSmall ? 8 + index * 1.2 : 15 + index * 2;
-    const smoothEasing = Easing.bezier(0.4, 0.0, 0.2, 1.0);
+    const smoothEasing = Easing.inOut(Easing.sin); // Smooth sine wave
     
-    translateX.setValue(0);
-    translateY.setValue(0);
-    
+    // Smooth orbital movement - no abrupt stops
     Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(translateX, {
-            toValue: amplitude * Math.sin(angle * 2 + index),
-            duration: duration,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: 0,
-            duration: duration * 0.5,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: -amplitude * Math.sin(angle * 2 + index),
-            duration: duration,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: 0,
-            duration: duration * 0.5,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(translateY, {
-            toValue: amplitude * Math.cos(angle * 3 + index),
-            duration: duration * 1.1,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateY, {
-            toValue: 0,
-            duration: duration * 0.55,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateY, {
-            toValue: -amplitude * Math.cos(angle * 3 + index),
-            duration: duration * 1.1,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateY, {
-            toValue: 0,
-            duration: duration * 0.55,
-            easing: smoothEasing,
-            useNativeDriver: true,
-          }),
-        ]),
+      Animated.sequence([
+        Animated.timing(translateX, {
+          toValue: amplitude * Math.sin(angle * 2 + index),
+          duration: duration,
+          easing: smoothEasing,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: -amplitude * Math.sin(angle * 2 + index),
+          duration: duration,
+          easing: smoothEasing,
+          useNativeDriver: true,
+        }),
       ])
     ).start();
 
-    const opacityDuration = isSmall ? 2500 + index * 200 : 3500 + index * 300;
-    const currentOpacity = opacity._value || 0.4;
-    opacity.setValue(currentOpacity);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, {
+          toValue: amplitude * Math.cos(angle * 3 + index),
+          duration: duration * 1.1,
+          easing: smoothEasing,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: -amplitude * Math.cos(angle * 3 + index),
+          duration: duration * 1.1,
+          easing: smoothEasing,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Smooth opacity pulsing
+    const opacityDuration = isSmall ? 3000 + index * 300 : 4500 + index * 400;
     
     Animated.loop(
       Animated.sequence([
@@ -375,26 +298,14 @@ const FloatingParticle = ({
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: opacityDuration * 0.5,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.15,
+          toValue: 0.2,
           duration: opacityDuration,
-          easing: smoothEasing,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: opacityDuration * 0.5,
           easing: smoothEasing,
           useNativeDriver: true,
         }),
       ])
     ).start();
-  }, [coreSize]);
+  }, []); // Empty dependency - run once on mount
 
   useEffect(() => {
     if (state === 'speaking' || state === 'listening') {
