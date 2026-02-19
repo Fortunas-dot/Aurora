@@ -458,18 +458,16 @@ export default function OnboardingScreen() {
         <PaginationDots total={onboardingSlides.length} currentIndex={currentIndex} />
       </View>
 
-      {/* Next Button (not shown on last slide) */}
-      {currentIndex < onboardingSlides.length - 1 && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md }]}>
-          <GlassButton
-            title="Next"
-            onPress={handleNext}
-            variant="primary"
-            size="lg"
-            style={styles.nextButton}
-          />
-        </View>
-      )}
+      {/* Next/Get Started Button */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md }]}>
+        <GlassButton
+          title={currentIndex === onboardingSlides.length - 1 ? "Get Started" : "Next"}
+          onPress={handleNext}
+          variant="primary"
+          size="lg"
+          style={styles.nextButton}
+        />
+      </View>
     </LinearGradient>
   );
 }
