@@ -17,9 +17,21 @@ import { useCallback } from 'react';
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuthStore();
-  const { isActive: isOnboardingActive } = useOnboardingStore();
+  const { isActive: isOnboardingActive, finishOnboarding } = useOnboardingStore();
   const { unreadByType, loadNotifications } = useNotificationStore();
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  
+  // Auto-finish onboarding if user is logged in and navigates to tabs
+  // This prevents users from getting stuck with hidden tab bar after login
+  // If a logged-in user reaches the tabs, they shouldn't be in onboarding mode
+  useEffect(() => {
+    if (isAuthenticated && isOnboardingActive) {
+      // User is logged in and in tabs, but onboarding is still active
+      // This can happen if onboarding was started but not finished
+      // Auto-finish to prevent stuck state
+      finishOnboarding();
+    }
+  }, [isAuthenticated, isOnboardingActive, finishOnboarding]);
   
   // Load total unread messages count
   const loadUnreadCount = useCallback(async () => {
@@ -76,18 +88,18 @@ export default function TabsLayout() {
 
     // Subscribe to events for unread badge updates
     const unsubNewMessage = chatWebSocketService.on('new_message', () => {
-      loadUnreadCount();
+        loadUnreadCount();
     });
     const unsubMessageSent = chatWebSocketService.on('message_sent', () => {
-      loadUnreadCount();
+        loadUnreadCount();
     });
     const unsubConversationUpdated = chatWebSocketService.on('conversation_updated', () => {
-      loadUnreadCount();
+        loadUnreadCount();
     });
     const unsubConnected = chatWebSocketService.on('connected', () => {
-      loadUnreadCount();
+        loadUnreadCount();
     });
-
+    
     return () => {
       unsubNewMessage();
       unsubMessageSent();
@@ -133,7 +145,7 @@ export default function TabsLayout() {
           title: 'Feed',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
-              <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="home" size={size} color={color} />
               {unreadByType.feed > 0 && (
                 <Badge count={unreadByType.feed} size="sm" />
               )}
@@ -147,7 +159,7 @@ export default function TabsLayout() {
           title: 'Connect',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
-              <Ionicons name="people" size={size} color={color} />
+            <Ionicons name="people" size={size} color={color} />
               {unreadByType.groups > 0 && (
                 <Badge count={unreadByType.groups} size="sm" />
               )}
@@ -188,7 +200,7 @@ export default function TabsLayout() {
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
-              <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
               {unreadByType.profile > 0 && (
                 <Badge count={unreadByType.profile} size="sm" />
               )}
