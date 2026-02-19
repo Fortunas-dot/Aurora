@@ -14,6 +14,8 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -585,6 +587,7 @@ export default function ConversationScreen() {
 
     return (
       <Pressable
+        onPress={() => Keyboard.dismiss()}
         onLongPress={() => handleLongPressMessage(item._id)}
         style={[
           styles.messageContainer,
@@ -771,6 +774,7 @@ export default function ConversationScreen() {
             ) : null
           }
           inverted={false}
+          onScrollBeginDrag={Keyboard.dismiss}
         />
 
         {/* Typing Indicator */}
