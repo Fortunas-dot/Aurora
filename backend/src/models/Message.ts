@@ -36,17 +36,6 @@ const MessageSchema = new Schema<IMessage>(
       maxlength: [2000, 'Message cannot exceed 2000 characters'],
       trim: true,
       default: '',
-      validate: {
-        validator: function(value: string) {
-          // Content must be provided OR attachments must be provided
-          const hasContent = value && value.trim().length > 0;
-          // Access parent document via 'this' context
-          const doc = this as any;
-          const hasAttachments = doc.attachments && doc.attachments.length > 0;
-          return hasContent || hasAttachments;
-        },
-        message: 'Message must have either content or attachments',
-      },
     },
     attachments: [{
       type: {
@@ -84,6 +73,20 @@ const MessageSchema = new Schema<IMessage>(
     timestamps: true,
   }
 );
+
+// Pre-save validation: message must have either content or attachments
+MessageSchema.pre('save', function(next) {
+  const message = this as IMessage;
+  const hasContent = message.content && message.content.trim().length > 0;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
+  
+  if (!hasContent && !hasAttachments) {
+    const error = new Error('Message must have either content or attachments');
+    return next(error);
+  }
+  
+  next();
+});
 
 // Index for efficient conversation queries
 MessageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
