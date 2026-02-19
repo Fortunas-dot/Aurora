@@ -58,16 +58,37 @@ class UploadService {
       } as any);
 
       // Upload to server
-      const response = await fetch(`${API_CONFIG.BASE_URL}/upload`, {
+      const uploadUrl = `${API_CONFIG.BASE_URL}/upload`;
+      console.log('📤 Uploading file to:', uploadUrl);
+      
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+          // Don't set Content-Type for FormData - browser will set it with boundary
         },
         body: formData,
       });
 
+      console.log('📤 Upload response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📤 Upload failed:', response.status, errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText || `HTTP ${response.status}` };
+        }
+        return {
+          success: false,
+          message: errorData.message || `Upload failed: ${response.status}`,
+        };
+      }
+
       const result = await response.json();
+      console.log('📤 Upload result:', result);
 
       if (result.success && result.data?.url) {
         // Convert relative URL to absolute URL
@@ -86,10 +107,10 @@ class UploadService {
 
       return {
         success: false,
-        message: result.message || 'Upload failed',
+        message: result.message || 'Upload failed - no URL returned',
       };
     } catch (error: any) {
-      console.error('Error uploading file:', error);
+      console.error('📤 Error uploading file:', error);
       return {
         success: false,
         message: error.message || 'Upload failed',
