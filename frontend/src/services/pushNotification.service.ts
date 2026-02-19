@@ -142,6 +142,14 @@ class PushNotificationService {
     // Listener for when user taps on notification
     const responseListener = Notifications.addNotificationResponseReceivedListener(onNotificationTapped);
 
+    // Check if app was opened from a notification (cold start)
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        console.log('App opened from notification (cold start):', response);
+        onNotificationTapped(response);
+      }
+    });
+
     // Return cleanup function
     return () => {
       receivedListener.remove();

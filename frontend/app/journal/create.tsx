@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, ISymptom, SeverityLevel } from '../../src/services/journal.service';
+import { uploadService } from '../../src/services/upload.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useVoiceJournaling, formatDuration } from '../../src/hooks/useVoiceJournaling';
@@ -366,7 +367,8 @@ export default function CreateJournalEntryScreen() {
   const [saving, setSaving] = useState(false);
   const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [mediaItems, setMediaItems] = useState<Array<{ type: 'image' | 'video'; uri: string }>>([]);
+  const [mediaItems, setMediaItems] = useState<Array<{ type: 'image' | 'video'; uri: string; uploadedUrl?: string; isUploading?: boolean }>>([]);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const contentInputRef = React.useRef<TextInput>(null);
   const inputAccessoryViewID = 'mediaInputAccessoryView';
   const isMountedRef = React.useRef(true);
@@ -444,12 +446,36 @@ export default function CreateJournalEntryScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
-        handleAddMediaItem('image', imageUri);
-        // TODO: Upload image and replace with URL
+        
+        // Add media item with uploading state
+        const newItemIndex = mediaItems.length;
+        setMediaItems((prev) => [...prev, { type: 'image', uri: imageUri, isUploading: true }]);
+        setIsUploadingMedia(true);
+        
+        // Upload to server
+        const uploadResult = await uploadService.uploadImage(imageUri);
+        
+        if (uploadResult.success && uploadResult.data?.url) {
+          // Update media item with uploaded URL
+          setMediaItems((prev) => 
+            prev.map((item, index) => 
+              index === newItemIndex 
+                ? { ...item, uploadedUrl: uploadResult.data!.url, isUploading: false }
+                : item
+            )
+          );
+        } else {
+          // Remove failed upload
+          setMediaItems((prev) => prev.filter((_, index) => index !== newItemIndex));
+          Alert.alert('Upload Failed', uploadResult.message || 'Could not upload image');
+        }
+        
+        setIsUploadingMedia(false);
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Could not select image');
+      setIsUploadingMedia(false);
     }
   };
 
@@ -467,12 +493,36 @@ export default function CreateJournalEntryScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const videoUri = result.assets[0].uri;
-        handleAddMediaItem('video', videoUri);
-        // TODO: Upload video and replace with URL
+        
+        // Add media item with uploading state
+        const newItemIndex = mediaItems.length;
+        setMediaItems((prev) => [...prev, { type: 'video', uri: videoUri, isUploading: true }]);
+        setIsUploadingMedia(true);
+        
+        // Upload to server
+        const uploadResult = await uploadService.uploadVideo(videoUri);
+        
+        if (uploadResult.success && uploadResult.data?.url) {
+          // Update media item with uploaded URL
+          setMediaItems((prev) => 
+            prev.map((item, index) => 
+              index === newItemIndex 
+                ? { ...item, uploadedUrl: uploadResult.data!.url, isUploading: false }
+                : item
+            )
+          );
+        } else {
+          // Remove failed upload
+          setMediaItems((prev) => prev.filter((_, index) => index !== newItemIndex));
+          Alert.alert('Upload Failed', uploadResult.message || 'Could not upload video');
+        }
+        
+        setIsUploadingMedia(false);
       }
     } catch (error) {
       console.error('Error picking video:', error);
       Alert.alert('Error', 'Could not select video');
+      setIsUploadingMedia(false);
     }
   };
 
@@ -520,6 +570,12 @@ export default function CreateJournalEntryScreen() {
       return; // Prevent double submission
     }
 
+    // Check if any media is still uploading
+    if (isUploadingMedia || mediaItems.some(item => item.isUploading)) {
+      Alert.alert('Please wait', 'Media is still uploading. Please wait until upload completes.');
+      return;
+    }
+
     setSaving(true);
     
     // Create abort controller for this save operation
@@ -535,6 +591,14 @@ export default function CreateJournalEntryScreen() {
         tagsCount: tags.length,
       });
 
+      // Prepare media items (only include successfully uploaded items)
+      const uploadedMedia = mediaItems
+        .filter(item => item.uploadedUrl && !item.isUploading)
+        .map(item => ({
+          type: item.type,
+          url: item.uploadedUrl!,
+        }));
+
       const response = await journalService.createEntry({
         content: content.trim(),
         mood,
@@ -544,6 +608,7 @@ export default function CreateJournalEntryScreen() {
         promptId: params.promptId,
         promptText: params.promptText,
         fontFamily: 'palatino', // Save Palatino as the font for this entry
+        media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
       });
 
       // Check if component is still mounted and operation wasn't aborted

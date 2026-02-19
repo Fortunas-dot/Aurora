@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { journalService, ISymptom, SeverityLevel } from '../../src/services/journal.service';
+import { uploadService } from '../../src/services/upload.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { getFontFamily } from '../../src/utils/fontHelper';
 import { format } from 'date-fns';
@@ -334,8 +335,32 @@ export default function BookPageEntryScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
-        handleInsertText(`[Image: ${imageUri}]`);
-        // TODO: Upload image and replace with URL
+        
+        // Show uploading indicator
+        handleInsertText('[Uploading image...]');
+        
+        // Upload to server
+        const uploadResult = await uploadService.uploadImage(imageUri);
+        
+        if (uploadResult.success && uploadResult.data?.url) {
+          // Replace placeholder with actual URL
+          setPages((prevPages) => {
+            const newPages = [...prevPages];
+            newPages[currentPageIndex] = newPages[currentPageIndex].replace(
+              '[Uploading image...]',
+              `[Image: ${uploadResult.data!.url}]`
+            );
+            return newPages;
+          });
+        } else {
+          // Remove placeholder on failure
+          setPages((prevPages) => {
+            const newPages = [...prevPages];
+            newPages[currentPageIndex] = newPages[currentPageIndex].replace('[Uploading image...]', '');
+            return newPages;
+          });
+          Alert.alert('Upload Failed', uploadResult.message || 'Could not upload image');
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -357,8 +382,32 @@ export default function BookPageEntryScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const videoUri = result.assets[0].uri;
-        handleInsertText(`[Video: ${videoUri}]`);
-        // TODO: Upload video and replace with URL
+        
+        // Show uploading indicator
+        handleInsertText('[Uploading video...]');
+        
+        // Upload to server
+        const uploadResult = await uploadService.uploadVideo(videoUri);
+        
+        if (uploadResult.success && uploadResult.data?.url) {
+          // Replace placeholder with actual URL
+          setPages((prevPages) => {
+            const newPages = [...prevPages];
+            newPages[currentPageIndex] = newPages[currentPageIndex].replace(
+              '[Uploading video...]',
+              `[Video: ${uploadResult.data!.url}]`
+            );
+            return newPages;
+          });
+        } else {
+          // Remove placeholder on failure
+          setPages((prevPages) => {
+            const newPages = [...prevPages];
+            newPages[currentPageIndex] = newPages[currentPageIndex].replace('[Uploading video...]', '');
+            return newPages;
+          });
+          Alert.alert('Upload Failed', uploadResult.message || 'Could not upload video');
+        }
       }
     } catch (error) {
       console.error('Error picking video:', error);

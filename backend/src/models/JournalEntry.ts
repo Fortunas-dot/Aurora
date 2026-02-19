@@ -17,12 +17,18 @@ export interface IAIInsights {
   analyzedAt?: Date;
 }
 
+export interface IMediaItem {
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface IJournalEntry extends Document {
   author: Types.ObjectId;
   journal: Types.ObjectId; // Reference to Journal
   content: string;
   audioUrl?: string;
   transcription?: string;
+  media?: IMediaItem[]; // Images and videos attached to entry
   mood: number;
   symptoms: ISymptom[];
   tags: string[];
@@ -63,6 +69,18 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
       maxlength: [10000, 'Transcription cannot exceed 10000 characters'],
       trim: true,
     },
+    media: [{
+      type: {
+        type: String,
+        enum: ['image', 'video'],
+        required: true,
+      },
+      url: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+    }],
     mood: {
       type: Number,
       required: [true, 'Mood rating is required'],

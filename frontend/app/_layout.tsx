@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet } from 'react-native';
@@ -37,6 +37,7 @@ function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors
 }
 
 export default function RootLayout() {
+  const router = useRouter();
   const { checkAuth, isLoading, isAuthenticated, user } = useAuthStore();
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
@@ -167,9 +168,44 @@ export default function RootLayout() {
         },
         (response) => {
           console.log('Notification tapped:', response);
-          const data = response.notification.request.content.data;
-          // Handle navigation based on notification data
-          // This will be handled by the notification card component
+          const data = response.notification.request.content.data as {
+            type?: string;
+            relatedUserId?: string;
+            relatedPostId?: string;
+            relatedGroupId?: string;
+            notificationId?: string;
+          };
+          
+          // Handle navigation based on notification type
+          if (data) {
+            switch (data.type) {
+              case 'like':
+              case 'comment':
+                if (data.relatedPostId) {
+                  router.push(`/post/${data.relatedPostId}`);
+                }
+                break;
+              case 'follow':
+                if (data.relatedUserId) {
+                  router.push(`/user/${data.relatedUserId}`);
+                }
+                break;
+              case 'message':
+                if (data.relatedUserId) {
+                  router.push(`/conversation/${data.relatedUserId}`);
+                }
+                break;
+              case 'group_invite':
+              case 'group_join':
+                if (data.relatedGroupId) {
+                  router.push(`/group/${data.relatedGroupId}`);
+                }
+                break;
+              default:
+                // Default: go to notifications screen
+                router.push('/notifications');
+            }
+          }
         }
       );
 

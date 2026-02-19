@@ -35,6 +35,11 @@ export interface IAIInsights {
   analyzedAt?: string;
 }
 
+export interface MediaItem {
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface JournalEntry {
   _id: string;
   author: string;
@@ -42,6 +47,7 @@ export interface JournalEntry {
   content: string;
   audioUrl?: string;
   transcription?: string;
+  media?: MediaItem[]; // Images and videos attached to entry
   mood: number;
   symptoms: ISymptom[];
   tags: string[];
@@ -96,6 +102,7 @@ export interface CreateEntryData {
   journalId: string;
   audioUrl?: string;
   transcription?: string;
+  media?: MediaItem[]; // Images and videos to attach
   symptoms?: ISymptom[];
   tags?: string[];
   promptId?: string;
