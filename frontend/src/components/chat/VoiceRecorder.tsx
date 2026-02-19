@@ -24,15 +24,25 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   // Auto-start recording when component mounts
   useEffect(() => {
+    let mounted = true;
+    
     // Start recording automatically when component is shown
-    startRecording();
+    const initRecording = async () => {
+      if (mounted) {
+        await startRecording();
+      }
+    };
+    
+    initRecording();
     
     return () => {
+      mounted = false;
       if (recording) {
         recording.stopAndUnloadAsync().catch(console.error);
       }
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
+        durationInterval.current = null;
       }
     };
   }, []); // Only run on mount
@@ -87,11 +97,43 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setDuration(0);
       setAudioLevel(0);
 
-      // Start duration timer - use ref to ensure we always have the latest value
-      durationInterval.current = setInterval(() => {
-        durationRef.current += 1;
-        setDuration(durationRef.current);
+      // Clear any existing interval first
+      if (durationInterval.current) {
+        clearInterval(durationInterval.current);
+        durationInterval.current = null;
+      }
+
+      // Start duration timer - poll recording status for accurate duration
+      console.log('Starting duration timer');
+      durationInterval.current = setInterval(async () => {
+        try {
+          const currentStatus = await newRecording.getStatusAsync();
+          if (currentStatus.isRecording && currentStatus.durationMillis) {
+            // Use actual duration from recording status (more accurate)
+            const seconds = Math.floor(currentStatus.durationMillis / 1000);
+            durationRef.current = seconds;
+            setDuration(seconds);
+            console.log('Duration from recording:', seconds);
+          } else {
+            // Fallback: increment manually if status doesn't have duration
+            durationRef.current += 1;
+            setDuration(durationRef.current);
+            console.log('Duration manual increment:', durationRef.current);
+          }
+        } catch (error) {
+          // Fallback: increment manually on error
+          durationRef.current += 1;
+          setDuration(durationRef.current);
+          console.log('Duration fallback increment:', durationRef.current);
+        }
       }, 1000);
+      
+      // Verify timer started
+      if (!durationInterval.current) {
+        console.error('Failed to start duration timer');
+      } else {
+        console.log('Duration timer started successfully');
+      }
 
       // Pulse animation
       Animated.loop(
@@ -158,12 +200,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Don't render anything until recording starts (prevents flash of start button)
+  // Show loading state while starting recording
   if (!isRecording && !recording) {
     return (
       <View style={styles.container}>
-        <View style={styles.recorderContent}>
+        <View style={[styles.recorderContent, { justifyContent: 'center' }]}>
           <LoadingSpinner size="sm" />
+          <Text style={{ marginLeft: SPACING.sm, color: COLORS.textMuted }}>Starting recording...</Text>
         </View>
       </View>
     );
