@@ -1,8 +1,19 @@
 import { getApiUrl } from '../utils/apiUrl';
 import { secureStorage } from '../utils/secureStorage';
 
-export type ChatWebSocketEvent = 'new_message' | 'message_sent' | 'typing_start' | 'typing_stop' | 'user_status' | 'message_read' | 'conversation_updated' | 'error' | 'connected';
+export type ChatWebSocketEventType = 
+  | 'new_message' 
+  | 'message_sent' 
+  | 'typing_start' 
+  | 'typing_stop' 
+  | 'user_status' 
+  | 'message_read' 
+  | 'conversation_updated' 
+  | 'connected' 
+  | 'disconnected' 
+  | 'error';
 
+// Legacy callback interface (still supported for backwards compat)
 export interface ChatWebSocketCallbacks {
   onNewMessage?: (message: any) => void;
   onMessageSent?: (message: any) => void;
@@ -16,31 +27,75 @@ export interface ChatWebSocketCallbacks {
   onDisconnected?: () => void;
 }
 
+type EventHandler = (...args: any[]) => void;
+
 class ChatWebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
-  private reconnectDelay = 3000; // 3 seconds
+  private reconnectDelay = 3000;
   private reconnectTimer: NodeJS.Timeout | null = null;
-  private callbacks: ChatWebSocketCallbacks = {};
   private isConnecting = false;
   private typingTimeout: NodeJS.Timeout | null = null;
 
+  // Event listener system - supports multiple listeners per event
+  private listeners: Map<ChatWebSocketEventType, Set<EventHandler>> = new Map();
+
   /**
-   * Connect to chat WebSocket
+   * Add an event listener. Returns an unsubscribe function.
    */
-  async connect(callbacks: ChatWebSocketCallbacks): Promise<void> {
-    // If already connected, just update callbacks
+  on(event: ChatWebSocketEventType, handler: EventHandler): () => void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(handler);
+
+    // Return unsubscribe function
+    return () => {
+      this.listeners.get(event)?.delete(handler);
+    };
+  }
+
+  /**
+   * Remove a specific event listener
+   */
+  off(event: ChatWebSocketEventType, handler: EventHandler): void {
+    this.listeners.get(event)?.delete(handler);
+  }
+
+  /**
+   * Emit an event to all registered listeners
+   */
+  private emit(event: ChatWebSocketEventType, ...args: any[]): void {
+    this.listeners.get(event)?.forEach((handler) => {
+      try {
+        handler(...args);
+      } catch (error) {
+        console.error(`Error in ${event} handler:`, error);
+      }
+    });
+  }
+
+  /**
+   * Connect to chat WebSocket. 
+   * If already connected, does nothing.
+   * Optionally accepts legacy callbacks for backwards compatibility.
+   */
+  async connect(callbacks?: ChatWebSocketCallbacks): Promise<void> {
+    // Register legacy callbacks as listeners if provided
+    if (callbacks) {
+      this.registerLegacyCallbacks(callbacks);
+    }
+
+    // If already connected, nothing to do
     if (this.ws?.readyState === WebSocket.OPEN) {
       console.log('Chat WebSocket already connected');
-      this.callbacks = callbacks;
       return;
     }
 
-    // If connecting, wait a bit and check again
+    // If connecting, wait
     if (this.isConnecting) {
       console.log('Chat WebSocket connection already in progress');
-      this.callbacks = callbacks; // Update callbacks anyway
       return;
     }
 
@@ -54,16 +109,14 @@ class ChatWebSocketService {
       this.ws = null;
     }
 
-    this.callbacks = callbacks;
     this.isConnecting = true;
 
     try {
       const token = await secureStorage.getItemAsync('auth_token');
       if (!token) {
-        // Silently fail if no token - user might not be logged in yet
         console.log('No auth token available, skipping WebSocket connection');
         this.isConnecting = false;
-        this.callbacks.onError?.(new Error('No auth token available'));
+        this.emit('error', new Error('No auth token available'));
         return;
       }
 
@@ -71,7 +124,7 @@ class ChatWebSocketService {
       const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://');
       const url = `${wsUrl}/ws/chat?token=${token}`;
 
-      console.log('Connecting to chat WebSocket:', url);
+      console.log('Connecting to chat WebSocket...');
 
       this.ws = new WebSocket(url);
 
@@ -79,16 +132,14 @@ class ChatWebSocketService {
         console.log('✅ Chat WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        this.callbacks.onConnected?.();
+        this.emit('connected');
       };
 
       this.ws.onmessage = (event) => {
         try {
-          // Parse message - backend sends JSON
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          // If parsing fails, check if it's a plain text ping/pong (fallback)
           if (typeof event.data === 'string') {
             const text = event.data.trim();
             if (text === 'ping') {
@@ -98,10 +149,9 @@ class ChatWebSocketService {
               return;
             }
             if (text === 'pong') {
-              return; // Ignore pong silently
+              return;
             }
           }
-          // Only log non-ping/pong parsing errors
           if (__DEV__) {
             console.warn('Error parsing chat WebSocket message:', error);
           }
@@ -111,86 +161,76 @@ class ChatWebSocketService {
       this.ws.onerror = (error) => {
         console.error('Chat WebSocket error:', error);
         this.isConnecting = false;
-        this.callbacks.onError?.(new Error('WebSocket connection error'));
+        this.emit('error', new Error('WebSocket connection error'));
       };
 
       this.ws.onclose = (event) => {
         console.log('Chat WebSocket disconnected', event.code, event.reason);
         this.isConnecting = false;
-        this.callbacks.onDisconnected?.();
-        
-        // Don't reconnect on:
-        // - Code 1000: Normal closure (manual disconnect)
-        // - Code 1005: No status received (server timeout/network issue - don't spam reconnect)
-        // - Code 1002: Protocol error (don't reconnect)
-        // - Code 1003: Unsupported data (don't reconnect)
-        // - Code 1007: Invalid data (don't reconnect)
-        // - Code 1008: Policy violation (don't reconnect)
-        // - Code 1009: Message too big (don't reconnect)
-        // - Code 1010: Extension error (don't reconnect)
-        // - Code 1015: TLS handshake failure (don't reconnect)
-        
-        const shouldReconnect = 
-          event.code !== 1000 && // Not manual close
-          event.code !== 1005 && // Not no status (server timeout - wait for user action)
-          event.code !== 1002 && // Not protocol error
-          event.code !== 1003 && // Not unsupported data
-          event.code !== 1007 && // Not invalid data
-          event.code !== 1008 && // Not policy violation
-          event.code !== 1009 && // Not message too big
-          event.code !== 1010 && // Not extension error
-          event.code !== 1015 && // Not TLS handshake failure
+        this.emit('disconnected');
+
+        const shouldReconnect =
+          event.code !== 1000 &&
+          event.code !== 1005 &&
+          event.code !== 1002 &&
+          event.code !== 1003 &&
+          event.code !== 1007 &&
+          event.code !== 1008 &&
+          event.code !== 1009 &&
+          event.code !== 1010 &&
+          event.code !== 1015 &&
           this.reconnectAttempts < this.maxReconnectAttempts;
-        
+
         if (shouldReconnect) {
           this.attemptReconnect();
-        } else if (event.code === 1005) {
-          // Code 1005 means server closed without close frame (likely timeout)
-          // Don't spam reconnect, just log it
-          console.log('Chat WebSocket closed by server (likely timeout). Will reconnect on next user action.');
         }
       };
     } catch (error) {
-      // Only log non-token errors as errors, token errors are expected
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('No auth token available')) {
-        console.log('No auth token available, skipping WebSocket connection');
-      } else {
+      if (!errorMessage.includes('No auth token available')) {
         console.error('Error connecting to chat WebSocket:', error);
       }
       this.isConnecting = false;
-      this.callbacks.onError?.(error as Error);
+      this.emit('error', error as Error);
     }
   }
 
   /**
-   * Handle incoming WebSocket messages
+   * Ensure the WebSocket is connected (connects if needed)
+   */
+  async ensureConnected(): Promise<void> {
+    if (this.ws?.readyState !== WebSocket.OPEN && !this.isConnecting) {
+      await this.connect();
+    }
+  }
+
+  /**
+   * Handle incoming WebSocket messages - emit to all listeners
    */
   private handleMessage(data: any): void {
     switch (data.type) {
       case 'new_message':
-        this.callbacks.onNewMessage?.(data.message);
+        this.emit('new_message', data.message);
         break;
       case 'message_sent':
-        this.callbacks.onMessageSent?.(data.message);
+        this.emit('message_sent', data.message);
         break;
       case 'typing_start':
-        this.callbacks.onTypingStart?.(data.userId);
+        this.emit('typing_start', data.userId);
         break;
       case 'typing_stop':
-        this.callbacks.onTypingStop?.(data.userId);
+        this.emit('typing_stop', data.userId);
         break;
       case 'user_status':
-        this.callbacks.onUserStatus?.(data.userId, data.isOnline);
+        this.emit('user_status', data.userId, data.isOnline);
         break;
       case 'message_read':
-        this.callbacks.onMessageRead?.(data.messageId, new Date(data.readAt));
+        this.emit('message_read', data.messageId, new Date(data.readAt));
         break;
       case 'conversation_updated':
-        this.callbacks.onConversationUpdated?.(data.conversation);
+        this.emit('conversation_updated', data.conversation);
         break;
       case 'ping':
-        // Respond to ping with pong if WebSocket is open
         if (this.ws?.readyState === WebSocket.OPEN) {
           try {
             this.ws.send(JSON.stringify({ type: 'pong' }));
@@ -200,13 +240,11 @@ class ChatWebSocketService {
         }
         break;
       case 'pong':
-        // Heartbeat response, ignore silently
         break;
       case 'error':
-        this.callbacks.onError?.(new Error(data.message));
+        this.emit('error', new Error(data.message));
         break;
       default:
-        // Only log if it's not a ping/pong message
         if (data.type && data.type !== 'ping' && data.type !== 'pong') {
           console.log('Unknown chat WebSocket message type:', data.type);
         }
@@ -214,9 +252,52 @@ class ChatWebSocketService {
   }
 
   /**
+   * Register legacy callbacks as event listeners (for backwards compatibility)
+   * Returns cleanup function to remove all registered listeners
+   */
+  private legacyCleanups: Array<() => void> = [];
+
+  private registerLegacyCallbacks(callbacks: ChatWebSocketCallbacks): void {
+    // Clean up previous legacy callbacks
+    this.legacyCleanups.forEach((cleanup) => cleanup());
+    this.legacyCleanups = [];
+
+    if (callbacks.onNewMessage) {
+      this.legacyCleanups.push(this.on('new_message', callbacks.onNewMessage));
+    }
+    if (callbacks.onMessageSent) {
+      this.legacyCleanups.push(this.on('message_sent', callbacks.onMessageSent));
+    }
+    if (callbacks.onTypingStart) {
+      this.legacyCleanups.push(this.on('typing_start', callbacks.onTypingStart));
+    }
+    if (callbacks.onTypingStop) {
+      this.legacyCleanups.push(this.on('typing_stop', callbacks.onTypingStop));
+    }
+    if (callbacks.onUserStatus) {
+      this.legacyCleanups.push(this.on('user_status', callbacks.onUserStatus));
+    }
+    if (callbacks.onMessageRead) {
+      this.legacyCleanups.push(this.on('message_read', callbacks.onMessageRead));
+    }
+    if (callbacks.onConversationUpdated) {
+      this.legacyCleanups.push(this.on('conversation_updated', callbacks.onConversationUpdated));
+    }
+    if (callbacks.onError) {
+      this.legacyCleanups.push(this.on('error', callbacks.onError));
+    }
+    if (callbacks.onConnected) {
+      this.legacyCleanups.push(this.on('connected', callbacks.onConnected));
+    }
+    if (callbacks.onDisconnected) {
+      this.legacyCleanups.push(this.on('disconnected', callbacks.onDisconnected));
+    }
+  }
+
+  /**
    * Send message via WebSocket
    */
-  sendMessage(receiverId: string, content: string, attachments?: Array<{ type: 'image' | 'file'; url: string }>): void {
+  sendMessage(receiverId: string, content: string, attachments?: Array<{ type: 'image' | 'file' | 'audio'; url: string; duration?: number }>): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'message',
@@ -239,7 +320,6 @@ class ChatWebSocketService {
         receiverId,
       }));
 
-      // Auto-stop typing after 3 seconds
       if (this.typingTimeout) {
         clearTimeout(this.typingTimeout);
       }
@@ -282,7 +362,6 @@ class ChatWebSocketService {
    * Attempt to reconnect to WebSocket
    */
   private attemptReconnect(): void {
-    // Don't reconnect if already connecting or if WebSocket is still open
     if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -292,47 +371,39 @@ class ChatWebSocketService {
       return;
     }
 
-    // Clear any existing reconnect timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
     this.reconnectAttempts++;
-    const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 30000); // Max 30 seconds
+    const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 30000);
 
     console.log(`Attempting to reconnect chat WebSocket in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
-      // Check again before reconnecting - make sure we still need to reconnect
       if (!this.isConnecting && this.ws?.readyState !== WebSocket.OPEN && this.ws?.readyState !== WebSocket.CONNECTING) {
-        if (this.callbacks.onConnected || this.callbacks.onNewMessage) {
-          this.connect(this.callbacks);
-        }
+        this.connect();
       }
     }, delay);
   }
 
   /**
-   * Disconnect from WebSocket
+   * Disconnect from WebSocket (only call on logout or app background)
    */
   disconnect(): void {
-    // Clear reconnect timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
-    // Clear typing timeout
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
       this.typingTimeout = null;
     }
 
-    // Close WebSocket connection
     if (this.ws) {
       try {
-        // Use code 1000 (normal closure) to indicate manual disconnect
         this.ws.close(1000, 'Manual disconnect');
       } catch (error) {
         // Ignore close errors
@@ -353,4 +424,3 @@ class ChatWebSocketService {
 }
 
 export const chatWebSocketService = new ChatWebSocketService();
-

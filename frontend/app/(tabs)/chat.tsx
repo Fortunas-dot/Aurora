@@ -175,53 +175,47 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    chatWebSocketService.connect({
-      onNewMessage: (message) => {
-        // Reload conversations to update unread counts and last messages
-        loadConversations();
-      },
-      onMessageSent: (message) => {
-        // When you send a message, update the conversation list
-        loadConversations();
-      },
-      onConversationUpdated: (conversation) => {
-        // Update conversation in list
-        setConversations((prev) => {
-          const index = prev.findIndex((c) => c.user._id === conversation.user._id);
-          if (index !== -1) {
-            const updated = [...prev];
-            updated[index] = {
-              ...updated[index],
-              lastMessage: conversation.lastMessage,
-              // Update unreadCount if provided in conversation
-              unreadCount: conversation.unreadCount !== undefined ? conversation.unreadCount : updated[index].unreadCount,
-            };
-            // Move to top
-            const [moved] = updated.splice(index, 1);
-            return [moved, ...updated];
-          } else {
-            // New conversation, add to top
-            return [conversation, ...prev];
-          }
-        });
-      },
-      onUserStatus: (userId, isOnline) => {
-        // Update online status in conversation list if needed
-        // This could be used to show online indicators
-      },
-      onConnected: () => {
-        console.log('✅ Chat WebSocket connected');
-      },
-      onDisconnected: () => {
-        console.log('❌ Chat WebSocket disconnected');
-      },
-      onError: (error) => {
-        console.error('Chat WebSocket error:', error);
-      },
+    // Connect WebSocket (idempotent - won't reconnect if already connected)
+    chatWebSocketService.connect();
+
+    // Subscribe to events using event listeners
+    const unsubNewMessage = chatWebSocketService.on('new_message', () => {
+      loadConversations();
     });
 
+    const unsubMessageSent = chatWebSocketService.on('message_sent', () => {
+      loadConversations();
+    });
+
+    const unsubConversationUpdated = chatWebSocketService.on('conversation_updated', (conversation: any) => {
+      setConversations((prev) => {
+        const index = prev.findIndex((c) => c.user._id === conversation.user._id);
+        if (index !== -1) {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            lastMessage: conversation.lastMessage,
+            unreadCount: conversation.unreadCount !== undefined ? conversation.unreadCount : updated[index].unreadCount,
+          };
+          const [moved] = updated.splice(index, 1);
+          return [moved, ...updated];
+        } else {
+          return [conversation, ...prev];
+        }
+      });
+    });
+
+    const unsubConnected = chatWebSocketService.on('connected', () => {
+      console.log('✅ Chat WebSocket connected');
+    });
+
+    // Cleanup: remove listeners but do NOT disconnect
+    // The WebSocket stays alive for other screens to use
     return () => {
-      chatWebSocketService.disconnect();
+      unsubNewMessage();
+      unsubMessageSent();
+      unsubConversationUpdated();
+      unsubConnected();
     };
   }, [isAuthenticated, loadConversations]);
 

@@ -67,32 +67,34 @@ export default function TabsLayout() {
   );
   
   // Setup WebSocket to update unread count in real-time
+  // _layout.tsx is the main connection owner - it establishes and maintains the connection
   useEffect(() => {
     if (!isAuthenticated) return;
     
-    chatWebSocketService.connect({
-      onNewMessage: () => {
-        // Reload unread count when new message arrives
-        loadUnreadCount();
-      },
-      onMessageSent: () => {
-        // Reload unread count when message is sent (might affect unread count)
-        loadUnreadCount();
-      },
-      onConversationUpdated: () => {
-        // Reload unread count when conversation is updated
-        loadUnreadCount();
-      },
-      onConnected: () => {
-        // Reload unread count when connected
-        loadUnreadCount();
-      },
-      onError: () => {},
-      onDisconnected: () => {},
+    // Establish the WebSocket connection (this is the primary connect point)
+    chatWebSocketService.connect();
+
+    // Subscribe to events for unread badge updates
+    const unsubNewMessage = chatWebSocketService.on('new_message', () => {
+      loadUnreadCount();
     });
-    
+    const unsubMessageSent = chatWebSocketService.on('message_sent', () => {
+      loadUnreadCount();
+    });
+    const unsubConversationUpdated = chatWebSocketService.on('conversation_updated', () => {
+      loadUnreadCount();
+    });
+    const unsubConnected = chatWebSocketService.on('connected', () => {
+      loadUnreadCount();
+    });
+
     return () => {
-      // Don't disconnect here as other screens might be using it
+      unsubNewMessage();
+      unsubMessageSent();
+      unsubConversationUpdated();
+      unsubConnected();
+      // Disconnect when tabs layout unmounts (user logged out or app closed)
+      chatWebSocketService.disconnect();
     };
   }, [isAuthenticated, loadUnreadCount]);
   

@@ -21,11 +21,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { formatDistanceToNow, format } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { GlassCard, GlassInput, GlassButton, Avatar, LoadingSpinner } from '../../src/components/common';
 import { EmojiPicker } from '../../src/components/chat/EmojiPicker';
 import { VoiceRecorder } from '../../src/components/chat/VoiceRecorder';
 import { VoiceMessagePlayer } from '../../src/components/chat/VoiceMessagePlayer';
+import { TypingIndicator } from '../../src/components/chat/TypingIndicator';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { messageService, Message } from '../../src/services/message.service';
 import { uploadService } from '../../src/services/upload.service';
@@ -229,102 +230,97 @@ export default function ConversationScreen() {
     loadMessages(1, false);
   }, [loadMessages]);
 
-  // Setup WebSocket connection for real-time chat
+  // Setup WebSocket event listeners for real-time chat
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    chatWebSocketService.connect({
-      onNewMessage: (message) => {
-        // Only add message if it's from the current conversation
-        if (message.sender._id === userId || message.receiver._id === userId) {
-          setMessages((prev) => {
-            // Check if message already exists
-            if (prev.some((m) => m._id === message._id)) {
-              return prev;
-            }
-            return [...prev, message];
-          });
-          
-          // Scroll to bottom
-          setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }, 100);
+    // Ensure WebSocket is connected
+    chatWebSocketService.ensureConnected();
 
-          // Mark as read if it's a received message
-          if (message.sender._id === userId) {
-            chatWebSocketService.markAsRead(message._id);
-          }
-        }
-      },
-      onMessageSent: (message) => {
-        // Only add message if it doesn't already exist (check by _id and content/timestamp)
+    // Subscribe to events using the new listener API
+    const unsubNewMessage = chatWebSocketService.on('new_message', (message: any) => {
+      // Only handle messages from the current conversation
+      if (message.sender._id === userId || message.receiver._id === userId) {
         setMessages((prev) => {
-          // Check if message already exists by _id
-          if (prev.some((m) => m._id === message._id)) {
-            return prev;
-          }
-          
-          // Check if it's a duplicate by content and sender (within last 2 seconds)
-          const now = new Date().getTime();
-          const messageTime = new Date(message.createdAt).getTime();
-          const isDuplicate = prev.some((m) => {
-            const mTime = new Date(m.createdAt).getTime();
-            return (
-              m.sender._id === message.sender._id &&
-              m.content === message.content &&
-              Math.abs(now - mTime) < 2000 &&
-              Math.abs(messageTime - mTime) < 2000
-            );
-          });
-          
-          if (isDuplicate) {
-            return prev;
-          }
-          
+          if (prev.some((m) => m._id === message._id)) return prev;
           return [...prev, message];
         });
-        
+
         // Scroll to bottom
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
-      },
-      onTypingStart: (typingUserId) => {
-        if (typingUserId === userId) {
-          setIsTyping(true);
+
+        // Mark as read if it's a received message
+        if (message.sender._id === userId) {
+          chatWebSocketService.markAsRead(message._id);
         }
-      },
-      onTypingStop: (typingUserId) => {
-        if (typingUserId === userId) {
-          setIsTyping(false);
-        }
-      },
-      onUserStatus: (statusUserId, online) => {
-        if (statusUserId === userId) {
-          setIsOnline(online);
-        }
-      },
-      onMessageRead: (messageId, readAt) => {
-        // Update message read status
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === messageId ? { ...msg, readAt: readAt.toISOString() } : msg
-          )
-        );
-      },
-      onConnected: () => {
-        console.log('✅ Chat WebSocket connected');
-      },
-      onDisconnected: () => {
-        console.log('❌ Chat WebSocket disconnected');
-      },
-      onError: (error) => {
-        console.error('Chat WebSocket error:', error);
-      },
+
+        // Clear typing indicator when message arrives
+        setIsTyping(false);
+      }
     });
 
+    const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === message._id)) return prev;
+
+        // Check for duplicate by content within 2 seconds
+        const now = new Date().getTime();
+        const messageTime = new Date(message.createdAt).getTime();
+        const isDuplicate = prev.some((m) => {
+          const mTime = new Date(m.createdAt).getTime();
+          return (
+            m.sender._id === message.sender._id &&
+            m.content === message.content &&
+            Math.abs(now - mTime) < 2000 &&
+            Math.abs(messageTime - mTime) < 2000
+          );
+        });
+
+        if (isDuplicate) return prev;
+        return [...prev, message];
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const unsubTypingStart = chatWebSocketService.on('typing_start', (typingUserId: string) => {
+      if (typingUserId === userId) {
+        setIsTyping(true);
+      }
+    });
+
+    const unsubTypingStop = chatWebSocketService.on('typing_stop', (typingUserId: string) => {
+      if (typingUserId === userId) {
+        setIsTyping(false);
+      }
+    });
+
+    const unsubUserStatus = chatWebSocketService.on('user_status', (statusUserId: string, online: boolean) => {
+      if (statusUserId === userId) {
+        setIsOnline(online);
+      }
+    });
+
+    const unsubMessageRead = chatWebSocketService.on('message_read', (messageId: string, readAt: Date) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === messageId ? { ...msg, readAt: readAt.toISOString() } : msg
+        )
+      );
+    });
+
+    // Cleanup: only remove listeners, do NOT disconnect the WebSocket
     return () => {
-      chatWebSocketService.disconnect();
+      unsubNewMessage();
+      unsubMessageSent();
+      unsubTypingStart();
+      unsubTypingStop();
+      unsubUserStatus();
+      unsubMessageRead();
     };
   }, [isAuthenticated, userId]);
 
@@ -555,7 +551,7 @@ export default function ConversationScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.sender._id === currentUser?._id;
-    const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: nl });
+    const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: enUS });
     const showDate = false; // Could add date separators if needed
 
     const imageUrl = (url: string) => {
@@ -656,9 +652,9 @@ export default function ConversationScreen() {
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.authPrompt}>
           <Ionicons name="chatbubbles-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.authPromptTitle}>Log in om te chatten</Text>
+          <Text style={styles.authPromptTitle}>Log in to chat</Text>
           <GlassButton
-            title="Inloggen"
+            title="Log in"
             onPress={() => router.push('/(auth)/login')}
             variant="primary"
             style={styles.authButton}
@@ -714,7 +710,11 @@ export default function ConversationScreen() {
                 <Text style={styles.headerUserName}>
                   {otherUser.displayName || otherUser.username}
                 </Text>
-                <Text style={[styles.headerUserStatus, isOnline && styles.headerUserStatusOnline]}>
+                <Text style={[
+                  styles.headerUserStatus, 
+                  isOnline && styles.headerUserStatusOnline,
+                  isTyping && styles.headerUserStatusTyping,
+                ]}>
                   {isTyping ? 'typing...' : isOnline ? 'Online' : 'Offline'}
                 </Text>
               </View>
@@ -754,10 +754,8 @@ export default function ConversationScreen() {
 
         {/* Typing Indicator */}
         {isTyping && (
-          <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>
-              {otherUser?.displayName || otherUser?.username} is typing...
-            </Text>
+          <View style={styles.typingIndicatorContainer}>
+            <TypingIndicator />
           </View>
         )}
 
@@ -930,6 +928,10 @@ const styles = StyleSheet.create({
   headerUserStatusOnline: {
     color: COLORS.primary,
   },
+  headerUserStatusTyping: {
+    color: COLORS.primary,
+    fontStyle: 'italic',
+  },
   headerSpacer: {
     width: 40,
   },
@@ -1083,16 +1085,9 @@ const styles = StyleSheet.create({
   authButton: {
     minWidth: 200,
   },
-  typingIndicator: {
+  typingIndicatorContainer: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.glass.border,
-  },
-  typingText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    fontStyle: 'italic',
+    paddingBottom: SPACING.xs,
   },
   attachmentsContainer: {
     marginBottom: SPACING.xs,
