@@ -809,30 +809,22 @@ export default function ConversationScreen() {
         {!showVoiceRecorder && (
           <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom + SPACING.xs : SPACING.sm }]}>
             <View style={styles.inputRow}>
-              <View style={[
-                styles.inputWrapper,
-                (messageText.includes('\n') || messageText.length > 40) && styles.inputWrapperMultiline
-              ]}>
-                <View style={[
-                  styles.inputFieldContainer,
-                  (messageText.includes('\n') || messageText.length > 40) && styles.inputFieldContainerMultiline
-                ]}>
+              <View style={[styles.inputWrapper, styles.inputWrapperMultiline]}>
+                <View style={[styles.inputFieldContainer, styles.inputFieldContainerMultiline]}>
                   <GlassInput
                     value={messageText}
                     onChangeText={handleTextChange}
                     placeholder="Type a message..."
-                    multiline={messageText.includes('\n') || messageText.length > 40}
+                    multiline={true}
+                    returnKeyType="default"
                     style={styles.messageInput}
                     inputStyle={[
-                      !messageText.includes('\n') && messageText.length <= 40
-                        ? styles.messageInputTextCentered
-                        : styles.messageInputTextMultiline,
-                      messageText.length > 0 && !messageText.includes('\n') && messageText.length <= 40 && { paddingRight: 60 },
-                      messageText.length > 0 && (messageText.includes('\n') || messageText.length > 40) && { paddingBottom: 20, paddingRight: 60 },
+                      styles.messageInputTextMultiline,
+                      !messageText.includes('\n') && messageText.length <= 40 && { textAlignVertical: 'center', paddingTop: SPACING.sm, paddingBottom: SPACING.sm },
+                      messageText.length > 0 && { paddingRight: 60 },
                     ]}
                     maxLength={2000}
                     showCharCount={false}
-                    onSubmitEditing={handleSendMessage}
                   />
                 </View>
               </View>
@@ -1011,12 +1003,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
+    gap: SPACING.sm,
     minHeight: 48,
   },
   inputWrapper: {
@@ -1074,9 +1066,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
@@ -1147,9 +1139,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   attachButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
