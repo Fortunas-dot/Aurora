@@ -1171,7 +1171,8 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.md, // Extra padding at top to accommodate remove button
+    paddingBottom: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.glass.border,
     backgroundColor: COLORS.background,
@@ -1179,6 +1180,7 @@ const styles = StyleSheet.create({
   imagePreviewWrapper: {
     position: 'relative',
     marginRight: SPACING.sm,
+    marginTop: SPACING.xs, // Small margin to ensure button is visible
   },
   imagePreview: {
     width: 80,
@@ -1191,6 +1193,7 @@ const styles = StyleSheet.create({
     right: -8,
     backgroundColor: COLORS.background,
     borderRadius: 12,
+    padding: 2, // Small padding to ensure icon is fully visible
   },
   attachButton: {
     width: 44,
