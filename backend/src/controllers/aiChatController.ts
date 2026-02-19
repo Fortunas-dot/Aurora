@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import OpenAI from 'openai';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 import ChatContext from '../models/ChatContext';
 import { AuthRequest } from '../middleware/auth';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
@@ -50,29 +50,29 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Get user data for context
-    const user = await User.findById(req.userId).select('healthInfo displayName');
+    // Get user data for context - cast to IUser | null for type compatibility
+    const user = await User.findById(req.userId).select('healthInfo displayName') as IUser | null;
     
     // Get chat context from previous sessions
     const chatContextData = await ChatContext.find({ user: req.userId })
       .sort({ sessionDate: -1 })
       .limit(5)
-      .select('importantPoints summary')
+      .select('importantPoints summary sessionDate')
       .lean();
 
     // Build system message with context
     let systemContent = 'You are Aurora, an empathetic and professional A.I. mental health companion. You listen attentively, ask thoughtful questions, and provide supportive guidance. You are warm, understanding, and non-judgmental. You help people explore their thoughts and feelings in a safe and supportive way. Speak in English.';
 
-    // Add health and journal context if provided
-    if (context?.healthInfo || context?.journalEntries) {
-      const formattedContext = formatCompleteContextForAI(
-        user ? { healthInfo: user.healthInfo } : null,
-        context?.journalEntries || [],
-        chatContextData
-      );
-      if (formattedContext) {
-        systemContent += formattedContext;
-      }
+    // Add health and journal context if available
+    // formatCompleteContextForAI expects full IUser or null, so pass the user document
+    const formattedContext = formatCompleteContextForAI(
+      user,
+      context?.journalEntries || [],
+      [], // calendar events (not used in chat)
+      chatContextData
+    );
+    if (formattedContext) {
+      systemContent += formattedContext;
     }
 
     const systemMessage: ChatMessage = {
