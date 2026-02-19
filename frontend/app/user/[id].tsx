@@ -310,6 +310,47 @@ export default function UserProfileScreen() {
       >
         {/* Profile Card */}
         <GlassCard style={styles.profileCard} padding="lg" gradient>
+          {/* More options button (top right) */}
+          {!isOwnProfile && isAuthenticated && (
+            <Pressable
+              style={styles.moreOptionsButton}
+              onPress={() => {
+                Alert.alert(
+                  'Options',
+                  `What would you like to do with @${profile.username}?`,
+                  [
+                    {
+                      text: isBlocked ? 'Unblock User' : 'Block User',
+                      style: isBlocked ? 'default' : 'destructive',
+                      onPress: handleBlock,
+                    },
+                    {
+                      text: 'Report User',
+                      style: 'destructive',
+                      onPress: handleReportUser,
+                    },
+                    {
+                      text: 'Cancel',
+                      style: 'cancel',
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={COLORS.textSecondary} />
+            </Pressable>
+          )}
+          
+          {/* Edit button for own profile (top right) */}
+          {isOwnProfile && (
+            <Pressable
+              style={styles.moreOptionsButton}
+              onPress={() => router.push('/edit-profile')}
+            >
+              <Ionicons name="pencil" size={18} color={COLORS.primary} />
+            </Pressable>
+          )}
+
           <View style={styles.profileHeader}>
             <Avatar
               uri={profile.avatar}
@@ -328,51 +369,28 @@ export default function UserProfileScreen() {
                   @{profile.username}
                 </Text>
               </View>
-              {!isOwnProfile && isAuthenticated && (
-                <View style={styles.actionButtons}>
-                  <GlassButton
-                    title={isFollowing ? 'Unfollow' : 'Follow'}
-                    onPress={handleFollow}
-                    variant={isFollowing ? 'outline' : 'primary'}
-                    disabled={isTogglingFollow}
-                    style={styles.followButton}
-                  />
-                  <Pressable
-                    style={styles.blockButton}
-                    onPress={handleBlock}
-                    disabled={isTogglingBlock}
-                  >
-                    <Ionicons
-                      name={isBlocked ? 'ban' : 'ban-outline'}
-                      size={20}
-                      color={isBlocked ? COLORS.error : COLORS.textSecondary}
-                    />
-                    <Text style={[styles.blockButtonText, isBlocked && { color: COLORS.error }]}>
-                      {isBlocked ? 'Blocked' : 'Block'}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.reportButton}
-                    onPress={handleReportUser}
-                  >
-                    <Ionicons
-                      name="flag-outline"
-                      size={20}
-                      color={COLORS.textSecondary}
-                    />
-                  </Pressable>
-                </View>
-              )}
-              {isOwnProfile && (
-                <Pressable
-                  style={styles.editButton}
-                  onPress={() => router.push('/edit-profile')}
-                >
-                  <Ionicons name="pencil" size={18} color={COLORS.primary} />
-                </Pressable>
-              )}
             </View>
           </View>
+          
+          {/* Follow button - full width below profile info */}
+          {!isOwnProfile && isAuthenticated && (
+            <View style={styles.followButtonContainer}>
+              <GlassButton
+                title={isFollowing ? 'Following' : 'Follow'}
+                onPress={handleFollow}
+                variant={isFollowing ? 'outline' : 'primary'}
+                disabled={isTogglingFollow}
+                style={styles.followButton}
+                icon={isFollowing ? 'checkmark' : 'person-add-outline'}
+              />
+              {isBlocked && (
+                <View style={styles.blockedBadge}>
+                  <Ionicons name="ban" size={14} color={COLORS.error} />
+                  <Text style={styles.blockedText}>Blocked</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
 
@@ -533,49 +551,41 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 2,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  followButton: {
-    minWidth: 80,
-    flex: 1,
-    maxWidth: 120,
-  },
-  blockButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-  },
-  reportButton: {
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-  },
-  blockButtonText: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
-  },
-  editButton: {
+  moreOptionsButton: {
+    position: 'absolute',
+    top: SPACING.sm,
+    right: SPACING.sm,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.glass.backgroundLight,
+    backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+  },
+  followButtonContainer: {
+    marginTop: SPACING.md,
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  followButton: {
+    width: '100%',
+  },
+  blockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.error + '20',
+  },
+  blockedText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.error,
+    fontWeight: '600',
   },
   bio: {
     ...TYPOGRAPHY.body,
