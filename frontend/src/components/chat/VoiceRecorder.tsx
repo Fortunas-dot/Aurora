@@ -18,7 +18,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const [duration, setDuration] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
-  const levelInterval = useRef<NodeJS.Timeout | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const durationRef = useRef(0);
 
@@ -29,9 +28,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       }
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
-      }
-      if (levelInterval.current) {
-        clearInterval(levelInterval.current);
       }
     };
   }, [recording]);
@@ -53,31 +49,23 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         staysActiveInBackground: false,
       });
 
-      // Create recording with proper options
-      const recordingOptions = {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        android: {
-          extension: '.m4a',
-          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-          audioEncoder: Audio.AndroidAudioEncoder.AAC,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
+      // Create recording with proper options - use simpler preset with metering enabled
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true, // Enable metering for audio level visualization
         },
-        ios: {
-          extension: '.m4a',
-          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
+        (status) => {
+          // Update audio level in real-time
+          if (status.isRecording && status.metering !== undefined) {
+            const dbValue = status.metering;
+            // Normalize dB value (-160 to 0) to 0-1 range
+            const normalizedLevel = Math.min(1, Math.max(0, (dbValue + 160) / 160));
+            setAudioLevel(normalizedLevel);
+          }
         },
-      };
-
-      const { recording: newRecording } = await Audio.Recording.createAsync(recordingOptions);
+        100 // Update every 100ms
+      );
 
       // Verify recording actually started
       const status = await newRecording.getStatusAsync();
@@ -92,29 +80,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setIsRecording(true);
       durationRef.current = 0;
       setDuration(0);
+      setAudioLevel(0);
 
       // Start duration timer - use ref to ensure we always have the latest value
-      console.log('Starting duration timer');
       durationInterval.current = setInterval(() => {
         durationRef.current += 1;
         setDuration(durationRef.current);
-        console.log('Duration:', durationRef.current);
       }, 1000);
-
-      // Start audio level monitoring
-      levelInterval.current = setInterval(async () => {
-        if (newRecording) {
-          try {
-            const currentStatus = await newRecording.getStatusAsync();
-            if (currentStatus.isRecording && currentStatus.metering !== undefined) {
-              const level = Math.max(0, Math.min(1, (currentStatus.metering + 60) / 60));
-              setAudioLevel(level);
-            }
-          } catch (error) {
-            // Ignore errors
-          }
-        }
-      }, 100);
 
       // Pulse animation
       Animated.loop(
@@ -147,24 +119,18 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         clearInterval(durationInterval.current);
         durationInterval.current = null;
       }
-      if (levelInterval.current) {
-        clearInterval(levelInterval.current);
-        levelInterval.current = null;
-      }
 
       // Stop and unload recording
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       
-      console.log('Recording stopped:', { uri, duration });
-      
-      if (uri) {
-        // Use actual duration from recording status if available, otherwise use our timer
-        const finalDuration = duration > 0 ? duration : 1; // Minimum 1 second
-        onRecordingComplete(uri, finalDuration);
+      if (uri && durationRef.current > 0) {
+        onRecordingComplete(uri, durationRef.current);
+      } else if (uri) {
+        // If duration is 0 but we have a URI, use minimum 1 second
+        onRecordingComplete(uri, 1);
       } else {
-        console.error('No recording URI available');
-        Alert.alert('Error', 'Recording file not found');
+        Alert.alert('Error', 'Recording file not found. Please try again.');
         onCancel();
       }
 
@@ -217,18 +183,31 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
             <View style={styles.durationContainer}>
               <View style={styles.waveform}>
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.waveBar,
-                      {
-                        height: 4 + audioLevel * 20 * Math.random(),
-                        opacity: 0.3 + audioLevel * 0.7,
-                      },
-                    ]}
-                  />
-                ))}
+                {Array.from({ length: 20 }).map((_, i) => {
+                  // Create a wave pattern that responds to audio level
+                  const baseHeight = 4;
+                  const maxHeight = 24;
+                  // Use index to create a wave pattern
+                  const wavePhase = (i / 20) * Math.PI * 2;
+                  const waveAmplitude = audioLevel;
+                  // Create a sine wave pattern based on position
+                  const waveValue = Math.sin(wavePhase);
+                  const height = baseHeight + (maxHeight - baseHeight) * (0.3 + waveAmplitude * (0.5 + 0.5 * waveValue));
+                  const opacity = 0.4 + audioLevel * 0.6;
+                  
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        styles.waveBar,
+                        {
+                          height: Math.max(4, Math.min(maxHeight, height)),
+                          opacity: opacity,
+                        },
+                      ]}
+                    />
+                  );
+                })}
               </View>
               <Text style={styles.duration}>{formatDuration(duration)}</Text>
             </View>
@@ -356,25 +335,31 @@ const styles = StyleSheet.create({
   },
   startButton: {
     flex: 1,
-    maxWidth: 280,
+    maxWidth: 300,
     alignSelf: 'center',
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: BORDER_RADIUS.xl,
     backgroundColor: COLORS.primary,
     overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   startButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
   },
   startButtonText: {
     ...TYPOGRAPHY.body,
     color: COLORS.background,
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 16,
+    letterSpacing: 0.3,
   },
 });
 
