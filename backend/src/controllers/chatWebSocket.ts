@@ -128,7 +128,11 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
   try {
     const { receiverId, content, attachments } = data;
 
-    if (!receiverId || (!content && (!attachments || attachments.length === 0))) {
+    // Validate: must have receiverId AND (content OR attachments)
+    const hasContent = content && content.trim().length > 0;
+    const hasAttachments = attachments && attachments.length > 0;
+    
+    if (!receiverId || (!hasContent && !hasAttachments)) {
       return;
     }
 
@@ -136,7 +140,7 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
     const message = await Message.create({
       sender: senderId,
       receiver: receiverId,
-      content: content || '',
+      content: content || '', // Empty string is OK if attachments exist
       attachments: attachments || [],
     });
 

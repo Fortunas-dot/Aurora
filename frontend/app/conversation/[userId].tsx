@@ -455,57 +455,67 @@ export default function ConversationScreen() {
       }
     }
 
-    const messageContent = messageText.trim();
+    const messageContent = messageText.trim() || ''; // Always provide content, even if empty
+    
+    // Clear input immediately for better UX
     setMessageText('');
     setSelectedImages([]);
-
     setIsUploading(false);
     
     // Send via WebSocket (preferred) or fallback to REST API
     if (chatWebSocketService.isConnected()) {
-      // No optimistic update for WebSocket - it's fast enough and will trigger onMessageSent
-      chatWebSocketService.sendMessage(userId, messageContent, attachments);
-      setIsSending(false);
-    } else {
-      // Fallback to REST API - use optimistic update here
-      const tempMessage: Message = {
-        _id: `temp-${Date.now()}`,
-        sender: currentUser!,
-        receiver: otherUser!,
-        content: messageContent,
-        attachments: attachments.length > 0 ? attachments : undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      setMessages((prev) => [...prev, tempMessage]);
-      
-      // Scroll to bottom
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      
       try {
-        const response = await messageService.sendMessage(userId, messageContent, attachments);
-        
-        if (response.success && response.data) {
-          // Replace temp message with real message
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg._id === tempMessage._id ? response.data! : msg
-            )
-          );
-        } else {
-          // Remove temp message on error
-          setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
-        }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        // Remove temp message on error
-        setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
-      } finally {
+        // Send via WebSocket - will trigger onMessageSent callback when successful
+        chatWebSocketService.sendMessage(userId, messageContent, attachments);
+        // Reset sending state immediately - WebSocket handles async delivery
         setIsSending(false);
+        return; // Exit early if WebSocket send succeeds
+      } catch (error) {
+        console.error('Error sending via WebSocket, falling back to REST API:', error);
+        // Fall through to REST API fallback below
       }
+    }
+    
+    // Fallback to REST API if WebSocket not connected or if WebSocket send failed
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`,
+      sender: currentUser!,
+      receiver: otherUser!,
+      content: messageContent,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => [...prev, tempMessage]);
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    
+    try {
+      const response = await messageService.sendMessage(userId, messageContent, attachments);
+      
+      if (response.success && response.data) {
+        // Replace temp message with real message
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === tempMessage._id ? response.data! : msg
+          )
+        );
+      } else {
+        // Remove temp message on error and show alert
+        setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
+        Alert.alert('Error', response.message || 'Could not send message');
+      }
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      // Remove temp message on error
+      setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
+      Alert.alert('Error', error.message || 'Could not send message');
+    } finally {
+      setIsSending(false);
     }
   };
 

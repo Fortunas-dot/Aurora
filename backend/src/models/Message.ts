@@ -32,9 +32,21 @@ const MessageSchema = new Schema<IMessage>(
     },
     content: {
       type: String,
-      required: [true, 'Message content is required'],
+      required: false, // Not strictly required - can be empty if attachments exist
       maxlength: [2000, 'Message cannot exceed 2000 characters'],
       trim: true,
+      default: '',
+      validate: {
+        validator: function(value: string) {
+          // Content must be provided OR attachments must be provided
+          const hasContent = value && value.trim().length > 0;
+          // Access parent document via 'this' context
+          const doc = this as any;
+          const hasAttachments = doc.attachments && doc.attachments.length > 0;
+          return hasContent || hasAttachments;
+        },
+        message: 'Message must have either content or attachments',
+      },
     },
     attachments: [{
       type: {
