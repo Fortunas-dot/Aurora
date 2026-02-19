@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { LoadingSpinner } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 
 interface VoiceRecorderProps {
@@ -21,7 +22,11 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const durationRef = useRef(0);
 
+  // Auto-start recording when component mounts
   useEffect(() => {
+    // Start recording automatically when component is shown
+    startRecording();
+    
     return () => {
       if (recording) {
         recording.stopAndUnloadAsync().catch(console.error);
@@ -30,7 +35,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         clearInterval(durationInterval.current);
       }
     };
-  }, [recording]);
+  }, []); // Only run on mount
 
   const startRecording = async () => {
     try {
@@ -153,6 +158,17 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Don't render anything until recording starts (prevents flash of start button)
+  if (!isRecording && !recording) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.recorderContent}>
+          <LoadingSpinner size="sm" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {isRecording ? (
@@ -228,28 +244,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
             />
           </Pressable>
         </View>
-      ) : (
-        <View style={styles.startRecordingContainer}>
-          <Pressable
-            style={styles.cancelButton}
-            onPress={onCancel}
-          >
-            <Ionicons name="close" size={24} color={COLORS.textMuted} />
-          </Pressable>
-
-          <Pressable 
-            style={styles.startButton} 
-            onPress={startRecording}
-          >
-            <View style={styles.startButtonContent}>
-              <Ionicons name="mic" size={20} color={COLORS.background} />
-              <Text style={styles.startButtonText}>Tap to start recording</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.placeholderButton} />
-        </View>
-      )}
+      ) : null}
     </View>
   );
 };
@@ -267,12 +262,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
-  startRecordingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.md,
-  },
   cancelButton: {
     width: 44,
     height: 44,
@@ -280,10 +269,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.background,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  placeholderButton: {
-    width: 44,
-    height: 44,
   },
   recordingInfo: {
     flex: 1,
@@ -332,34 +317,6 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     borderColor: COLORS.glass.border,
     opacity: 0.5,
-  },
-  startButton: {
-    flex: 1,
-    maxWidth: 300,
-    alignSelf: 'center',
-    borderRadius: BORDER_RADIUS.xl,
-    backgroundColor: COLORS.primary,
-    overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  startButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-  },
-  startButtonText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.background,
-    fontWeight: '600',
-    fontSize: 16,
-    letterSpacing: 0.3,
   },
 });
 
