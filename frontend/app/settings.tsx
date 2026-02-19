@@ -7,6 +7,8 @@ import {
   Pressable,
   Switch,
   Alert,
+  Modal,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -110,6 +112,7 @@ export default function SettingsScreen() {
   const [t, setT] = useState(() => i18n.getTranslations());
   const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
   const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
+  const [showAiInfoModal, setShowAiInfoModal] = useState(false);
   const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent, resetConsent } = useConsentStore();
 
   useEffect(() => {
@@ -271,8 +274,8 @@ export default function SettingsScreen() {
                   <Text style={[styles.menuTitle, { color: colors.text }]}>AI Features</Text>
                   <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>
                     {aiConsentStatus === 'granted' 
-                      ? 'Your data is shared with OpenAI for AI features' 
-                      : 'AI features are disabled'}
+                      ? 'Data shared with OpenAI' 
+                      : 'AI features disabled'}
                   </Text>
                 </View>
                 <View style={[
@@ -287,11 +290,16 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </View>
-              <View style={styles.aiConsentDetails}>
-                <Text style={[styles.aiConsentDescription, { color: colors.textSecondary }]}>
-                  When enabled, your chat messages, journal entries, voice transcripts, and health information 
-                  are sent to OpenAI to provide AI-powered support and insights.
-                </Text>
+              <View style={styles.aiConsentActions}>
+                <Pressable
+                  style={[styles.aiLearnMoreButton, { borderColor: colors.glass.border }]}
+                  onPress={() => setShowAiInfoModal(true)}
+                >
+                  <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.aiLearnMoreText, { color: colors.primary }]}>
+                    Learn More
+                  </Text>
+                </Pressable>
                 <Pressable
                   style={[
                     styles.aiConsentButton,
@@ -304,7 +312,7 @@ export default function SettingsScreen() {
                     if (aiConsentStatus === 'granted') {
                       Alert.alert(
                         'Disable AI Features?',
-                        'This will stop sharing your data with OpenAI. AI chat, voice therapy, and journal insights will be disabled. You will be asked for consent again when you try to use AI features.',
+                        'This will stop sharing your data with OpenAI. AI chat, voice therapy, and journal insights will be disabled.',
                         [
                           { text: 'Cancel', style: 'cancel' },
                           { 
@@ -328,13 +336,155 @@ export default function SettingsScreen() {
                     styles.aiConsentButtonText,
                     { color: aiConsentStatus === 'granted' ? colors.error : colors.primary }
                   ]}>
-                    {aiConsentStatus === 'granted' ? 'Revoke Consent' : 'Enable AI Features'}
+                    {aiConsentStatus === 'granted' ? 'Revoke' : 'Enable'}
                   </Text>
                 </Pressable>
               </View>
             </View>
           </GlassCard>
         </View>
+
+        {/* AI Info Modal */}
+        <Modal
+          visible={showAiInfoModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowAiInfoModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.backgroundDark, paddingTop: insets.top }]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft} />
+                <Text style={[styles.modalTitle, { color: colors.text }]}>AI Data Sharing</Text>
+                <Pressable style={styles.modalCloseButton} onPress={() => setShowAiInfoModal(false)}>
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </Pressable>
+              </View>
+              
+              <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent}>
+                {/* What Data */}
+                <View style={styles.infoSection}>
+                  <View style={styles.infoSectionHeader}>
+                    <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>What data is shared?</Text>
+                  </View>
+                  <View style={styles.infoList}>
+                    <View style={styles.infoListItem}>
+                      <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                      <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
+                        Text you type in AI chat conversations
+                      </Text>
+                    </View>
+                    <View style={styles.infoListItem}>
+                      <Ionicons name="book" size={18} color={colors.primary} />
+                      <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
+                        Journal entries (for AI-generated prompts and insights)
+                      </Text>
+                    </View>
+                    <View style={styles.infoListItem}>
+                      <Ionicons name="mic" size={18} color={colors.primary} />
+                      <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
+                        Voice recordings and transcripts (for voice therapy)
+                      </Text>
+                    </View>
+                    <View style={styles.infoListItem}>
+                      <Ionicons name="heart" size={18} color={colors.primary} />
+                      <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
+                        Health information from your profile (if applicable)
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Who Receives */}
+                <View style={styles.infoSection}>
+                  <View style={styles.infoSectionHeader}>
+                    <Ionicons name="business-outline" size={24} color={colors.primary} />
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>Who receives this data?</Text>
+                  </View>
+                  <GlassCard style={styles.recipientCard} padding="md">
+                    <Text style={[styles.recipientName, { color: colors.text }]}>OpenAI</Text>
+                    <Text style={[styles.recipientDesc, { color: colors.textSecondary }]}>
+                      Our AI technology provider. OpenAI processes your data to generate supportive responses and insights.
+                    </Text>
+                    <Text style={[styles.recipientHighlight, { color: colors.success }]}>
+                      ✓ OpenAI does NOT use your data to train their AI models
+                    </Text>
+                    <Pressable 
+                      style={styles.externalLink}
+                      onPress={() => Linking.openURL('https://openai.com/privacy')}
+                    >
+                      <Text style={[styles.externalLinkText, { color: colors.primary }]}>
+                        View OpenAI's Privacy Policy
+                      </Text>
+                      <Ionicons name="open-outline" size={16} color={colors.primary} />
+                    </Pressable>
+                  </GlassCard>
+                </View>
+
+                {/* Data Protection */}
+                <View style={styles.infoSection}>
+                  <View style={styles.infoSectionHeader}>
+                    <Ionicons name="shield-checkmark-outline" size={24} color={colors.primary} />
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>How is your data protected?</Text>
+                  </View>
+                  <View style={styles.protectionList}>
+                    <View style={styles.protectionItem}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
+                        Encrypted in transit and at rest
+                      </Text>
+                    </View>
+                    <View style={styles.protectionItem}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
+                        OpenAI is contractually obligated to protect your data
+                      </Text>
+                    </View>
+                    <View style={styles.protectionItem}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
+                        NOT used for advertising
+                      </Text>
+                    </View>
+                    <View style={styles.protectionItem}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
+                        NOT sold to third parties
+                      </Text>
+                    </View>
+                    <View style={styles.protectionItem}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
+                        You can revoke consent anytime in Settings
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Privacy Policy Link */}
+                <Pressable 
+                  style={[styles.privacyPolicyButton, { borderColor: colors.glass.border }]}
+                  onPress={() => {
+                    setShowAiInfoModal(false);
+                    router.push('/privacy-policy');
+                  }}
+                >
+                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.privacyPolicyText, { color: colors.primary }]}>
+                    Read our full Privacy Policy
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+                </Pressable>
+
+                {/* Optional Note */}
+                <Text style={[styles.optionalNote, { color: colors.textMuted }]}>
+                  AI features are optional. You can use Aurora's community, journaling, and other features without enabling AI.
+                </Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Privacy Settings */}
         <View style={styles.menuSection}>
@@ -673,14 +823,25 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.small,
     fontWeight: '600',
   },
-  aiConsentDetails: {
+  aiConsentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
     marginTop: SPACING.md,
     marginLeft: 40 + SPACING.md,
   },
-  aiConsentDescription: {
-    ...TYPOGRAPHY.small,
-    lineHeight: 18,
-    marginBottom: SPACING.md,
+  aiLearnMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  aiLearnMoreText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '500',
   },
   aiConsentButton: {
     flexDirection: 'row',
@@ -695,6 +856,134 @@ const styles = StyleSheet.create({
   aiConsentButtonText: {
     ...TYPOGRAPHY.bodyMedium,
     fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalContent: {
+    flex: 1,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    marginTop: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  modalHeaderLeft: {
+    width: 40,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.h3,
+    textAlign: 'center',
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: SPACING.lg,
+    paddingBottom: 100,
+  },
+  infoSection: {
+    marginBottom: SPACING.xl,
+  },
+  infoSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  infoSectionTitle: {
+    ...TYPOGRAPHY.h4,
+    flex: 1,
+  },
+  infoList: {
+    gap: SPACING.sm,
+  },
+  infoListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+  },
+  infoListText: {
+    ...TYPOGRAPHY.body,
+    flex: 1,
+    lineHeight: 22,
+  },
+  recipientCard: {
+    marginTop: SPACING.xs,
+  },
+  recipientName: {
+    ...TYPOGRAPHY.h4,
+    marginBottom: SPACING.xs,
+  },
+  recipientDesc: {
+    ...TYPOGRAPHY.body,
+    lineHeight: 22,
+    marginBottom: SPACING.sm,
+  },
+  recipientHighlight: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '600',
+    marginBottom: SPACING.sm,
+  },
+  externalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  externalLinkText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '500',
+  },
+  protectionList: {
+    gap: SPACING.sm,
+  },
+  protectionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  protectionText: {
+    ...TYPOGRAPHY.body,
+    flex: 1,
+  },
+  privacyPolicyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    marginBottom: SPACING.lg,
+  },
+  privacyPolicyText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '600',
+    flex: 1,
+  },
+  optionalNote: {
+    ...TYPOGRAPHY.small,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
