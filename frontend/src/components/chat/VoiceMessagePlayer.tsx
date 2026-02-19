@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
@@ -15,9 +15,20 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
   duration = 0,
   isOwn = false,
 }) => {
+  const { width: screenWidth } = useWindowDimensions();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
+
+  // Calculate container width based on duration
+  // Base width: 120px, add ~8px per second, max 75% of screen width (to match message bubble)
+  const containerWidth = useMemo(() => {
+    const baseWidth = 120;
+    const pixelsPerSecond = 8;
+    const calculatedWidth = baseWidth + (duration * pixelsPerSecond);
+    const maxWidth = screenWidth * 0.75 - (SPACING.md * 2); // Account for message bubble padding
+    return Math.min(Math.max(calculatedWidth, baseWidth), maxWidth);
+  }, [duration, screenWidth]);
 
   useEffect(() => {
     return () => {
@@ -34,6 +45,17 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
           await sound.pauseAsync();
           setIsPlaying(false);
         } else {
+          // Check if audio finished - if so, reset to beginning
+          const status = await sound.getStatusAsync();
+          if (status.isLoaded) {
+            // If position is at or near the end (within 0.1 seconds), reset to beginning
+            const currentPos = status.positionMillis / 1000;
+            const totalDuration = status.durationMillis ? status.durationMillis / 1000 : duration;
+            if (totalDuration > 0 && currentPos >= totalDuration - 0.1) {
+              await sound.setPositionAsync(0);
+              setPosition(0);
+            }
+          }
           await sound.playAsync();
           setIsPlaying(true);
         }
@@ -54,6 +76,8 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
           if (status.didJustFinish) {
             setIsPlaying(false);
             setPosition(0);
+            // Reset sound position to beginning for next play
+            newSound.setPositionAsync(0).catch(console.error);
           }
         }
       });
@@ -74,6 +98,7 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
     <Pressable
       style={[
         styles.container,
+        { width: containerWidth },
         isOwn && styles.containerOwn,
       ]}
       onPress={playSound}
@@ -84,8 +109,8 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
       ]}>
         <Ionicons
           name={isPlaying ? 'pause' : 'play'}
-          size={16}
-          color={isOwn ? COLORS.background : COLORS.primary}
+          size={18}
+          color={isOwn ? COLORS.primary : COLORS.white}
         />
       </View>
       <View style={styles.progressContainer}>
@@ -119,22 +144,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    minWidth: 120,
   },
   containerOwn: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   playButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   playButtonOwn: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.white,
   },
   progressContainer: {
     flex: 1,

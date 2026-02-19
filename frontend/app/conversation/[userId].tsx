@@ -209,18 +209,24 @@ export default function ConversationScreen() {
       const response = await messageService.getConversation(userId, pageNum, 50);
       
       if (response.success && response.data) {
+        // Ensure all messages have attachments array (even if empty)
+        const messagesWithAttachments = response.data.map((msg: Message) => ({
+          ...msg,
+          attachments: msg.attachments || [],
+        }));
+        
         // #region agent log
-        const messagesWithAttachments = response.data.filter(m => m.attachments && m.attachments.length > 0);
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:211',message:'Loading messages',data:{totalMessages:response.data.length,messagesWithAttachments:messagesWithAttachments.length,attachmentsSample:messagesWithAttachments.slice(0,3).map(m=>({id:m._id,attachments:m.attachments}))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        const messagesWithNonEmptyAttachments = messagesWithAttachments.filter(m => m.attachments && m.attachments.length > 0);
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:211',message:'Loading messages',data:{totalMessages:messagesWithAttachments.length,messagesWithNonEmptyAttachments:messagesWithNonEmptyAttachments.length,attachmentsSample:messagesWithNonEmptyAttachments.slice(0,3).map(m=>({id:m._id,attachments:m.attachments}))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         // #endregion
         
         if (append) {
-          setMessages((prev) => [...response.data!, ...prev]);
+          setMessages((prev) => [...messagesWithAttachments, ...prev]);
         } else {
-          setMessages(response.data);
+          setMessages(messagesWithAttachments);
           // Set other user from first message if available, otherwise keep existing
-          if (response.data.length > 0 && !otherUser) {
-            const firstMessage = response.data[0];
+          if (messagesWithAttachments.length > 0 && !otherUser) {
+            const firstMessage = messagesWithAttachments[0];
             setOtherUser(
               firstMessage.sender._id === currentUser?._id
                 ? firstMessage.receiver
@@ -276,7 +282,12 @@ export default function ConversationScreen() {
       if (message.sender._id === userId || message.receiver._id === userId) {
         setMessages((prev) => {
           if (prev.some((m) => m._id === message._id)) return prev;
-          return [...prev, message];
+          // Ensure attachments are included
+          const messageWithAttachments = {
+            ...message,
+            attachments: message.attachments || [],
+          };
+          return [...prev, messageWithAttachments];
         });
 
         // Scroll to bottom
@@ -296,7 +307,14 @@ export default function ConversationScreen() {
 
     const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
       setMessages((prev) => {
-        if (prev.some((m) => m._id === message._id)) return prev;
+        if (prev.some((m) => m._id === message._id)) {
+          // Update existing message to ensure attachments are preserved
+          return prev.map((m) => 
+            m._id === message._id 
+              ? { ...m, ...message, attachments: message.attachments || m.attachments || [] }
+              : m
+          );
+        }
 
         // Check for duplicate by content within 2 seconds
         const now = new Date().getTime();
@@ -312,7 +330,12 @@ export default function ConversationScreen() {
         });
 
         if (isDuplicate) return prev;
-        return [...prev, message];
+        // Ensure attachments are included
+        const messageWithAttachments = {
+          ...message,
+          attachments: message.attachments || [],
+        };
+        return [...prev, messageWithAttachments];
       });
 
       setTimeout(() => {
@@ -573,17 +596,21 @@ export default function ConversationScreen() {
       const response = await messageService.sendMessage(userId, messageContent, attachmentsToSend);
       
       if (response.success && response.data) {
-        // Replace temp message with real message, preserving attachments if they exist
+        // Replace temp message with real message, ensuring attachments are always preserved
         setMessages((prev) =>
           prev.map((msg) => {
             if (msg._id === tempMessage._id) {
               const newMessage = response.data!;
-              // Preserve attachments from temp message if new message doesn't have them
-              if (tempMessage.attachments && tempMessage.attachments.length > 0 && 
-                  (!newMessage.attachments || newMessage.attachments.length === 0)) {
-                return { ...newMessage, attachments: tempMessage.attachments };
-              }
-              return newMessage;
+              // Always use API response attachments if they exist, otherwise fall back to temp message attachments
+              const finalAttachments = (newMessage.attachments && newMessage.attachments.length > 0)
+                ? newMessage.attachments
+                : (tempMessage.attachments && tempMessage.attachments.length > 0)
+                  ? tempMessage.attachments
+                  : [];
+              return { 
+                ...newMessage, 
+                attachments: finalAttachments,
+              };
             }
             return msg;
           })
