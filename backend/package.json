@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Aurora A.I. Mental Health Support Companion Backend API",
   "main": "dist/server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
