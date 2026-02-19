@@ -331,14 +331,6 @@ export default function ConversationScreen() {
       );
     });
 
-    // Handle WebSocket errors (e.g., validation failures)
-    const unsubError = chatWebSocketService.on('error', (error: Error) => {
-      console.error('Chat WebSocket error:', error);
-      Alert.alert('Error', error.message || 'Could not send message');
-      setIsSending(false);
-      setIsUploading(false);
-    });
-
     // Cleanup: only remove listeners, do NOT disconnect the WebSocket
     return () => {
       unsubConnected();
