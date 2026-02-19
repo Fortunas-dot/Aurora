@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
@@ -20,6 +20,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const levelInterval = useRef<NodeJS.Timeout | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const durationRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -37,32 +38,76 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   const startRecording = async () => {
     try {
-      await Audio.requestPermissionsAsync();
+      // Request permissions
+      const permissionResponse = await Audio.requestPermissionsAsync();
+      if (!permissionResponse.granted) {
+        console.error('Audio recording permission denied');
+        onCancel();
+        return;
+      }
+
+      // Set audio mode
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
       });
 
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      // Create recording with proper options
+      const recordingOptions = {
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+      };
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(recordingOptions);
+
+      // Verify recording actually started
+      const status = await newRecording.getStatusAsync();
+      if (!status.isRecording) {
+        console.error('Recording did not start');
+        await newRecording.stopAndUnloadAsync();
+        onCancel();
+        return;
+      }
 
       setRecording(newRecording);
       setIsRecording(true);
+      durationRef.current = 0;
       setDuration(0);
 
-      // Start duration timer
+      // Start duration timer - use ref to ensure we always have the latest value
+      console.log('Starting duration timer');
       durationInterval.current = setInterval(() => {
-        setDuration((prev) => prev + 1);
+        durationRef.current += 1;
+        setDuration(durationRef.current);
+        console.log('Duration:', durationRef.current);
       }, 1000);
 
       // Start audio level monitoring
       levelInterval.current = setInterval(async () => {
         if (newRecording) {
           try {
-            const status = await newRecording.getStatusAsync();
-            if (status.isRecording && status.metering !== undefined) {
-              const level = Math.max(0, Math.min(1, (status.metering + 60) / 60));
+            const currentStatus = await newRecording.getStatusAsync();
+            if (currentStatus.isRecording && currentStatus.metering !== undefined) {
+              const level = Math.max(0, Math.min(1, (currentStatus.metering + 60) / 60));
               setAudioLevel(level);
             }
           } catch (error) {
@@ -86,8 +131,9 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           }),
         ])
       ).start();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to start recording:', error);
+      Alert.alert('Error', error.message || 'Could not start recording');
       onCancel();
     }
   };
@@ -96,6 +142,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     if (!recording) return;
 
     try {
+      // Clear intervals first
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
         durationInterval.current = null;
@@ -105,22 +152,31 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         levelInterval.current = null;
       }
 
+      // Stop and unload recording
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       
-      if (uri && duration > 0) {
-        onRecordingComplete(uri, duration);
+      console.log('Recording stopped:', { uri, duration });
+      
+      if (uri) {
+        // Use actual duration from recording status if available, otherwise use our timer
+        const finalDuration = duration > 0 ? duration : 1; // Minimum 1 second
+        onRecordingComplete(uri, finalDuration);
       } else {
+        console.error('No recording URI available');
+        Alert.alert('Error', 'Recording file not found');
         onCancel();
       }
 
       setRecording(null);
       setIsRecording(false);
+      durationRef.current = 0;
       setDuration(0);
       setAudioLevel(0);
       scaleAnim.setValue(1);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to stop recording:', error);
+      Alert.alert('Error', error.message || 'Could not stop recording');
       onCancel();
     }
   };
@@ -202,9 +258,14 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
             <Ionicons name="close" size={24} color={COLORS.textMuted} />
           </Pressable>
 
-          <Pressable style={styles.startButton} onPress={startRecording}>
-            <Ionicons name="mic" size={24} color={COLORS.background} />
-            <Text style={styles.startButtonText}>Tap to start recording</Text>
+          <Pressable 
+            style={styles.startButton} 
+            onPress={startRecording}
+          >
+            <View style={styles.startButtonContent}>
+              <Ionicons name="mic" size={20} color={COLORS.background} />
+              <Text style={styles.startButtonText}>Tap to start recording</Text>
+            </View>
           </Pressable>
 
           <View style={styles.placeholderButton} />
@@ -230,7 +291,7 @@ const styles = StyleSheet.create({
   startRecordingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: SPACING.md,
   },
   cancelButton: {
@@ -295,19 +356,25 @@ const styles = StyleSheet.create({
   },
   startButton: {
     flex: 1,
+    maxWidth: 280,
+    alignSelf: 'center',
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.primary,
+    overflow: 'hidden',
+  },
+  startButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.primary,
   },
   startButtonText: {
     ...TYPOGRAPHY.body,
     color: COLORS.background,
     fontWeight: '600',
+    fontSize: 15,
   },
 });
 
