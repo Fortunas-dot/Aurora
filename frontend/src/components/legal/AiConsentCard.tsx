@@ -9,6 +9,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/them
 interface AiConsentCardProps {
   onAccept: () => void;
   onDecline?: () => void;
+  onLearnMore?: () => void;
   compact?: boolean;
 }
 
@@ -25,6 +26,7 @@ interface AiConsentCardProps {
 export const AiConsentCard: React.FC<AiConsentCardProps> = ({
   onAccept,
   onDecline,
+  onLearnMore,
   compact = false,
 }) => {
   const router = useRouter();
@@ -49,6 +51,12 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
             <Ionicons name="shield-checkmark" size={20} color={COLORS.primary} />
           </View>
           <Text style={styles.title}>AI Data Sharing</Text>
+          {onLearnMore && (
+            <Pressable onPress={onLearnMore} style={styles.learnMoreButton}>
+              <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.learnMoreText}>Learn More</Text>
+            </Pressable>
+          )}
         </View>
 
         <ScrollView 
@@ -146,6 +154,20 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
     flex: 1,
+  },
+  learnMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.glass.backgroundLight,
+  },
+  learnMoreText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
   scrollContent: {
     maxHeight: 250,

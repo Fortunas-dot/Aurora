@@ -625,6 +625,7 @@ export default function JournalScreen() {
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}
+            onLearnMore={() => router.push('/ai-data-info')}
           />
         )}
 

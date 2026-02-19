@@ -773,6 +773,7 @@ export default function TextChatScreen() {
             <AiConsentCard
               onAccept={grantAiConsent}
               onDecline={denyAiConsent}
+              onLearnMore={() => router.push('/ai-data-info')}
             />
           </View>
         )}

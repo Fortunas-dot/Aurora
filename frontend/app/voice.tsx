@@ -104,6 +104,7 @@ export default function VoiceTherapyScreen() {
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}
+            onLearnMore={() => router.push('/ai-data-info')}
           />
         )}
 
