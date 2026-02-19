@@ -20,6 +20,20 @@ class ApiService {
     this.baseUrl = getApiUrl();
   }
 
+  /**
+   * Get the base URL for API requests
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
+   * Get the authentication token
+   */
+  async getAuthToken(): Promise<string | null> {
+    return await secureStorage.getItemAsync('auth_token');
+  }
+
   private async getAuthHeaders(): Promise<HeadersInit> {
     const token = await secureStorage.getItemAsync('auth_token');
     const headers: HeadersInit = {

@@ -1,24 +1,22 @@
 import 'react-native-url-polyfill/auto';
 import EventSource from 'react-native-sse';
-import Constants from 'expo-constants';
 import { OpenAIMessage, StreamingOptions } from '../types/chat.types';
+import { apiService } from './api.service';
 
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-
+/**
+ * OpenAI Service that routes through the backend
+ * This keeps the API key secure on the server side
+ */
 export class OpenAIService {
-  private apiKey: string;
+  private baseUrl: string;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || OPENAI_API_KEY;
-
-    if (!this.apiKey) {
-      console.warn('OpenAI API key not found. Please set OPENAI_API_KEY in .env file');
-    }
+  constructor() {
+    // Get API URL from the apiService
+    this.baseUrl = apiService.getBaseUrl();
   }
 
   /**
-   * Stream chat completion from OpenAI
+   * Stream chat completion through backend
    */
   async streamChatCompletion(
     messages: OpenAIMessage[],
@@ -27,48 +25,49 @@ export class OpenAIService {
     onError: (error: Error) => void,
     options: Partial<StreamingOptions> = {}
   ): Promise<() => void> {
-    const {
-      model = 'gpt-4o-mini',
-      temperature = 0.7,
-      maxTokens,
-    } = options;
+    // Get auth token
+    const token = await apiService.getAuthToken();
+    
+    if (!token) {
+      onError(new Error('Authentication required'));
+      return () => {};
+    }
 
-    const requestBody = {
-      model,
-      messages,
-      stream: true,
-      temperature,
-      ...(maxTokens && { max_tokens: maxTokens }),
-    };
+    const streamUrl = `${this.baseUrl}/ai/chat`;
 
-    const eventSource = new EventSource(OPENAI_API_URL, {
+    const eventSource = new EventSource(streamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        messages: messages.filter(m => m.role !== 'system'), // System message is built on backend
+        context: {
+          // Context will be fetched on backend from user data
+        },
+      }),
       pollingInterval: 0, // Disable automatic reconnections
     });
 
     let streamOpened = false;
     const openTimeout = setTimeout(() => {
       if (!streamOpened) {
-        console.error('OpenAI stream failed to open within 10 seconds');
+        console.error('Chat stream failed to open within 15 seconds');
         eventSource.close();
         onError(new Error('Connection timeout. Please check your internet connection and try again.'));
       }
-    }, 10000); // 10 second timeout for stream to open
+    }, 15000); // 15 second timeout for stream to open
 
     eventSource.addEventListener('open', () => {
       streamOpened = true;
       clearTimeout(openTimeout);
-      console.log('OpenAI stream opened');
+      console.log('Chat stream opened');
     });
 
     eventSource.addEventListener('message', (event: any) => {
       if (event.data === '[DONE]') {
-        console.log('OpenAI stream completed');
+        console.log('Chat stream completed');
         eventSource.close();
         onComplete();
         return;
@@ -76,30 +75,38 @@ export class OpenAIService {
 
       try {
         const parsed = JSON.parse(event.data);
-        const content = parsed.choices[0]?.delta?.content;
+        
+        // Check for error in stream
+        if (parsed.error) {
+          console.error('Stream error:', parsed.error);
+          eventSource.close();
+          onError(new Error(parsed.error));
+          return;
+        }
 
+        const content = parsed.content;
         if (content) {
           onChunk(content);
         }
       } catch (err) {
-        console.error('Error parsing OpenAI response:', err);
+        console.error('Error parsing chat response:', err);
       }
     });
 
     eventSource.addEventListener('error', (event: any) => {
       clearTimeout(openTimeout);
-      console.error('OpenAI stream error:', event);
+      console.error('Chat stream error:', event);
       eventSource.close();
 
       // Try to extract error message
-      let errorMessage = 'Failed to stream response from OpenAI';
+      let errorMessage = 'Failed to stream response';
 
       if (event.message) {
         errorMessage = event.message;
       } else if (event.data) {
         try {
           const errorData = JSON.parse(event.data);
-          errorMessage = errorData.error?.message || errorMessage;
+          errorMessage = errorData.message || errorData.error?.message || errorMessage;
         } catch {
           // Ignore parse errors
         }
@@ -111,7 +118,7 @@ export class OpenAIService {
     // Return cleanup function
     return () => {
       clearTimeout(openTimeout);
-      console.log('Closing OpenAI stream');
+      console.log('Closing chat stream');
       eventSource.close();
     };
   }
@@ -124,35 +131,22 @@ export class OpenAIService {
     options: Partial<StreamingOptions> = {}
   ): Promise<string> {
     const {
-      model = 'gpt-4o-mini',
-      temperature = 0.7,
       maxTokens,
     } = options;
 
     try {
-      const response = await fetch(OPENAI_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature,
-          ...(maxTokens && { max_tokens: maxTokens }),
-        }),
+      const response = await apiService.post<{ content: string; usage?: any }>('/ai/chat/complete', {
+        messages,
+        maxTokens,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to get response from OpenAI');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to get response');
       }
 
-      const data = await response.json();
-      return data.choices[0]?.message?.content || '';
-    } catch (error) {
-      console.error('Error sending message to OpenAI:', error);
+      return response.data?.content || '';
+    } catch (error: any) {
+      console.error('Error sending message:', error);
       throw error;
     }
   }

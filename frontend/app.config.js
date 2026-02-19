@@ -120,9 +120,8 @@ module.exports = {
       // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
       // Only used in development mode when API_URL contains localhost
       API_HOST: process.env.API_HOST || null,
-      // OpenAI API Key
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-      // Railway proxy URL for OpenAI Realtime API
+      // NOTE: OpenAI API Key is NOT exposed in frontend - all AI calls go through backend
+      // Railway proxy URL for OpenAI Realtime API (voice)
       PROXY_URL: process.env.PROXY_URL || 'wss://aurora-production.up.railway.app',
       // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
       PROXY_HOST: process.env.PROXY_HOST || null,

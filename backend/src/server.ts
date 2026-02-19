@@ -16,6 +16,7 @@ import uploadRoutes from './routes/upload';
 import journalRoutes from './routes/journal';
 import journalsRoutes from './routes/journals';
 import ideaRoutes from './routes/ideas';
+import aiRoutes from './routes/ai';
 import therapistRoutes from './routes/therapists';
 import seedRoutes from './routes/seed';
 import calendarRoutes from './routes/calendar';
@@ -87,6 +88,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/journals', journalsRoutes);
 app.use('/api/ideas', ideaRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/therapists', therapistRoutes);
 // Seed routes should be disabled in production
 if (process.env.NODE_ENV !== 'production') {
