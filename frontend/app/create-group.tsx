@@ -28,15 +28,15 @@ import { useAuthStore } from '../src/store/authStore';
 import { COUNTRIES, getCountryName, Country } from '../src/constants/countries';
 
 const SUGGESTED_TAGS = [
-  'angst',
-  'depressie',
+  'anxiety',
+  'depression',
   'mindfulness',
-  'therapie',
+  'therapy',
   'support',
-  'herstel',
+  'recovery',
   'stress',
-  'slaap',
-  'meditatie',
+  'sleep',
+  'meditation',
   'community',
 ];
 

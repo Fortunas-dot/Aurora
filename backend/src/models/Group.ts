@@ -11,6 +11,11 @@ export interface IGroup extends Document {
   coverImage?: string; // Hero/cover image for the group
   country?: string; // Country code or 'global'
   healthCondition?: string; // Health condition the group focuses on
+  reports: Array<{
+    user: Types.ObjectId;
+    reason: string;
+    createdAt: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +68,22 @@ const GroupSchema = new Schema<IGroup>(
       default: null,
       trim: true,
     },
+    reports: [{
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+      reason: {
+        type: String,
+        required: true,
+        enum: ['spam', 'harassment', 'inappropriate', 'misleading', 'other'],
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
   },
   {
     timestamps: true,

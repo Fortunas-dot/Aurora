@@ -8,6 +8,7 @@ import {
   leaveGroup,
   getGroupPosts,
   updateGroup,
+  reportGroup,
 } from '../controllers/groupController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -30,6 +31,7 @@ router.post('/:id/join', protect, joinGroup);
 router.post('/:id/leave', protect, leaveGroup);
 router.put('/:id', protect, groupValidation, updateGroup);
 router.get('/:id/posts', optionalAuth, getGroupPosts);
+router.post('/:id/report', protect, reportGroup);
 
 export default router;
 

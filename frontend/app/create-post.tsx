@@ -26,16 +26,16 @@ import { useAuthStore } from '../src/store/authStore';
 import { useSettingsStore } from '../src/store/settingsStore';
 
 const SUGGESTED_TAGS = [
-  'meditatie',
-  'angst',
-  'depressie',
-  'therapie',
+  'meditation',
+  'anxiety',
+  'depression',
+  'therapy',
   'mindfulness',
   'stress',
-  'slaap',
-  'zelfzorg',
-  'hoop',
-  'herstel',
+  'sleep',
+  'selfcare',
+  'hope',
+  'recovery',
 ];
 
 export default function CreatePostScreen() {
@@ -503,7 +503,7 @@ export default function CreatePostScreen() {
 
             {/* Suggested Tags */}
             <View style={styles.suggestedTags}>
-              <Text style={styles.suggestedTagsTitle}>Suggesties:</Text>
+              <Text style={styles.suggestedTagsTitle}>Suggestions:</Text>
               <View style={styles.suggestedTagsList}>
                 {SUGGESTED_TAGS.filter((tag) => !tags.includes(tag)).map((tag) => (
                   <Pressable

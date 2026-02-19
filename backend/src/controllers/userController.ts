@@ -731,3 +731,75 @@ export const deleteAccount = async (req: AuthRequest, res: Response): Promise<vo
     });
   }
 };
+
+// @desc    Report user
+// @route   POST /api/users/:id/report
+// @access  Private
+export const reportUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const targetUserId = req.params.id;
+    const { reason } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        success: false,
+        message: 'Report reason is required',
+      });
+      return;
+    }
+
+    // Can't report yourself
+    if (targetUserId === req.userId) {
+      res.status(400).json({
+        success: false,
+        message: 'You cannot report yourself',
+      });
+      return;
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Check if already reported by this user
+    const alreadyReported = targetUser.reports?.some(
+      (r: any) => r.user.toString() === req.userId
+    );
+
+    if (alreadyReported) {
+      res.status(400).json({
+        success: false,
+        message: 'You have already reported this user',
+      });
+      return;
+    }
+
+    // Initialize reports array if not exists
+    if (!targetUser.reports) {
+      targetUser.reports = [];
+    }
+
+    targetUser.reports.push({
+      user: req.userId as any,
+      reason,
+      createdAt: new Date(),
+    });
+
+    await targetUser.save();
+
+    res.json({
+      success: true,
+      message: 'User reported successfully. Our team will review this report.',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error reporting user',
+    });
+  }
+};

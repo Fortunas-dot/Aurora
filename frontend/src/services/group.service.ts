@@ -94,6 +94,10 @@ class GroupService {
   ): Promise<ApiResponse<any[]>> {
     return apiService.get<any[]>(`/groups/${id}/posts?page=${page}&limit=${limit}`);
   }
+
+  async reportGroup(id: string, reason: string): Promise<ApiResponse<void>> {
+    return apiService.post<void>(`/groups/${id}/report`, { reason });
+  }
 }
 
 export const groupService = new GroupService();

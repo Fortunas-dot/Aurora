@@ -96,6 +96,10 @@ class UserService {
   async deleteAccount(): Promise<ApiResponse<void>> {
     return apiService.delete<void>('/users/account');
   }
+
+  async reportUser(userId: string, reason: string): Promise<ApiResponse<void>> {
+    return apiService.post<void>(`/users/${userId}/report`, { reason });
+  }
 }
 
 export const userService = new UserService();

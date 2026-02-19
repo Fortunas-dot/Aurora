@@ -15,7 +15,7 @@ import {
   Dimensions,
   Easing,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -412,6 +412,17 @@ export default function GroupsScreen() {
       loadBuddies();
     }
   }, [activeTab, selectedCountry, selectedHealthCondition, loadGroups, loadBuddies, groupSearchQuery]);
+
+  // Refresh groups when screen comes into focus (e.g., after creating a group)
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab === 'groups') {
+        loadGroups(1, false, groupSearchQuery, selectedCountry, selectedHealthCondition);
+      } else if (activeTab === 'buddies') {
+        loadBuddies();
+      }
+    }, [activeTab, loadGroups, loadBuddies, groupSearchQuery, selectedCountry, selectedHealthCondition])
+  );
 
   // Search effect for groups
   useEffect(() => {

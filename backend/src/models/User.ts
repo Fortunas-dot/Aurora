@@ -27,6 +27,11 @@ export interface IUser extends Document {
   savedPosts: Types.ObjectId[];
   blockedUsers: Types.ObjectId[]; // Users that this user has blocked
   pushTokens: PushToken[];
+  reports: Array<{
+    user: Types.ObjectId;
+    reason: string;
+    createdAt: Date;
+  }>;
   healthInfo?: {
     mentalHealth?: Array<{
       condition: string;
@@ -148,6 +153,22 @@ const UserSchema = new Schema<IUser>(
       platform: {
         type: String,
         enum: ['ios', 'android', 'web'],
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
+    reports: [{
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+      reason: {
+        type: String,
+        required: true,
+        enum: ['spam', 'harassment', 'inappropriate', 'impersonation', 'other'],
       },
       createdAt: {
         type: Date,

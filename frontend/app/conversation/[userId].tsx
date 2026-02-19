@@ -816,13 +816,6 @@ export default function ConversationScreen() {
                     maxLength={2000}
                     onSubmitEditing={handleSendMessage}
                   />
-                  {messageText.length > 0 && (messageText.includes('\n') || messageText.length > 40) && (
-                    <View style={styles.charCountContainer}>
-                      <Text style={styles.charCount}>
-                        {messageText.length}/2000
-                      </Text>
-                    </View>
-                  )}
                 </View>
               </View>
               <Pressable

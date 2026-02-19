@@ -84,7 +84,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
       data: groups.map((group) => ({
         ...group.toObject(),
         memberCount: group.members.length,
-        isMember: req.userId ? group.members.some((m) => m.toString() === req.userId) : false,
+        isMember: req.userId ? group.members.some((m: any) => (m._id || m).toString() === req.userId) : false,
       })),
       pagination: {
         page,
@@ -440,3 +440,65 @@ export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+// @desc    Report group
+// @route   POST /api/groups/:id/report
+// @access  Private
+export const reportGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const groupId = req.params.id;
+    const { reason } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        success: false,
+        message: 'Report reason is required',
+      });
+      return;
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if already reported by this user
+    const alreadyReported = group.reports?.some(
+      (r: any) => r.user.toString() === req.userId
+    );
+
+    if (alreadyReported) {
+      res.status(400).json({
+        success: false,
+        message: 'You have already reported this group',
+      });
+      return;
+    }
+
+    // Initialize reports array if not exists
+    if (!group.reports) {
+      group.reports = [];
+    }
+
+    group.reports.push({
+      user: req.userId as any,
+      reason,
+      createdAt: new Date(),
+    });
+
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Group reported successfully. Our team will review this report.',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error reporting group',
+    });
+  }
+};

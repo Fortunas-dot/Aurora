@@ -133,32 +133,32 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.recorderContent}>
-        <Pressable
-          style={styles.cancelButton}
-          onPress={onCancel}
-        >
-          <Ionicons name="close" size={24} color={COLORS.textMuted} />
-        </Pressable>
-
-        <View style={styles.recordingInfo}>
-          <Animated.View
-            style={[
-              styles.recordButton,
-              {
-                transform: [{ scale: scaleAnim }],
-                backgroundColor: isRecording ? COLORS.error : COLORS.primary,
-              },
-            ]}
+      {isRecording ? (
+        <View style={styles.recorderContent}>
+          <Pressable
+            style={styles.cancelButton}
+            onPress={onCancel}
           >
-            <Ionicons
-              name={isRecording ? 'mic' : 'mic-outline'}
-              size={32}
-              color={COLORS.background}
-            />
-          </Animated.View>
+            <Ionicons name="close" size={24} color={COLORS.textMuted} />
+          </Pressable>
 
-          {isRecording && (
+          <View style={styles.recordingInfo}>
+            <Animated.View
+              style={[
+                styles.recordButton,
+                {
+                  transform: [{ scale: scaleAnim }],
+                  backgroundColor: COLORS.error,
+                },
+              ]}
+            >
+              <Ionicons
+                name="mic"
+                size={32}
+                color={COLORS.background}
+              />
+            </Animated.View>
+
             <View style={styles.durationContainer}>
               <View style={styles.waveform}>
                 {Array.from({ length: 20 }).map((_, i) => (
@@ -176,30 +176,39 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
               </View>
               <Text style={styles.duration}>{formatDuration(duration)}</Text>
             </View>
-          )}
+          </View>
+
+          <Pressable
+            style={[
+              styles.sendButton,
+              duration === 0 && styles.sendButtonDisabled,
+            ]}
+            onPress={stopRecording}
+            disabled={duration === 0}
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color={duration === 0 ? COLORS.textMuted : COLORS.primary}
+            />
+          </Pressable>
         </View>
+      ) : (
+        <View style={styles.startRecordingContainer}>
+          <Pressable
+            style={styles.cancelButton}
+            onPress={onCancel}
+          >
+            <Ionicons name="close" size={24} color={COLORS.textMuted} />
+          </Pressable>
 
-        <Pressable
-          style={[
-            styles.sendButton,
-            (!isRecording || duration === 0) && styles.sendButtonDisabled,
-          ]}
-          onPress={stopRecording}
-          disabled={!isRecording || duration === 0}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={(!isRecording || duration === 0) ? COLORS.textMuted : COLORS.primary}
-          />
-        </Pressable>
-      </View>
+          <Pressable style={styles.startButton} onPress={startRecording}>
+            <Ionicons name="mic" size={24} color={COLORS.background} />
+            <Text style={styles.startButtonText}>Tap to start recording</Text>
+          </Pressable>
 
-      {!isRecording && (
-        <Pressable style={styles.startButton} onPress={startRecording}>
-          <Ionicons name="mic" size={24} color={COLORS.background} />
-          <Text style={styles.startButtonText}>Houd ingedrukt om op te nemen</Text>
-        </Pressable>
+          <View style={styles.placeholderButton} />
+        </View>
       )}
     </View>
   );
@@ -218,8 +227,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
+  startRecordingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+  },
   cancelButton: {
-    padding: SPACING.xs,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderButton: {
+    width: 44,
+    height: 44,
   },
   recordingInfo: {
     flex: 1,
@@ -228,9 +252,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   recordButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -270,6 +294,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   startButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

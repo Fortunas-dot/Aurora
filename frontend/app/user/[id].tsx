@@ -167,6 +167,82 @@ export default function UserProfileScreen() {
     );
   };
 
+  const handleReportUser = () => {
+    if (!id || !isAuthenticated) return;
+
+    Alert.alert(
+      'Report User',
+      'Why are you reporting this user?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Spam',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(id, 'spam');
+              if (response.success) {
+                Alert.alert('Success', 'User reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report user');
+              }
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Failed to report user');
+            }
+          },
+        },
+        {
+          text: 'Harassment',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(id, 'harassment');
+              if (response.success) {
+                Alert.alert('Success', 'User reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report user');
+              }
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Failed to report user');
+            }
+          },
+        },
+        {
+          text: 'Inappropriate',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(id, 'inappropriate');
+              if (response.success) {
+                Alert.alert('Success', 'User reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report user');
+              }
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Failed to report user');
+            }
+          },
+        },
+        {
+          text: 'Impersonation',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(id, 'impersonation');
+              if (response.success) {
+                Alert.alert('Success', 'User reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report user');
+              }
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Failed to report user');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleLoadMore = () => {
     if (!isLoading && hasMore) {
       const nextPage = page + 1;
@@ -274,6 +350,16 @@ export default function UserProfileScreen() {
                     <Text style={[styles.blockButtonText, isBlocked && { color: COLORS.error }]}>
                       {isBlocked ? 'Blocked' : 'Block'}
                     </Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.reportButton}
+                    onPress={handleReportUser}
+                  >
+                    <Ionicons
+                      name="flag-outline"
+                      size={20}
+                      color={COLORS.textSecondary}
+                    />
                   </Pressable>
                 </View>
               )}
@@ -462,6 +548,13 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  reportButton: {
+    padding: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,

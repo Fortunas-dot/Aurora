@@ -127,6 +127,82 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleReportGroup = () => {
+    if (!group || !isAuthenticated) return;
+
+    Alert.alert(
+      'Report Group',
+      'Why are you reporting this group?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Spam',
+          onPress: async () => {
+            try {
+              const response = await groupService.reportGroup(group._id, 'spam');
+              if (response.success) {
+                Alert.alert('Success', 'Group reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report group');
+              }
+            } catch (error) {
+              console.error('Error reporting group:', error);
+              Alert.alert('Error', 'Failed to report group');
+            }
+          },
+        },
+        {
+          text: 'Harassment',
+          onPress: async () => {
+            try {
+              const response = await groupService.reportGroup(group._id, 'harassment');
+              if (response.success) {
+                Alert.alert('Success', 'Group reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report group');
+              }
+            } catch (error) {
+              console.error('Error reporting group:', error);
+              Alert.alert('Error', 'Failed to report group');
+            }
+          },
+        },
+        {
+          text: 'Inappropriate',
+          onPress: async () => {
+            try {
+              const response = await groupService.reportGroup(group._id, 'inappropriate');
+              if (response.success) {
+                Alert.alert('Success', 'Group reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report group');
+              }
+            } catch (error) {
+              console.error('Error reporting group:', error);
+              Alert.alert('Error', 'Failed to report group');
+            }
+          },
+        },
+        {
+          text: 'Misleading',
+          onPress: async () => {
+            try {
+              const response = await groupService.reportGroup(group._id, 'misleading');
+              if (response.success) {
+                Alert.alert('Success', 'Group reported. Our team will review this report.');
+              } else {
+                Alert.alert('Error', response.message || 'Failed to report group');
+              }
+            } catch (error) {
+              console.error('Error reporting group:', error);
+              Alert.alert('Error', 'Failed to report group');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleGroupSettings = () => {
     if (!group) return;
 
@@ -162,6 +238,15 @@ export default function GroupDetailScreen() {
         onPress: () => {
           router.push(`/group/${group._id}/settings`);
         },
+      });
+    }
+
+    // Add report option for non-admins
+    if (!group.isAdmin && isAuthenticated) {
+      options.push({
+        text: 'Report Group',
+        style: 'destructive' as const,
+        onPress: () => handleReportGroup(),
       });
     }
 

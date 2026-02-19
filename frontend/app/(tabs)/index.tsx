@@ -808,12 +808,6 @@ export default function FeedScreen() {
   // Show overlay if onboarding is active and we're on step 3 or higher
   // OR if onboarding is active and we're on the Feed page (in case step got stuck)
   const shouldShowOverlay = isOnboardingActive && (currentStep >= 3 || isOnboardingActive);
-  
-  console.log('🔵 Feed Screen Render - Onboarding:', {
-    isOnboardingActive,
-    currentStep,
-    shouldShowOverlay,
-  });
 
   return (
     <View style={styles.container}>

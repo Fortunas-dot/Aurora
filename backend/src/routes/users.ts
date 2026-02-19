@@ -11,6 +11,7 @@ import {
   blockUser,
   getBlockedUsers,
   deleteAccount,
+  reportUser,
 } from '../controllers/userController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -29,6 +30,7 @@ router.get('/:id/followers', optionalAuth, getFollowers);
 router.get('/:id/following', optionalAuth, getFollowing);
 router.get('/:id/posts', optionalAuth, getUserPosts);
 router.post('/:id/block', protect, blockUser);
+router.post('/:id/report', protect, reportUser);
 router.get('/:id', optionalAuth, getUserProfile); // Must be last
 
 export default router;
