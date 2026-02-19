@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { secureStorage } from '../utils/secureStorage';
-import { API_CONFIG } from './api.service';
+import { apiService } from './api.service';
 
 export interface UploadResponse {
   success: boolean;
@@ -59,7 +59,8 @@ class UploadService {
       } as any);
 
       // Upload to server
-      const uploadUrl = `${API_CONFIG.BASE_URL}/upload`;
+      const baseUrl = apiService.getBaseUrl();
+      const uploadUrl = `${baseUrl}/upload`;
       console.log('📤 Uploading file to:', uploadUrl);
       
       const response = await fetch(uploadUrl, {
@@ -95,7 +96,7 @@ class UploadService {
         // Convert relative URL to absolute URL
         const absoluteUrl = result.data.url.startsWith('http') 
           ? result.data.url 
-          : `${API_CONFIG.BASE_URL.replace('/api', '')}${result.data.url}`;
+          : `${baseUrl.replace('/api', '')}${result.data.url}`;
         
         return {
           success: true,
