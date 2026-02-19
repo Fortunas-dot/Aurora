@@ -17,6 +17,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/the
 import { useTheme } from '../src/hooks/useTheme';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
 import { useAuthStore } from '../src/store/authStore';
+import { useConsentStore } from '../src/store/consentStore';
 import { userService, UserProfile } from '../src/services/user.service';
 import { i18n, Language } from '../src/utils/i18n';
 
@@ -109,13 +110,15 @@ export default function SettingsScreen() {
   const [t, setT] = useState(() => i18n.getTranslations());
   const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
   const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
+  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent, resetConsent } = useConsentStore();
 
   useEffect(() => {
     if (isAuthenticated) {
       loadSettings();
       loadBlockedUsers();
+      loadConsent();
     }
-  }, [isAuthenticated, loadSettings]);
+  }, [isAuthenticated, loadSettings, loadConsent]);
 
   const loadBlockedUsers = async () => {
     setIsLoadingBlocked(true);
@@ -252,6 +255,84 @@ export default function SettingsScreen() {
               subtitle="Learn about Aurora's features"
               onPress={() => router.push('/onboarding')}
             />
+          </GlassCard>
+        </View>
+
+        {/* AI Data Sharing */}
+        <View style={styles.menuSection}>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>AI Data Sharing</Text>
+          <GlassCard padding={0}>
+            <View style={styles.aiConsentContainer}>
+              <View style={styles.aiConsentHeader}>
+                <View style={[styles.menuIconContainer, { backgroundColor: colors.glass.backgroundLight }]}>
+                  <Ionicons name="sparkles" size={22} color={colors.primary} />
+                </View>
+                <View style={styles.aiConsentInfo}>
+                  <Text style={[styles.menuTitle, { color: colors.text }]}>AI Features</Text>
+                  <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>
+                    {aiConsentStatus === 'granted' 
+                      ? 'Your data is shared with OpenAI for AI features' 
+                      : 'AI features are disabled'}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.aiStatusBadge, 
+                  { backgroundColor: aiConsentStatus === 'granted' ? colors.success + '20' : colors.glass.backgroundLight }
+                ]}>
+                  <Text style={[
+                    styles.aiStatusText, 
+                    { color: aiConsentStatus === 'granted' ? colors.success : colors.textMuted }
+                  ]}>
+                    {aiConsentStatus === 'granted' ? 'Enabled' : 'Disabled'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.aiConsentDetails}>
+                <Text style={[styles.aiConsentDescription, { color: colors.textSecondary }]}>
+                  When enabled, your chat messages, journal entries, voice transcripts, and health information 
+                  are sent to OpenAI to provide AI-powered support and insights.
+                </Text>
+                <Pressable
+                  style={[
+                    styles.aiConsentButton,
+                    { 
+                      backgroundColor: aiConsentStatus === 'granted' ? colors.error + '20' : colors.primary + '20',
+                      borderColor: aiConsentStatus === 'granted' ? colors.error : colors.primary,
+                    }
+                  ]}
+                  onPress={() => {
+                    if (aiConsentStatus === 'granted') {
+                      Alert.alert(
+                        'Disable AI Features?',
+                        'This will stop sharing your data with OpenAI. AI chat, voice therapy, and journal insights will be disabled. You will be asked for consent again when you try to use AI features.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { 
+                            text: 'Disable', 
+                            style: 'destructive',
+                            onPress: () => resetConsent()
+                          },
+                        ]
+                      );
+                    } else {
+                      router.push('/text-chat'); // This will show the consent card
+                    }
+                  }}
+                >
+                  <Ionicons 
+                    name={aiConsentStatus === 'granted' ? 'close-circle' : 'checkmark-circle'} 
+                    size={18} 
+                    color={aiConsentStatus === 'granted' ? colors.error : colors.primary} 
+                  />
+                  <Text style={[
+                    styles.aiConsentButtonText,
+                    { color: aiConsentStatus === 'granted' ? colors.error : colors.primary }
+                  ]}>
+                    {aiConsentStatus === 'granted' ? 'Revoke Consent' : 'Enable AI Features'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
           </GlassCard>
         </View>
 
@@ -571,6 +652,49 @@ const styles = StyleSheet.create({
   unblockButtonText: {
     ...TYPOGRAPHY.small,
     fontSize: 12,
+  },
+  aiConsentContainer: {
+    padding: SPACING.md,
+  },
+  aiConsentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiConsentInfo: {
+    flex: 1,
+    marginLeft: SPACING.md,
+  },
+  aiStatusBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  aiStatusText: {
+    ...TYPOGRAPHY.small,
+    fontWeight: '600',
+  },
+  aiConsentDetails: {
+    marginTop: SPACING.md,
+    marginLeft: 40 + SPACING.md,
+  },
+  aiConsentDescription: {
+    ...TYPOGRAPHY.small,
+    lineHeight: 18,
+    marginBottom: SPACING.md,
+  },
+  aiConsentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  aiConsentButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '600',
   },
 });
 

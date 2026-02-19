@@ -12,6 +12,7 @@ interface ConsentState {
   loadConsent: () => Promise<void>;
   grantAiConsent: () => Promise<void>;
   denyAiConsent: () => Promise<void>;
+  resetConsent: () => Promise<void>;
 }
 
 const AI_CONSENT_KEY = 'ai_data_consent';
@@ -47,6 +48,14 @@ export const useConsentStore = create<ConsentState>((set) => ({
       await secureStorage.setItemAsync(AI_CONSENT_KEY, 'denied');
     } finally {
       set({ aiConsentStatus: 'denied' });
+    }
+  },
+
+  resetConsent: async () => {
+    try {
+      await secureStorage.deleteItemAsync(AI_CONSENT_KEY);
+    } finally {
+      set({ aiConsentStatus: 'unknown' });
     }
   },
 }));

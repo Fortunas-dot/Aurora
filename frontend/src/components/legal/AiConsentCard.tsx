@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { GlassCard } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 
@@ -14,11 +15,26 @@ interface AiConsentCardProps {
  * Card that explains AI data usage and asks for consent before sending
  * personal data (journal entries, chat messages, voice transcripts) to
  * Aurora's backend and OpenAI.
+ * 
+ * Required by Apple App Store Guidelines 5.1.1(i) and 5.1.2(i):
+ * - Disclose what data will be sent
+ * - Specify who the data is sent to
+ * - Obtain the user's permission before sending data
  */
 export const AiConsentCard: React.FC<AiConsentCardProps> = ({
   onAccept,
   onDecline,
 }) => {
+  const router = useRouter();
+
+  const openOpenAIPrivacy = () => {
+    Linking.openURL('https://openai.com/privacy');
+  };
+
+  const openPrivacyPolicy = () => {
+    router.push('/privacy-policy');
+  };
+
   return (
     <View style={styles.cardContainer}>
       <LinearGradient
@@ -30,63 +46,83 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
           <View style={styles.iconContainer}>
             <Ionicons name="shield-checkmark" size={22} color={COLORS.primary} />
           </View>
-          <Text style={styles.title}>AI & Data Use</Text>
+          <Text style={styles.title}>AI Data Sharing Consent</Text>
         </View>
 
-      <Text style={styles.text}>
-        Aurora can use your personal input to provide AI-powered support. This may
-        include:
+      <Text style={styles.importantText}>
+        Your permission is required before using AI features.
       </Text>
 
+      <Text style={styles.sectionHeader}>What data will be shared:</Text>
       <View style={styles.list}>
         <View style={styles.listItem}>
           <Ionicons name="chatbubble-ellipses" size={16} color={COLORS.primary} />
           <Text style={styles.listText}>
-            What you type in conversations and journal entries
+            Text you type in AI chat conversations
+          </Text>
+        </View>
+        <View style={styles.listItem}>
+          <Ionicons name="book" size={16} color={COLORS.primary} />
+          <Text style={styles.listText}>
+            Journal entries (for AI-generated prompts and insights)
           </Text>
         </View>
         <View style={styles.listItem}>
           <Ionicons name="mic" size={16} color={COLORS.primary} />
           <Text style={styles.listText}>
-            Voice recordings and transcripts when you use voice support
+            Voice recordings and transcripts (for voice therapy)
           </Text>
         </View>
         <View style={styles.listItem}>
           <Ionicons name="heart" size={16} color={COLORS.primary} />
           <Text style={styles.listText}>
-            Optional health information you choose to share in the app
+            Health information you've added to your profile (if applicable)
           </Text>
         </View>
       </View>
 
+      <Text style={styles.sectionHeader}>Who receives this data:</Text>
+      <View style={styles.recipientBox}>
+        <Text style={styles.recipientName}>OpenAI</Text>
+        <Text style={styles.recipientDesc}>
+          Our AI technology provider. OpenAI processes your data to generate 
+          supportive responses and insights. OpenAI does not use your data to 
+          train their AI models.
+        </Text>
+        <Pressable onPress={openOpenAIPrivacy}>
+          <Text style={styles.linkText}>View OpenAI's Privacy Policy →</Text>
+        </Pressable>
+      </View>
+
+      <Text style={styles.sectionHeader}>Data protection:</Text>
       <Text style={styles.text}>
-        This data is sent to our secure servers and to our AI technology provider,
-        OpenAI, only to generate supportive responses and insights. It is not used
-        for advertising or sold to data brokers.
-      </Text>
-      <Text style={styles.text}>
-        OpenAI is contractually obligated to protect your data and provides the same 
-        or equal protection of personal data as we do. OpenAI does not use your data 
-        to train their models and is bound by their privacy policy and our data 
-        processing agreement.
+        • Your data is encrypted in transit and at rest{'\n'}
+        • OpenAI is contractually obligated to protect your data{'\n'}
+        • Your data is NOT used for advertising{'\n'}
+        • Your data is NOT sold to third parties{'\n'}
+        • You can revoke consent at any time in Settings
       </Text>
 
-      <Text style={styles.text}>
-        You can continue to use Aurora without AI features if you prefer not to
-        share this data.
+      <Pressable onPress={openPrivacyPolicy}>
+        <Text style={styles.linkText}>Read our full Privacy Policy →</Text>
+      </Pressable>
+
+      <Text style={styles.optionalText}>
+        AI features are optional. You can use Aurora's community, journaling, 
+        and other features without enabling AI.
       </Text>
 
       <View style={styles.buttons}>
         {onDecline && (
           <Pressable style={[styles.button, styles.secondaryButton]} onPress={onDecline}>
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-              Not now
+              Don't Allow
             </Text>
           </Pressable>
         )}
         <Pressable style={[styles.button, styles.primaryButton]} onPress={onAccept}>
           <Text style={[styles.buttonText, styles.primaryButtonText]}>
-            I agree
+            Allow AI Features
           </Text>
         </Pressable>
       </View>
@@ -109,13 +145,13 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: 'rgba(15, 15, 25, 1)', // Fully opaque background to block Aurora symbol
+    backgroundColor: 'rgba(15, 15, 25, 1)',
     borderColor: COLORS.glass.border,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
     gap: SPACING.sm,
   },
   iconContainer: {
@@ -130,6 +166,20 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
     fontWeight: '600',
+    flex: 1,
+  },
+  importantText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginBottom: SPACING.md,
+  },
+  sectionHeader: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   text: {
     ...TYPOGRAPHY.small,
@@ -138,13 +188,14 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   list: {
-    marginVertical: SPACING.sm,
+    marginBottom: SPACING.sm,
     gap: SPACING.xs,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.sm,
+    paddingVertical: 2,
   },
   listText: {
     ...TYPOGRAPHY.small,
@@ -152,17 +203,54 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
+  recipientBox: {
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  recipientName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  recipientDesc: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    marginBottom: SPACING.xs,
+  },
+  linkText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.primary,
+    fontWeight: '500',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  optionalText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
   buttons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     gap: SPACING.sm,
     marginTop: SPACING.md,
   },
   button: {
+    flex: 1,
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
+    alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
