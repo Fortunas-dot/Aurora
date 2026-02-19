@@ -347,6 +347,18 @@ class ChatWebSocketService {
   }
 
   /**
+   * Request online status for a specific user
+   */
+  checkOnline(userId: string): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'check_online',
+        userId,
+      }));
+    }
+  }
+
+  /**
    * Mark message as read
    */
   markAsRead(messageId: string): void {

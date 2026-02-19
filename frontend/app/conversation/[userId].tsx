@@ -234,8 +234,16 @@ export default function ConversationScreen() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    // Ensure WebSocket is connected
-    chatWebSocketService.ensureConnected();
+    // Ensure WebSocket is connected, then check online status
+    chatWebSocketService.ensureConnected().then(() => {
+      // Request the current online status of the other user
+      chatWebSocketService.checkOnline(userId);
+    });
+
+    // Also check online status when the WebSocket reconnects
+    const unsubConnected = chatWebSocketService.on('connected', () => {
+      chatWebSocketService.checkOnline(userId);
+    });
 
     // Subscribe to events using the new listener API
     const unsubNewMessage = chatWebSocketService.on('new_message', (message: any) => {
@@ -315,6 +323,7 @@ export default function ConversationScreen() {
 
     // Cleanup: only remove listeners, do NOT disconnect the WebSocket
     return () => {
+      unsubConnected();
       unsubNewMessage();
       unsubMessageSent();
       unsubTypingStart();

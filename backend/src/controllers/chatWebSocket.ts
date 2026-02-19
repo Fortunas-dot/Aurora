@@ -74,6 +74,10 @@ export const handleChatWebSocket = (ws: AuthenticatedWebSocket, req: any): void 
             await handleMarkRead(decoded.userId, data.messageId);
             break;
           
+          case 'check_online':
+            handleCheckOnline(ws, data.userId);
+            break;
+          
           default:
             console.log('Unknown chat WebSocket message type:', data.type);
         }
@@ -259,6 +263,24 @@ const handleMarkRead = async (userId: string, messageId: string): Promise<void> 
     }
   } catch (error) {
     console.error('Error marking message as read:', error);
+  }
+};
+
+/**
+ * Handle check online status request
+ */
+const handleCheckOnline = (ws: AuthenticatedWebSocket, targetUserId: string): void => {
+  if (!targetUserId) return;
+  
+  const targetWs = activeChatConnections.get(targetUserId);
+  const isOnline = targetWs !== undefined && targetWs.readyState === 1;
+  
+  if (ws.readyState === 1) {
+    ws.send(JSON.stringify({
+      type: 'user_status',
+      userId: targetUserId,
+      isOnline,
+    }));
   }
 };
 
