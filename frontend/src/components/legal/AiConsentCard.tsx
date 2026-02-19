@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/them
 interface AiConsentCardProps {
   onAccept: () => void;
   onDecline?: () => void;
+  compact?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ interface AiConsentCardProps {
 export const AiConsentCard: React.FC<AiConsentCardProps> = ({
   onAccept,
   onDecline,
+  compact = false,
 }) => {
   const router = useRouter();
 
@@ -36,96 +38,69 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
   };
 
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, compact && styles.cardContainerCompact]}>
       <LinearGradient
         colors={['rgba(15, 15, 25, 1)', 'rgba(20, 20, 30, 1)']}
         style={styles.backgroundGradient}
       />
-      <GlassCard style={styles.card} padding="lg" variant="dark">
+      <GlassCard style={styles.card} padding="md" variant="dark">
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="shield-checkmark" size={22} color={COLORS.primary} />
+            <Ionicons name="shield-checkmark" size={20} color={COLORS.primary} />
           </View>
-          <Text style={styles.title}>AI Data Sharing Consent</Text>
+          <Text style={styles.title}>AI Data Sharing</Text>
         </View>
 
-      <Text style={styles.importantText}>
-        Your permission is required before using AI features.
-      </Text>
-
-      <Text style={styles.sectionHeader}>What data will be shared:</Text>
-      <View style={styles.list}>
-        <View style={styles.listItem}>
-          <Ionicons name="chatbubble-ellipses" size={16} color={COLORS.primary} />
-          <Text style={styles.listText}>
-            Text you type in AI chat conversations
+        <ScrollView 
+          style={styles.scrollContent} 
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+        >
+          <Text style={styles.importantText}>
+            To use AI features, your data will be shared with OpenAI:
           </Text>
-        </View>
-        <View style={styles.listItem}>
-          <Ionicons name="book" size={16} color={COLORS.primary} />
-          <Text style={styles.listText}>
-            Journal entries (for AI-generated prompts and insights)
+
+          <View style={styles.dataList}>
+            <Text style={styles.dataItem}>• Chat messages & journal entries</Text>
+            <Text style={styles.dataItem}>• Voice recordings (for voice therapy)</Text>
+            <Text style={styles.dataItem}>• Health info from your profile</Text>
+          </View>
+
+          <View style={styles.recipientBox}>
+            <View style={styles.recipientHeader}>
+              <Text style={styles.recipientName}>Sent to: OpenAI</Text>
+            </View>
+            <Text style={styles.recipientDesc}>
+              OpenAI generates AI responses. They do not use your data to train AI models.
+            </Text>
+            <Pressable onPress={openOpenAIPrivacy}>
+              <Text style={styles.linkText}>OpenAI Privacy Policy →</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.protectionText}>
+            ✓ Encrypted  ✓ Not used for ads  ✓ Not sold  ✓ Revocable in Settings
           </Text>
-        </View>
-        <View style={styles.listItem}>
-          <Ionicons name="mic" size={16} color={COLORS.primary} />
-          <Text style={styles.listText}>
-            Voice recordings and transcripts (for voice therapy)
-          </Text>
-        </View>
-        <View style={styles.listItem}>
-          <Ionicons name="heart" size={16} color={COLORS.primary} />
-          <Text style={styles.listText}>
-            Health information you've added to your profile (if applicable)
-          </Text>
-        </View>
-      </View>
 
-      <Text style={styles.sectionHeader}>Who receives this data:</Text>
-      <View style={styles.recipientBox}>
-        <Text style={styles.recipientName}>OpenAI</Text>
-        <Text style={styles.recipientDesc}>
-          Our AI technology provider. OpenAI processes your data to generate 
-          supportive responses and insights. OpenAI does not use your data to 
-          train their AI models.
-        </Text>
-        <Pressable onPress={openOpenAIPrivacy}>
-          <Text style={styles.linkText}>View OpenAI's Privacy Policy →</Text>
-        </Pressable>
-      </View>
+          <Pressable onPress={openPrivacyPolicy}>
+            <Text style={styles.linkText}>Full Privacy Policy →</Text>
+          </Pressable>
+        </ScrollView>
 
-      <Text style={styles.sectionHeader}>Data protection:</Text>
-      <Text style={styles.text}>
-        • Your data is encrypted in transit and at rest{'\n'}
-        • OpenAI is contractually obligated to protect your data{'\n'}
-        • Your data is NOT used for advertising{'\n'}
-        • Your data is NOT sold to third parties{'\n'}
-        • You can revoke consent at any time in Settings
-      </Text>
-
-      <Pressable onPress={openPrivacyPolicy}>
-        <Text style={styles.linkText}>Read our full Privacy Policy →</Text>
-      </Pressable>
-
-      <Text style={styles.optionalText}>
-        AI features are optional. You can use Aurora's community, journaling, 
-        and other features without enabling AI.
-      </Text>
-
-      <View style={styles.buttons}>
-        {onDecline && (
-          <Pressable style={[styles.button, styles.secondaryButton]} onPress={onDecline}>
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-              Don't Allow
+        <View style={styles.buttons}>
+          {onDecline && (
+            <Pressable style={[styles.button, styles.secondaryButton]} onPress={onDecline}>
+              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+                Don't Allow
+              </Text>
+            </Pressable>
+          )}
+          <Pressable style={[styles.button, styles.primaryButton]} onPress={onAccept}>
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              Allow
             </Text>
           </Pressable>
-        )}
-        <Pressable style={[styles.button, styles.primaryButton]} onPress={onAccept}>
-          <Text style={[styles.buttonText, styles.primaryButtonText]}>
-            Allow AI Features
-          </Text>
-        </Pressable>
-      </View>
+        </View>
       </GlassCard>
     </View>
   );
@@ -134,14 +109,18 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
 const styles = StyleSheet.create({
   cardContainer: {
     width: '100%',
-    marginBottom: SPACING.lg,
+    maxHeight: 400,
+    marginBottom: SPACING.md,
     position: 'relative',
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
+  },
+  cardContainerCompact: {
+    maxHeight: 350,
   },
   backgroundGradient: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: BORDER_RADIUS.lg,
   },
   card: {
     width: '100%',
@@ -151,13 +130,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: COLORS.glass.background,
     justifyContent: 'center',
     alignItems: 'center',
@@ -168,87 +147,73 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
+  scrollContent: {
+    maxHeight: 250,
+  },
   importantText: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.small,
     color: COLORS.primary,
     fontWeight: '600',
-    marginBottom: SPACING.md,
-  },
-  sectionHeader: {
-    ...TYPOGRAPHY.captionMedium,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xs,
-  },
-  text: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
     marginBottom: SPACING.sm,
   },
-  list: {
+  dataList: {
     marginBottom: SPACING.sm,
-    gap: SPACING.xs,
   },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.sm,
-    paddingVertical: 2,
-  },
-  listText: {
+  dataItem: {
     ...TYPOGRAPHY.small,
     color: COLORS.textSecondary,
-    flex: 1,
     lineHeight: 20,
   },
   recipientBox: {
     backgroundColor: COLORS.glass.backgroundDark,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.sm,
     marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
   },
+  recipientHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   recipientName: {
-    ...TYPOGRAPHY.bodyMedium,
+    ...TYPOGRAPHY.small,
     color: COLORS.text,
     fontWeight: '600',
-    marginBottom: SPACING.xs,
   },
   recipientDesc: {
-    ...TYPOGRAPHY.small,
+    ...TYPOGRAPHY.caption,
     color: COLORS.textSecondary,
-    lineHeight: 18,
-    marginBottom: SPACING.xs,
+    lineHeight: 16,
+    marginTop: SPACING.xs,
   },
   linkText: {
-    ...TYPOGRAPHY.small,
+    ...TYPOGRAPHY.caption,
     color: COLORS.primary,
     fontWeight: '500',
     marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
   },
-  optionalText: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.textMuted,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
+  protectionText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.success,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
   },
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: SPACING.sm,
-    marginTop: SPACING.md,
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
   },
   button: {
     flex: 1,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     alignItems: 'center',
   },
