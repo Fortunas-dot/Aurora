@@ -272,6 +272,14 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
+      console.log('📨 WebSocket message_sent received:', {
+        id: message._id,
+        content: message.content,
+        attachments: message.attachments,
+        attachmentsCount: message.attachments?.length || 0,
+        hasAttachments: !!message.attachments && message.attachments.length > 0,
+      });
+      
       setMessages((prev) => {
         if (prev.some((m) => m._id === message._id)) return prev;
 
@@ -289,6 +297,7 @@ export default function ConversationScreen() {
         });
 
         if (isDuplicate) return prev;
+        console.log('📨 Adding message to list:', message);
         return [...prev, message];
       });
 
