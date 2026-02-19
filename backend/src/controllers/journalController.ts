@@ -1310,7 +1310,7 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
 
     // Use AI to extract important points
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini', // Use gpt-4o-mini which supports response_format
       messages: [
         {
           role: 'system',
@@ -1360,7 +1360,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
 
     // Generate a brief summary
     const summaryCompletion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
