@@ -9,6 +9,7 @@ import { AuroraCore as BlobsAuroraCore } from '../../src/components/voice/Aurora
 import { Badge } from '../../src/components/common';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
+import { useNotificationStore } from '../../src/store/notificationStore';
 import { messageService } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { useCallback } from 'react';
@@ -17,6 +18,7 @@ export default function TabsLayout() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuthStore();
   const { isActive: isOnboardingActive } = useOnboardingStore();
+  const { unreadByType, loadNotifications } = useNotificationStore();
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
   // Load total unread messages count
@@ -40,10 +42,20 @@ export default function TabsLayout() {
   useEffect(() => {
     loadUnreadCount();
     
+    // Also load notifications to get unreadByType
+    if (isAuthenticated) {
+      loadNotifications(1, false);
+    }
+    
     // Refresh every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
+    const interval = setInterval(() => {
+      loadUnreadCount();
+      if (isAuthenticated) {
+        loadNotifications(1, false);
+      }
+    }, 30000);
     return () => clearInterval(interval);
-  }, [loadUnreadCount]);
+  }, [loadUnreadCount, isAuthenticated, loadNotifications]);
   
   // Reload unread count when screen comes into focus
   useFocusEffect(
@@ -118,7 +130,12 @@ export default function TabsLayout() {
         options={{
           title: 'Feed',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <View style={styles.tabIconContainer}>
+              <Ionicons name="home" size={size} color={color} />
+              {unreadByType.feed > 0 && (
+                <Badge count={unreadByType.feed} size="sm" />
+              )}
+            </View>
           ),
         }}
       />
@@ -127,7 +144,12 @@ export default function TabsLayout() {
         options={{
           title: 'Connect',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
+            <View style={styles.tabIconContainer}>
+              <Ionicons name="people" size={size} color={color} />
+              {unreadByType.groups > 0 && (
+                <Badge count={unreadByType.groups} size="sm" />
+              )}
+            </View>
           ),
         }}
       />
@@ -163,7 +185,12 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <View style={styles.tabIconContainer}>
+              <Ionicons name="person" size={size} color={color} />
+              {unreadByType.profile > 0 && (
+                <Badge count={unreadByType.profile} size="sm" />
+              )}
+            </View>
           ),
         }}
       />
@@ -209,6 +236,9 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   chatIconContainer: {
+    position: 'relative',
+  },
+  tabIconContainer: {
     position: 'relative',
   },
 });

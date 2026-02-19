@@ -1,9 +1,17 @@
 import { create } from 'zustand';
-import { notificationService, Notification } from '../services/notification.service';
+import { notificationService, Notification, NotificationType } from '../services/notification.service';
+
+interface UnreadCountsByType {
+  feed: number;      // likes, comments on posts
+  groups: number;    // group_invite, group_join
+  messages: number;  // message type (separate from chat messages)
+  profile: number;   // follow
+}
 
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
+  unreadByType: UnreadCountsByType;
   isLoading: boolean;
   isRefreshing: boolean;
   page: number;
@@ -18,9 +26,42 @@ interface NotificationState {
   clearNotifications: () => void;
 }
 
+// Helper to categorize notification types to tabs
+const getTabForNotificationType = (type: NotificationType): keyof UnreadCountsByType => {
+  switch (type) {
+    case 'like':
+    case 'comment':
+      return 'feed';
+    case 'group_invite':
+    case 'group_join':
+      return 'groups';
+    case 'message':
+      return 'messages';
+    case 'follow':
+      return 'profile';
+    default:
+      return 'feed';
+  }
+};
+
+// Calculate unread counts by type from notifications array
+const calculateUnreadByType = (notifications: Notification[]): UnreadCountsByType => {
+  const counts: UnreadCountsByType = { feed: 0, groups: 0, messages: 0, profile: 0 };
+  
+  notifications.forEach((notif) => {
+    if (!notif.read) {
+      const tab = getTabForNotificationType(notif.type);
+      counts[tab]++;
+    }
+  });
+  
+  return counts;
+};
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
+  unreadByType: { feed: 0, groups: 0, messages: 0, profile: 0 },
   isLoading: false,
   isRefreshing: false,
   page: 1,
@@ -42,22 +83,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const safeUnreadCount = unreadCount || 0;
         const safePagination = pagination || { pages: 1 };
         
-        set((state) => ({
-          notifications: append ? [...(state.notifications || []), ...safeNotifications] : safeNotifications,
-          unreadCount: safeUnreadCount,
-          page: pageNum,
-          hasMore: pagination ? pageNum < pagination.pages : false,
-        }));
+        set((state) => {
+          const newNotifications = append ? [...(state.notifications || []), ...safeNotifications] : safeNotifications;
+          return {
+            notifications: newNotifications,
+            unreadCount: safeUnreadCount,
+            unreadByType: calculateUnreadByType(newNotifications),
+            page: pageNum,
+            hasMore: pagination ? pageNum < pagination.pages : false,
+          };
+        });
       } else {
         // If response is not successful, reset to empty state
         if (!append) {
-          set({ notifications: [], unreadCount: 0, hasMore: false });
+          set({ notifications: [], unreadCount: 0, unreadByType: { feed: 0, groups: 0, messages: 0, profile: 0 }, hasMore: false });
         }
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
       if (!append) {
-        set({ notifications: [], unreadCount: 0, hasMore: false });
+        set({ notifications: [], unreadCount: 0, unreadByType: { feed: 0, groups: 0, messages: 0, profile: 0 }, hasMore: false });
       }
     } finally {
       set({ isLoading: false });
@@ -74,12 +119,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       const response = await notificationService.markAsRead(notificationId);
       if (response.success) {
-        set((state) => ({
-          notifications: state.notifications.map((notif) =>
+        set((state) => {
+          const newNotifications = state.notifications.map((notif) =>
             notif._id === notificationId ? { ...notif, read: true } : notif
-          ),
-          unreadCount: Math.max(0, state.unreadCount - 1),
-        }));
+          );
+          return {
+            notifications: newNotifications,
+            unreadCount: Math.max(0, state.unreadCount - 1),
+            unreadByType: calculateUnreadByType(newNotifications),
+          };
+        });
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -93,6 +142,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set((state) => ({
           notifications: state.notifications.map((notif) => ({ ...notif, read: true })),
           unreadCount: 0,
+          unreadByType: { feed: 0, groups: 0, messages: 0, profile: 0 },
         }));
       }
     } catch (error) {
@@ -113,6 +163,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({
       notifications: [],
       unreadCount: 0,
+      unreadByType: { feed: 0, groups: 0, messages: 0, profile: 0 },
       page: 1,
       hasMore: true,
     });
