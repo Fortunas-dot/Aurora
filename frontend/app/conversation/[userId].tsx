@@ -482,7 +482,8 @@ export default function ConversationScreen() {
         // #endregion
         
         // Critical fix: If we had images to upload but ended up with no attachments, that's an error
-        if (selectedImages.length > 0 && attachments.length === 0) {
+        const hadImagesToUpload = selectedImages.length > 0;
+        if (hadImagesToUpload && attachments.length === 0) {
           console.error('All image uploads failed or returned no data');
           Alert.alert('Error', 'Could not upload images. Please try again.');
           setIsSending(false);
@@ -502,6 +503,15 @@ export default function ConversationScreen() {
     }
 
     const messageContent = messageText.trim() || ''; // Always provide content, even if empty
+    
+    // Final validation: must have either content or attachments before sending
+    if (!messageContent && attachments.length === 0) {
+      console.error('Cannot send message: no content and no attachments');
+      Alert.alert('Error', 'Message must have either text or an attachment');
+      setIsSending(false);
+      setIsUploading(false);
+      return;
+    }
     
     // #region agent log
     fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:460',message:'Before sending message',data:{messageContent,attachmentsCount:attachments.length,hasContent:!!messageContent,hasAttachments:attachments.length>0,isWebSocketConnected:chatWebSocketService.isConnected()},timestamp:Date.now(),runId:'run1',hypothesisId:'C,D,E'})}).catch(()=>{});
