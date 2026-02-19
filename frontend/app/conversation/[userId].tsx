@@ -1031,7 +1031,7 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: SPACING.sm,
     minHeight: 48,
   },
@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
-    alignSelf: 'center',
+    marginTop: SPACING.md, // Align with first line of text (paddingTop of input)
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -1172,7 +1172,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
-    alignSelf: 'center',
+    marginTop: SPACING.md, // Align with first line of text (paddingTop of input)
   },
   reactionsContainer: {
     flexDirection: 'row',
