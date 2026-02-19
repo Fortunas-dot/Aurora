@@ -453,21 +453,37 @@ export default function ConversationScreen() {
         // #endregion
 
         const uploadPromises = selectedImages.map(async (uri) => {
+          console.log('📤 Starting upload for image:', uri.substring(0, 50));
           const uploadResult = await uploadService.uploadImage(uri);
+          console.log('📤 Upload result:', {
+            success: uploadResult.success,
+            hasData: !!uploadResult.data,
+            message: uploadResult.message,
+            data: uploadResult.data,
+          });
           // #region agent log
           fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:440',message:'Single image upload result',data:{success:uploadResult.success,hasData:!!uploadResult.data,uri:uri.substring(0,50)},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
           // #endregion
           if (uploadResult.success && uploadResult.data) {
+            console.log('✅ Upload successful, URL:', uploadResult.data.url);
             return {
               type: 'image' as const,
               url: uploadResult.data.url,
             };
           }
+          console.error('❌ Upload failed:', uploadResult.message || 'Unknown error');
           return null;
         });
 
         const uploadedAttachments = await Promise.all(uploadPromises);
+        console.log('📤 All uploads completed:', {
+          total: uploadedAttachments.length,
+          successful: uploadedAttachments.filter(a => a !== null).length,
+          failed: uploadedAttachments.filter(a => a === null).length,
+        });
+        
         attachments = uploadedAttachments.filter((a) => a !== null) as Array<{ type: 'image'; url: string }>;
+        console.log('📤 Final attachments:', attachments.length);
         
         // #region agent log
         fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:451',message:'After upload and filter',data:{uploadedAttachmentsCount:uploadedAttachments.length,filteredAttachmentsCount:attachments.length,selectedImagesCount:selectedImages.length},timestamp:Date.now(),runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
@@ -476,7 +492,9 @@ export default function ConversationScreen() {
         // Critical fix: If we had images to upload but ended up with no attachments, that's an error
         const hadImagesToUpload = selectedImages.length > 0;
         if (hadImagesToUpload && attachments.length === 0) {
-          console.error('All image uploads failed or returned no data');
+          console.error('❌ All image uploads failed or returned no data');
+          console.error('Selected images count:', selectedImages.length);
+          console.error('Uploaded attachments:', uploadedAttachments);
           Alert.alert('Error', 'Could not upload images. Please try again.');
           setIsSending(false);
           setIsUploading(false);
