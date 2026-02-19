@@ -51,19 +51,9 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
   }, [visible]);
 
   // Debug logging
-  React.useEffect(() => {
-    console.log('🔵 OnboardingOverlay - Render state:', {
-      visible,
-      title,
-    });
-  }, [visible, title]);
-
   if (!visible) {
-    console.log('🔵 OnboardingOverlay - Not visible, returning null');
     return null;
   }
-
-  console.log('🔵 OnboardingOverlay - Rendering Modal');
 
   return (
     <Modal

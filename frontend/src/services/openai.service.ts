@@ -136,7 +136,7 @@ export class OpenAIService {
 
     try {
       const response = await apiService.post<{ content: string; usage?: any }>('/ai/chat/complete', {
-        messages,
+          messages,
         maxTokens,
       });
 

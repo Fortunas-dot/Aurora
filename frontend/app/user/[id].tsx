@@ -373,14 +373,14 @@ export default function UserProfileScreen() {
           </View>
           
           {/* Follow button - full width below profile info */}
-          {!isOwnProfile && isAuthenticated && (
+              {!isOwnProfile && isAuthenticated && (
             <View style={styles.followButtonContainer}>
-              <GlassButton
+                  <GlassButton
                 title={isFollowing ? 'Following' : 'Follow'}
-                onPress={handleFollow}
-                variant={isFollowing ? 'outline' : 'primary'}
-                disabled={isTogglingFollow}
-                style={styles.followButton}
+                    onPress={handleFollow}
+                    variant={isFollowing ? 'outline' : 'primary'}
+                    disabled={isTogglingFollow}
+                    style={styles.followButton}
                 icon={isFollowing ? 'checkmark' : 'person-add-outline'}
               />
               {isBlocked && (

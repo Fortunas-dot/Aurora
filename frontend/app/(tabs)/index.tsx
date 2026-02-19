@@ -804,10 +804,8 @@ export default function FeedScreen() {
 
   const emptyState = getEmptyStateText();
 
-  // Force overlay to show if onboarding is active (for debugging)
-  // Show overlay if onboarding is active and we're on step 3 or higher
-  // OR if onboarding is active and we're on the Feed page (in case step got stuck)
-  const shouldShowOverlay = isOnboardingActive && (currentStep >= 3 || isOnboardingActive);
+  // Show overlay on the Feed only for the Feed step of onboarding
+  const shouldShowOverlay = isOnboardingActive && currentStep === 3;
 
   return (
     <View style={styles.container}>
