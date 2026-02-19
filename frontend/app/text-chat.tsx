@@ -513,46 +513,49 @@ export default function TextChatScreen() {
               await clearHistory();
               clearMessages();
               
-              // Reset all animations to initial state with smooth animation
-              Animated.parallel([
-                Animated.timing(auroraScale, {
-                  toValue: 1,
-                  duration: 600,
-                  easing: Easing.out(Easing.ease),
-                  useNativeDriver: true,
-                }),
-                Animated.timing(auroraOpacity, {
-                  toValue: 1,
-                  duration: 600,
-                  easing: Easing.out(Easing.ease),
-                  useNativeDriver: true,
-                }),
-                Animated.timing(starsOpacity, {
-                  toValue: 0,
-                  duration: 400,
-                  easing: Easing.out(Easing.ease),
-                  useNativeDriver: true,
-                }),
-                Animated.timing(floatingAuroraOpacity, {
-                  toValue: 0,
-                  duration: 400,
-                  easing: Easing.in(Easing.ease),
-                  useNativeDriver: true,
-                }),
-              ]).start();
+              // Clear border glows
+              setBorderGlows([]);
               
               // Reset floating Aurora position immediately
               floatingAuroraX.setValue(width * 0.2);
               floatingAuroraY.setValue(height * 0.3);
-              
-              // Clear border glows
-              setBorderGlows([]);
               
               // Reset typewriter effect - will trigger automatically via useEffect when hasMessages becomes false
               setDisplayedText('');
               setIsTyping(false);
               
               setShowMenu(false);
+              
+              // Force immediate animation reset (useEffect will also trigger but this ensures it happens)
+              // Use setTimeout to ensure state has updated
+              setTimeout(() => {
+                Animated.parallel([
+                  Animated.timing(auroraScale, {
+                    toValue: 1,
+                    duration: 600,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(auroraOpacity, {
+                    toValue: 1,
+                    duration: 600,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(starsOpacity, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(floatingAuroraOpacity, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.in(Easing.ease),
+                    useNativeDriver: true,
+                  }),
+                ]).start();
+              }, 50);
             } catch (err) {
               console.error('Failed to clear chat history:', err);
               Alert.alert('Error', 'Failed to clear chat history. Please try again.');
