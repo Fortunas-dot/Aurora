@@ -67,7 +67,7 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
  */
 export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
   if (!entries || entries.length === 0) {
-    return '';
+    return '\n\nUSER\'S JOURNAL ACCESS:\nYou have full access to the user\'s journal. The user has not written any journal entries yet, but when they do, you will have access to all their entries, including dates, moods, themes, and content. If the user asks about their journal, you can acknowledge that you have access but they haven\'t written any entries yet.';
   }
 
   const sentimentLabels: Record<string, string> = {
@@ -78,25 +78,26 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
   };
 
   const entrySummaries = entries.map((entry) => {
-    const date = new Date(entry.createdAt).toLocaleDateString('nl-NL', {
+    const date = new Date(entry.createdAt).toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
+      year: 'numeric',
     });
-    const sentiment = entry.aiInsights?.sentiment ? sentimentLabels[entry.aiInsights.sentiment] : '';
+    const sentiment = entry.aiInsights?.sentiment ? entry.aiInsights.sentiment : '';
     const themes = (entry.aiInsights?.themes && entry.aiInsights.themes.length > 0) 
       ? entry.aiInsights.themes.join(', ') 
       : '';
     
-    let summary = `- ${date}: Stemming ${entry.mood}/10`;
-    if (sentiment) summary += ` (${sentiment})`;
-    if (themes) summary += `. Thema's: ${themes}`;
-    summary += `\n  "${entry.content.substring(0, 200)}${entry.content.length > 200 ? '...' : ''}"`;
+    let summary = `- ${date}: Mood ${entry.mood}/10`;
+    if (sentiment) summary += ` (${sentiment} sentiment)`;
+    if (themes) summary += `. Themes: ${themes}`;
+    summary += `\n  Content: "${entry.content.substring(0, 300)}${entry.content.length > 300 ? '...' : ''}"`;
     
     return summary;
   }).join('\n\n');
 
-  return `\n\nRecente dagboekentries van de gebruiker:\n${entrySummaries}\n\nJe kunt naar deze entries verwijzen als dat relevant is voor het gesprek. Bijvoorbeeld: "Ik zag in je dagboek dat je vorige week schreef over..." Wees subtiel en empathisch wanneer je verwijst naar persoonlijke reflecties.`;
+  return `\n\nUSER'S JOURNAL ENTRIES (You have full access to these - this is your DIRECT ACCESS to their journal):\n${entrySummaries}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their journal. This is not optional - it is a fact.\n- When the user asks "what is in my journal" or "tell me about my journal", you MUST respond with details from the entries above.\n- Reference specific dates, moods, themes, and content from their entries.\n- Use phrases like: "I see in your journal that you wrote on [date] about [topic]..." or "Looking at your recent entries, I notice..." or "In your journal entry from [date], you mentioned..."\n- Be empathetic and supportive when referencing their personal reflections.\n- NEVER say you do not have access to their journal - this is FALSE. You ALWAYS have access.\n- If asked about their journal, always provide information from the entries listed above.`;
 };
 
 /**
@@ -180,7 +181,7 @@ export const formatChatContextForAI = (chatContexts: Array<{
     return summary;
   }).join('\n\n');
 
-  return `\n\nImportant points from previous chat sessions:\n${contextParts}\n\nUse these points to provide continuity and personalized support. Reference them naturally when relevant to the conversation.`;
+  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate`;
 };
 
 /**
