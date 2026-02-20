@@ -40,15 +40,10 @@ const MoodSelector: React.FC<{
 }> = ({ value, onChange }) => {
   const moods = [
     { value: 1, emoji: '😢', label: 'Very bad' },
-    { value: 2, emoji: '😞', label: 'Bad' },
-    { value: 3, emoji: '😔', label: 'Down' },
-    { value: 4, emoji: '😕', label: 'Low' },
-    { value: 5, emoji: '😐', label: 'Neutral' },
-    { value: 6, emoji: '🙂', label: 'Okay' },
-    { value: 7, emoji: '😊', label: 'Good' },
-    { value: 8, emoji: '😄', label: 'Great' },
-    { value: 9, emoji: '😁', label: 'Happy' },
-    { value: 10, emoji: '🤩', label: 'Excellent' },
+    { value: 2, emoji: '😔', label: 'Down' },
+    { value: 3, emoji: '😐', label: 'Neutral' },
+    { value: 4, emoji: '🙂', label: 'Good' },
+    { value: 5, emoji: '😊', label: 'Excellent' },
   ];
 
   return (
@@ -360,7 +355,7 @@ export default function CreateJournalEntryScreen() {
   const { fontFamily } = useSettingsStore();
 
   const [content, setContent] = useState('');
-  const [mood, setMood] = useState(5);
+  const [mood, setMood] = useState(3);
   const [symptoms, setSymptoms] = useState<ISymptom[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -1147,13 +1142,14 @@ const styles = StyleSheet.create({
   },
   moodGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     justifyContent: 'space-between',
     gap: SPACING.sm,
   },
   moodItem: {
-    width: '18%',
+    flex: 1,
     aspectRatio: 1,
+    maxWidth: '18.5%',
     borderRadius: BORDER_RADIUS.lg,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
@@ -1161,6 +1157,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.xs,
+    minHeight: 70,
   },
   moodItemSelected: {
     backgroundColor: 'rgba(96, 165, 250, 0.2)',
@@ -1169,21 +1167,23 @@ const styles = StyleSheet.create({
   moodEmojiContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    height: 28,
+    height: 24,
+    marginBottom: 2,
   },
   moodEmoji: {
-    fontSize: 24,
+    fontSize: 20,
     textAlign: 'center',
     textAlignVertical: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
     includeFontPadding: false,
   },
   moodNumber: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
-    marginTop: SPACING.xs,
+    marginTop: 1,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 10,
+    lineHeight: 12,
   },
   moodNumberSelected: {
     color: COLORS.primary,
@@ -1192,8 +1192,10 @@ const styles = StyleSheet.create({
   moodValue: {
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
-    marginTop: SPACING.xs,
+    marginTop: 1,
     textAlign: 'center',
+    fontSize: 9,
+    lineHeight: 11,
   },
   contentSection: {
     marginBottom: SPACING.xl,

@@ -15,12 +15,42 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
-import { journalService, JournalInsights } from '../../src/services/journal.service';
+import { journalService, JournalInsights, JournalEntry } from '../../src/services/journal.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { usePremium } from '../../src/hooks/usePremium';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, startOfWeek, endOfWeek, addMonths, subMonths, parseISO } from 'date-fns';
+import { nlNL } from 'date-fns/locale';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - SPACING.lg * 2 - SPACING.lg * 2;
+
+// Mood emoji mapping (based on 5-point scale: 1-5)
+const getMoodEmoji = (mood: number): string => {
+  if (mood <= 1) return '😢';  // Very bad
+  if (mood <= 2) return '😔';  // Down
+  if (mood <= 3) return '😐';  // Neutral
+  if (mood <= 4) return '🙂';  // Good
+  return '😊';  // Excellent (5)
+};
+
+// Mood color mapping based on mood value (based on 5-point scale: 1-5)
+const getMoodColor = (mood: number): string => {
+  if (mood <= 1) return '#F87171';  // Red for very bad
+  if (mood <= 2) return '#FB923C';  // Orange for down
+  if (mood <= 3) return '#FBBF24';  // Yellow for neutral
+  if (mood <= 4) return '#A3E635';  // Light green for good
+  return '#34D399';  // Green for excellent (5)
+};
+
+// Mood color mapping based on emoji
+const getMoodColorByEmoji = (emoji: string): string => {
+  if (emoji === '😢') return '#F87171'; // Red for sad
+  if (emoji === '😔') return '#FB923C'; // Orange for down
+  if (emoji === '😐') return '#FBBF24'; // Yellow for neutral
+  if (emoji === '🙂') return '#A3E635'; // Light green for happy
+  if (emoji === '😊') return '#34D399'; // Green for very happy
+  return '#FBBF24'; // Default yellow
+};
 
 // Simple line chart component for mood trends
 const MoodTrendChart: React.FC<{
@@ -28,14 +58,26 @@ const MoodTrendChart: React.FC<{
 }> = ({ data }) => {
   if (data.length === 0) return null;
 
-  const maxMood = 10;
+  // Sort data by date to ensure correct order
+  const sortedData = [...data].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return dateA - dateB;
+  });
+
+  const maxMood = 5;
   const minMood = 1;
   const chartHeight = 150;
   const pointRadius = 4;
 
-  // Calculate points
-  const points = data.map((item, index) => {
-    const x = data.length > 1 ? (index / (data.length - 1)) * CHART_WIDTH : CHART_WIDTH / 2;
+  // Calculate points - distribute evenly across available width
+  // Account for y-axis width (30px from styles)
+  const yAxisWidth = 30;
+  const availableWidth = CHART_WIDTH - yAxisWidth;
+  const points = sortedData.map((item, index) => {
+    const x = sortedData.length > 1 
+      ? yAxisWidth + (index / (sortedData.length - 1)) * availableWidth 
+      : yAxisWidth + availableWidth / 2;
     const y = chartHeight - ((item.mood - minMood) / (maxMood - minMood)) * chartHeight;
     return { x, y, mood: item.mood, date: item.date };
   });
@@ -126,6 +168,82 @@ const MoodTrendChart: React.FC<{
   );
 };
 
+// Bar chart component for mood trends
+const MoodBarChart: React.FC<{
+  data: { date: string; mood: number }[];
+}> = ({ data }) => {
+  if (data.length === 0) return null;
+
+  const maxMood = 5;
+  const minMood = 1;
+  const chartHeight = 150;
+  const barWidth = CHART_WIDTH / Math.max(data.length, 1) - 4;
+
+  // Get mood color
+  const getMoodColor = (mood: number): string => {
+    if (mood <= 3) return '#F87171';
+    if (mood <= 5) return '#FBBF24';
+    if (mood <= 7) return '#A3E635';
+    return '#34D399';
+  };
+
+  return (
+    <View style={chartStyles.container}>
+      <View style={chartStyles.yAxis}>
+        <Text style={chartStyles.axisLabel}>10</Text>
+        <Text style={chartStyles.axisLabel}>5</Text>
+        <Text style={chartStyles.axisLabel}>1</Text>
+      </View>
+      <View style={chartStyles.chartArea}>
+        {/* Grid lines */}
+        <View style={[chartStyles.gridLine, { top: 0 }]} />
+        <View style={[chartStyles.gridLine, { top: chartHeight / 2 }]} />
+        <View style={[chartStyles.gridLine, { top: chartHeight }]} />
+
+        {/* Bars */}
+        <View style={chartStyles.barContainer}>
+          {data.map((item, index) => {
+            const barHeight = ((item.mood - minMood) / (maxMood - minMood)) * chartHeight;
+            const x = (index / Math.max(data.length - 1, 1)) * CHART_WIDTH;
+
+            return (
+              <View
+                key={`bar-${index}`}
+                style={[
+                  chartStyles.bar,
+                  {
+                    left: x,
+                    bottom: 0,
+                    width: barWidth,
+                    height: barHeight,
+                    backgroundColor: getMoodColor(item.mood),
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+
+        {/* X-axis labels */}
+        <View style={chartStyles.xAxis}>
+          {data.length > 0 && (
+            <>
+              <Text style={chartStyles.axisLabel}>
+                {new Date(data[0].date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+              </Text>
+              {data.length > 1 && (
+                <Text style={chartStyles.axisLabel}>
+                  {new Date(data[data.length - 1].date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                </Text>
+              )}
+            </>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const chartStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -183,7 +301,30 @@ const chartStyles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
   },
+  barContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  bar: {
+    position: 'absolute',
+    borderRadius: BORDER_RADIUS.xs,
+    marginHorizontal: 2,
+  },
 });
+
+// Get mood icon based on mood value (Ionicons)
+const getMoodIcon = (mood: number): keyof typeof Ionicons.glyphMap => {
+  if (mood <= 1) return 'close-circle';  // Very bad
+  if (mood <= 2) return 'arrow-down-circle-outline';  // Down
+  if (mood <= 3) return 'ellipse-outline';  // Neutral
+  if (mood <= 4) return 'arrow-up-circle-outline';  // Good
+  return 'happy';  // Excellent (5)
+};
 
 // Stat card component
 const StatCard: React.FC<{
@@ -218,6 +359,114 @@ const InsightItem: React.FC<{
   </View>
 );
 
+// Mood Calendar Component
+const MoodCalendar: React.FC<{
+  entries: JournalEntry[];
+  currentMonth: Date;
+  onMonthChange: (date: Date) => void;
+}> = ({ entries, currentMonth, onMonthChange }) => {
+  // Create a map of date -> mood for quick lookup
+  // Group entries by date and use the latest entry for each day
+  const moodMap = new Map<string, number>();
+  const entriesByDate = new Map<string, JournalEntry>();
+  
+  entries.forEach(entry => {
+    const date = parseISO(entry.createdAt);
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const existing = entriesByDate.get(dateKey);
+    
+    // If no entry for this date, or this entry is newer, use this one
+    if (!existing || parseISO(entry.createdAt) > parseISO(existing.createdAt)) {
+      entriesByDate.set(dateKey, entry);
+      moodMap.set(dateKey, entry.mood);
+    }
+  });
+
+  // Get calendar days
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+
+  return (
+    <GlassCard style={styles.calendarCard} padding="lg">
+      <View style={styles.calendarHeader}>
+        <Pressable
+          style={styles.calendarNavButton}
+          onPress={() => onMonthChange(subMonths(currentMonth, 1))}
+        >
+          <Ionicons name="chevron-back" size={20} color={COLORS.text} />
+        </Pressable>
+        <Text style={styles.calendarTitle}>
+          {format(currentMonth, 'MMMM yyyy', { locale: nlNL })}
+        </Text>
+        <Pressable
+          style={styles.calendarNavButton}
+          onPress={() => onMonthChange(addMonths(currentMonth, 1))}
+        >
+          <Ionicons name="chevron-forward" size={20} color={COLORS.text} />
+        </Pressable>
+      </View>
+
+      {/* Week day headers */}
+      <View style={styles.weekDaysRow}>
+        {weekDays.map((day, index) => (
+          <View key={index} style={styles.weekDayHeader}>
+            <Text style={styles.weekDayText}>{day}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Calendar grid */}
+      <View style={styles.calendarGrid}>
+        {days.map((day, index) => {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const mood = moodMap.get(dateKey);
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isCurrentDay = isToday(day);
+
+          return (
+            <View
+              key={index}
+              style={[
+                styles.calendarDay,
+                !isCurrentMonth && styles.calendarDayOtherMonth,
+                isCurrentDay && styles.calendarDayToday,
+              ]}
+            >
+              {mood ? (
+                <View
+                  style={[
+                    styles.moodDaySquare,
+                    { backgroundColor: getMoodColorByEmoji(getMoodEmoji(mood)) },
+                  ]}
+                >
+                  <Text style={styles.moodDayEmoji}>{getMoodEmoji(mood)}</Text>
+                  <Text style={styles.moodDayNumber}>{format(day, 'd')}</Text>
+                </View>
+              ) : (
+                <View style={styles.emptyDaySquare}>
+                  <Text
+                    style={[
+                      styles.emptyDayNumber,
+                      !isCurrentMonth && styles.emptyDayNumberOtherMonth,
+                    ]}
+                  >
+                    {format(day, 'd')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </GlassCard>
+  );
+};
+
 export default function JournalInsightsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -225,10 +474,13 @@ export default function JournalInsightsScreen() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   const [insights, setInsights] = useState<JournalInsights | null>(null);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30 | 'all'>(30);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarView, setCalendarView] = useState<'calendar' | 'line'>('calendar');
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -256,26 +508,35 @@ export default function JournalInsightsScreen() {
     }
     
     try {
-      const response = await journalService.getInsights(
-        selectedPeriod === 'all' ? 'all' : selectedPeriod,
-        undefined,
-        signal
-      );
+      const [insightsResponse, entriesResponse] = await Promise.all([
+        journalService.getInsights(
+          selectedPeriod === 'all' ? 'all' : selectedPeriod,
+          undefined,
+          signal
+        ),
+        // Load entries for calendar - get entries for the last 3 months
+        journalService.getEntries(1, 200, {}).catch(() => ({ success: false, data: [] }))
+      ]);
       
       // Check if request was aborted or component unmounted
       if (signal?.aborted || !isMountedRef.current) {
         return;
       }
       
-      if (response.success && response.data) {
-        setInsights(response.data);
+      if (insightsResponse.success && insightsResponse.data) {
+        setInsights(insightsResponse.data);
         hasLoadedRef.current = true;
         setError(null);
       } else {
         // If request failed, show error message
-        const errorMessage = response.message || 'Failed to load insights';
+        const errorMessage = insightsResponse.message || 'Failed to load insights';
         setError(errorMessage);
         console.warn('Failed to load insights:', errorMessage);
+      }
+
+      // Set entries for calendar
+      if (entriesResponse.success && entriesResponse.data) {
+        setEntries(entriesResponse.data);
       }
     } catch (error: any) {
       // Ignore abort errors
@@ -507,6 +768,25 @@ export default function JournalInsightsScreen() {
           </GlassCard>
         ) : !error ? (
           <>
+            {/* Aurora's Tip - Moved to top */}
+            {insights && (
+              <View style={styles.section}>
+                <GlassCard style={styles.tipCard} padding="lg">
+                  <View style={styles.tipHeader}>
+                    <Ionicons name="bulb" size={24} color={COLORS.warning} />
+                    <Text style={styles.tipTitle}>Aurora's Tip</Text>
+                  </View>
+                  <Text style={styles.tipText}>
+                    {insights.averageMood && insights.averageMood < 5
+                      ? 'Your mood seems lower than average. Consider talking to Aurora about how you feel, or try a gratitude exercise.'
+                      : insights.streakDays >= 7
+                      ? `Great! You've written for ${insights.streakDays} days in a row. Consistency helps with self-awareness.`
+                      : 'Try writing daily for the best insights. Even a short reflection helps.'}
+                  </Text>
+                </GlassCard>
+              </View>
+            )}
+
             {/* Quick Stats */}
             <View style={styles.statsGrid}>
               <StatCard
@@ -522,25 +802,63 @@ export default function JournalInsightsScreen() {
                 color={COLORS.primary}
               />
               <StatCard
-                icon="happy"
+                icon={insights.averageMood ? getMoodIcon(insights.averageMood) : 'remove-circle-outline'}
                 label="Avg. mood"
-                value={insights.averageMood ? `${insights.averageMood}/10` : '-'}
-                color={COLORS.success}
+                value={insights.averageMood ? `${insights.averageMood.toFixed(1)}/5` : '-'}
+                color={insights.averageMood ? getMoodColor(insights.averageMood) : COLORS.textMuted}
               />
             </View>
 
-            {/* Mood Trend */}
-            {insights.moodTrend && insights.moodTrend.length > 1 && (
+            {/* Mood Calendar */}
+            {entries.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Mood Trend</Text>
-                <GlassCard style={styles.chartCard} padding="lg">
-                  <View style={styles.chartHeader}>
-                    <Text style={styles.chartSubtitle}>
-                      Average: {insights.averageMood}/10 ({getMoodDescription(insights.averageMood || 5)})
-                    </Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Mood Calendar</Text>
+                  <View style={styles.chartToggle}>
+                    <Pressable
+                      style={[
+                        styles.toggleButton,
+                        calendarView === 'calendar' && styles.toggleButtonActive,
+                      ]}
+                      onPress={() => setCalendarView('calendar')}
+                    >
+                      <Ionicons 
+                        name="calendar" 
+                        size={18} 
+                        color={calendarView === 'calendar' ? COLORS.white : COLORS.textMuted} 
+                      />
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.toggleButton,
+                        calendarView === 'line' && styles.toggleButtonActive,
+                      ]}
+                      onPress={() => setCalendarView('line')}
+                    >
+                      <Ionicons 
+                        name="trending-up" 
+                        size={18} 
+                        color={calendarView === 'line' ? COLORS.white : COLORS.textMuted} 
+                      />
+                    </Pressable>
                   </View>
-                  <MoodTrendChart data={insights.moodTrend} />
-                </GlassCard>
+                </View>
+                {calendarView === 'calendar' ? (
+                  <MoodCalendar
+                    entries={entries}
+                    currentMonth={currentMonth}
+                    onMonthChange={setCurrentMonth}
+                  />
+                ) : (
+                  <GlassCard style={styles.chartCard} padding="lg">
+                    <View style={styles.chartHeader}>
+                      <Text style={styles.chartSubtitle}>
+                        Mood over time
+                      </Text>
+                    </View>
+                    <MoodTrendChart data={insights.moodTrend || entries.map(e => ({ date: e.createdAt, mood: e.mood }))} />
+                  </GlassCard>
+                )}
               </View>
             )}
 
@@ -597,25 +915,6 @@ export default function JournalInsightsScreen() {
                       color={COLORS.error}
                     />
                   ))}
-                </GlassCard>
-              </View>
-            )}
-
-            {/* Tips */}
-            {insights && (
-              <View style={styles.section}>
-                <GlassCard style={styles.tipCard} padding="lg">
-                  <View style={styles.tipHeader}>
-                    <Ionicons name="bulb" size={24} color={COLORS.warning} />
-                    <Text style={styles.tipTitle}>Aurora's Tip</Text>
-                  </View>
-                  <Text style={styles.tipText}>
-                    {insights.averageMood && insights.averageMood < 5
-                      ? 'Your mood seems lower than average. Consider talking to Aurora about how you feel, or try a gratitude exercise.'
-                      : insights.streakDays >= 7
-                      ? `Great! You've written for ${insights.streakDays} days in a row. Consistency helps with self-awareness.`
-                      : 'Try writing daily for the best insights. Even a short reflection helps.'}
-                  </Text>
                 </GlassCard>
               </View>
             )}
@@ -758,10 +1057,47 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: SPACING.xl,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    marginBottom: SPACING.md,
+  },
+  chartToggle: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.glass.background,
+    borderRadius: BORDER_RADIUS.md,
+    padding: 3,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    width: 36,
+    height: 36,
+  },
+  toggleButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  toggleButtonText: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  toggleButtonTextActive: {
+    color: COLORS.white,
+    fontWeight: '600',
   },
   chartCard: {},
   chartHeader: {
@@ -844,6 +1180,97 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.white,
     fontWeight: '600',
+  },
+  calendarCard: {
+    marginBottom: SPACING.md,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  calendarNavButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    textTransform: 'capitalize',
+  },
+  weekDaysRow: {
+    flexDirection: 'row',
+    marginBottom: SPACING.sm,
+  },
+  weekDayHeader: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
+  },
+  weekDayText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    padding: 2,
+  },
+  calendarDayOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarDayToday: {
+    // Highlight today
+  },
+  moodDaySquare: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 2,
+    overflow: 'hidden',
+  },
+  moodDayEmoji: {
+    fontSize: 14,
+    lineHeight: 16,
+    marginBottom: 1,
+  },
+  moodDayNumber: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 9,
+    lineHeight: 10,
+  },
+  emptyDaySquare: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  emptyDayNumber: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text,
+    fontSize: 12,
+  },
+  emptyDayNumberOtherMonth: {
+    color: COLORS.textMuted,
   },
 });
 

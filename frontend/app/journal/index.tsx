@@ -109,22 +109,32 @@ const TypewriterText: React.FC<{
   );
 };
 
-// Mood emoji mapping
+// Mood emoji mapping (based on 5-point scale: 1-5)
 const getMoodEmoji = (mood: number): string => {
-  if (mood <= 2) return '😢';
-  if (mood <= 4) return '😔';
-  if (mood <= 6) return '😐';
-  if (mood <= 8) return '🙂';
-  return '😊';
+  if (mood <= 1) return '😢';  // Very bad
+  if (mood <= 2) return '😔';  // Down
+  if (mood <= 3) return '😐';  // Neutral
+  if (mood <= 4) return '🙂';  // Good
+  return '😊';  // Excellent (5)
 };
 
-// Mood color mapping
+// Mood emoji mapping for average mood display (supports both 5 and 10 point scales)
+const getAverageMoodEmoji = (mood: number): string => {
+  // Support both 5-point and 10-point scales
+  if (mood <= 2) return '😢';  // Very bad
+  if (mood <= 4) return '😔';  // Down
+  if (mood <= 6) return '😐';  // Neutral
+  if (mood <= 8) return '🙂';  // Good
+  return '😊';  // Excellent
+};
+
+// Mood color mapping (based on 5-point scale: 1-5)
 const getMoodColor = (mood: number): string => {
-  if (mood <= 2) return '#F87171';
-  if (mood <= 4) return '#FB923C';
-  if (mood <= 6) return '#FBBF24';
-  if (mood <= 8) return '#A3E635';
-  return '#34D399';
+  if (mood <= 1) return '#F87171';  // Red for very bad
+  if (mood <= 2) return '#FB923C';  // Orange for down
+  if (mood <= 3) return '#FBBF24';  // Yellow for neutral
+  if (mood <= 4) return '#A3E635';  // Light green for good
+  return '#34D399';  // Green for excellent (5)
 };
 
 // Format date for display
@@ -180,12 +190,12 @@ const EntryCard: React.FC<{
             <Text style={styles.moodEmoji}>{getMoodEmoji(entry.mood)}</Text>
             <View style={styles.moodScoreContainer}>
               <View style={[styles.moodBar, { 
-                width: `${(entry.mood / 10) * 100}%`,
+                width: `${(entry.mood / 5) * 100}%`,
                 backgroundColor: moodColor,
               }]} />
             </View>
             <Text style={[styles.moodText, { color: moodColor }]}>
-              {entry.mood}/10
+              {entry.mood}/5
             </Text>
           </View>
         </View>
@@ -320,7 +330,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
         <View style={styles.statItem}>
           <View style={[styles.statIconContainer, { backgroundColor: `${averageMoodColor}20` }]}>
             <Text style={styles.statEmoji}>
-              {insights.averageMood ? getMoodEmoji(insights.averageMood) : '😐'}
+              {insights.averageMood ? getAverageMoodEmoji(insights.averageMood) : '😐'}
             </Text>
           </View>
           <Text style={[styles.statValue, { color: averageMoodColor }]}>
