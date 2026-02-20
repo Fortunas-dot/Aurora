@@ -127,7 +127,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
         .limit(5)
         .select('createdAt mood content aiInsights')
         .lean();
-      journalEntries = recentEntries as IJournalEntry[];
+      journalEntries = recentEntries as unknown as IJournalEntry[];
     }
 
     // Build system message with context
@@ -266,7 +266,7 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
         .limit(5)
         .select('createdAt mood content aiInsights')
         .lean();
-      journalEntries = recentEntries as IJournalEntry[];
+      journalEntries = recentEntries as unknown as IJournalEntry[];
     }
 
     // Build system message with context
