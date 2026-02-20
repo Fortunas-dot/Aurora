@@ -354,7 +354,7 @@ const voiceStyles = StyleSheet.create({
 
 export default function CreateJournalEntryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ journalId?: string; promptId?: string; promptText?: string }>();
+  const params = useLocalSearchParams<{ journalId?: string; promptId?: string; promptText?: string; entryId?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { fontFamily } = useSettingsStore();
@@ -365,6 +365,7 @@ export default function CreateJournalEntryScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingEntry, setLoadingEntry] = useState(false);
   const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [mediaItems, setMediaItems] = useState<Array<{ type: 'image' | 'video'; uri: string; uploadedUrl?: string; isUploading?: boolean }>>([]);
@@ -386,6 +387,44 @@ export default function CreateJournalEntryScreen() {
 
   // Use Palatino as default font for journal entries
   const selectedFontFamily = useMemo(() => getFontFamily('palatino'), []);
+
+  // Load entry data if editing
+  useEffect(() => {
+    if (params.entryId) {
+      loadEntryForEdit();
+    }
+  }, [params.entryId]);
+
+  const loadEntryForEdit = async () => {
+    if (!params.entryId) return;
+    
+    setLoadingEntry(true);
+    try {
+      const response = await journalService.getEntry(params.entryId);
+      if (response.success && response.data) {
+        const entry = response.data;
+        setContent(entry.content || '');
+        setMood(entry.mood || 5);
+        setSymptoms(entry.symptoms || []);
+        setTags(entry.tags || []);
+        
+        // Load media items if they exist
+        if (entry.media && entry.media.length > 0) {
+          setMediaItems(entry.media.map(item => ({
+            type: item.type,
+            uri: item.url,
+            uploadedUrl: item.url, // Already uploaded
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading entry for edit:', error);
+      Alert.alert('Error', 'Could not load entry');
+      router.back();
+    } finally {
+      setLoadingEntry(false);
+    }
+  };
 
   // Handle voice transcription
   const handleVoiceTranscription = useCallback((text: string) => {
@@ -560,7 +599,8 @@ export default function CreateJournalEntryScreen() {
       return;
     }
 
-    if (!params.journalId) {
+    // If editing, entryId should be set. If creating, journalId should be set.
+    if (!params.entryId && !params.journalId) {
       Alert.alert('Error', 'Journal ID is required');
       router.back();
       return;
@@ -599,17 +639,30 @@ export default function CreateJournalEntryScreen() {
           url: item.uploadedUrl!,
         }));
 
-      const response = await journalService.createEntry({
-        content: content.trim(),
-        mood,
-        journalId: params.journalId,
-        symptoms,
-        tags,
-        promptId: params.promptId,
-        promptText: params.promptText,
-        fontFamily: 'palatino', // Save Palatino as the font for this entry
-        media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
-      });
+      let response;
+      
+      if (params.entryId) {
+        // Update existing entry
+        response = await journalService.updateEntry(params.entryId, {
+          content: content.trim(),
+          mood,
+          symptoms,
+          tags,
+        });
+      } else {
+        // Create new entry
+        response = await journalService.createEntry({
+          content: content.trim(),
+          mood,
+          journalId: params.journalId!,
+          symptoms,
+          tags,
+          promptId: params.promptId,
+          promptText: params.promptText,
+          fontFamily: 'palatino', // Save Palatino as the font for this entry
+          media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
+        });
+      }
 
       // Check if component is still mounted and operation wasn't aborted
       if (!isMountedRef.current || abortController.signal.aborted) {
@@ -626,7 +679,7 @@ export default function CreateJournalEntryScreen() {
         router.back();
       } else {
         if (isMountedRef.current) {
-          Alert.alert('Error', response.message || 'Could not save entry');
+          Alert.alert('Error', response.message || (params.entryId ? 'Could not update entry' : 'Could not save entry'));
           setSaving(false);
         }
       }
@@ -673,6 +726,25 @@ export default function CreateJournalEntryScreen() {
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
+  // Show loading state while loading entry for edit
+  if (loadingEntry) {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+            <Ionicons name="close" size={28} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Edit Entry</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading entry...</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
       <KeyboardAvoidingView
@@ -701,7 +773,7 @@ export default function CreateJournalEntryScreen() {
           >
             <Ionicons name="close" size={28} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>New Entry</Text>
+          <Text style={styles.headerTitle}>{params.entryId ? 'Edit Entry' : 'New Entry'}</Text>
           <GlassButton
             title={saving ? 'Saving...' : 'Save'}
             onPress={handleSave}
@@ -1024,6 +1096,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  loadingText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,

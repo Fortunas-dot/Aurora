@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import {
   View,
   TextInput,
@@ -16,19 +16,19 @@ interface ChatInputProps {
   isDisabled?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({
+const ChatInputComponent: React.FC<ChatInputProps> = ({
   onSend,
   isDisabled = false
 }) => {
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (text.trim() && !isDisabled) {
       onSend(text.trim());
       setText('');
     }
-  };
+  }, [text, isDisabled, onSend]);
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
@@ -69,6 +69,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     </View>
   );
 };
+
+export const ChatInput = memo(ChatInputComponent);
 
 const styles = StyleSheet.create({
   container: {

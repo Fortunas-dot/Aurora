@@ -13,12 +13,256 @@ import { useChatStore } from '../src/store/chatStore';
 import { useAuthStore } from '../src/store/authStore';
 import { journalService } from '../src/services/journal.service';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
-import { AuroraCore } from '../src/components/voice/AuroraCore';
+import { AuroraCore as OrganicAuroraCore } from '../src/components/voice/AuroraCore.sphere.organic';
 import { useTheme } from '../src/hooks/useTheme';
 import { useConsentStore } from '../src/store/consentStore';
 import { AiConsentCard } from '../src/components/legal/AiConsentCard';
 
 const { width, height } = Dimensions.get('window');
+
+// Animated Psychology/Therapy Symbol Component - Lotus Flower (Blooming)
+const PsychologySymbol: React.FC<{ size?: number }> = ({ size = 28 }) => {
+  const { colors } = useTheme();
+  
+  // Petal animations - each petal blooms at different times
+  const petal1 = useRef(new Animated.Value(0)).current;
+  const petal2 = useRef(new Animated.Value(0)).current;
+  const petal3 = useRef(new Animated.Value(0)).current;
+  const petal4 = useRef(new Animated.Value(0)).current;
+  const petal5 = useRef(new Animated.Value(0)).current;
+  const petal6 = useRef(new Animated.Value(0)).current;
+  const petal7 = useRef(new Animated.Value(0)).current;
+  const petal8 = useRef(new Animated.Value(0)).current;
+  
+  // Center glow animation
+  const centerGlow = useRef(new Animated.Value(0.6)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Blooming animation sequence - petals open one by one
+    const bloomAnimation = Animated.sequence([
+      // First layer of petals
+      Animated.parallel([
+        Animated.timing(petal1, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(petal5, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(petal3, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(petal7, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Second layer of petals
+      Animated.parallel([
+        Animated.timing(petal2, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(petal6, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(petal4, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(petal8, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
+
+    // Center glow pulse
+    const glowAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(centerGlow, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(centerGlow, {
+          toValue: 0.6,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Slow rotation
+    const rotateAnimation = Animated.loop(
+      Animated.timing(rotate, {
+        toValue: 1,
+        duration: 20000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    // Start animations
+    bloomAnimation.start();
+    glowAnimation.start();
+    rotateAnimation.start();
+
+    // Loop the blooming animation
+    const bloomLoop = Animated.loop(
+      Animated.sequence([
+        bloomAnimation,
+        Animated.delay(2000),
+        Animated.parallel([
+          Animated.timing(petal1, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal2, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal3, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal4, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal5, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal6, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal7, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(petal8, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+        ]),
+        Animated.delay(1000),
+      ])
+    );
+
+    bloomLoop.start();
+
+    return () => {
+      bloomLoop.stop();
+      glowAnimation.stop();
+      rotateAnimation.stop();
+    };
+  }, []);
+
+  const rotation = rotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  // Petal positions in a lotus pattern (8 petals)
+  const petalAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+  const petals = [
+    { anim: petal1, angle: 0 },
+    { anim: petal2, angle: 45 },
+    { anim: petal3, angle: 90 },
+    { anim: petal4, angle: 135 },
+    { anim: petal5, angle: 180 },
+    { anim: petal6, angle: 225 },
+    { anim: petal7, angle: 270 },
+    { anim: petal8, angle: 315 },
+  ];
+
+  return (
+    <Animated.View
+      style={{
+        width: size,
+        height: size,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        transform: [{ rotate: rotation }],
+      }}
+    >
+      {/* Lotus petals */}
+      {petals.map((petal, i) => {
+        const angle = (petal.angle * Math.PI) / 180;
+        const radius = size * 0.25;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        
+        const scale = petal.anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.3, 1],
+        });
+
+        const opacity = petal.anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.4, 0.9],
+        });
+
+        return (
+          <Animated.View
+            key={i}
+            style={{
+              position: 'absolute',
+              left: size / 2 + x - size * 0.1,
+              top: size / 2 + y - size * 0.1,
+              width: size * 0.2,
+              height: size * 0.2,
+              borderRadius: size * 0.1,
+              backgroundColor: colors.primary,
+              opacity,
+              transform: [
+                { scale },
+                { rotate: `${petal.angle}deg` },
+              ],
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 3,
+              elevation: 3,
+            }}
+          />
+        );
+      })}
+      
+      {/* Center of the lotus (glowing core) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: size * 0.3,
+          height: size * 0.3,
+          borderRadius: size * 0.15,
+          backgroundColor: colors.primary,
+          opacity: centerGlow,
+          transform: [{ scale: centerGlow }],
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 6,
+          elevation: 6,
+        }}
+      >
+        <LinearGradient
+          colors={[colors.primary, `${colors.primary}80`, 'transparent']}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: size * 0.15,
+          }}
+        />
+      </Animated.View>
+    </Animated.View>
+  );
+};
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -159,24 +403,33 @@ export default function TextChatScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
-  // Typewriter effect when screen opens (only if no messages)
+  // Typewriter effect when screen opens (only if no messages) - optimized
   useEffect(() => {
     if (!hasMessages && !isTyping) {
       setIsTyping(true);
       setDisplayedText('');
       let currentIndex = 0;
+      let rafId: number;
       
-      const typeInterval = setInterval(() => {
+      const typeNext = () => {
         if (currentIndex < initialGreeting.length) {
           setDisplayedText(initialGreeting.substring(0, currentIndex + 1));
           currentIndex++;
+          rafId = requestAnimationFrame(() => {
+            setTimeout(typeNext, 20); // Faster typing, 20ms per character
+          });
         } else {
-          clearInterval(typeInterval);
           setIsTyping(false);
         }
-      }, 30); // 30ms per character for smooth typing
+      };
       
-      return () => clearInterval(typeInterval);
+      rafId = requestAnimationFrame(() => {
+        setTimeout(typeNext, 20);
+      });
+      
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      };
     } else if (hasMessages) {
       // If messages exist, show full text immediately
       setDisplayedText(initialGreeting);
@@ -299,30 +552,35 @@ export default function TextChatScreen() {
     }
   }, [hasMessages]);
 
-  // Helper function to create border glow effect
+  // Helper function to create border glow effect - optimized to limit concurrent glows
   const createBorderGlow = useCallback((side: 'top' | 'bottom' | 'left' | 'right', position: number) => {
-    const id = glowIdRef.current++;
-    const opacity = new Animated.Value(0);
-    
-    setBorderGlows(prev => [...prev, { id, side, position, opacity }]);
-    
-    // Animate glow in and out
-    Animated.sequence([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 800,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Remove glow after animation
-      setBorderGlows(prev => prev.filter(g => g.id !== id));
+    // Limit concurrent glows for performance - max 3 at a time
+    setBorderGlows(prev => {
+      if (prev.length >= 3) return prev; // Don't create more if we already have 3
+      
+      const id = glowIdRef.current++;
+      const opacity = new Animated.Value(0);
+      
+      // Animate glow in and out
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Remove glow after animation
+        setBorderGlows(prevGlows => prevGlows.filter(g => g.id !== id));
+      });
+      
+      return [...prev, { id, side, position, opacity }];
     });
   }, []);
 
@@ -400,10 +658,10 @@ export default function TextChatScreen() {
           createBorderGlow('bottom', currentX);
         }
 
-        // More frequent random variation for more random movement
-        if (Math.random() < 0.15) { // Increased from 0.02 to 0.15 (15% chance)
-          velocityX += (Math.random() - 0.5) * 0.4; // Reduced variation from 0.8 to 0.4
-          velocityY += (Math.random() - 0.5) * 0.4;
+        // Less frequent random variation for better performance
+        if (Math.random() < 0.05) { // Reduced from 0.15 to 0.05 (5% chance) for better performance
+          velocityX += (Math.random() - 0.5) * 0.3;
+          velocityY += (Math.random() - 0.5) * 0.3;
         }
 
         // Normalize velocity to prevent too fast movement
@@ -471,8 +729,8 @@ export default function TextChatScreen() {
       
       if (response.success) {
         Alert.alert(
-          'Session Finished',
-          `Important points have been saved:\n\n${response.data?.importantPoints?.map((p, i) => `${i + 1}. ${p}`).join('\n') || 'No points extracted'}`,
+          '',
+          'Thank you for talking, I have noted the most important points of our conversation for next time we talk again.',
           [
             {
               text: 'OK',
@@ -635,7 +893,7 @@ export default function TextChatScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Star field effect - only visible when messages exist */}
+      {/* Star field effect - only visible when messages exist - reduced for performance */}
       <Animated.View 
         style={[
           styles.starField, 
@@ -643,7 +901,7 @@ export default function TextChatScreen() {
           { pointerEvents: 'none' }
         ]}
       >
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 15 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </Animated.View>
@@ -698,27 +956,11 @@ export default function TextChatScreen() {
             ]}
             pointerEvents="none"
           >
-            <AuroraCore state="idle" audioLevel={0} size={width * 0.7} />
+            <OrganicAuroraCore state="idle" audioLevel={0} size={width * 0.7} />
           </Animated.View>
         </>
       )}
 
-      {/* Small Aurora logo in header when messages exist */}
-      {hasMessages && (
-        <Animated.View
-          style={[
-            styles.headerAurora,
-            {
-              opacity: auroraOpacity,
-              transform: [{ scale: auroraScale }],
-              top: insets.top + SPACING.sm + 8,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <AuroraCore state="idle" audioLevel={0} size={40} />
-        </Animated.View>
-      )}
 
       {/* Floating tiny Aurora sphere when messages exist */}
       {hasMessages && (
@@ -735,7 +977,7 @@ export default function TextChatScreen() {
           ]}
           pointerEvents="none"
         >
-          <AuroraCore state="idle" audioLevel={0} size={60} />
+          <OrganicAuroraCore state="idle" audioLevel={0} size={60} />
         </Animated.View>
       )}
 
@@ -804,12 +1046,9 @@ export default function TextChatScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>Mental health chat</Text>
         </View>
-        <Pressable 
-          style={styles.menuButton}
-          onPress={() => setShowMenu(true)}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.text} />
-        </Pressable>
+        <View style={styles.psychologySymbolContainer}>
+          <PsychologySymbol size={28} />
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -1023,6 +1262,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  psychologySymbolContainer: {
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
   },

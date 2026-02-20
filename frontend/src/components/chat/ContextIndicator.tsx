@@ -76,7 +76,7 @@ export const ContextIndicator: React.FC<ContextIndicatorProps> = ({
           ]}
         >
           <View style={[styles.iconContainer, { backgroundColor: `${item.iconColor}20` }]}>
-            <Ionicons name={item.icon} size={16} color={item.iconColor} />
+            <Ionicons name={item.icon} size={14} color={item.iconColor} />
           </View>
           <Text style={[styles.itemText, { color: colors.text }]} numberOfLines={2}>
             {item.label}
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    gap: SPACING.xs + 2,
+    gap: SPACING.xs,
     marginHorizontal: SPACING.md,
     marginVertical: SPACING.xs,
     width: '100%',
@@ -101,13 +101,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 4,
-    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     width: '100%',
-    minHeight: 44,
-    maxHeight: 52,
+    minHeight: 36,
+    maxHeight: 42,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -115,19 +115,19 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    marginRight: SPACING.xs + 2,
     flexShrink: 0,
   },
   itemText: {
     ...TYPOGRAPHY.small,
-    fontSize: 11.5,
+    fontSize: 10.5,
     textAlign: 'left',
-    lineHeight: 15,
+    lineHeight: 13,
     flex: 1,
     fontWeight: '500',
   },

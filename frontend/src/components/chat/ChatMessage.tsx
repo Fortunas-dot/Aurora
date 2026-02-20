@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ 
+const ChatMessageComponent: React.FC<ChatMessageProps> = ({ 
   message, 
   isStreaming = false 
 }) => {
@@ -61,6 +61,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     </View>
   );
 };
+
+export const ChatMessage = memo(ChatMessageComponent);
 
 const styles = StyleSheet.create({
   container: {

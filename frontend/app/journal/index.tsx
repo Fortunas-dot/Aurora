@@ -160,11 +160,12 @@ const EntryCard: React.FC<{
           colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
+          style={styles.entryGradient}
         />
         
-        {/* Header with date and mood */}
-        <View style={styles.entryHeader}>
+        <View style={styles.entryContentWrapper}>
+          {/* Header with date and mood */}
+          <View style={styles.entryHeader}>
           <View style={styles.entryDateContainer}>
             <View style={[styles.dateDot, { backgroundColor: moodColor }]} />
             <View>
@@ -230,6 +231,7 @@ const EntryCard: React.FC<{
             <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </View>
         </View>
+        </View>
       </GlassCard>
     </Pressable>
   );
@@ -246,9 +248,10 @@ const PromptCard: React.FC<{
         colors={['rgba(96, 165, 250, 0.2)', 'rgba(167, 139, 250, 0.15)', 'rgba(94, 234, 212, 0.1)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
+        style={styles.promptGradient}
       />
-      <View style={styles.promptHeader}>
+      <View style={styles.promptContentWrapper}>
+        <View style={styles.promptHeader}>
         <View style={styles.promptIconContainer}>
           <LinearGradient
             colors={[COLORS.primary, COLORS.secondary]}
@@ -264,11 +267,12 @@ const PromptCard: React.FC<{
             </View>
           </View>
       </View>
-      <Text style={styles.promptText}>{prompt.text}</Text>
-      <View style={styles.promptAction}>
-        <View style={styles.promptActionContent}>
-          <Text style={styles.promptActionText}>Start writing</Text>
-          <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+        <Text style={styles.promptText}>{prompt.text}</Text>
+        <View style={styles.promptAction}>
+          <View style={styles.promptActionContent}>
+            <Text style={styles.promptActionText}>Start writing</Text>
+            <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+          </View>
         </View>
       </View>
     </GlassCard>
@@ -289,9 +293,10 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
         colors={['rgba(96, 165, 250, 0.1)', 'rgba(167, 139, 250, 0.05)', 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
+        style={styles.statsGradient}
       />
-      <Text style={styles.statsTitle}>Your Progress</Text>
+      <View style={styles.statsContentWrapper}>
+        <Text style={styles.statsTitle}>Your Progress</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
           <View style={[styles.statIconContainer, { backgroundColor: `${COLORS.warning}20` }]}>
@@ -323,6 +328,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
           </Text>
           <Text style={styles.statLabel}>avg. mood</Text>
         </View>
+      </View>
       </View>
     </GlassCard>
   );
@@ -427,15 +433,17 @@ export default function JournalScreen() {
   useFocusEffect(
     useCallback(() => {
       loadConsent().catch(console.error);
-      // Only load journals on initial focus, not every time we navigate back
+      // Load journals on initial focus
       if (!hasInitialLoadRef.current) {
         hasInitialLoadRef.current = true;
         hasTriggeredTypewriterRef.current = false; // Reset typewriter trigger for initial load
         setShowTypewriter(false); // Reset typewriter state
         loadJournals(false);
       } else {
-        // On subsequent focuses, only refresh data if we have a selected journal
-        // Don't reload journals list to avoid unnecessary loading state
+        // On subsequent focuses, reload journals list (to catch newly created journals)
+        // but skip the loading state to avoid flickering
+        loadJournals(true);
+        // Also refresh data if we have a selected journal
         if (selectedJournal) {
           loadData(selectedJournal._id);
         }
@@ -487,7 +495,14 @@ export default function JournalScreen() {
 
 
   const handleEntryPress = (entry: JournalEntry) => {
-    router.push(`/journal/${entry._id}`);
+    // Open entry in edit mode (create page with entryId)
+    router.push({
+      pathname: '/journal/create',
+      params: { 
+        entryId: entry._id,
+        journalId: entry.journal?._id || entry.journal || selectedJournal?._id,
+      },
+    });
   };
 
   const handleInsightsPress = () => {
@@ -869,6 +884,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: SPACING.sm,
   },
+  promptGradient: {
+    position: 'absolute',
+    top: -SPACING.md,
+    left: -SPACING.md,
+    right: -SPACING.md,
+    bottom: -SPACING.md,
+    borderRadius: BORDER_RADIUS.xl,
+    zIndex: 0,
+  },
+  promptContentWrapper: {
+    position: 'relative',
+    zIndex: 1,
+  },
   promptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -940,6 +968,19 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
+  statsGradient: {
+    position: 'absolute',
+    top: -SPACING.md,
+    left: -SPACING.md,
+    right: -SPACING.md,
+    bottom: -SPACING.md,
+    borderRadius: BORDER_RADIUS.xl,
+    zIndex: 0,
+  },
+  statsContentWrapper: {
+    position: 'relative',
+    zIndex: 1,
+  },
   statsTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
@@ -999,6 +1040,19 @@ const styles = StyleSheet.create({
   entryCard: {
     position: 'relative',
     overflow: 'hidden',
+  },
+  entryGradient: {
+    position: 'absolute',
+    top: -SPACING.lg,
+    left: -SPACING.lg,
+    right: -SPACING.lg,
+    bottom: -SPACING.lg,
+    borderRadius: BORDER_RADIUS.xl,
+    zIndex: 0,
+  },
+  entryContentWrapper: {
+    position: 'relative',
+    zIndex: 1,
   },
   dateDot: {
     width: 8,

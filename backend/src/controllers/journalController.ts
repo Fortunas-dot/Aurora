@@ -1316,18 +1316,23 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
           role: 'system',
           content: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
-Extract 3-7 key points that are:
+Extract 3-10 key points that include:
+- Personal information the user shares about themselves (health conditions, diagnoses, personal circumstances, family, work, etc.)
+- Direct statements about their condition (e.g., if user says "I have Alzheimer's", extract "User has Alzheimer's disease")
 - Important for understanding the user's mental health state
 - Relevant for future conversations
 - Specific and actionable (not generic)
 - Related to the user's concerns, goals, or progress
+- Any personal details, conditions, or facts the user mentions (e.g., "I have Alzheimer's", "I'm a teacher", "I live alone", "I have depression", etc.)
 
-Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 100 characters each).
+CRITICAL: Always extract personal information, health conditions, and diagnoses that the user shares. If the user explicitly states they have a condition (e.g., "I have Alzheimer's", "I have depression"), you MUST extract this as a point. These are essential facts about the user that must be remembered for future conversations.
+
+Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 150 characters each).
 
 Example format:
-{"points": ["User struggles with anxiety in social situations", "User is working on building self-confidence", "User mentioned feeling overwhelmed at work"]}
+{"points": ["User has been diagnosed with Alzheimer's disease", "User struggles with anxiety in social situations", "User is working on building self-confidence", "User mentioned feeling overwhelmed at work", "User lives alone and has limited family support"]}
 
-${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured.` : ''}`,
+${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured, but DO include new personal information even if similar topics exist.` : ''}`,
         },
         {
           role: 'user',
@@ -1335,7 +1340,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
         },
       ],
       temperature: 0.5,
-      max_tokens: 500,
+      max_tokens: 800,
       response_format: { type: 'json_object' },
     });
 
@@ -1380,7 +1385,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
     // Save to database
     const chatContext = await ChatContext.create({
       user: req.userId,
-      importantPoints: importantPoints.slice(0, 7), // Limit to 7 points
+      importantPoints: importantPoints.slice(0, 10), // Limit to 10 points to capture more personal details
       summary: summary.substring(0, 1000),
       sessionDate: new Date(),
     });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -48,26 +48,30 @@ export const MessageList: React.FC = () => {
     }
   }, [currentStreamingMessage]);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages - optimized
   useEffect(() => {
     if (messages.length > 0 || currentStreamingMessage) {
-      setTimeout(() => {
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      });
     }
   }, [messages.length, currentStreamingMessage]);
 
-  const renderMessage = ({ item }: { item: typeof messages[0] }) => (
+  // Memoize render functions for performance
+  const renderMessage = useCallback(({ item }: { item: typeof messages[0] }) => (
     <ChatMessage message={item} />
-  );
+  ), []);
 
-  const renderEmptyState = () => {
+  const renderEmptyState = useCallback(() => {
     // Empty state is now handled by the parent component (text-chat.tsx)
     // which shows a large animated Aurora symbol
     return null;
-  };
+  }, []);
 
-  const renderFooter = () => {
+  const keyExtractor = useCallback((item: typeof messages[0]) => item.id, []);
+
+  const renderFooter = useCallback(() => {
     if (isStreaming) {
       return (
         <View>
@@ -95,31 +99,44 @@ export const MessageList: React.FC = () => {
       );
     }
     return null;
-  };
+  }, [isStreaming, messages.length, availableContext, currentStreamingMessage]);
+
+  // Memoize onContentSizeChange to prevent unnecessary re-renders
+  const handleContentSizeChange = useCallback(() => {
+    if (messages.length > 0 || currentStreamingMessage) {
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      });
+    }
+  }, [messages.length, currentStreamingMessage]);
+
+  // Memoize maintainVisibleContentPosition
+  const maintainVisibleContentPosition = useMemo(() => {
+    return messages.length > 0
+      ? {
+          minIndexForVisible: 0,
+        }
+      : undefined;
+  }, [messages.length]);
 
   return (
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         renderItem={renderMessage}
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={renderFooter}
         keyboardDismissMode="interactive"
-        onContentSizeChange={() => {
-          if (messages.length > 0 || currentStreamingMessage) {
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }
-        }}
-        maintainVisibleContentPosition={
-          messages.length > 0
-            ? {
-                minIndexForVisible: 0,
-              }
-            : undefined
-        }
+        onContentSizeChange={handleContentSizeChange}
+        maintainVisibleContentPosition={maintainVisibleContentPosition}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
       />
     </View>
   );
