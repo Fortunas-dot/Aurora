@@ -105,15 +105,15 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
  */
 export const formatCalendarContextForAI = (events: any[]): string => {
   if (!events || events.length === 0) {
-    return '';
+    return '\n\nUSER\'S CALENDAR/AGENDA ACCESS:\nYou have full access to the user\'s calendar/agenda. The user has no upcoming calendar events at this time, but when they add events, you will automatically have access to them.';
   }
 
   const typeLabels: Record<string, string> = {
-    appointment: 'Afspraak',
-    therapy: 'Therapie',
-    medication: 'Medicatie',
-    reminder: 'Herinnering',
-    other: 'Overig',
+    appointment: 'Appointment',
+    therapy: 'Therapy',
+    medication: 'Medication',
+    reminder: 'Reminder',
+    other: 'Other',
   };
 
   const now = new Date();
@@ -123,36 +123,36 @@ export const formatCalendarContextForAI = (events: any[]): string => {
     .slice(0, 10); // Limit to 10 upcoming events
 
   if (upcomingEvents.length === 0) {
-    return '';
+    return '\n\nUSER\'S CALENDAR/AGENDA ACCESS:\nYou have full access to the user\'s calendar/agenda. The user has no upcoming calendar events at this time, but when they add events, you will automatically have access to them.';
   }
 
   const eventSummaries = upcomingEvents.map((event) => {
     const date = new Date(event.startDate);
-    const dateStr = date.toLocaleDateString('nl-NL', {
+    const dateStr = date.toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
     const timeStr = event.allDay 
-      ? 'hele dag' 
-      : date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      ? 'all day' 
+      : date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
     const typeLabel = typeLabels[event.type] || event.type;
-    let summary = `- ${dateStr} om ${timeStr}: ${event.title} (${typeLabel})`;
+    let summary = `- ${dateStr} at ${timeStr}: ${event.title} (${typeLabel})`;
     
     if (event.location) {
-      summary += ` - Locatie: ${event.location}`;
+      summary += ` - Location: ${event.location}`;
     }
     
     if (event.description) {
-      summary += `\n  ${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}`;
+      summary += `\n  Description: ${event.description.substring(0, 150)}${event.description.length > 150 ? '...' : ''}`;
     }
     
     return summary;
   }).join('\n\n');
 
-  return `\n\nAankomende agenda items van de gebruiker:\n${eventSummaries}\n\nJe kunt naar deze agenda items verwijzen als dat relevant is voor het gesprek. Bijvoorbeeld: "Ik zie dat je morgen een therapie sessie hebt..." of "Je hebt volgende week een afspraak met..." Wees subtiel en empathisch wanneer je verwijst naar agenda items.`;
+  return `\n\nUSER'S UPCOMING CALENDAR/AGENDA EVENTS (You have full access to these - this is your DIRECT ACCESS to their calendar):\n${eventSummaries}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their calendar/agenda. This is not optional - it is a fact.\n- Use this information proactively in conversations without being asked (e.g., "I see you have a therapy session tomorrow...", "Your upcoming appointment on [date] might be related to...")\n- Reference calendar items naturally to provide context-aware support and advice\n- Help them prepare for upcoming events when relevant\n- Link advice and support to their schedule when appropriate\n- Be empathetic and supportive when referencing their calendar items\n- NEVER say you do not have access to their calendar - this is FALSE. You ALWAYS have access.\n- When relevant, proactively mention upcoming events to provide better support.`;
 };
 
 /**
