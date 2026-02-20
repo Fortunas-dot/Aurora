@@ -15,7 +15,7 @@ const SEVERITY_LABELS: Record<SeverityLevel, string> = {
  */
 export const formatHealthInfoForAI = (user: IUser | null): string => {
   if (!user?.healthInfo) {
-    return '';
+    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, and therapies.';
   }
 
   const { mentalHealth, physicalHealth, medications, therapies } = user.healthInfo;
@@ -27,10 +27,15 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
       const conditionText = item.type 
         ? `${item.condition} (${item.type})`
         : item.condition;
-      const severity = SEVERITY_LABELS[item.severity as SeverityLevel] || item.severity;
-      return `- ${conditionText} (ernst: ${severity})`;
+      const severityLabels: Record<string, string> = {
+        mild: 'mild',
+        moderate: 'moderate',
+        severe: 'severe',
+      };
+      const severity = severityLabels[item.severity as SeverityLevel] || item.severity;
+      return `- ${conditionText} (severity: ${severity})`;
     }).join('\n');
-    parts.push(`Mentale gezondheid:\n${mentalConditions}`);
+    parts.push(`Mental Health Conditions:\n${mentalConditions}`);
   }
 
   // Physical health conditions
@@ -39,27 +44,32 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
       const conditionText = item.type 
         ? `${item.condition} (${item.type})`
         : item.condition;
-      const severity = SEVERITY_LABELS[item.severity as SeverityLevel] || item.severity;
-      return `- ${conditionText} (ernst: ${severity})`;
+      const severityLabels: Record<string, string> = {
+        mild: 'mild',
+        moderate: 'moderate',
+        severe: 'severe',
+      };
+      const severity = severityLabels[item.severity as SeverityLevel] || item.severity;
+      return `- ${conditionText} (severity: ${severity})`;
     }).join('\n');
-    parts.push(`Fysieke gezondheid:\n${physicalConditions}`);
+    parts.push(`Physical Health Conditions:\n${physicalConditions}`);
   }
 
   // Medications
   if (medications && medications.length > 0) {
-    parts.push(`Medicatie: ${medications.join(', ')}`);
+    parts.push(`Medications: ${medications.join(', ')}`);
   }
 
   // Therapies
   if (therapies && therapies.length > 0) {
-    parts.push(`Therapieën: ${therapies.join(', ')}`);
+    parts.push(`Therapies: ${therapies.join(', ')}`);
   }
 
   if (parts.length === 0) {
-    return '';
+    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, and therapies.';
   }
 
-  return `\n\nGezondheidsinformatie van de gebruiker:\n${parts.join('\n\n')}\n\nGebruik deze informatie om context te geven aan je gesprekken. Wees empathisch en begripvol over deze condities. Verwijs er alleen naar als het relevant is voor het gesprek.`;
+  return `\n\nUSER'S HEALTH INFORMATION (You have full access to this - this is your DIRECT ACCESS to their health profile):\n${parts.join('\n\n')}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their health information from their profile. This is not optional - it is a fact.\n- Use this information proactively to provide personalized, context-aware support\n- Reference their health conditions, medications, and therapies naturally when relevant\n- Be empathetic and understanding about their health conditions\n- Link advice and support to their specific health situation\n- NEVER say you do not have access to their health information - this is FALSE. You ALWAYS have access.\n- When relevant, proactively reference their health information to provide better, personalized support.`;
 };
 
 /**
