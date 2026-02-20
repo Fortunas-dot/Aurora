@@ -353,16 +353,18 @@ export default function JournalInsightsScreen() {
   };
 
   // Redirect non‑premium users to subscription via effect (avoid navigation in render)
-  useEffect(() => {
-  if (isAuthenticated && !isPremium && !isPremiumLoading) {
-    router.replace('/subscription');
-    }
-  }, [isAuthenticated, isPremium, isPremiumLoading, router]);
+  // TEMPORARILY DISABLED FOR TESTING
+  // useEffect(() => {
+  // if (isAuthenticated && !isPremium && !isPremiumLoading) {
+  //   router.replace('/subscription');
+  //   }
+  // }, [isAuthenticated, isPremium, isPremiumLoading, router]);
 
   // While redirecting, render nothing to avoid flicker
-  if (isAuthenticated && !isPremium && !isPremiumLoading) {
-    return null;
-  }
+  // TEMPORARILY DISABLED FOR TESTING
+  // if (isAuthenticated && !isPremium && !isPremiumLoading) {
+  //   return null;
+  // }
 
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
