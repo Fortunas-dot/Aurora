@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.backgroundDark,
     borderWidth: 2,
     borderColor: COLORS.glass.border,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: SPACING.sm,

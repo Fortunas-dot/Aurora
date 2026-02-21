@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.background,
     borderWidth: 2,
     borderColor: COLORS.glass.border,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',

@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.backgroundDark,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
     marginTop: SPACING.sm,
     gap: SPACING.xs,
   },

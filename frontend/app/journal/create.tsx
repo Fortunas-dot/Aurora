@@ -363,10 +363,13 @@ export default function CreateJournalEntryScreen() {
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isFullscreenKeyboardVisible, setIsFullscreenKeyboardVisible] = useState(false);
   const [mediaItems, setMediaItems] = useState<Array<{ type: 'image' | 'video'; uri: string; uploadedUrl?: string; isUploading?: boolean }>>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const contentInputRef = React.useRef<TextInput>(null);
+  const fullscreenContentInputRef = React.useRef<TextInput>(null);
   const inputAccessoryViewID = 'mediaInputAccessoryView';
+  const fullscreenInputAccessoryViewID = 'fullscreenMediaInputAccessoryView';
   const isMountedRef = React.useRef(true);
   const saveAbortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -430,18 +433,30 @@ export default function CreateJournalEntryScreen() {
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
+      () => {
+        if (isFullscreenBookPage) {
+          setIsFullscreenKeyboardVisible(true);
+        } else {
+          setIsKeyboardVisible(true);
+        }
+      }
     );
     const keyboardWillHide = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
+      () => {
+        if (isFullscreenBookPage) {
+          setIsFullscreenKeyboardVisible(false);
+        } else {
+          setIsKeyboardVisible(false);
+        }
+      }
     );
 
     return () => {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
     };
-  }, []);
+  }, [isFullscreenBookPage]);
 
   // Insert text at cursor position (or append to end)
   const handleInsertText = useCallback((text: string) => {
@@ -1039,6 +1054,7 @@ export default function CreateJournalEntryScreen() {
                 {/* Content Input Area */}
                 <View style={styles.fullscreenContentContainer}>
                   <TextInput
+                    ref={fullscreenContentInputRef}
                     style={[styles.fullscreenContentInput, { fontFamily: selectedFontFamily }]}
                     value={content}
                     onChangeText={setContent}
@@ -1048,6 +1064,7 @@ export default function CreateJournalEntryScreen() {
                     textAlignVertical="top"
                     autoFocus
                     blurOnSubmit={false}
+                    inputAccessoryViewID={Platform.OS === 'ios' ? fullscreenInputAccessoryViewID : undefined}
                   />
                   
                   {/* Book Lines Overlay */}
@@ -1059,6 +1076,34 @@ export default function CreateJournalEntryScreen() {
                 </View>
               </ScrollView>
             </Pressable>
+
+            {/* Keyboard Toolbar with Media Options - iOS InputAccessoryView for Fullscreen */}
+            {Platform.OS === 'ios' && (
+              <InputAccessoryView nativeID={fullscreenInputAccessoryViewID}>
+                <View style={styles.keyboardToolbar}>
+                  <Pressable
+                    style={styles.keyboardToolbarButton}
+                    onPress={handleMediaSelection}
+                  >
+                    <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                    <Text style={styles.keyboardToolbarButtonText}>Media</Text>
+                  </Pressable>
+                </View>
+              </InputAccessoryView>
+            )}
+
+            {/* Keyboard Toolbar with Media Options - Android fallback for Fullscreen */}
+            {Platform.OS === 'android' && isFullscreenKeyboardVisible && (
+              <View style={[styles.keyboardToolbar, { bottom: insets.bottom }]}>
+                <Pressable
+                  style={styles.keyboardToolbarButton}
+                  onPress={handleMediaSelection}
+                >
+                  <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                  <Text style={styles.keyboardToolbarButtonText}>Media</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -1154,11 +1199,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingVertical: SPACING.xs,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
     paddingHorizontal: SPACING.xs,
     minHeight: 70,
+    overflow: 'visible',
   },
   moodItemSelected: {
     backgroundColor: 'rgba(96, 165, 250, 0.2)',
@@ -1167,15 +1214,18 @@ const styles = StyleSheet.create({
   moodEmojiContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    height: 24,
+    height: 28,
     marginBottom: 2,
+    paddingTop: 2,
+    overflow: 'visible',
   },
   moodEmoji: {
-    fontSize: 20,
+    fontSize: 22,
     textAlign: 'center',
     textAlignVertical: 'center',
-    lineHeight: 20,
+    lineHeight: 28,
     includeFontPadding: false,
+    overflow: 'visible',
   },
   moodNumber: {
     ...TYPOGRAPHY.caption,

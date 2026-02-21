@@ -361,7 +361,7 @@ export default function AuroraScreen() {
           {dailyQuote && (
             <GlassCard style={styles.quoteCard} padding="md" gradient>
               <View style={styles.quoteContainer}>
-                <Ionicons name="quote" size={24} color={colors.primary} style={styles.quoteIcon} />
+                <Ionicons name="chatbubble-outline" size={24} color={colors.primary} style={styles.quoteIcon} />
                 <Text style={[styles.quoteText, { color: colors.text }]}>{dailyQuote}</Text>
               </View>
             </GlassCard>
