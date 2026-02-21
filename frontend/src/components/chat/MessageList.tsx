@@ -16,6 +16,8 @@ export const MessageList: React.FC = () => {
   const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
   const streamingStartTime = useRef<number | null>(null);
+  const isUserScrolling = useRef(false);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Safety check: Reset streaming state if it's been active for too long without data
   useEffect(() => {
@@ -48,9 +50,18 @@ export const MessageList: React.FC = () => {
     }
   }, [currentStreamingMessage]);
 
-  // Auto-scroll to bottom on new messages - optimized
+  // Cleanup scroll timeout on unmount
   useEffect(() => {
-    if (messages.length > 0 || currentStreamingMessage) {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-scroll to bottom on new messages - optimized (only if user is not scrolling)
+  useEffect(() => {
+    if ((messages.length > 0 || currentStreamingMessage) && !isUserScrolling.current) {
       // Use requestAnimationFrame for smoother scrolling
       requestAnimationFrame(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -103,12 +114,40 @@ export const MessageList: React.FC = () => {
 
   // Memoize onContentSizeChange to prevent unnecessary re-renders
   const handleContentSizeChange = useCallback(() => {
-    if (messages.length > 0 || currentStreamingMessage) {
+    if ((messages.length > 0 || currentStreamingMessage) && !isUserScrolling.current) {
       requestAnimationFrame(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       });
     }
   }, [messages.length, currentStreamingMessage]);
+
+  // Handle scroll events to detect user scrolling
+  const handleScrollBeginDrag = useCallback(() => {
+    isUserScrolling.current = true;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+  }, []);
+
+  const handleScrollEndDrag = useCallback(() => {
+    // Reset user scrolling flag after a delay
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      isUserScrolling.current = false;
+    }, 1000); // Wait 1 second after scroll ends before allowing auto-scroll
+  }, []);
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    // Reset user scrolling flag after momentum ends
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      isUserScrolling.current = false;
+    }, 500);
+  }, []);
 
   // Memoize maintainVisibleContentPosition
   const maintainVisibleContentPosition = useMemo(() => {
@@ -132,11 +171,17 @@ export const MessageList: React.FC = () => {
         keyboardDismissMode="interactive"
         onContentSizeChange={handleContentSizeChange}
         maintainVisibleContentPosition={maintainVisibleContentPosition}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={10}
-        windowSize={10}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={15}
+        updateCellsBatchingPeriod={100}
+        initialNumToRender={15}
+        windowSize={21}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        showsVerticalScrollIndicator={true}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
       />
     </View>
   );

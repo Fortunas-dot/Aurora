@@ -17,21 +17,34 @@ import { useCallback } from 'react';
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuthStore();
-  const { isActive: isOnboardingActive, finishOnboarding } = useOnboardingStore();
+  const { isActive: isOnboardingActive, finishOnboarding, currentStep } = useOnboardingStore();
   const { unreadByType, loadNotifications } = useNotificationStore();
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
   // Auto-finish onboarding if user is logged in and navigates to tabs
   // This prevents users from getting stuck with hidden tab bar after login
   // If a logged-in user reaches the tabs, they shouldn't be in onboarding mode
+  // BUT: Don't finish if we're in the middle of showing onboarding overlays (step 3+)
+  // Also add a delay to allow state to persist before checking
   useEffect(() => {
-    if (isAuthenticated && isOnboardingActive) {
-      // User is logged in and in tabs, but onboarding is still active
-      // This can happen if onboarding was started but not finished
-      // Auto-finish to prevent stuck state
-      finishOnboarding();
-    }
-  }, [isAuthenticated, isOnboardingActive, finishOnboarding]);
+    // Add a delay to allow Zustand persist to complete and state to propagate
+    const timeoutId = setTimeout(() => {
+      // Re-read state from store to ensure we have the latest value
+      const latestState = useOnboardingStore.getState();
+      const latestStep = latestState.currentStep;
+      const latestIsActive = latestState.isActive;
+      
+      if (isAuthenticated && latestIsActive && latestStep < 3) {
+        // User is logged in and in tabs, but onboarding is still active
+        // This can happen if onboarding was started but not finished
+        // Auto-finish to prevent stuck state
+        // But only if we're not in the middle of showing overlays (step 3+)
+        finishOnboarding();
+      }
+    }, 600); // Wait 600ms for state to persist and propagate
+    
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, isOnboardingActive, finishOnboarding, currentStep]);
   
   // Load total unread messages count
   const loadUnreadCount = useCallback(async () => {

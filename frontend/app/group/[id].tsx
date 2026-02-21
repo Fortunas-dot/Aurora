@@ -460,6 +460,13 @@ export default function GroupDetailScreen() {
           />
         )}
         keyExtractor={(item) => item._id}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={15}
+        windowSize={21}
+        initialNumToRender={15}
+        updateCellsBatchingPeriod={100}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
         ListHeaderComponent={
           <>
             {renderGroupHeader()}

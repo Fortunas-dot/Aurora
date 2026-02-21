@@ -703,6 +703,9 @@ export default function JournalInsightsScreen() {
           { paddingBottom: insets.bottom + SPACING.xl },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={false}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

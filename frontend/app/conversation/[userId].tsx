@@ -878,6 +878,13 @@ export default function ConversationScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={15}
+          windowSize={21}
+          initialNumToRender={15}
+          updateCellsBatchingPeriod={100}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

@@ -82,8 +82,8 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
         {/* Content Card */}
         <View style={[styles.contentContainer, { paddingBottom: insets.bottom + SPACING.md }]}>
           <GlassCard padding="lg" style={styles.card} gradient>
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
+            <Text style={[styles.title, { color: '#FFFFFF' }]}>{title}</Text>
+            <Text style={[styles.description, { color: '#FFFFFF' }]}>
               {description}
             </Text>
             
@@ -131,6 +131,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginBottom: SPACING.md,
     textAlign: 'center',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   description: {
     ...TYPOGRAPHY.bodyLarge,
@@ -138,6 +143,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: SPACING.xl,
     textAlign: 'center',
+    color: '#FFFFFF',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   buttonContainer: {
     flexDirection: 'row',

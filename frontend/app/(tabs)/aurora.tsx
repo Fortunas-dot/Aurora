@@ -634,7 +634,7 @@ export default function AuroraScreen() {
         <OnboardingOverlay
           visible={true}
           title="Aurora"
-          description="Chat with your AI companion through voice or text. Get personalized support, insights, and guidance tailored to your mental health needs."
+          description="Chat with your AI companion through text. Get personalized support, insights, and guidance tailored to your mental health needs. View your journal insights, track your progress, and access evidence-based mental health support."
           onNext={() => {
             nextStep();
             // Navigate to Connect tab after a short delay to ensure state is updated

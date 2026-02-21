@@ -129,6 +129,13 @@ export default function FollowingScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={15}
+          windowSize={21}
+          initialNumToRender={15}
+          updateCellsBatchingPeriod={100}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

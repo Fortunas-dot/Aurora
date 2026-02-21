@@ -805,7 +805,8 @@ export default function FeedScreen() {
   const emptyState = getEmptyStateText();
 
   // Show overlay on the Feed only for the Feed step of onboarding
-  const shouldShowOverlay = isOnboardingActive && currentStep === 3;
+  // Check for step 3 or 4 to handle the case where nextStep() was called before navigation
+  const shouldShowOverlay = isOnboardingActive && currentStep >= 3;
 
   return (
     <View style={styles.container}>
@@ -896,11 +897,11 @@ export default function FeedScreen() {
         contentContainerStyle={styles.feedContent}
         ListHeaderComponent={!isSearching ? listHeader : null}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        initialNumToRender={10}
-        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={15}
+        windowSize={21}
+        initialNumToRender={15}
+        updateCellsBatchingPeriod={100}
         getItemLayout={undefined}
         scrollEventThrottle={16}
         decelerationRate="normal"

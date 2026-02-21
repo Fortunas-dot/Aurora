@@ -761,12 +761,13 @@ export default function JournalScreen() {
             <FlatList
               data={journals}
               keyExtractor={(item) => item._id}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              initialNumToRender={10}
-              updateCellsBatchingPeriod={50}
+              removeClippedSubviews={false}
+              maxToRenderPerBatch={15}
+              windowSize={21}
+              initialNumToRender={15}
+              updateCellsBatchingPeriod={100}
               scrollEventThrottle={16}
+              decelerationRate="normal"
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.modalJournalItem}

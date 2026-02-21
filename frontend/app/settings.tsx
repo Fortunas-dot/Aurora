@@ -99,11 +99,9 @@ export default function SettingsScreen() {
   const { user, isAuthenticated } = useAuthStore();
   const { colors } = useTheme();
   const {
-    fontFamily,
     auroraStyle,
     notificationPreferences,
     isLoading,
-    setFontFamily,
     setAuroraStyle,
     setNotificationPreference,
     loadSettings,
@@ -224,7 +222,7 @@ export default function SettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
+        removeClippedSubviews={false}
         scrollEventThrottle={16}
         decelerationRate="normal"
         nestedScrollEnabled={true}
@@ -234,13 +232,6 @@ export default function SettingsScreen() {
         <View style={styles.menuSection}>
           <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.appSettings}</Text>
           <GlassCard padding={0}>
-            <MenuItem
-              icon="text-outline"
-              title="Font"
-              subtitle={fontFamily === 'system' ? 'System Default' : fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
-              onPress={() => router.push('/font-settings')}
-            />
-            <View style={styles.menuDivider} />
             <MenuItem
               icon="sparkles-outline"
               title="Aurora Style"

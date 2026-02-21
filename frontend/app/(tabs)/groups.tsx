@@ -1168,11 +1168,11 @@ export default function GroupsScreen() {
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            removeClippedSubviews={true}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            initialNumToRender={10}
-            updateCellsBatchingPeriod={50}
+            removeClippedSubviews={false}
+            maxToRenderPerBatch={15}
+            windowSize={21}
+            initialNumToRender={15}
+            updateCellsBatchingPeriod={100}
             scrollEventThrottle={16}
             decelerationRate="normal"
             getItemLayout={undefined}

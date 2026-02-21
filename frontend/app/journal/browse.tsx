@@ -266,11 +266,11 @@ export default function BrowseJournalsScreen() {
           journals.length === 0 && !isLoading ? styles.emptyListContent : undefined,
           { paddingBottom: insets.bottom + SPACING.xl },
         ]}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        initialNumToRender={10}
-        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={15}
+        windowSize={21}
+        initialNumToRender={15}
+        updateCellsBatchingPeriod={100}
         scrollEventThrottle={16}
         decelerationRate="normal"
         refreshControl={
