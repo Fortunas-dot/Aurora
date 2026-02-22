@@ -378,16 +378,6 @@ export default function JournalEntryScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Date Header */}
-            <View style={styles.fullscreenDateHeader}>
-              <Text style={styles.fullscreenDateText}>
-                {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
-              </Text>
-              <Text style={styles.fullscreenTimeText}>
-                {format(parseISO(entry.createdAt), 'HH:mm')}
-              </Text>
-            </View>
-
             {/* Prompt if available */}
             {entry.promptText && (
               <View style={styles.fullscreenPromptContainer}>
