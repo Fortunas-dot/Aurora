@@ -1176,6 +1176,7 @@ const styles = StyleSheet.create({
   },
   fullscreenDateInfoInline: {
     marginBottom: 4,
+    flexShrink: 1,
   },
   fullscreenAuthorName: {
     ...TYPOGRAPHY.bodyMedium,
@@ -1195,6 +1196,7 @@ const styles = StyleSheet.create({
     color: '#8B7355',
     fontWeight: '400',
     marginBottom: 1,
+    flexWrap: 'wrap',
   },
   fullscreenHeaderTime: {
     fontSize: 10,
