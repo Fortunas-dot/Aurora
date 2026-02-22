@@ -42,17 +42,20 @@ const updateValidation = [
 
 // Public routes (allow viewing public journal entries without auth)
 router.get('/', optionalAuth, getEntries);
+
+// Specific routes that require auth (must be before :id route to avoid matching)
+// These are protected individually to ensure they're matched before the catch-all :id route
+router.get('/insights', protect, getInsights);
+router.get('/prompt', protect, getPrompt);
+router.get('/aurora-context', protect, getAuroraContext);
+router.post('/finish-session', protect, finishChatSession);
+router.post('/save-chat-context', protect, saveChatContext);
+
+// Catch-all route for entry IDs (must be after specific routes)
 router.get('/:id', optionalAuth, getEntry);
 
 // All other routes require authentication
 router.use(protect);
-
-// Insights and prompts (before :id routes)
-router.get('/insights', getInsights);
-router.get('/prompt', getPrompt);
-router.get('/aurora-context', getAuroraContext);
-router.post('/finish-session', finishChatSession);
-router.post('/save-chat-context', saveChatContext);
 
 // CRUD routes (create, update, delete require auth)
 router.post('/', entryValidation, createEntry);
