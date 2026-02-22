@@ -77,9 +77,10 @@ export const optionalAuth = async (
     }
 
     if (token) {
+      // JWT_SECRET must be set (validated at startup via validateEnv)
+      // If somehow it's not set, throw error instead of silently failing
       if (!process.env.JWT_SECRET) {
-        // Skip auth if JWT_SECRET not configured (should not happen)
-        return next();
+        throw new Error('JWT_SECRET not configured');
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
@@ -93,7 +94,8 @@ export const optionalAuth = async (
 
     next();
   } catch {
-    // Continue without auth
+    // Continue without auth if token is invalid (but JWT_SECRET must exist)
+    // This allows public endpoints to work without authentication
     next();
   }
 };

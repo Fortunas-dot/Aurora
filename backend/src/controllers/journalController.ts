@@ -97,6 +97,8 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
     const search = req.query.search as string;
+    const topic = req.query.topic as string;
+    const sort = req.query.sort as string || 'popular'; // popular, newest, most-entries
 
     const query: any = { isPublic: true };
 
@@ -107,9 +109,37 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
       ];
     }
 
+    // Filter by topic if provided
+    if (topic) {
+      const topicLower = topic.toLowerCase().trim();
+      // Topics is an array, so we check if the topic exists in the array
+      // MongoDB will match if the array contains the value
+      query.topics = topicLower;
+    }
+
+    console.log('🔍 Public journals query:', JSON.stringify(query, null, 2));
+    if (topic) {
+      console.log('📌 Filtering by topic:', topic.toLowerCase().trim());
+    }
+
+    // Determine sort order based on sort parameter
+    let sortOrder: any = {};
+    switch (sort) {
+      case 'newest':
+        sortOrder = { createdAt: -1 };
+        break;
+      case 'most-entries':
+        sortOrder = { entriesCount: -1, createdAt: -1 };
+        break;
+      case 'popular':
+      default:
+        sortOrder = { followersCount: -1, createdAt: -1 };
+        break;
+    }
+
     const journals = await Journal.find(query)
       .populate('owner', 'username displayName avatar')
-      .sort({ followersCount: -1, createdAt: -1 })
+      .sort(sortOrder)
       .skip(skip)
       .limit(limit);
 
@@ -450,7 +480,7 @@ export const getFollowingJournals = async (req: AuthRequest, res: Response): Pro
 
 // ==================== JOURNAL ENTRY CRUD ====================
 
-// @desc    Get all journal entries for current user
+// @desc    Get all journal entries for current user or public journal entries
 // @route   GET /api/journal
 // @access  Private
 export const getEntries = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -464,11 +494,49 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
     const tag = req.query.tag as string;
     const journalId = req.query.journalId as string;
 
-    const query: any = { author: req.userId };
+    const query: any = {};
 
-    // Filter by journal if provided
+    // If journalId is provided, check if it's a public journal
     if (journalId) {
+      const journal = await Journal.findById(journalId);
+      if (!journal) {
+        res.status(404).json({
+          success: false,
+          message: 'Journal not found',
+        });
+        return;
+      }
+
+      // Check if user is the owner
+      const ownerIdStr = journal.owner.toString();
+      const userIdStr = String(req.userId || '');
+      const isOwner = ownerIdStr === userIdStr;
+
+      // If not owner, check if journal is public
+      if (!isOwner && !journal.isPublic) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied',
+        });
+        return;
+      }
+
+      // Set query based on ownership
+      if (isOwner) {
+        // Owner can see all their entries
+        query.author = req.userId;
+      } else {
+        // For public journals, get entries from the journal owner
+        query.author = journal.owner;
+      }
       query.journal = journalId;
+      // Only show non-private entries for public journals
+      if (!isOwner) {
+        query.isPrivate = false;
+      }
+    } else {
+      // No journalId provided, default to current user's entries
+      query.author = req.userId;
     }
 
     // Date range filter
@@ -496,7 +564,8 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const entries = await JournalEntry.find(query)
-      .populate('journal', 'name isPublic')
+      .populate('journal', 'name isPublic owner')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -523,13 +592,13 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
 
 // @desc    Get single journal entry
 // @route   GET /api/journal/:id
-// @access  Private
+// @access  Private (own entries) or Public (if journal is public)
 export const getEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const entry = await JournalEntry.findOne({
-      _id: req.params.id,
-      author: req.userId,
-    }).populate('journal', 'name isPublic');
+    // First, try to find entry by ID
+    const entry = await JournalEntry.findById(req.params.id)
+      .populate('journal', 'name isPublic owner')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor');
 
     if (!entry) {
       res.status(404).json({
@@ -539,9 +608,49 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
+    // Check if user owns this entry
+    const authorId = typeof entry.author === 'object' && entry.author !== null && '_id' in entry.author
+      ? entry.author._id.toString()
+      : entry.author.toString();
+    const isOwner = req.userId ? authorId === req.userId : false;
+
+    // If not owner, check if journal is public and entry is not private
+    if (!isOwner) {
+      // Check if entry is private
+      if (entry.isPrivate) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied',
+        });
+        return;
+      }
+
+      const journal = entry.journal;
+      if (typeof journal === 'object' && journal) {
+        // Check if journal is public
+        if (!journal.isPublic) {
+          res.status(403).json({
+            success: false,
+            message: 'Access denied',
+          });
+          return;
+        }
+      } else {
+        // If journal is not populated, fetch it
+        const journalDoc = await Journal.findById(entry.journal);
+        if (!journalDoc || !journalDoc.isPublic) {
+          res.status(403).json({
+            success: false,
+            message: 'Access denied',
+          });
+          return;
+        }
+      }
+    }
+
     res.json({
       success: true,
-      data: entry,
+      data: { ...entry.toObject(), isOwner },
     });
   } catch (error: any) {
     res.status(500).json({
