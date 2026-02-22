@@ -693,7 +693,12 @@ export default function JournalInsightsScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Insights</Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          style={styles.headerButton}
+          onPress={() => router.push('/journal')}
+        >
+          <Ionicons name="book-outline" size={24} color={COLORS.text} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -771,6 +776,31 @@ export default function JournalInsightsScreen() {
           </GlassCard>
         ) : !error ? (
           <>
+            {/* View Journal Entries Insights Button */}
+            <View style={styles.section}>
+              <Pressable onPress={() => router.push('/journal/entries-insights')}>
+                <GlassCard style={styles.viewEntriesCard} padding="lg">
+                  <View style={styles.viewEntriesContent}>
+                    <View style={styles.viewEntriesIconContainer}>
+                      <LinearGradient
+                        colors={[`${COLORS.primary}30`, `${COLORS.primary}15`]}
+                        style={styles.viewEntriesIconGradient}
+                      >
+                        <Ionicons name="sparkles" size={24} color={COLORS.primary} />
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.viewEntriesText}>
+                      <Text style={styles.viewEntriesTitle}>View Journal Entries Insights</Text>
+                      <Text style={styles.viewEntriesDescription}>
+                        See Aurora's AI insights and feedback for your journal and individual entries
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={COLORS.textMuted} />
+                  </View>
+                </GlassCard>
+              </Pressable>
+            </View>
+
             {/* Aurora's Tip - Moved to top */}
             {insights && (
               <View style={styles.section}>
@@ -958,6 +988,14 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 44,
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -1151,6 +1189,41 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.small,
     color: COLORS.warning,
     flex: 1,
+  },
+  viewEntriesCard: {
+    marginBottom: SPACING.lg,
+  },
+  viewEntriesContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  viewEntriesIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewEntriesIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewEntriesText: {
+    flex: 1,
+  },
+  viewEntriesTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  viewEntriesDescription: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
   },
   tipCard: {
     backgroundColor: 'rgba(251, 191, 36, 0.1)',

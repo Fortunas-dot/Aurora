@@ -25,6 +25,27 @@ import { enUS } from 'date-fns/locale';
 import { useConsentStore } from '../../src/store/consentStore';
 import { AiConsentCard } from '../../src/components/legal/AiConsentCard';
 
+// Mental health topics list (same as in create-journal.tsx and browse.tsx)
+const mentalHealthTopics = [
+  { id: 'depression', label: 'Depression', icon: 'sad-outline' },
+  { id: 'anxiety', label: 'Anxiety', icon: 'heart-outline' },
+  { id: 'bipolar', label: 'Bipolar Disorder', icon: 'pulse-outline' },
+  { id: 'ptsd', label: 'PTSD', icon: 'shield-outline' },
+  { id: 'ocd', label: 'OCD', icon: 'repeat-outline' },
+  { id: 'adhd', label: 'ADHD', icon: 'flash-outline' },
+  { id: 'eating-disorder', label: 'Eating Disorder', icon: 'nutrition-outline' },
+  { id: 'addiction', label: 'Addiction', icon: 'warning-outline' },
+  { id: 'grief', label: 'Grief & Loss', icon: 'heart-dislike-outline' },
+  { id: 'stress', label: 'Stress Management', icon: 'fitness-outline' },
+  { id: 'self-esteem', label: 'Self-Esteem', icon: 'star-outline' },
+  { id: 'relationships', label: 'Relationships', icon: 'people-outline' },
+  { id: 'work-life', label: 'Work-Life Balance', icon: 'briefcase-outline' },
+  { id: 'sleep', label: 'Sleep Issues', icon: 'moon-outline' },
+  { id: 'anger', label: 'Anger Management', icon: 'flame-outline' },
+  { id: 'trauma', label: 'Trauma', icon: 'medical-outline' },
+  { id: 'general', label: 'General Wellness', icon: 'leaf-outline' },
+];
+
 // Typewriter effect component
 const TypewriterText: React.FC<{
   text: string;
@@ -596,9 +617,36 @@ export default function JournalScreen() {
                   <Ionicons name="book" size={20} color={COLORS.primary} />
                 </View>
               )}
-              <Text style={styles.journalSelectorText} numberOfLines={1}>
-                {selectedJournal.name}
-              </Text>
+              <View style={styles.journalSelectorTextContainer}>
+                <Text style={styles.journalSelectorText} numberOfLines={1}>
+                  {selectedJournal.name}
+                </Text>
+                {selectedJournal.topics && selectedJournal.topics.length > 0 && (
+                  <View style={styles.journalSelectorTopics}>
+                    {selectedJournal.topics.slice(0, 2).map((topic, index) => {
+                      const topicInfo = mentalHealthTopics.find(t => t.id === topic);
+                      if (!topicInfo) return null;
+                      return (
+                        <View key={index} style={styles.journalSelectorTopicChip}>
+                          <Ionicons
+                            name={topicInfo.icon as any}
+                            size={10}
+                            color={COLORS.primary}
+                          />
+                          <Text style={styles.journalSelectorTopicText} numberOfLines={1}>
+                            {topicInfo.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {selectedJournal.topics.length > 2 && (
+                      <Text style={styles.journalSelectorTopicMore}>
+                        +{selectedJournal.topics.length - 2}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
             </>
           )}
           <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
@@ -792,6 +840,32 @@ export default function JournalScreen() {
                       <Text style={styles.modalJournalDescription} numberOfLines={1}>
                         {item.description}
                       </Text>
+                    )}
+                    {/* Topics */}
+                    {item.topics && item.topics.length > 0 && (
+                      <View style={styles.modalJournalTopics}>
+                        {item.topics.slice(0, 3).map((topic, index) => {
+                          const topicInfo = mentalHealthTopics.find(t => t.id === topic);
+                          if (!topicInfo) return null;
+                          return (
+                            <View key={index} style={styles.modalJournalTopicChip}>
+                              <Ionicons
+                                name={topicInfo.icon as any}
+                                size={10}
+                                color={COLORS.primary}
+                              />
+                              <Text style={styles.modalJournalTopicText} numberOfLines={1}>
+                                {topicInfo.label}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                        {item.topics.length > 3 && (
+                          <Text style={styles.modalJournalTopicMore}>
+                            +{item.topics.length - 3}
+                          </Text>
+                        )}
+                      </View>
                     )}
                     <View style={styles.modalJournalMeta}>
                       <Ionicons
@@ -1303,10 +1377,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  journalSelectorTextContainer: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
   journalSelectorText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    flex: 1,
+  },
+  journalSelectorTopics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    flexWrap: 'wrap',
+  },
+  journalSelectorTopicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: `${COLORS.primary}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}30`,
+  },
+  journalSelectorTopicText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontSize: 9,
+    maxWidth: 60,
+  },
+  journalSelectorTopicMore: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 9,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1387,6 +1492,36 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginBottom: SPACING.xs / 2,
+  },
+  modalJournalTopics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  modalJournalTopicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: `${COLORS.primary}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}30`,
+  },
+  modalJournalTopicText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontSize: 10,
+    maxWidth: 80,
+  },
+  modalJournalTopicMore: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 10,
   },
   modalJournalMeta: {
     flexDirection: 'row',

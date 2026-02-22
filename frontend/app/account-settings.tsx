@@ -25,7 +25,6 @@ export default function AccountSettingsScreen() {
   const { user, isAuthenticated, updateUser } = useAuthStore();
 
   const [email, setEmail] = useState(user?.email || '');
-  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [phoneLocal, setPhoneLocal] = useState('');
   const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
@@ -40,14 +39,28 @@ export default function AccountSettingsScreen() {
     }
   }, [isAuthenticated, router]);
 
+  // Initialize email when user data is available
   useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email, user?._id]);
+
+  useEffect(() => {
+    // Initialize phone number when user data is available
     if (user?.phoneNumber) {
       // Parse existing phone number to extract country code and local number
       const fullNumber = user.phoneNumber;
-      const country = COUNTRIES.find(c => fullNumber.startsWith(c.dialCode));
+      
+      // Find matching country by dial code (try longest match first to handle cases like +1 vs +12)
+      const sortedCountries = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
+      const country = sortedCountries.find(c => fullNumber.startsWith(c.dialCode));
+      
       if (country) {
         setSelectedCountry(country);
-        setPhoneLocal(fullNumber.replace(country.dialCode, ''));
+        // Remove dial code from the full number to get local number
+        const localNumber = fullNumber.replace(country.dialCode, '');
+        setPhoneLocal(localNumber);
       } else {
         // If no matching country found, try to extract manually
         const match = fullNumber.match(/^(\+\d{1,3})(.+)$/);
@@ -59,14 +72,20 @@ export default function AccountSettingsScreen() {
             setSelectedCountry(foundCountry);
             setPhoneLocal(local);
           } else {
+            // Fallback: show full number if we can't parse it
             setPhoneLocal(fullNumber);
           }
         } else {
+          // Fallback: show full number if it doesn't match E.164 format
           setPhoneLocal(fullNumber);
         }
       }
+    } else {
+      // Reset phone fields if no phone number exists
+      setPhoneLocal('');
+      setSelectedCountry(COUNTRIES[0]);
     }
-  }, [user?.phoneNumber]);
+  }, [user?.phoneNumber, user?._id]); // Trigger when user or phoneNumber changes
 
   const filteredCountries = COUNTRIES.filter((country) => {
     if (!countrySearch.trim()) return true;

@@ -338,13 +338,15 @@ export default function JournalViewScreen() {
           !isLoading ? (
             <View style={styles.emptyContainer}>
               <GlassCard style={styles.emptyCard} padding="xl">
-                <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-                <Text style={styles.emptyTitle}>No entries yet</Text>
-                <Text style={styles.emptyText}>
-                  {journal.isOwner
-                    ? 'Start writing your first entry'
-                    : 'This journal has no entries yet'}
-                </Text>
+                <View style={styles.emptyContent}>
+                  <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyTitle}>No entries yet</Text>
+                  <Text style={styles.emptyText}>
+                    {journal.isOwner
+                      ? 'Start writing your first entry'
+                      : 'This journal has no entries yet'}
+                  </Text>
+                </View>
               </GlassCard>
             </View>
           ) : null
@@ -532,11 +534,14 @@ const styles = StyleSheet.create({
   emptyContainer: {
     paddingVertical: SPACING.xl,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyCard: {
+    width: '100%',
+  },
+  emptyContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.xxl,
     width: '100%',
   },
   emptyTitle: {
@@ -544,6 +549,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
   emptyText: {
     ...TYPOGRAPHY.body,

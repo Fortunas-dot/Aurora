@@ -42,7 +42,7 @@ export interface MediaItem {
 
 export interface JournalEntry {
   _id: string;
-  author: string;
+  author: string | User; // Can be string ID or populated User object
   journal: string | Journal;
   content: string;
   audioUrl?: string;
@@ -56,6 +56,7 @@ export interface JournalEntry {
   aiInsights?: IAIInsights;
   fontFamily?: string; // Font family used for this entry
   isPrivate: boolean;
+  isOwner?: boolean; // Indicates if current user owns this entry
   createdAt: string;
   updatedAt: string;
 }
@@ -139,11 +140,19 @@ class JournalService {
   }
 
   // Get public journals
-  async getPublicJournals(page: number = 1, limit: number = 20, search?: string): Promise<ApiResponse<Journal[]>> {
+  async getPublicJournals(page: number = 1, limit: number = 20, search?: string, topic?: string, sort?: 'popular' | 'newest' | 'most-entries'): Promise<ApiResponse<Journal[]>> {
     let endpoint = `/journals/public?page=${page}&limit=${limit}`;
     if (search) {
       endpoint += `&search=${encodeURIComponent(search)}`;
     }
+    if (topic) {
+      endpoint += `&topic=${encodeURIComponent(topic)}`;
+      console.log('📤 Sending topic filter to API:', topic);
+    }
+    if (sort) {
+      endpoint += `&sort=${encodeURIComponent(sort)}`;
+    }
+    console.log('📤 API endpoint:', endpoint);
     return apiService.get<Journal[]>(endpoint);
   }
 

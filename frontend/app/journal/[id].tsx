@@ -7,15 +7,19 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Image,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard } from '../../src/components/common';
+import { GlassCard, Avatar } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { journalService, JournalEntry } from '../../src/services/journal.service';
 import { useSettingsStore } from '../../src/store/settingsStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { getFontFamily } from '../../src/utils/fontHelper';
 import { format, parseISO } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -75,6 +79,11 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
     mixed: 'Mixed',
   };
 
+  // Get sentiment with fallback
+  const sentiment = insights.sentiment || 'neutral';
+  const emoji = sentimentEmoji[sentiment] || sentimentEmoji.neutral;
+  const label = sentimentLabel[sentiment] || 'Neutral';
+
   return (
     <GlassCard style={styles.insightsCard} padding="lg">
       <View style={styles.insightsHeader}>
@@ -85,11 +94,11 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
       </View>
 
       {/* Sentiment */}
-      <View style={styles.insightRow}>
-        <Text style={styles.insightLabel}>Mood</Text>
+      <View style={styles.insightSection}>
+        <Text style={styles.insightLabel}>Sentiment</Text>
         <View style={styles.sentimentBadge}>
-          <Text style={styles.sentimentEmoji}>{sentimentEmoji[insights.sentiment]}</Text>
-          <Text style={styles.sentimentText}>{sentimentLabel[insights.sentiment]}</Text>
+          <Text style={styles.sentimentEmoji}>{emoji}</Text>
+          <Text style={styles.sentimentText}>{label}</Text>
         </View>
       </View>
 
@@ -150,10 +159,37 @@ export default function JournalEntryScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
 
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
+  
+  // Check if this is the user's own entry
+  // Use isOwner from backend response, or fallback to checking author
+  const isOwnEntry = React.useMemo(() => {
+    if (!entry) return false;
+    
+    // First, use isOwner from backend if available
+    if (entry.isOwner !== undefined) {
+      return entry.isOwner;
+    }
+    
+    // Fallback: check author if isOwner is not provided
+    if (!user) return false;
+    
+    if (typeof entry.author === 'object' && entry.author !== null) {
+      const authorId = (entry.author as any)._id || (entry.author as any).id;
+      return authorId === user._id;
+    }
+    
+    if (typeof entry.author === 'string') {
+      return entry.author === user._id;
+    }
+    
+    return false;
+  }, [entry, user]);
 
   useEffect(() => {
     loadEntry();
@@ -231,6 +267,126 @@ export default function JournalEntryScreen() {
     );
   }
 
+  // Get author info
+  const author = entry && typeof entry.author === 'object' ? entry.author : null;
+  const journal = entry && typeof entry.journal === 'object' ? entry.journal : null;
+  const moodColor = entry ? getMoodColor(entry.mood) : COLORS.primary;
+
+  // Debug logging
+  console.log('Entry view debug:', {
+    isOwnEntry,
+    entryIsOwner: entry?.isOwner,
+    authorId: typeof entry?.author === 'object' ? (entry.author as any)?._id : entry?.author,
+    userId: user?._id,
+  });
+
+  // For entries from others (public journals), show fullscreen book page directly
+  if (!isOwnEntry) {
+    return (
+      <View style={styles.fullscreenContainer}>
+        {/* Book Page Background */}
+        <Pressable 
+          style={styles.fullscreenBookPage}
+          onPress={() => router.back()}
+        >
+          {/* Book Binding Shadow */}
+          <View style={styles.fullscreenBookBinding} />
+          
+          {/* Author Info at top */}
+          {author && (
+            <View style={[styles.fullscreenAuthorInfo, { top: insets.top + SPACING.md }]}>
+              <Avatar
+                uri={author.avatar}
+                size={32}
+                name={author.displayName || author.username}
+                userId={author._id}
+                avatarCharacter={author.avatarCharacter}
+                avatarBackgroundColor={author.avatarBackgroundColor}
+              />
+              <View style={styles.fullscreenAuthorDetails}>
+                <Text style={styles.fullscreenAuthorName}>{author.displayName || author.username}</Text>
+                {journal && (
+                  <Text style={styles.fullscreenJournalName}>{journal.name}</Text>
+                )}
+              </View>
+            </View>
+          )}
+          
+          {/* Close Button */}
+          <Pressable 
+            style={[styles.fullscreenCloseButton, { top: insets.top + SPACING.md }]}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="close" size={28} color="#6B5D4F" />
+          </Pressable>
+          
+          {/* Page Content */}
+          <ScrollView
+            style={styles.fullscreenPageScrollView}
+            contentContainerStyle={[
+              styles.fullscreenPageContent,
+              { paddingBottom: insets.bottom + SPACING.xl },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Date Header */}
+            <View style={styles.fullscreenDateHeader}>
+              <Text style={styles.fullscreenDateText}>
+                {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+              </Text>
+              <Text style={styles.fullscreenTimeText}>
+                {format(parseISO(entry.createdAt), 'HH:mm')}
+              </Text>
+            </View>
+
+            {/* Prompt if available */}
+            {entry.promptText && (
+              <View style={styles.fullscreenPromptContainer}>
+                <Ionicons name="sparkles" size={14} color="#8B7355" style={styles.fullscreenPromptIcon} />
+                <Text style={styles.fullscreenPromptText}>{entry.promptText}</Text>
+              </View>
+            )}
+
+            {/* Media Items */}
+            {entry.media && entry.media.length > 0 && (
+              <View style={styles.fullscreenMediaItemsContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fullscreenMediaScrollView}>
+                  {entry.media.map((item, index) => (
+                    <View key={index} style={styles.fullscreenMediaItemWrapper}>
+                      {item.type === 'image' ? (
+                        <Image source={{ uri: item.url }} style={styles.fullscreenMediaItemImage} />
+                      ) : (
+                        <View style={styles.fullscreenMediaItemVideo}>
+                          <Ionicons name="videocam" size={32} color="#8B7355" />
+                          <Text style={styles.fullscreenMediaItemVideoText}>Video</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Content Area */}
+            <View style={styles.fullscreenContentContainer}>
+              <Text style={[styles.fullscreenContentText, { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }]}>
+                {entry.content}
+              </Text>
+              
+              {/* Book Lines Overlay */}
+              <View style={styles.fullscreenLinesOverlay} pointerEvents="none">
+                {Array.from({ length: 25 }).map((_, index) => (
+                  <View key={index} style={styles.fullscreenBookLine} />
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // For own entries, show normal view with expand option
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
       {/* Header */}
@@ -271,9 +427,9 @@ export default function JournalEntryScreen() {
               {format(parseISO(entry.createdAt), 'HH:mm')}
             </Text>
           </View>
-          <View style={[styles.moodBadge, { backgroundColor: `${getMoodColor(entry.mood)}20` }]}>
+          <View style={[styles.moodBadge, { backgroundColor: `${moodColor}20` }]}>
             <Text style={styles.moodEmoji}>{getMoodEmoji(entry.mood)}</Text>
-            <Text style={[styles.moodText, { color: getMoodColor(entry.mood) }]}>
+            <Text style={[styles.moodText, { color: moodColor }]}>
               {entry.mood}/10
             </Text>
           </View>
@@ -290,10 +446,98 @@ export default function JournalEntryScreen() {
           </GlassCard>
         )}
 
-        {/* Content */}
-        <GlassCard style={styles.contentCard} padding="lg">
-          <Text style={[styles.contentText, { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }]}>{entry.content}</Text>
-        </GlassCard>
+        {/* Content - Book Page Style */}
+        <View style={styles.contentSection}>
+          <View style={styles.bookPageContainer}>
+            {/* Expand Icon */}
+            <Pressable 
+              style={styles.expandIcon}
+              onPress={() => {
+                // For own entries, we can still show the expand functionality if needed
+                // But for now, we'll keep the normal view for own entries
+                router.push({
+                  pathname: '/journal/[id]',
+                  params: { id: entry._id, fullscreen: 'true' },
+                });
+              }}
+            >
+              <Ionicons name="expand" size={20} color="#6B5D4F" />
+            </Pressable>
+            
+            {/* Date Header */}
+            <View style={styles.bookDateHeader}>
+              <Text style={styles.bookDateText}>
+                {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+              </Text>
+              <Text style={styles.bookTimeText}>
+                {format(parseISO(entry.createdAt), 'HH:mm')}
+              </Text>
+            </View>
+
+            {/* Media Items */}
+            {entry.media && entry.media.length > 0 && (
+              <View style={styles.mediaItemsContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
+                  {entry.media.map((item, index) => (
+                    <View key={index} style={styles.mediaItemWrapper}>
+                      {item.type === 'image' ? (
+                        <Image source={{ uri: item.url }} style={styles.mediaItemImage} />
+                      ) : (
+                        <View style={styles.mediaItemVideo}>
+                          <Ionicons name="videocam" size={32} color="#8B7355" />
+                          <Text style={styles.mediaItemVideoText}>Video</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Prompt if available */}
+            {entry.promptText && (
+              <View style={styles.bookPromptContainer}>
+                <Ionicons name="sparkles" size={14} color="#8B7355" style={styles.bookPromptIcon} />
+                <Text style={styles.bookPromptText}>{entry.promptText}</Text>
+              </View>
+            )}
+            
+            <View style={styles.bookPageContent}>
+              <Text style={[styles.bookPageText, { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }]}>
+                {entry.content}
+              </Text>
+              
+              {/* Book Lines Overlay */}
+              <View style={styles.bookLinesOverlay} pointerEvents="none">
+                {Array.from({ length: 12 }).map((_, index) => (
+                  <View key={index} style={styles.bookLine} />
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Audio Indicator */}
+        {entry.audioUrl && (
+          <GlassCard style={styles.audioCard} padding="md">
+            <View style={styles.audioInfo}>
+              <LinearGradient
+                colors={[`${COLORS.primary}30`, `${COLORS.primary}15`]}
+                style={styles.audioIconBg}
+              >
+                <Ionicons name="mic" size={20} color={COLORS.primary} />
+              </LinearGradient>
+              <View style={styles.audioTextContainer}>
+                <Text style={styles.audioLabel}>Voice Entry</Text>
+                {entry.transcription && (
+                  <Text style={styles.audioTranscription} numberOfLines={2}>
+                    {entry.transcription}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </GlassCard>
+        )}
 
         {/* Symptoms */}
         {entry.symptoms && entry.symptoms.length > 0 && (
@@ -354,6 +598,95 @@ export default function JournalEntryScreen() {
           <AIInsightsCard insights={entry.aiInsights} />
         )}
       </ScrollView>
+
+      {/* Fullscreen Book Page Modal (for own entries) */}
+      <Modal
+        visible={isFullscreenBookPage}
+        animationType="fade"
+        transparent={false}
+        onRequestClose={() => setIsFullscreenBookPage(false)}
+      >
+        <View style={styles.fullscreenContainer}>
+          {/* Book Page Background */}
+          <Pressable 
+            style={styles.fullscreenBookPage}
+            onPress={() => setIsFullscreenBookPage(false)}
+          >
+            {/* Book Binding Shadow */}
+            <View style={styles.fullscreenBookBinding} />
+            
+            {/* Close Button */}
+            <Pressable 
+              style={[styles.fullscreenCloseButton, { top: insets.top + SPACING.md }]}
+              onPress={() => setIsFullscreenBookPage(false)}
+            >
+              <Ionicons name="close" size={28} color="#6B5D4F" />
+            </Pressable>
+            
+            {/* Page Content */}
+            <ScrollView
+              style={styles.fullscreenPageScrollView}
+              contentContainerStyle={[
+                styles.fullscreenPageContent,
+                { paddingBottom: insets.bottom + SPACING.xl },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Date Header */}
+              <View style={styles.fullscreenDateHeader}>
+                <Text style={styles.fullscreenDateText}>
+                  {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+                </Text>
+                <Text style={styles.fullscreenTimeText}>
+                  {format(parseISO(entry.createdAt), 'HH:mm')}
+                </Text>
+              </View>
+
+              {/* Prompt if available */}
+              {entry.promptText && (
+                <View style={styles.fullscreenPromptContainer}>
+                  <Ionicons name="sparkles" size={14} color="#8B7355" style={styles.fullscreenPromptIcon} />
+                  <Text style={styles.fullscreenPromptText}>{entry.promptText}</Text>
+                </View>
+              )}
+
+              {/* Media Items */}
+              {entry.media && entry.media.length > 0 && (
+                <View style={styles.fullscreenMediaItemsContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fullscreenMediaScrollView}>
+                    {entry.media.map((item, index) => (
+                      <View key={index} style={styles.fullscreenMediaItemWrapper}>
+                        {item.type === 'image' ? (
+                          <Image source={{ uri: item.url }} style={styles.fullscreenMediaItemImage} />
+                        ) : (
+                          <View style={styles.fullscreenMediaItemVideo}>
+                            <Ionicons name="videocam" size={32} color="#8B7355" />
+                            <Text style={styles.fullscreenMediaItemVideoText}>Video</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Content Area */}
+              <View style={styles.fullscreenContentContainer}>
+                <Text style={[styles.fullscreenContentText, { fontFamily: getFontFamily(entry.fontFamily || 'palatino') }]}>
+                  {entry.content}
+                </Text>
+                
+                {/* Book Lines Overlay */}
+                <View style={styles.fullscreenLinesOverlay} pointerEvents="none">
+                  {Array.from({ length: 25 }).map((_, index) => (
+                    <View key={index} style={styles.fullscreenBookLine} />
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -412,26 +745,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
   },
-  dateSection: {},
+  dateSection: {
+    flex: 1,
+  },
   dateText: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.h2,
     color: COLORS.text,
     textTransform: 'capitalize',
+    marginBottom: SPACING.xs,
   },
   timeText: {
-    ...TYPOGRAPHY.caption,
+    ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
-    marginTop: SPACING.xs,
+    fontSize: 14,
   },
   moodBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.full,
-    gap: SPACING.xs,
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
   },
   moodEmoji: {
     fontSize: 20,
@@ -440,40 +781,413 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
   },
   promptCard: {
-    marginBottom: SPACING.md,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    marginBottom: SPACING.lg,
+    backgroundColor: 'rgba(96, 165, 250, 0.12)',
+    borderColor: 'rgba(96, 165, 250, 0.25)',
+    borderWidth: 1,
   },
   promptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   promptLabel: {
-    ...TYPOGRAPHY.captionMedium,
+    ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
+    fontWeight: '600',
   },
   promptText: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
-  contentCard: {
-    marginBottom: SPACING.lg,
-  },
-  contentText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text,
-    lineHeight: 26,
+    fontStyle: 'italic',
+    lineHeight: 24,
   },
-  section: {
+  authorCard: {
     marginBottom: SPACING.lg,
   },
-  sectionTitle: {
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  authorDetails: {
+    flex: 1,
+  },
+  authorName: {
     ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  journalInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  journalName: {
+    ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
+  },
+  contentSection: {
+    marginBottom: SPACING.xl,
+  },
+  bookPageContainer: {
+    backgroundColor: '#F5F1E8', // Paper color
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    paddingTop: SPACING.xl,
+    minHeight: 300,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E0D5C4',
+  },
+  expandIcon: {
+    position: 'absolute',
+    top: SPACING.sm,
+    right: SPACING.sm,
+    zIndex: 10,
+    padding: SPACING.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  bookDateHeader: {
     marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0D5C4',
+  },
+  bookDateText: {
+    fontSize: 14,
+    fontFamily: 'Palatino',
+    color: '#6B5D4F',
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  bookTimeText: {
+    fontSize: 12,
+    fontFamily: 'Palatino',
+    color: '#8B7355',
+    fontStyle: 'italic',
+  },
+  bookPromptContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0E8D8',
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E0D5C4',
+  },
+  bookPromptIcon: {
+    marginRight: SPACING.sm,
+  },
+  bookPromptText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'Palatino',
+    color: '#6B5D4F',
+    lineHeight: 18,
+  },
+  mediaItemsContainer: {
+    marginBottom: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  mediaScrollView: {
+    flexGrow: 0,
+  },
+  mediaItemWrapper: {
+    marginRight: SPACING.sm,
+    position: 'relative',
+  },
+  mediaItemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#E0D5C4',
+  },
+  mediaItemVideo: {
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#E0D5C4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D4C5B0',
+  },
+  mediaItemVideoText: {
+    ...TYPOGRAPHY.caption,
+    color: '#8B7355',
+    fontSize: 10,
+    marginTop: SPACING.xs,
+  },
+  bookPageContent: {
+    position: 'relative',
+    minHeight: 200,
+    marginTop: SPACING.md,
+  },
+  bookPageText: {
+    fontSize: 15,
+    fontFamily: 'Palatino',
+    color: '#4A3E2F',
+    lineHeight: 22,
+    zIndex: 2,
+    position: 'relative',
+  },
+  bookLinesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 264, // 12 lines * 22px
+    zIndex: 0,
+    justifyContent: 'flex-start',
+  },
+  bookLine: {
+    height: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8DDD0',
+    marginBottom: 0,
+  },
+  // Fullscreen Modal Styles
+  fullscreenContainer: {
+    flex: 1,
+    backgroundColor: '#E8E0D6', // Book cover color
+  },
+  fullscreenBookPage: {
+    flex: 1,
+    backgroundColor: '#F5F1E8', // Paper color
+    marginHorizontal: SPACING.md,
+    marginVertical: SPACING.lg,
+    borderRadius: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  fullscreenBookBinding: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 8,
+    backgroundColor: '#D4C5B0',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  fullscreenCloseButton: {
+    position: 'absolute',
+    right: SPACING.md,
+    zIndex: 100,
+    padding: SPACING.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: BORDER_RADIUS.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  fullscreenPageScrollView: {
+    flex: 1,
+  },
+  fullscreenPageContent: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xl + 50, // Extra padding for close button
+    paddingLeft: SPACING.xl + 12, // Extra padding to account for binding
+  },
+  fullscreenDateHeader: {
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0D5C4',
+  },
+  fullscreenDateText: {
+    fontSize: 16,
+    fontFamily: 'Palatino',
+    color: '#6B5D4F',
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  fullscreenTimeText: {
+    fontSize: 12,
+    fontFamily: 'Palatino',
+    color: '#8B7355',
+    fontStyle: 'italic',
+  },
+  fullscreenPromptContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0E8D8',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#E0D5C4',
+  },
+  fullscreenPromptIcon: {
+    marginRight: SPACING.sm,
+  },
+  fullscreenPromptText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Palatino',
+    color: '#6B5D4F',
+    lineHeight: 20,
+  },
+  fullscreenMediaItemsContainer: {
+    marginBottom: SPACING.lg,
+    paddingVertical: SPACING.sm,
+  },
+  fullscreenMediaScrollView: {
+    flexGrow: 0,
+  },
+  fullscreenMediaItemWrapper: {
+    marginRight: SPACING.md,
+    position: 'relative',
+  },
+  fullscreenMediaItemImage: {
+    width: 150,
+    height: 150,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#E0D5C4',
+  },
+  fullscreenMediaItemVideo: {
+    width: 150,
+    height: 150,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#E0D5C4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D4C5B0',
+  },
+  fullscreenMediaItemVideoText: {
+    ...TYPOGRAPHY.caption,
+    color: '#8B7355',
+    marginTop: SPACING.xs,
+  },
+  fullscreenContentContainer: {
+    position: 'relative',
+    minHeight: 600,
+  },
+  fullscreenContentText: {
+    fontSize: 16,
+    fontFamily: 'Palatino',
+    color: '#4A3E2F',
+    lineHeight: 24,
+    zIndex: 2,
+    position: 'relative',
+  },
+  fullscreenLinesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 600, // 25 lines * 24px
+    zIndex: 0,
+    justifyContent: 'flex-start',
+  },
+  fullscreenBookLine: {
+    height: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8DDD0',
+    marginBottom: 0,
+  },
+  fullscreenAuthorInfo: {
+    position: 'absolute',
+    left: SPACING.xl + 12, // Account for binding
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    zIndex: 50,
+  },
+  fullscreenAuthorDetails: {
+    flex: 1,
+  },
+  fullscreenAuthorName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: '#6B5D4F',
+    fontWeight: '600',
+  },
+  fullscreenJournalName: {
+    ...TYPOGRAPHY.caption,
+    color: '#8B7355',
+    fontSize: 12,
+  },
+  mediaSection: {
+    marginBottom: SPACING.lg,
+  },
+  mediaContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  mediaItem: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    backgroundColor: COLORS.glass.background,
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  mediaVideo: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: COLORS.glass.backgroundDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioCard: {
+    marginBottom: SPACING.lg,
+  },
+  audioInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  audioIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioTextContainer: {
+    flex: 1,
+  },
+  audioLabel: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.primary,
+    marginBottom: SPACING.xs,
+  },
+  audioTranscription: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  section: {
+    marginBottom: SPACING.xl,
+  },
+  sectionTitle: {
+    ...TYPOGRAPHY.h4,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    fontWeight: '600',
   },
   symptomsContainer: {
     gap: SPACING.sm,
@@ -543,25 +1257,29 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   insightLabel: {
-    ...TYPOGRAPHY.captionMedium,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
     marginBottom: SPACING.sm,
   },
   sentimentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.glass.backgroundLight,
+    gap: SPACING.sm,
+    backgroundColor: `${COLORS.primary}15`,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}30`,
   },
   sentimentEmoji: {
-    fontSize: 16,
+    fontSize: 18,
   },
   sentimentText: {
-    ...TYPOGRAPHY.small,
-    color: COLORS.text,
+    ...TYPOGRAPHY.body,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
   insightSection: {
     marginTop: SPACING.md,

@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +30,31 @@ export default function BrowseJournalsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedSort, setSelectedSort] = useState<'popular' | 'newest' | 'most-entries'>('popular');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  // Mental health topics list (same as in create-journal.tsx)
+  const mentalHealthTopics = [
+    { id: 'depression', label: 'Depression', icon: 'sad-outline' },
+    { id: 'anxiety', label: 'Anxiety', icon: 'heart-outline' },
+    { id: 'bipolar', label: 'Bipolar Disorder', icon: 'pulse-outline' },
+    { id: 'ptsd', label: 'PTSD', icon: 'shield-outline' },
+    { id: 'ocd', label: 'OCD', icon: 'repeat-outline' },
+    { id: 'adhd', label: 'ADHD', icon: 'flash-outline' },
+    { id: 'eating-disorder', label: 'Eating Disorder', icon: 'nutrition-outline' },
+    { id: 'addiction', label: 'Addiction', icon: 'warning-outline' },
+    { id: 'grief', label: 'Grief & Loss', icon: 'heart-dislike-outline' },
+    { id: 'stress', label: 'Stress Management', icon: 'fitness-outline' },
+    { id: 'self-esteem', label: 'Self-Esteem', icon: 'star-outline' },
+    { id: 'relationships', label: 'Relationships', icon: 'people-outline' },
+    { id: 'work-life', label: 'Work-Life Balance', icon: 'briefcase-outline' },
+    { id: 'sleep', label: 'Sleep Issues', icon: 'moon-outline' },
+    { id: 'anger', label: 'Anger Management', icon: 'flame-outline' },
+    { id: 'trauma', label: 'Trauma', icon: 'medical-outline' },
+    { id: 'general', label: 'General Wellness', icon: 'leaf-outline' },
+  ];
 
   const loadJournals = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!isAuthenticated) {
@@ -40,7 +64,8 @@ export default function BrowseJournalsScreen() {
     }
 
     try {
-      const response = await journalService.getPublicJournals(pageNum, 20, searchQuery);
+      console.log('🔍 Loading journals with topic filter:', selectedTopic, 'sort:', selectedSort);
+      const response = await journalService.getPublicJournals(pageNum, 20, searchQuery, selectedTopic || undefined, selectedSort);
       if (response.success && response.data) {
         if (append) {
           setJournals((prev) => [...prev, ...response.data]);
@@ -71,13 +96,13 @@ export default function BrowseJournalsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isAuthenticated, searchQuery]);
+  }, [isAuthenticated, searchQuery, selectedTopic, selectedSort]);
 
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     loadJournals(1, false);
-  }, [searchQuery, loadJournals]);
+  }, [searchQuery, selectedTopic, selectedSort, loadJournals]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -198,6 +223,29 @@ export default function BrowseJournalsScreen() {
               </Text>
             )}
 
+            {/* Topics */}
+            {item.topics && item.topics.length > 0 && (
+              <View style={styles.topicsContainer}>
+                {item.topics.slice(0, 3).map((topic, index) => {
+                  const topicInfo = mentalHealthTopics.find(t => t.id === topic);
+                  if (!topicInfo) return null;
+                  return (
+                    <View key={index} style={styles.topicChip}>
+                      <Ionicons
+                        name={topicInfo.icon as any}
+                        size={12}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.topicChipText}>{topicInfo.label}</Text>
+                    </View>
+                  );
+                })}
+                {item.topics.length > 3 && (
+                  <Text style={styles.moreTopicsText}>+{item.topics.length - 3} more</Text>
+                )}
+              </View>
+            )}
+
             <View style={styles.journalStats}>
               <View style={styles.stat}>
                 <Ionicons name="people-outline" size={16} color={COLORS.textMuted} />
@@ -254,6 +302,132 @@ export default function BrowseJournalsScreen() {
           style={styles.searchInput}
           icon="search"
         />
+      </View>
+
+      {/* Topic Filters */}
+      <View style={styles.filtersContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersScrollContent}
+        >
+          <Pressable
+            style={[
+              styles.topicFilterChip,
+              !selectedTopic && styles.topicFilterChipActive,
+            ]}
+            onPress={() => setSelectedTopic(null)}
+          >
+            <Text
+              style={[
+                styles.topicFilterText,
+                !selectedTopic && styles.topicFilterTextActive,
+              ]}
+            >
+              All Topics
+            </Text>
+          </Pressable>
+          {mentalHealthTopics.map((topic) => {
+            const isSelected = selectedTopic === topic.id;
+            return (
+              <Pressable
+                key={topic.id}
+                style={[
+                  styles.topicFilterChip,
+                  isSelected && styles.topicFilterChipActive,
+                ]}
+                onPress={() => setSelectedTopic(isSelected ? null : topic.id)}
+              >
+                <Ionicons
+                  name={topic.icon as any}
+                  size={16}
+                  color={isSelected ? COLORS.primary : COLORS.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.topicFilterText,
+                    isSelected && styles.topicFilterTextActive,
+                  ]}
+                >
+                  {topic.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Sort Filters */}
+      <View style={styles.sortFiltersContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sortFiltersScrollContent}
+        >
+          <Pressable
+            style={[
+              styles.sortFilterChip,
+              selectedSort === 'popular' && styles.sortFilterChipActive,
+            ]}
+            onPress={() => setSelectedSort('popular')}
+          >
+            <Ionicons
+              name="trending-up"
+              size={16}
+              color={selectedSort === 'popular' ? COLORS.primary : COLORS.textMuted}
+            />
+            <Text
+              style={[
+                styles.sortFilterText,
+                selectedSort === 'popular' && styles.sortFilterTextActive,
+              ]}
+            >
+              Most Popular
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.sortFilterChip,
+              selectedSort === 'newest' && styles.sortFilterChipActive,
+            ]}
+            onPress={() => setSelectedSort('newest')}
+          >
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={selectedSort === 'newest' ? COLORS.primary : COLORS.textMuted}
+            />
+            <Text
+              style={[
+                styles.sortFilterText,
+                selectedSort === 'newest' && styles.sortFilterTextActive,
+              ]}
+            >
+              Newest
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.sortFilterChip,
+              selectedSort === 'most-entries' && styles.sortFilterChipActive,
+            ]}
+            onPress={() => setSelectedSort('most-entries')}
+          >
+            <Ionicons
+              name="book-outline"
+              size={16}
+              color={selectedSort === 'most-entries' ? COLORS.primary : COLORS.textMuted}
+            />
+            <Text
+              style={[
+                styles.sortFilterText,
+                selectedSort === 'most-entries' && styles.sortFilterTextActive,
+              ]}
+            >
+              Most Entries
+            </Text>
+          </Pressable>
+        </ScrollView>
       </View>
 
       {/* Journals List */}
@@ -355,6 +529,72 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: 0,
   },
+  filtersContainer: {
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  filtersScrollContent: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  topicFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginRight: SPACING.sm,
+  },
+  topicFilterChipActive: {
+    backgroundColor: `${COLORS.primary}20`,
+    borderColor: COLORS.primary,
+  },
+  topicFilterText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  topicFilterTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  sortFiltersContainer: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  sortFiltersScrollContent: {
+    paddingRight: SPACING.lg,
+  },
+  sortFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    marginRight: SPACING.sm,
+  },
+  sortFilterChipActive: {
+    backgroundColor: `${COLORS.primary}20`,
+    borderColor: COLORS.primary,
+  },
+  sortFilterText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+  },
+  sortFilterTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   listContent: {
     paddingHorizontal: SPACING.lg,
   },
@@ -409,6 +649,34 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
+  },
+  topicsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  topicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: `${COLORS.primary}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}30`,
+  },
+  topicChipText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontSize: 11,
+  },
+  moreTopicsText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 11,
   },
   journalStats: {
     flexDirection: 'row',
