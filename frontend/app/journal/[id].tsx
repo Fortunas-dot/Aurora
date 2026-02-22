@@ -300,17 +300,28 @@ export default function JournalEntryScreen() {
             <View style={[styles.fullscreenAuthorInfo, { top: insets.top + SPACING.md }]}>
               <Avatar
                 uri={author.avatar}
-                size={32}
+                size={40}
                 name={author.displayName || author.username}
                 userId={author._id}
                 avatarCharacter={author.avatarCharacter}
                 avatarBackgroundColor={author.avatarBackgroundColor}
               />
               <View style={styles.fullscreenAuthorDetails}>
-                <Text style={styles.fullscreenAuthorName}>{author.displayName || author.username}</Text>
+                <Text style={styles.fullscreenAuthorName} numberOfLines={1}>
+                  {author.displayName || author.username}
+                </Text>
                 {journal && (
-                  <Text style={styles.fullscreenJournalName}>{journal.name}</Text>
+                  <Text style={styles.fullscreenJournalName} numberOfLines={1}>
+                    {journal.name}
+                  </Text>
                 )}
+                {/* Date in header */}
+                <Text style={styles.fullscreenHeaderDate}>
+                  {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+                </Text>
+                <Text style={styles.fullscreenHeaderTime}>
+                  {format(parseISO(entry.createdAt), 'HH:mm')}
+                </Text>
               </View>
             </View>
           )}
@@ -1056,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   fullscreenPageContent: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl + 50, // Extra padding for close button
+    paddingTop: SPACING.xl + 100, // Extra padding for header (author info + close button)
     paddingLeft: SPACING.xl + 12, // Extra padding to account for binding
   },
   fullscreenDateHeader: {
@@ -1160,23 +1171,43 @@ const styles = StyleSheet.create({
   fullscreenAuthorInfo: {
     position: 'absolute',
     left: SPACING.xl + 12, // Account for binding
+    right: SPACING.xl + 100, // Leave space for action buttons
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
+    alignItems: 'flex-start',
+    gap: SPACING.md,
     zIndex: 50,
+    maxWidth: '70%', // Prevent overlap with close button
   },
   fullscreenAuthorDetails: {
     flex: 1,
+    gap: SPACING.xs / 2,
   },
   fullscreenAuthorName: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#6B5D4F',
     fontWeight: '600',
+    fontSize: 16,
+    marginBottom: 2,
   },
   fullscreenJournalName: {
     ...TYPOGRAPHY.caption,
     color: '#8B7355',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  fullscreenHeaderDate: {
+    fontSize: 14,
+    fontFamily: 'Palatino',
+    color: '#6B5D4F',
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  fullscreenHeaderTime: {
     fontSize: 12,
+    fontFamily: 'Palatino',
+    color: '#8B7355',
+    fontStyle: 'italic',
   },
   mediaSection: {
     marginBottom: SPACING.lg,
