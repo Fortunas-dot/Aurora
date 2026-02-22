@@ -630,9 +630,12 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     // Check if user owns this entry
-    const authorId = typeof entry.author === 'object' && entry.author !== null && '_id' in entry.author
-      ? entry.author._id.toString()
-      : entry.author.toString();
+    let authorId: string;
+    if (typeof entry.author === 'object' && entry.author !== null && '_id' in entry.author) {
+      authorId = (entry.author as any)._id.toString();
+    } else {
+      authorId = String(entry.author);
+    }
     const isOwner = req.userId ? authorId === req.userId : false;
 
     // If not owner, check if journal is public and entry is not private
@@ -647,9 +650,10 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
       }
 
       const journal = entry.journal;
-      if (typeof journal === 'object' && journal) {
-        // Check if journal is public
-        if (!journal.isPublic) {
+      // Check if journal is populated (object) or just an ObjectId (string)
+      if (typeof journal === 'object' && journal !== null && 'isPublic' in journal) {
+        // Journal is populated, check isPublic directly
+        if (!(journal as any).isPublic) {
           res.status(403).json({
             success: false,
             message: 'Access denied',
@@ -658,7 +662,8 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
         }
       } else {
         // If journal is not populated, fetch it
-        const journalDoc = await Journal.findById(entry.journal);
+        const journalId = typeof journal === 'string' ? journal : String(journal);
+        const journalDoc = await Journal.findById(journalId);
         if (!journalDoc || !journalDoc.isPublic) {
           res.status(403).json({
             success: false,
