@@ -11,7 +11,7 @@ import {
   unfollowJournal,
   getFollowingJournals,
 } from '../controllers/journalController';
-import { protect } from '../middleware/auth';
+import { protect, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -67,6 +67,7 @@ const updateValidation = [
 
 // Public routes (before protect middleware)
 router.get('/public', getPublicJournals);
+router.get('/:id', optionalAuth, getJournal); // Allow viewing public journals without auth
 
 // All other routes require authentication
 router.use(protect);
@@ -77,7 +78,6 @@ router.get('/following', getFollowingJournals);
 // CRUD routes
 router.post('/', journalValidation, createJournal);
 router.get('/', getUserJournals);
-router.get('/:id', getJournal);
 router.put('/:id', updateValidation, updateJournal);
 router.delete('/:id', deleteJournal);
 

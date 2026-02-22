@@ -72,17 +72,32 @@ export default function JournalViewScreen() {
     if (!id) return;
 
     try {
+      console.log(`[JournalView] Loading entries for journalId: ${id}`);
       const response = await journalService.getEntries(pageNum, 20, { journalId: id });
-      if (response.success && response.data) {
+      console.log(`[JournalView] Response:`, {
+        success: response.success,
+        dataLength: response.data?.length || 0,
+        data: response.data,
+        message: response.message
+      });
+      
+      if (response.success) {
+        // Handle both empty array and undefined/null
+        const entriesData = response.data || [];
         if (append) {
-          setEntries((prev) => [...prev, ...response.data]);
+          setEntries((prev) => [...prev, ...entriesData]);
         } else {
-          setEntries(response.data);
+          setEntries(entriesData);
         }
-        setHasMore(response.data.length === 20);
+        setHasMore(entriesData.length === 20);
+      } else {
+        console.warn(`[JournalView] Failed to load entries:`, response.message);
+        // Set empty array on failure
+        setEntries([]);
       }
     } catch (error) {
       console.error('Error loading entries:', error);
+      setEntries([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

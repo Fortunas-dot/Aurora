@@ -524,18 +524,37 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
       // Set query based on ownership
       if (isOwner) {
         // Owner can see all their entries
-        query.author = req.userId;
+        query.author = new Types.ObjectId(req.userId);
       } else {
         // For public journals, get entries from the journal owner
-        query.author = journal.owner;
+        // Ensure owner is an ObjectId
+        query.author = typeof journal.owner === 'string' 
+          ? new Types.ObjectId(journal.owner) 
+          : journal.owner;
       }
-      query.journal = journalId;
+      query.journal = new Types.ObjectId(journalId);
       // Only show non-private entries for public journals
+      // Use $ne (not equal) to include entries where isPrivate is false, undefined, or doesn't exist
       if (!isOwner) {
-        query.isPrivate = false;
+        query.isPrivate = { $ne: true };
       }
+
+      console.log(`[getEntries] Public journal query:`, JSON.stringify({
+        author: query.author.toString(),
+        journal: query.journal.toString(),
+        isPrivate: query.isPrivate,
+        isOwner,
+        journalIsPublic: journal.isPublic
+      }));
     } else {
       // No journalId provided, default to current user's entries
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
       query.author = req.userId;
     }
 
@@ -571,6 +590,8 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
       .limit(limit);
 
     const total = await JournalEntry.countDocuments(query);
+
+    console.log(`[getEntries] Found ${entries.length} entries (total: ${total}) for query:`, JSON.stringify(query));
 
     res.json({
       success: true,

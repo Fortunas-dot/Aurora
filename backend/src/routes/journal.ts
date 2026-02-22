@@ -13,7 +13,7 @@ import {
   finishChatSession,
   saveChatContext,
 } from '../controllers/journalController';
-import { protect } from '../middleware/auth';
+import { protect, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -40,7 +40,11 @@ const updateValidation = [
     .withMessage('Mood must be between 1 and 10'),
 ];
 
-// All routes require authentication
+// Public routes (allow viewing public journal entries without auth)
+router.get('/', optionalAuth, getEntries);
+router.get('/:id', optionalAuth, getEntry);
+
+// All other routes require authentication
 router.use(protect);
 
 // Insights and prompts (before :id routes)
@@ -50,9 +54,7 @@ router.get('/aurora-context', getAuroraContext);
 router.post('/finish-session', finishChatSession);
 router.post('/save-chat-context', saveChatContext);
 
-// CRUD routes
-router.get('/', getEntries);
-router.get('/:id', getEntry);
+// CRUD routes (create, update, delete require auth)
 router.post('/', entryValidation, createEntry);
 router.put('/:id', updateValidation, updateEntry);
 router.delete('/:id', deleteEntry);
