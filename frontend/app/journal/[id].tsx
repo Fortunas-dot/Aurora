@@ -307,6 +307,15 @@ export default function JournalEntryScreen() {
                 avatarBackgroundColor={author.avatarBackgroundColor}
               />
               <View style={styles.fullscreenAuthorDetails}>
+                {/* Date and Time - Above author name */}
+                <View style={styles.fullscreenDateInfoInline}>
+                  <Text style={styles.fullscreenHeaderDate} numberOfLines={1}>
+                    {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+                  </Text>
+                  <Text style={styles.fullscreenHeaderTime}>
+                    {format(parseISO(entry.createdAt), 'HH:mm')}
+                  </Text>
+                </View>
                 <Text style={styles.fullscreenAuthorName} numberOfLines={1}>
                   {author.displayName || author.username}
                 </Text>
@@ -319,18 +328,8 @@ export default function JournalEntryScreen() {
             </View>
           )}
           
-          {/* Date and Time - Right side */}
-          <View style={[styles.fullscreenDateInfo, { top: insets.top + SPACING.md }]}>
-            <Text style={styles.fullscreenHeaderDate} numberOfLines={1}>
-              {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
-            </Text>
-            <Text style={styles.fullscreenHeaderTime}>
-              {format(parseISO(entry.createdAt), 'HH:mm')}
-            </Text>
-          </View>
-          
           {/* Close Button and Actions */}
-          <View style={[styles.fullscreenHeaderActions, { top: insets.top + SPACING.md + 60 }]}>
+          <View style={[styles.fullscreenHeaderActions, { top: insets.top + SPACING.md }]}>
             {/* Edit/Delete buttons for own entries */}
             {isOwnEntry && (
               <>
@@ -1164,16 +1163,19 @@ const styles = StyleSheet.create({
   fullscreenAuthorInfo: {
     position: 'absolute',
     left: SPACING.xl + 12, // Account for binding
-    right: SPACING.xl + 150, // Leave space for date and action buttons
+    right: SPACING.xl + 100, // Leave space for action buttons
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.md,
     zIndex: 50,
-    maxWidth: '60%', // Prevent overlap with date and buttons
+    maxWidth: '70%', // Prevent overlap with buttons
   },
   fullscreenAuthorDetails: {
     flex: 1,
     gap: SPACING.xs / 2,
+  },
+  fullscreenDateInfoInline: {
+    marginBottom: 4,
   },
   fullscreenAuthorName: {
     ...TYPOGRAPHY.bodyMedium,
@@ -1187,36 +1189,18 @@ const styles = StyleSheet.create({
     color: '#8B7355',
     fontSize: 13,
   },
-  fullscreenDateInfo: {
-    position: 'absolute',
-    right: SPACING.md,
-    zIndex: 50,
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    maxWidth: '40%',
-  },
   fullscreenHeaderDate: {
-    fontSize: 13,
-    fontFamily: 'Palatino',
-    color: '#6B5D4F',
-    fontWeight: '500',
-    marginBottom: 2,
-    textAlign: 'right',
-  },
-  fullscreenHeaderTime: {
     fontSize: 11,
     fontFamily: 'Palatino',
     color: '#8B7355',
+    fontWeight: '400',
+    marginBottom: 1,
+  },
+  fullscreenHeaderTime: {
+    fontSize: 10,
+    fontFamily: 'Palatino',
+    color: '#8B7355',
     fontStyle: 'italic',
-    textAlign: 'right',
   },
   mediaSection: {
     marginBottom: SPACING.lg,
