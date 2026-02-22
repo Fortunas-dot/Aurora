@@ -309,7 +309,7 @@ export default function JournalEntryScreen() {
               <View style={styles.fullscreenAuthorDetails}>
                 {/* Date and Time - Above author name */}
                 <View style={styles.fullscreenDateInfoInline}>
-                  <Text style={styles.fullscreenHeaderDate} numberOfLines={1}>
+                  <Text style={styles.fullscreenHeaderDate}>
                     {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
                   </Text>
                   <Text style={styles.fullscreenHeaderTime}>
