@@ -623,7 +623,7 @@ export default function JournalScreen() {
                 </Text>
                 {selectedJournal.topics && selectedJournal.topics.length > 0 && (
                   <View style={styles.journalSelectorTopics}>
-                    {selectedJournal.topics.slice(0, 2).map((topic, index) => {
+                    {selectedJournal.topics.slice(0, 1).map((topic, index) => {
                       const topicInfo = mentalHealthTopics.find(t => t.id === topic);
                       if (!topicInfo) return null;
                       return (
@@ -639,9 +639,9 @@ export default function JournalScreen() {
                         </View>
                       );
                     })}
-                    {selectedJournal.topics.length > 2 && (
+                    {selectedJournal.topics.length > 1 && (
                       <Text style={styles.journalSelectorTopicMore}>
-                        +{selectedJournal.topics.length - 2}
+                        +{selectedJournal.topics.length - 1}
                       </Text>
                     )}
                   </View>
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
   },
   journalSelectorTopicChip: {
     flexDirection: 'row',

@@ -297,7 +297,7 @@ export default function JournalEntryScreen() {
           
           {/* Author Info at top */}
           {author && (
-            <View style={[styles.fullscreenAuthorInfo, { top: insets.top + SPACING.md }]}>
+            <View style={[styles.fullscreenAuthorInfo, { top: insets.top }]}>
               <Avatar
                 uri={author.avatar}
                 size={40}
@@ -307,23 +307,25 @@ export default function JournalEntryScreen() {
                 avatarBackgroundColor={author.avatarBackgroundColor}
               />
               <View style={styles.fullscreenAuthorDetails}>
-                {/* Date and Time - Above author name */}
-                <View style={styles.fullscreenDateInfoInline}>
-                  <Text style={styles.fullscreenHeaderDate}>
-                    {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
-                  </Text>
-                  <Text style={styles.fullscreenHeaderTime}>
-                    {format(parseISO(entry.createdAt), 'HH:mm')}
-                  </Text>
-                </View>
+                {/* Owner name */}
                 <Text style={styles.fullscreenAuthorName} numberOfLines={1}>
                   {author.displayName || author.username}
                 </Text>
+                {/* Journal title */}
                 {journal && (
                   <Text style={styles.fullscreenJournalName} numberOfLines={1}>
                     {journal.name}
                   </Text>
                 )}
+                {/* Date and Time */}
+                <View style={styles.fullscreenDateInfoInline}>
+                  <Text style={styles.fullscreenHeaderDate} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.8}>
+                    {format(parseISO(entry.createdAt), 'EEEE d MMMM yyyy', { locale: enUS })}
+                  </Text>
+                  <Text style={styles.fullscreenHeaderTime} numberOfLines={1}>
+                    {format(parseISO(entry.createdAt), 'HH:mm')}
+                  </Text>
+                </View>
               </View>
             </View>
           )}
@@ -1168,38 +1170,39 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: SPACING.md,
     zIndex: 50,
-    maxWidth: '70%', // Prevent overlap with buttons
+    maxWidth: '75%', // More space for date
   },
   fullscreenAuthorDetails: {
     flex: 1,
-    gap: SPACING.xs / 2,
+    gap: 0, // No gap between items
   },
   fullscreenDateInfoInline: {
-    marginBottom: 4,
-    flexShrink: 1,
+    marginTop: 0, // No space above date
+    flex: 1,
+    minWidth: 0, // Allow flex shrinking
   },
   fullscreenAuthorName: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#6B5D4F',
     fontWeight: '600',
     fontSize: 16,
-    marginBottom: 2,
+    marginBottom: 0, // No space below name
   },
   fullscreenJournalName: {
     ...TYPOGRAPHY.caption,
     color: '#8B7355',
     fontSize: 13,
+    marginBottom: 0, // No space below journal name
   },
   fullscreenHeaderDate: {
-    fontSize: 11,
+    fontSize: 15,
     fontFamily: 'Palatino',
     color: '#8B7355',
     fontWeight: '400',
     marginBottom: 1,
-    flexWrap: 'wrap',
   },
   fullscreenHeaderTime: {
-    fontSize: 10,
+    fontSize: 13,
     fontFamily: 'Palatino',
     color: '#8B7355',
     fontStyle: 'italic',
