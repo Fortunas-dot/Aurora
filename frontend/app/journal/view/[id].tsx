@@ -161,7 +161,11 @@ export default function JournalViewScreen() {
   };
 
   const handleEntryPress = (entry: JournalEntry) => {
-    router.push(`/journal/${entry._id}`);
+    // When viewing from public journal, always show book page style
+    router.push({
+      pathname: '/journal/[id]',
+      params: { id: entry._id, fromPublicJournal: 'true' },
+    });
   };
 
   const renderEntry = ({ item }: { item: JournalEntry }) => {

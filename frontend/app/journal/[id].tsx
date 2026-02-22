@@ -157,7 +157,7 @@ const AIInsightsCard: React.FC<{ insights: JournalEntry['aiInsights'] }> = ({ in
 
 export default function JournalEntryScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromPublicJournal } = useLocalSearchParams<{ id: string; fromPublicJournal?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
@@ -165,6 +165,9 @@ export default function JournalEntryScreen() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
+  
+  // If coming from public journal view, always show book page style
+  const showBookPageStyle = fromPublicJournal === 'true';
   
   // Check if this is the user's own entry
   // Use isOwner from backend response, or fallback to checking author
@@ -280,8 +283,8 @@ export default function JournalEntryScreen() {
     userId: user?._id,
   });
 
-  // For entries from others (public journals), show fullscreen book page directly
-  if (!isOwnEntry) {
+  // For entries from others (public journals) or when viewing from public journal view, show fullscreen book page directly
+  if (!isOwnEntry || showBookPageStyle) {
     return (
       <View style={styles.fullscreenContainer}>
         {/* Book Page Background */}
@@ -312,13 +315,48 @@ export default function JournalEntryScreen() {
             </View>
           )}
           
-          {/* Close Button */}
-          <Pressable 
-            style={[styles.fullscreenCloseButton, { top: insets.top + SPACING.md }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="close" size={28} color="#6B5D4F" />
-          </Pressable>
+          {/* Close Button and Actions */}
+          <View style={[styles.fullscreenHeaderActions, { top: insets.top + SPACING.md }]}>
+            {/* Edit/Delete buttons for own entries */}
+            {isOwnEntry && (
+              <>
+                <Pressable 
+                  style={styles.fullscreenActionButton}
+                  onPress={handleReanalyze}
+                >
+                  <Ionicons
+                    name="refresh"
+                    size={24}
+                    color={analyzing ? "#8B7355" : "#6B5D4F"}
+                  />
+                </Pressable>
+                <Pressable 
+                  style={styles.fullscreenActionButton}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/journal/create',
+                      params: { entryId: entry._id, journalId: typeof entry.journal === 'object' ? entry.journal?._id : entry.journal },
+                    });
+                  }}
+                >
+                  <Ionicons name="create-outline" size={24} color="#6B5D4F" />
+                </Pressable>
+                <Pressable 
+                  style={styles.fullscreenActionButton}
+                  onPress={handleDelete}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#8B4E4E" />
+                </Pressable>
+              </>
+            )}
+            {/* Close Button */}
+            <Pressable 
+              style={styles.fullscreenCloseButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="close" size={28} color="#6B5D4F" />
+            </Pressable>
+          </View>
           
           {/* Page Content */}
           <ScrollView
@@ -985,10 +1023,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  fullscreenCloseButton: {
+  fullscreenHeaderActions: {
     position: 'absolute',
     right: SPACING.md,
     zIndex: 100,
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    alignItems: 'center',
+  },
+  fullscreenActionButton: {
+    padding: SPACING.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: BORDER_RADIUS.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fullscreenCloseButton: {
     padding: SPACING.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderRadius: BORDER_RADIUS.md,
