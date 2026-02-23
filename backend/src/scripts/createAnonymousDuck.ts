@@ -37,6 +37,13 @@ async function createAnonymousDuck() {
         bio: 'Just trying to survive...',
         isAnonymous: true,
         isProtected: false,
+        healthInfo: {
+          mentalHealth: [
+            { condition: 'Depression', severity: 'moderate' },
+            { condition: 'Anxiety Disorder', severity: 'moderate' },
+            { condition: 'Sleep Problems', severity: 'moderate' }
+          ]
+        }
       });
       console.log('  ✓ Created user: anonymous_duck');
     }
@@ -215,7 +222,12 @@ async function createAnonymousDuck() {
       if (progress < 0.2) {
         // Very dark phase (first 20% - 8 entries)
         mood = 1 + Math.floor(Math.random() * 2); // 1-2
-        symptoms = [{ condition: 'depression', severity: 'severe' }, { condition: 'self-harm', severity: 'severe' }];
+        // Multiple severe conditions in early phase
+        symptoms = [
+          { condition: 'Depression', severity: 'severe' },
+          { condition: 'Anxiety Disorder', severity: 'severe' },
+          { condition: 'Sleep Problems', severity: 'severe' }
+        ];
         tags = ['dark', 'self-harm', 'depression', 'hopeless'];
         content = shuffledDark[darkIndex % shuffledDark.length];
         darkIndex++;
@@ -223,7 +235,12 @@ async function createAnonymousDuck() {
       } else if (progress < 0.5) {
         // Still dark but some awareness (20-50% - 12 entries)
         mood = 2 + Math.floor(Math.random() * 2); // 2-3
-        symptoms = [{ condition: 'depression', severity: 'moderate' }, { condition: 'self-harm', severity: 'moderate' }];
+        // Conditions improving but still present
+        symptoms = [
+          { condition: 'Depression', severity: 'moderate' },
+          { condition: 'Anxiety Disorder', severity: 'moderate' },
+          { condition: 'Sleep Problems', severity: 'moderate' }
+        ];
         tags = ['self-harm', 'depression', 'struggling', 'awareness'];
         content = shuffledAwareness[awarenessIndex % shuffledAwareness.length];
         awarenessIndex++;
@@ -231,7 +248,18 @@ async function createAnonymousDuck() {
       } else if (progress < 0.8) {
         // Turning point and recovery (50-80% - 12 entries)
         mood = 3 + Math.floor(Math.random() * 3); // 3-5
-        symptoms = [{ condition: 'depression', severity: 'mild' }, { condition: 'self-harm', severity: 'mild' }];
+        // Conditions becoming milder, some may be resolved
+        const recoverySymptoms = [
+          { condition: 'Depression', severity: 'mild' },
+          { condition: 'Anxiety Disorder', severity: 'mild' },
+          { condition: 'Sleep Problems', severity: 'mild' }
+        ];
+        // Sometimes only 1-2 conditions remain
+        if (Math.random() > 0.3) {
+          symptoms = recoverySymptoms.slice(0, 2);
+        } else {
+          symptoms = recoverySymptoms;
+        }
         tags = ['recovery', 'hope', 'struggling', 'progress'];
         content = shuffledRecovery[recoveryIndex % shuffledRecovery.length];
         recoveryIndex++;
@@ -239,7 +267,15 @@ async function createAnonymousDuck() {
       } else {
         // Hopeful and healing (80-100% - 8 entries)
         mood = 5 + Math.floor(Math.random() * 4); // 5-8
-        symptoms = [{ condition: 'depression', severity: 'mild' }];
+        // Most conditions resolved or very mild
+        const hopefulSymptoms = [
+          { condition: 'Depression', severity: 'mild' }
+        ];
+        // Sometimes anxiety or sleep issues may still be present but mild
+        if (Math.random() > 0.5) {
+          hopefulSymptoms.push({ condition: 'Anxiety Disorder', severity: 'mild' });
+        }
+        symptoms = hopefulSymptoms;
         tags = ['recovery', 'hope', 'healing', 'progress', 'strength'];
         content = shuffledHopeful[hopefulIndex % shuffledHopeful.length];
         hopefulIndex++;
