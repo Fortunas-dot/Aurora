@@ -206,10 +206,35 @@ async function createAnonymousDuck() {
     
     const entries = [];
     
+    // Helper function to generate random time (most entries during waking hours, some late night/early morning)
+    const getRandomTime = (): { hours: number; minutes: number } => {
+      const rand = Math.random();
+      if (rand < 0.7) {
+        // 70% of entries during normal waking hours (6:00 - 23:00)
+        const hours = 6 + Math.floor(Math.random() * 17); // 6-22
+        const minutes = Math.floor(Math.random() * 60);
+        return { hours, minutes };
+      } else if (rand < 0.9) {
+        // 20% late night entries (23:00 - 2:00)
+        const hours = 23 + Math.floor(Math.random() * 3); // 23, 0, 1
+        const minutes = Math.floor(Math.random() * 60);
+        return { hours: hours % 24, minutes };
+      } else {
+        // 10% early morning entries (2:00 - 6:00)
+        const hours = 2 + Math.floor(Math.random() * 4); // 2-5
+        const minutes = Math.floor(Math.random() * 60);
+        return { hours, minutes };
+      }
+    };
+    
     // Generate entries with progression from dark to hopeful
     for (let i = 0; i < 40; i++) {
       const entryDate = new Date(startDate);
       entryDate.setDate(entryDate.getDate() + i);
+      
+      // Add random time to make entries more believable
+      const { hours, minutes } = getRandomTime();
+      entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
       
       // Calculate progress (0 = very dark, 1 = hopeful)
       const progress = i / 39;
