@@ -100,140 +100,6 @@ async function createBrokenWings() {
     await JournalEntry.deleteMany({ journal: journal._id });
     journal.entriesCount = 0;
     
-    // Helper function to shuffle array
-    const shuffle = <T>(array: T[]): T[] => {
-      const shuffled = [...array];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    };
-    
-    // Define all entries for each phase with realistic variety
-    const darkEntries = [
-      `Can't sleep. Every time I close my eyes, I see it. Hear it. Feel it. The night that changed everything. Always there. Waiting.`,
-      `Had a flashback today. Full body. Full sensory. I was back there. In that moment. Could smell it. Taste it. Feel it. Thought I was going to die.`,
-      `Hypervigilant all the time. Every sound makes me jump. Every shadow makes me freeze. Can't relax. Can't feel safe. Never feel safe.`,
-      `Avoid everything. Places. People. Situations. Anything that might trigger me. My world is getting smaller. Soon there will be nothing left.`,
-      `Can't remember what happened. Not all of it. My mind has blocked it out. But my body remembers. My body always remembers.`,
-      `Nightmares every night. The same one. Over and over. Wake up screaming. Covered in sweat. Afraid to go back to sleep.`,
-      `Feel disconnected. From my body. From my emotions. From reality. Like I'm watching my life from outside. Like I'm not really here.`,
-      `Angry all the time. Rage that comes from nowhere. Snap at people. Break things. Don't recognize myself.`,
-      `Blame myself. Should have done something. Should have fought back. Should have been stronger. It's my fault. All my fault.`,
-      `Can't trust anyone. Not really. Everyone is a threat. Everyone could hurt me. I'm alone. Always alone.`,
-      `I'm numb. Can't feel anything. Not happiness. Not sadness. Not anything. Just... empty. A void.`,
-      `Panic attacks. Out of nowhere. My heart races. Can't breathe. Think I'm dying. The fear is overwhelming.`,
-      `Stuck. Stuck in that moment. That night. Can't move forward. Can't move back. Just... stuck.`,
-      `Feel broken. Beyond repair. Too many pieces. Too scattered. Don't know how to put myself back together.`,
-      `Scared. All the time. Scared of everything. Scared of nothing. Just scared. Constant. Overwhelming fear.`,
-      `Don't know who I am anymore. The person I was before is gone. The person I am now is a stranger. I'm lost.`,
-      `Saw something on TV. A scene. Similar to... that night. Had to turn it off. Couldn't breathe.`,
-      `My friend hugged me. I flinched. They looked hurt. I'm sorry. But I can't help it.`,
-      `Drove past that place today. The place where... I had to pull over. Vomited.`,
-      `Can't wear that perfume anymore. The one I wore that night. The smell triggers me. Everything triggers me.`,
-    ];
-    
-    const awarenessEntries = [
-      `Starting to understand what happened to me. It has a name. PTSD. Post-traumatic stress disorder. It's not my fault. It's an injury.`,
-      `Told someone. My therapist. Said the words out loud. Described what happened. Terrifying. But also... freeing.`,
-      `Learning about trauma. About how it affects the brain. About how it's not weakness. It's a response. Knowledge is power.`,
-      `Had a trigger today. A sound. A smell. Something. Panicked. But I used my grounding techniques. Got through it. That's progress.`,
-      `Starting to see patterns. What triggers me. When I'm most vulnerable. Understanding is the first step to healing.`,
-      `In therapy now. EMDR. Trauma therapy. It's hard. So hard. But I'm doing it. Really doing it.`,
-      `Learning that it's not my fault. I didn't ask for this. Didn't deserve this. It's not my fault.`,
-      `Building a safety plan. Things to do when I'm triggered. People to call. Places to go. It's something.`,
-      `Starting to feel again. Not all the time. But sometimes. Real emotions. Not just numbness. That's something.`,
-      `Learning to ground myself. To stay in the present. To remind myself I'm safe now. Not always easy. But I'm trying.`,
-      `Had a good day. A really good day. No flashbacks. No panic attacks. No nightmares. Just... a normal day. I'd forgotten what that felt like.`,
-      `Starting to trust again. Slowly. Carefully. One person at a time. It's scary. But I'm trying.`,
-      `Processing the trauma. Talking about it. Writing about it. Feeling it. It's painful. But it's necessary.`,
-      `Learning that I'm not broken. I'm injured. And injuries can heal. It takes time. But they can heal.`,
-      `Building connections. With people who understand. With people who care. I'm not alone anymore.`,
-      `I'm fighting. Every day is a battle. Some days I lose. But I'm still here. Still fighting.`,
-      `Went to a support group. Met others who've been through similar things. I'm not alone. That helps.`,
-      `My therapist asked me to write about it. I did. It was hard. But it helped. A little.`,
-      `Had a flashback. But this time I used my grounding techniques. Got through it. Without panicking. That's new.`,
-      `Slept through the night. No nightmares. First time in months. I'm hopeful.`,
-    ];
-    
-    const recoveryEntries = [
-      `Went a whole week without a flashback. A whole week. Didn't think it was possible. But I did it.`,
-      `Sleeping better. Not every night. But most nights. The nightmares are less frequent. Less intense. That's progress.`,
-      `Learning to manage my triggers. Can't avoid everything. But I can cope. I have tools. Have strategies.`,
-      `Processing the trauma. Really processing it. It's painful. But I'm doing it. I'm facing it.`,
-      `Building a life again. Not the life I had before. But a new life. A better life. With purpose. With meaning.`,
-      `Finding joy again. Small moments of happiness. They're rare. But they're there. And they're growing.`,
-      `Helping others. Sharing my story. Offering support. Feels good to use my pain for something positive.`,
-      `Learning to trust my body again. To feel safe in my own skin. It's a process. But I'm getting there.`,
-      `Building healthy relationships. With boundaries. With respect. With care. Learning what that looks like.`,
-      `Finding meaning in my pain. Using it to help others. Making something good out of something terrible.`,
-      `Grateful. Grateful for therapy. Grateful for support. Grateful that I'm healing.`,
-      `Proud of myself. Every day I get through is a victory. Every trigger I manage is a win.`,
-      `Learning that recovery isn't linear. Some days are good. Some days are hard. But I'm moving forward.`,
-      `Starting to see a future. Not defined by the trauma. But informed by it. A future with hope.`,
-      `Building resilience. Getting stronger. The trauma doesn't define me anymore. I define me.`,
-      `Healing. Slowly, but surely. The wounds are closing. The scars are fading. I'm healing.`,
-      `Went to that place today. The place where... I didn't have a flashback. I was okay. That's huge.`,
-      `Let someone hug me today. Without flinching. That's progress. Real progress.`,
-      `Had a nightmare. But I used my grounding techniques. Got through it. Didn't panic. I'm getting stronger.`,
-      `Started dating again. It's scary. But I'm trying. I deserve to be happy.`,
-    ];
-    
-    const hopefulEntries = [
-      `Months since my last flashback. Months. Can't believe it. The trauma is losing its power over me.`,
-      `Sleep through the night now. Most nights. The nightmares are rare. When they come, I can handle them.`,
-      `Feel safe. Really safe. In my body. In my mind. In my life. Never thought that was possible.`,
-      `Living again. Really living. Not just surviving. But living. With joy. With purpose. With hope.`,
-      `Helping others who are where I was. Sharing my story. Offering hope. Feels good to give back.`,
-      `Grateful for the journey. For the pain. For the struggle. For the healing. It made me who I am.`,
-      `I'm strong. Stronger than I ever knew. Been through hell. Came out the other side.`,
-      `I'm free. Free from the flashbacks. Free from the fear. Free to live. Free to be happy.`,
-      `Building a life I love. With purpose. With meaning. With joy. It's not perfect. But it's mine.`,
-      `Proof that healing is possible. That trauma doesn't have to define you. That there's life after pain.`,
-      `I'm a survivor. Not a victim. A survivor. Been through hell. Came out stronger.`,
-      `Finding peace. Real peace. Not the absence of pain. But peace with the pain. It's part of my story. But not all of it.`,
-      `Living in the present. Not stuck in the past. Not afraid of the future. Just... present.`,
-      `Whole again. Not the same as before. But whole. The pieces have come back together. Different, but whole.`,
-      `The night that changed everything... it did change everything. But not all for the worse. I'm stronger now. Wiser. More.`,
-      `I'm here. I'm alive. I'm healing. I'm thriving. The trauma is part of my story. But it's not the whole story.`,
-      `Got a new job. One I actually like. I'm moving forward. Building a future.`,
-      `In a relationship now. A healthy one. With someone who understands. Who cares. I'm happy. Really happy.`,
-      `Went back to that place. The place where... I was okay. More than okay. I was strong.`,
-      `One year since I started therapy. One year. I'm a different person. A better person. I'm healing.`,
-    ];
-    
-    // Shuffle each array to ensure variety
-    const shuffledDark = shuffle(darkEntries);
-    const shuffledAwareness = shuffle(awarenessEntries);
-    const shuffledRecovery = shuffle(recoveryEntries);
-    const shuffledHopeful = shuffle(hopefulEntries);
-    
-    // Use Sets to track used entries per phase to prevent duplicates
-    const usedDark = new Set<number>();
-    const usedAwareness = new Set<number>();
-    const usedRecovery = new Set<number>();
-    const usedHopeful = new Set<number>();
-    
-    // Helper to get next unused entry from a shuffled array
-    const getNextEntry = (shuffled: string[], usedSet: Set<number>): string => {
-      // If all entries have been used, reset the set
-      if (usedSet.size >= shuffled.length) {
-        usedSet.clear();
-      }
-      
-      // Find an unused index
-      let index;
-      do {
-        index = Math.floor(Math.random() * shuffled.length);
-      } while (usedSet.has(index));
-      
-      usedSet.add(index);
-      return shuffled[index];
-    };
-    
-    const entries = [];
-    
     // Helper function to generate random time
     const getRandomTime = (): { hours: number; minutes: number } => {
       const rand = Math.random();
@@ -252,54 +118,170 @@ async function createBrokenWings() {
       }
     };
     
-    // Use different number of entries (39 for BrokenWings)
+    // Generate entries as a continuous story with varying lengths
     const totalEntries = 39;
-    const endDate = new Date();
+    const endDate = new Date('2026-02-23');
     const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - totalEntries);
+    startDate.setDate(startDate.getDate() - (totalEntries - 1));
     
-    // Generate entries with progression from dark to hopeful
+    // Story context that builds over time
+    const storyContext = {
+      daysSinceFlashback: 0,
+      inTherapy: false,
+      daysSinceTherapy: 0,
+      lastNightmare: 0,
+      supportSystem: [] as string[],
+    };
+    
+    // Function to generate entry content based on progress and story context
+    const generateEntry = (dayIndex: number, progress: number): string => {
+      const lengthType = Math.random();
+      let content = '';
+      
+      // Determine entry length: 30% short, 50% medium, 20% long
+      const isShort = lengthType < 0.3;
+      const isLong = lengthType > 0.8;
+      
+      if (progress < 0.35) {
+        // Dark phase - severe PTSD symptoms
+        storyContext.daysSinceFlashback = 0;
+        storyContext.lastNightmare = 0;
+        
+        if (isShort) {
+          const shorts = [
+            `Can't sleep. Every time I close my eyes, I see it.`,
+            `Had a flashback today. Full body. Thought I was going to die.`,
+            `Hypervigilant all the time. Every sound makes me jump.`,
+            `Nightmares every night. The same one. Over and over.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `I don't remember when it happened. That night. The night that changed everything. But my body remembers. My body always remembers. Every time I close my eyes, I'm back there. I can smell it. The smoke. The fear. I can hear it. The screams. The sirens. I can feel it. The pain. The terror. I'm stuck there. Trapped in that moment. Can't escape.
+
+Had a flashback today. Full body. Full sensory. I was at work, in a meeting, and suddenly I wasn't there anymore. I was back there. In that moment. The night that changed everything. I could smell the smoke. Taste the blood. Feel the fear. My heart raced. I couldn't breathe. Thought I was going to die. Right there in the conference room. My coworker had to shake me. Bring me back. I was covered in sweat. Shaking. Couldn't speak. Just... gone.
+
+I'm hypervigilant all the time. Every sound makes me jump. Every shadow makes me freeze. Can't relax. Can't feel safe. Never feel safe. My body is always on alert. Always waiting for the next threat. The next attack. The next moment that will destroy me. I'm exhausted. But I can't stop. Can't let my guard down. If I do, something bad will happen. I know it will.
+
+Nightmares every night. The same one. Over and over. I wake up screaming. Covered in sweat. Afraid to go back to sleep. But I have to sleep. Have to work. Have to function. But I'm not functioning. I'm just... surviving. Barely.`;
+        } else {
+          content = `Can't sleep. Every time I close my eyes, I see it. The night that changed everything. Had a flashback today. Full body. Full sensory. I was back there. In that moment. Could smell it. Taste it. Feel it. Thought I was going to die. I'm hypervigilant all the time. Every sound makes me jump. Every shadow makes me freeze. Can't relax. Can't feel safe. Never feel safe. Nightmares every night. The same one. Over and over. Wake up screaming. Covered in sweat. Afraid to go back to sleep. I'm just surviving. Barely.`;
+        }
+      } else if (progress < 0.55) {
+        // Awareness phase - starting to understand
+        storyContext.daysSinceFlashback++;
+        storyContext.lastNightmare++;
+        if (!storyContext.inTherapy && Math.random() > 0.5) {
+          storyContext.inTherapy = true;
+          storyContext.supportSystem.push('therapist');
+        }
+        
+        if (isShort) {
+          const shorts = [
+            `Starting to understand. It has a name. PTSD.`,
+            `Told my therapist today. Said the words out loud.`,
+            `Had a trigger. Used my grounding techniques. Got through it.`,
+            `In therapy now. EMDR. It's hard. But I'm doing it.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `I'm starting to understand what happened to me. It has a name. PTSD. Post-traumatic stress disorder. It's not my fault. It's an injury. A wound. Like a broken bone. But in my mind. In my soul. Learning about trauma. About how it affects the brain. About how it's not weakness. It's a response. A survival response. My body is trying to protect me. But it's stuck. Stuck in that moment. That night. The night that changed everything.
+
+I told my therapist today. Said the words out loud. Described what happened. The night that changed everything. The car crash. The fire. The screams. The loss. It was terrifying. Saying it out loud made it real. Made it tangible. But also... freeing? Like I'm not carrying it alone anymore. Like someone else knows. Someone else understands.
+
+I had a trigger today. A sound. A car backfiring. Something. Panicked. My heart raced. Couldn't breathe. But I used my grounding techniques. The ones my therapist taught me. Five things I can see. Four things I can touch. Three things I can hear. Two things I can smell. One thing I can taste. Got through it. Without a full flashback. That's progress. Real progress.
+
+I'm in therapy now. EMDR. Trauma therapy. It's hard. So hard. Reliving the trauma. Processing it. But I'm doing it. Really doing it. Because I want to heal. I want to live again. Not just survive. Live.`;
+        } else {
+          content = `Starting to understand what happened to me. It has a name. PTSD. It's not my fault. It's an injury. I told my therapist today. Said the words out loud. Described what happened. The night that changed everything. It was terrifying. But also freeing. Like I'm not carrying it alone anymore. Had a trigger today. A sound. Panicked. But I used my grounding techniques. Got through it. Without a full flashback. That's progress. I'm in therapy now. EMDR. It's hard. But I'm doing it. Because I want to heal. I want to live again.`;
+        }
+      } else if (progress < 0.80) {
+        // Recovery phase - processing, healing
+        if (!storyContext.inTherapy) {
+          storyContext.inTherapy = true;
+        }
+        storyContext.daysSinceTherapy++;
+        storyContext.daysSinceFlashback = Math.min(storyContext.daysSinceFlashback + 1, 14);
+        storyContext.lastNightmare = Math.min(storyContext.lastNightmare + 1, 7);
+        
+        if (isShort) {
+          const shorts = [
+            `Went a whole week without a flashback.`,
+            `Sleeping better. The nightmares are less frequent.`,
+            `Went to that place today. I was okay.`,
+            `Learning to manage my triggers. I have tools now.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `Three months in therapy now. Dr. Martinez says I'm making incredible progress. I don't always see it, but I'm trying to trust her. The nightmares are less frequent. Maybe twice a week instead of every night. When they come, I use my grounding techniques. I remind myself I'm safe now. The night that changed everything is in the past. I'm in the present. I'm safe.
+
+I went a whole week without a flashback. A whole week. Didn't think it was possible. But I did it. The triggers are still there. But I'm learning to manage them. Learning to cope. I have tools now. Breathing exercises. Grounding techniques. A support system. People I can call. Places I can go. Things I can do. It's not perfect. But it's something. It's progress.
+
+I went to that place today. The place where it happened. The night that changed everything. I didn't have a flashback. I was okay. More than okay. I was strong. I stood there. Felt the fear. But didn't let it consume me. Used my tools. Breathed through it. And I was okay. That's huge. That's healing.`;
+        } else {
+          content = `Three months in therapy now. Dr. Martinez says I'm making progress. The nightmares are less frequent. Maybe twice a week instead of every night. I went a whole week without a flashback. Didn't think it was possible. But I did it. I went to that place today. The place where it happened. I didn't have a flashback. I was okay. More than okay. I was strong. That's huge. That's healing.`;
+        }
+      } else {
+        // Hopeful phase - healing, growth
+        storyContext.daysSinceFlashback = Math.min(storyContext.daysSinceFlashback + 1, 90);
+        storyContext.lastNightmare = Math.min(storyContext.lastNightmare + 1, 30);
+        storyContext.daysSinceTherapy = Math.min(storyContext.daysSinceTherapy + 1, 365);
+        
+        if (isShort) {
+          const shorts = [
+            `${Math.floor(storyContext.daysSinceFlashback / 30)} months since my last flashback.`,
+            `Sleep through the night now. The nightmares are rare.`,
+            `Feel safe. Really safe. Never thought that was possible.`,
+            `The night that changed everything... it made me stronger.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `It's been ${Math.floor(storyContext.daysSinceFlashback / 30)} months since my last flashback. ${Math.floor(storyContext.daysSinceFlashback / 30)} months. I never thought I'd see this day. Never thought I'd make it this far. But here I am. Still going. Still healing. Still growing.
+
+Therapy is less frequent now - once a month instead of twice a week. Dr. Martinez says I've done incredible work. I've processed the trauma. Learned to manage triggers. Built a support system. The flashbacks are gone. The nightmares are rare. When they come, I can handle them. I'm not stuck in that moment anymore. That night. The night that changed everything. I'm here. In the present. Living.
+
+I feel safe. Really safe. In my body. In my mind. In my life. Never thought that was possible. But it is. I'm safe. The night that changed everything... it did change everything. But not all for the worse. I'm stronger now. Wiser. More resilient. I've been through hell. Came out the other side. I'm a survivor. Not a victim. A survivor.`;
+        } else {
+          content = `It's been ${Math.floor(storyContext.daysSinceFlashback / 30)} months since my last flashback. I never thought I'd make it this far. But here I am. Still going. Still healing. Therapy is less frequent now - once a month. The flashbacks are gone. The nightmares are rare. I feel safe. Really safe. Never thought that was possible. The night that changed everything... it made me stronger. Wiser. More resilient. I'm a survivor.`;
+        }
+      }
+      
+      return content;
+    };
+    
+    const entries = [];
+    
     for (let i = 0; i < totalEntries; i++) {
       const entryDate = new Date(startDate);
       entryDate.setDate(entryDate.getDate() + i);
       
-      // Add random time
       const { hours, minutes } = getRandomTime();
       entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
       
-      // Calculate progress (0 = very dark, 1 = hopeful)
       const progress = i / (totalEntries - 1);
+      const content = generateEntry(i, progress);
       
-      let content = '';
-      let mood = 1;
+      let mood: number;
       let symptoms: any[] = [];
       let tags: string[] = [];
       
-      if (progress < 0.2) {
-        // Very dark phase
-        mood = 1 + Math.floor(Math.random() * 2);
+      if (progress < 0.35) {
+        mood = 1 + Math.floor(Math.random() * 2); // 1-2
         symptoms = [
           { condition: 'PTSD', type: 'Complex PTSD', severity: 'severe' },
           { condition: 'Depression', severity: 'severe' },
           { condition: 'Anxiety Disorder', severity: 'severe' }
         ];
         tags = ['ptsd', 'trauma', 'dark', 'hopeless'];
-        content = getNextEntry(shuffledDark, usedDark);
-        
-      } else if (progress < 0.5) {
-        // Awareness phase
-        mood = 2 + Math.floor(Math.random() * 2);
+      } else if (progress < 0.55) {
+        mood = 2 + Math.floor(Math.random() * 2); // 2-3
         symptoms = [
           { condition: 'PTSD', type: 'Complex PTSD', severity: 'moderate' },
           { condition: 'Depression', severity: 'moderate' },
           { condition: 'Anxiety Disorder', severity: 'moderate' }
         ];
         tags = ['ptsd', 'trauma', 'struggling', 'awareness'];
-        content = getNextEntry(shuffledAwareness, usedAwareness);
-        
-      } else if (progress < 0.8) {
-        // Recovery phase
-        mood = 3 + Math.floor(Math.random() * 3);
+      } else if (progress < 0.80) {
+        mood = 3 + Math.floor(Math.random() * 3); // 3-5
         const recoverySymptoms = [
           { condition: 'PTSD', type: 'Complex PTSD', severity: 'mild' },
           { condition: 'Depression', severity: 'mild' },
@@ -311,11 +293,8 @@ async function createBrokenWings() {
           symptoms = recoverySymptoms;
         }
         tags = ['recovery', 'hope', 'struggling', 'progress'];
-        content = getNextEntry(shuffledRecovery, usedRecovery);
-        
       } else {
-        // Hopeful phase
-        mood = 5 + Math.floor(Math.random() * 4);
+        mood = 5 + Math.floor(Math.random() * 4); // 5-8
         const hopefulSymptoms = [
           { condition: 'PTSD', type: 'Complex PTSD', severity: 'mild' }
         ];
@@ -324,7 +303,6 @@ async function createBrokenWings() {
         }
         symptoms = hopefulSymptoms;
         tags = ['recovery', 'hope', 'healing', 'progress', 'strength'];
-        content = getNextEntry(shuffledHopeful, usedHopeful);
       }
       
       entries.push({
@@ -348,6 +326,7 @@ async function createBrokenWings() {
     
     console.log(`  ✓ Created ${entries.length} journal entries`);
     console.log(`  ✓ Journal spans from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+    console.log('  ✓ Entries form a continuous story with varying lengths');
     console.log('\n✅ Successfully created BrokenWings user and journal!');
     console.log(`   Username: BrokenWings`);
     console.log(`   Password: password123`);

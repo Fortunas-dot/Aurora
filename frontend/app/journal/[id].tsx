@@ -288,10 +288,7 @@ export default function JournalEntryScreen() {
     return (
       <View style={styles.fullscreenContainer}>
         {/* Book Page Background */}
-        <Pressable 
-          style={styles.fullscreenBookPage}
-          onPress={() => router.back()}
-        >
+        <View style={styles.fullscreenBookPage}>
           {/* Book Binding Shadow */}
           <View style={styles.fullscreenBookBinding} />
           
@@ -424,7 +421,7 @@ export default function JournalEntryScreen() {
               </View>
             </View>
           </ScrollView>
-        </Pressable>
+        </View>
       </View>
     );
   }
@@ -651,10 +648,7 @@ export default function JournalEntryScreen() {
       >
         <View style={styles.fullscreenContainer}>
           {/* Book Page Background */}
-          <Pressable 
-            style={styles.fullscreenBookPage}
-            onPress={() => setIsFullscreenBookPage(false)}
-          >
+          <View style={styles.fullscreenBookPage}>
             {/* Book Binding Shadow */}
             <View style={styles.fullscreenBookBinding} />
             
@@ -727,7 +721,7 @@ export default function JournalEntryScreen() {
                 </View>
               </View>
             </ScrollView>
-          </Pressable>
+          </View>
         </View>
       </Modal>
     </LinearGradient>

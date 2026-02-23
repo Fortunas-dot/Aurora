@@ -100,140 +100,6 @@ async function createSilentSoul() {
     await JournalEntry.deleteMany({ journal: journal._id });
     journal.entriesCount = 0;
     
-    // Helper function to shuffle array
-    const shuffle = <T>(array: T[]): T[] => {
-      const shuffled = [...array];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    };
-    
-    // Define all entries for each phase with realistic variety
-    const darkEntries = [
-      `Don't want to exist anymore. The thought is constant. Background noise that never stops. What's the point?`,
-      `Made a plan today. A real plan. I know how. I know when. The details are clear. It's almost comforting. Having an exit strategy.`,
-      `Wrote a note. Deleted it. Wrote it again. Don't know if I'll use it. But it's there. Just in case.`,
-      `Everyone would be better off without me. I'm a burden. A problem. A mistake. The world doesn't need me. I don't need me.`,
-      `So tired. Not the kind sleep fixes. The kind that goes to your bones. Your soul. Tired of existing. Tired of trying.`,
-      `Researched methods today. I know which ones work. Which ones are painless. The information is there. Easy to find. Too easy.`,
-      `Look at the pills. Count them. Think about how many it would take. The math is simple. Too simple.`,
-      `Don't see a future. Can't imagine tomorrow. Next week. Next year. Just... nothing. An empty void.`,
-      `I'm a ghost already. Here, but not. Go through the motions. Not really living. Just... waiting.`,
-      `The pain is too much. Every day is agony. Every breath is effort. Don't know how much longer. Don't know if I want to.`,
-      `Lost everything that mattered. My job. My relationships. My hope. Nothing left. Nothing to fight for. Nothing to stay for.`,
-      `Broken beyond repair. Too many pieces. Too scattered. Can't put myself back together. Don't even know where to start.`,
-      `I'm a failure. At everything. Failed at life. At love. At being human. Just... done.`,
-      `The voices won't stop. Tell me I'm worthless. Tell me to end it. Sometimes I think they're right.`,
-      `Planning my funeral in my head. Who would come? Would anyone care? Would anyone notice? Probably not.`,
-      `Don't want to die. But don't want to live like this either. Stuck. Trapped. No way out.`,
-      `Called in sick again. Can't get out of bed. What's the point?`,
-      `My friend texted. Asked if I'm okay. I said yes. Lied. Again.`,
-      `Looked at old photos. I was happy once. I think. Hard to remember.`,
-      `The pills are right there. In the cabinet. I know how many.`,
-    ];
-    
-    const awarenessEntries = [
-      `Called a crisis line today. Hung up before they answered. But I called. That's something, right?`,
-      `Told someone. My best friend. Said the words out loud. "I want to die." Terrifying. But also... lighter.`,
-      `Starting to see that maybe this isn't normal. Maybe wanting to die every day isn't how everyone feels. Maybe I need help.`,
-      `Had a moment today. A small moment where I didn't want to die. Brief, but it was there. That's something.`,
-      `I'm scared. Scared of what I might do. Scared of the thoughts. Scared that I'm losing control.`,
-      `Looked at old photos today. I was happy once. Remember that person. Want to be that person again. I think I want to try.`,
-      `Made an appointment with a therapist. Don't know if it will help. But I'm trying. That has to count.`,
-      `Realizing I'm not alone. Other people feel this way. Other people have survived this. Maybe I can too.`,
-      `Really bad day. The thoughts were overwhelming. But I didn't do anything. Just... waited. And the moment passed.`,
-      `Starting to question the thoughts. Are they true? Am I really worthless? Am I really a burden? Maybe not.`,
-      `Learning about depression. About suicidal ideation. Knowledge is power, they say. I hope so.`,
-      `Told my therapist about the plan. About the note. About the thoughts. Hardest thing I've ever done.`,
-      `On medication now. Early days. But maybe... maybe it will help. I'm willing to try.`,
-      `Building a safety plan. Things to do when the thoughts get bad. People to call. Places to go. It's something.`,
-      `Starting to see that the thoughts are symptoms. Not truth. Not me. They're the illness.`,
-      `I'm fighting. Every day is a battle. Some days I lose. But I'm still here. Still fighting.`,
-      `My mom called. Asked if I'm okay. I almost told her. Almost. But I couldn't. Not yet.`,
-      `Watched a movie today. Forgot about the thoughts for two hours. That was nice.`,
-      `My therapist asked me to promise. Promise I won't hurt myself. I promised. It felt... important.`,
-      `Found an old journal. From when I was happy. I want that back. I think I want that back.`,
-    ];
-    
-    const recoveryEntries = [
-      `Went a whole day without thinking about suicide. A whole day. Didn't think it was possible. But I did it.`,
-      `In treatment now. Therapy. Medication. Support groups. It's hard. But I'm doing it. Really doing it.`,
-      `Had a crisis. The thoughts came back. Strong. Insistent. But I used my safety plan. Called someone. Got through it.`,
-      `Learning coping skills. When the thoughts come, I have tools. Have strategies. Not helpless anymore.`,
-      `Look at my safety plan. I'm proud. I built this. Created this. Taking care of myself.`,
-      `Finding reasons to stay. Small reasons. A good cup of coffee. A beautiful sunset. A friend's laugh. They add up.`,
-      `Learning that I'm not broken. Not a failure. I'm a person with an illness. And illnesses can be treated.`,
-      `Building a life worth living. Not a perfect life. But a life. With good days and bad days. And that's okay.`,
-      `Had a setback. The thoughts came back. But I didn't act on them. Reached out. Got help. That's progress.`,
-      `Starting to see a future. Not a perfect future. But a future. With possibilities. With hope.`,
-      `Grateful. Grateful for the people who helped me. Grateful for treatment. Grateful that I'm still here.`,
-      `Helping others now. Sharing my story. Offering support. Feels good to use my pain for something positive.`,
-      `Learning that recovery isn't linear. Some days are good. Some days are hard. But I'm moving forward.`,
-      `Proud of myself. Every day I stay is a victory. Every day I choose life is a win.`,
-      `Finding joy again. Small moments of happiness. They're rare. But they're there. And they're growing.`,
-      `Building connections. Real connections. With people who understand. With people who care. I'm not alone anymore.`,
-      `Went to a support group today. Met someone who's been where I am. They made it. Maybe I can too.`,
-      `Had a panic attack. Old me would have... well. New me called my therapist. Did breathing exercises. Got through it.`,
-      `Made plans for next week. Real plans. With friends. I'm looking forward to them. That's new.`,
-      `The medication is helping. I think. The thoughts are quieter. Less insistent. That's something.`,
-    ];
-    
-    const hopefulEntries = [
-      `Months since I last thought about suicide. Months. Can't believe it. The thoughts are gone. Really gone.`,
-      `Look at my life now. See possibility. See hope. See a future. See reasons to stay.`,
-      `I'm happy. Really happy. Not all the time. But often. And that's enough. That's more than enough.`,
-      `I don't want to exist anymore... that was my past. Not my present. Not my future. I want to live. I really do.`,
-      `Helping others who are where I was. Sharing my story. Offering hope. Feels good to give back.`,
-      `Grateful for every day. Every breath. Every moment. Grateful I'm still here. Grateful I chose to stay.`,
-      `Building a life I love. With purpose. With meaning. With joy. It's not perfect. But it's mine. And it's good.`,
-      `I'm proof that it gets better. That the darkness doesn't last forever. That there's light on the other side.`,
-      `I'm strong. Stronger than I ever knew. Fought the hardest battle of my life. And I won. Really winning.`,
-      `I'm living. Really living. Not just existing. But living. With passion. With purpose. With hope.`,
-      `Grateful for the crisis. For the pain. For the struggle. It made me who I am. And I like who I am.`,
-      `I'm a survivor. Not a victim. A survivor. Been through hell. Came out the other side.`,
-      `Finding meaning in my pain. Using it to help others. Making something good out of something terrible.`,
-      `I'm free. Free from the thoughts. Free from the darkness. Free to live. Free to be happy.`,
-      `I don't want to exist anymore... but that was then. This is now. And now, I want to live. I really, really do.`,
-      `I'm here. I'm alive. I'm fighting. I'm winning. Every day is a victory. Every day is a gift.`,
-      `Started a new job today. I'm excited. Nervous. But excited. I have a future. I really have a future.`,
-      `Went on a date. First one in years. It was nice. I'm learning to live again.`,
-      `My friend said I seem happier. I am. I really am.`,
-      `One year since my last crisis. One year. I never thought I'd make it. But here I am.`,
-    ];
-    
-    // Shuffle each array to ensure variety
-    const shuffledDark = shuffle(darkEntries);
-    const shuffledAwareness = shuffle(awarenessEntries);
-    const shuffledRecovery = shuffle(recoveryEntries);
-    const shuffledHopeful = shuffle(hopefulEntries);
-    
-    // Use Sets to track used entries per phase to prevent duplicates
-    const usedDark = new Set<number>();
-    const usedAwareness = new Set<number>();
-    const usedRecovery = new Set<number>();
-    const usedHopeful = new Set<number>();
-    
-    // Helper to get next unused entry from a shuffled array
-    const getNextEntry = (shuffled: string[], usedSet: Set<number>): string => {
-      // If all entries have been used, reset the set
-      if (usedSet.size >= shuffled.length) {
-        usedSet.clear();
-      }
-      
-      // Find an unused index
-      let index;
-      do {
-        index = Math.floor(Math.random() * shuffled.length);
-      } while (usedSet.has(index));
-      
-      usedSet.add(index);
-      return shuffled[index];
-    };
-    
-    const entries = [];
-    
     // Helper function to generate random time
     const getRandomTime = (): { hours: number; minutes: number } => {
       const rand = Math.random();
@@ -252,54 +118,164 @@ async function createSilentSoul() {
       }
     };
     
-    // Use different number of entries (41 for SilentSoul)
+    // Generate entries as a continuous story with varying lengths
     const totalEntries = 41;
-    const endDate = new Date();
+    const endDate = new Date('2026-02-23');
     const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - totalEntries);
+    startDate.setDate(startDate.getDate() - (totalEntries - 1));
     
-    // Generate entries with progression from dark to hopeful
+    // Story context that builds over time
+    const storyContext = {
+      daysSinceLastThought: 0,
+      inTherapy: false,
+      daysSinceTherapy: 0,
+      supportSystem: [] as string[],
+      lastAttempt: 0,
+    };
+    
+    // Function to generate entry content based on progress and story context
+    const generateEntry = (dayIndex: number, progress: number): string => {
+      const lengthType = Math.random();
+      let content = '';
+      
+      // Determine entry length: 30% short, 50% medium, 20% long
+      const isShort = lengthType < 0.3;
+      const isLong = lengthType > 0.8;
+      
+      if (progress < 0.35) {
+        // Dark phase - active suicidal thoughts
+        storyContext.daysSinceLastThought = 0;
+        
+        if (isShort) {
+          const shorts = [
+            `I don't want to exist anymore.`,
+            `Everyone would be better off without me.`,
+            `Made a plan today.`,
+            `The pain is too much. I can't do this anymore.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `I don't want to exist anymore. The thought is constant. Always there. In the background. In the foreground. Everywhere. I'm tired. So tired. Of the pain. Of the emptiness. Of the nothingness. Of existing. I don't want to exist anymore.
+
+Made a plan today. A real plan. Not just thoughts. A plan. I know how. I know when. I know where. It's all figured out. The only thing left is... doing it. But I'm scared. Scared of the pain. Scared of failing. Scared of what comes after. But also... relieved? Like there's an end. A way out. A final escape from this pain. This emptiness. This nothingness.
+
+Everyone would be better off without me. My family. My friends. Everyone. I'm a burden. A weight. Dragging them down. Making their lives harder. They'd be sad at first. But then they'd be relieved. Free. Free from me. Free from my problems. Free from my pain. They'd move on. They'd be better. Happier. Without me.
+
+The pain is too much. I can't do this anymore. Every day is a struggle. Every moment is pain. I'm drowning. In the darkness. In the emptiness. In the nothingness. I can't breathe. Can't think. Can't feel anything except pain. I'm done. I'm just... done.`;
+        } else {
+          content = `I don't want to exist anymore. The thought is constant. Always there. Made a plan today. A real plan. I know how. I know when. I know where. Everyone would be better off without me. I'm a burden. A weight. Dragging everyone down. The pain is too much. I can't do this anymore. Every day is a struggle. Every moment is pain. I'm drowning. I'm done.`;
+        }
+      } else if (progress < 0.55) {
+        // Awareness phase - starting to question, maybe reaching out
+        storyContext.daysSinceLastThought++;
+        if (!storyContext.inTherapy && Math.random() > 0.5) {
+          storyContext.inTherapy = true;
+          storyContext.supportSystem.push('therapist');
+        }
+        
+        if (isShort) {
+          const shorts = [
+            `Called a crisis line today. They listened.`,
+            `Told someone. My friend. They didn't judge.`,
+            `Maybe... maybe I don't have to do this?`,
+            `Starting therapy next week. I'm scared.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `I called a crisis line today. The suicide hotline. I don't know why. The thoughts were so strong. So overwhelming. I had the plan. I was ready. But something made me pick up the phone. Dial the number. And they answered. A voice. A real person. They listened. Really listened. Didn't judge. Didn't minimize. Just... listened. And for a moment, just a moment, I felt less alone. Less hopeless. Less... done.
+
+I told someone. My best friend, Alex. About the thoughts. About the plan. About how I don't want to exist anymore. They didn't judge. Didn't get angry. Didn't tell me I was being dramatic. They just... listened. Cried. Hugged me. Said they're here. That they care. That I matter. That I'm not a burden. That they'd be devastated if I was gone. Not relieved. Devastated. I'm trying to believe that. Trying to hold onto that.
+
+Maybe... maybe I don't have to do this? Maybe there's another way? Maybe the pain can get better? Maybe I can get better? I don't know. But I'm starting to question. Starting to wonder. Starting to hope? Just a little. A tiny spark. But it's there.`;
+        } else {
+          content = `I called a crisis line today. The thoughts were so strong. But something made me pick up the phone. They listened. Really listened. For a moment, I felt less alone. I told my friend Alex. About the thoughts. About the plan. They didn't judge. Just listened. Cried. Hugged me. Said they care. That I matter. Maybe... maybe I don't have to do this? Maybe there's another way? I'm starting to question. Starting to hope? Just a little.`;
+        }
+      } else if (progress < 0.80) {
+        // Recovery phase - in therapy, learning to cope
+        if (!storyContext.inTherapy) {
+          storyContext.inTherapy = true;
+        }
+        storyContext.daysSinceTherapy++;
+        storyContext.daysSinceLastThought = Math.min(storyContext.daysSinceLastThought + 1, 14);
+        
+        if (isShort) {
+          const shorts = [
+            `Three days without suicidal thoughts.`,
+            `Therapy was hard today. But I'm making progress.`,
+            `Had a bad day. Didn't act on the thoughts.`,
+            `Learning that the thoughts are just thoughts. Not commands.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `Three weeks in therapy now. Dr. Kim says I'm making progress. I don't always see it, but I'm trying to trust her. The suicidal thoughts are less frequent. Less intense. When they come, I'm learning to recognize them. To name them. To understand them. They're just thoughts. Not commands. Not facts. Just thoughts. And thoughts can change. Thoughts can get better.
+
+I went three days without suicidal thoughts. Three whole days. Didn't think it was possible. But I did it. The thoughts came back today. But they were weaker. Quieter. I didn't act on them. Didn't make a plan. Didn't think about how. Just... had the thought. Acknowledged it. Let it pass. That's progress. Real progress.
+
+Therapy was hard today. Really hard. We talked about why. Why I don't want to exist. Why the pain feels so overwhelming. Why I feel like a burden. We're getting to the root of it. Processing it. Understanding it. It's painful. But it's necessary. I'm learning that the pain doesn't have to be forever. That I can heal. That I can get better. That I can want to exist again.`;
+        } else {
+          content = `Three weeks in therapy now. Dr. Kim says I'm making progress. I went three days without suicidal thoughts. Three whole days. The thoughts came back today. But they were weaker. I didn't act on them. Just had the thought. Acknowledged it. Let it pass. That's progress. Therapy was hard today. We talked about why. Why I don't want to exist. Why the pain feels so overwhelming. It's painful. But it's necessary. I'm learning that the pain doesn't have to be forever. That I can heal.`;
+        }
+      } else {
+        // Hopeful phase - healing, finding reasons to stay
+        storyContext.daysSinceLastThought = Math.min(storyContext.daysSinceLastThought + 1, 180);
+        storyContext.daysSinceTherapy = Math.min(storyContext.daysSinceTherapy + 1, 365);
+        
+        if (isShort) {
+          const shorts = [
+            `${Math.floor(storyContext.daysSinceLastThought / 30)} months since I last thought about it.`,
+            `I want to exist. I actually want to exist.`,
+            `Found reasons to stay. Real reasons.`,
+            `The pain is still there sometimes. But it's manageable now.`,
+          ];
+          content = shorts[Math.floor(Math.random() * shorts.length)];
+        } else if (isLong) {
+          content = `It's been ${Math.floor(storyContext.daysSinceLastThought / 30)} months since I last had a serious suicidal thought. ${Math.floor(storyContext.daysSinceLastThought / 30)} months. I never thought I'd see this day. Never thought I'd make it this far. But here I am. Still here. Still alive. Still fighting.
+
+I want to exist. I actually want to exist. Not just survive. Not just endure. But exist. Live. Thrive. I found reasons to stay. Real reasons. My friends. My family. My dog. The sunrise. Coffee in the morning. Music. Art. Books. Small moments of joy. They add up. They matter. I matter.
+
+Therapy is less frequent now - once a month instead of twice a week. Dr. Kim says I've done incredible work. I've processed the trauma. Learned coping skills. Built a support system. Found reasons to stay. The pain is still there sometimes. But it's manageable now. I have tools. I have support. I have hope. I have reasons to stay.`;
+        } else {
+          content = `It's been ${Math.floor(storyContext.daysSinceLastThought / 30)} months since I last had a serious suicidal thought. I never thought I'd make it this far. But here I am. Still here. Still alive. I want to exist. I actually want to exist. I found reasons to stay. Real reasons. The pain is still there sometimes. But it's manageable now. I have tools. I have support. I have hope. I have reasons to stay.`;
+        }
+      }
+      
+      return content;
+    };
+    
+    const entries = [];
+    
     for (let i = 0; i < totalEntries; i++) {
       const entryDate = new Date(startDate);
       entryDate.setDate(entryDate.getDate() + i);
       
-      // Add random time
       const { hours, minutes } = getRandomTime();
       entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
       
-      // Calculate progress (0 = very dark, 1 = hopeful)
       const progress = i / (totalEntries - 1);
+      const content = generateEntry(i, progress);
       
-      let content = '';
-      let mood = 1;
+      let mood: number;
       let symptoms: any[] = [];
       let tags: string[] = [];
       
-      if (progress < 0.2) {
-        // Very dark phase
-        mood = 1 + Math.floor(Math.random() * 2);
+      if (progress < 0.35) {
+        mood = 1 + Math.floor(Math.random() * 2); // 1-2
         symptoms = [
           { condition: 'Depression', severity: 'severe' },
-          { condition: 'PTSD', severity: 'severe' },
+          { condition: 'PTSD', severity: 'moderate' },
           { condition: 'Anxiety Disorder', severity: 'severe' }
         ];
         tags = ['suicide', 'depression', 'dark', 'hopeless'];
-        content = getNextEntry(shuffledDark, usedDark);
-        
-      } else if (progress < 0.5) {
-        // Awareness phase
-        mood = 2 + Math.floor(Math.random() * 2);
+      } else if (progress < 0.55) {
+        mood = 2 + Math.floor(Math.random() * 2); // 2-3
         symptoms = [
           { condition: 'Depression', severity: 'moderate' },
           { condition: 'PTSD', severity: 'moderate' },
           { condition: 'Anxiety Disorder', severity: 'moderate' }
         ];
         tags = ['suicide', 'depression', 'struggling', 'awareness'];
-        content = getNextEntry(shuffledAwareness, usedAwareness);
-        
-      } else if (progress < 0.8) {
-        // Recovery phase
-        mood = 3 + Math.floor(Math.random() * 3);
+      } else if (progress < 0.80) {
+        mood = 3 + Math.floor(Math.random() * 3); // 3-5
         const recoverySymptoms = [
           { condition: 'Depression', severity: 'mild' },
           { condition: 'PTSD', severity: 'mild' },
@@ -311,11 +287,8 @@ async function createSilentSoul() {
           symptoms = recoverySymptoms;
         }
         tags = ['recovery', 'hope', 'struggling', 'progress'];
-        content = getNextEntry(shuffledRecovery, usedRecovery);
-        
       } else {
-        // Hopeful phase
-        mood = 5 + Math.floor(Math.random() * 4);
+        mood = 5 + Math.floor(Math.random() * 4); // 5-8
         const hopefulSymptoms = [
           { condition: 'Depression', severity: 'mild' }
         ];
@@ -324,7 +297,6 @@ async function createSilentSoul() {
         }
         symptoms = hopefulSymptoms;
         tags = ['recovery', 'hope', 'healing', 'progress', 'strength'];
-        content = getNextEntry(shuffledHopeful, usedHopeful);
       }
       
       entries.push({
@@ -348,6 +320,7 @@ async function createSilentSoul() {
     
     console.log(`  ✓ Created ${entries.length} journal entries`);
     console.log(`  ✓ Journal spans from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+    console.log('  ✓ Entries form a continuous story with varying lengths');
     console.log('\n✅ Successfully created SilentSoul user and journal!');
     console.log(`   Username: SilentSoul`);
     console.log(`   Password: password123`);

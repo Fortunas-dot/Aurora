@@ -98,272 +98,311 @@ async function createAnonymousDuck() {
     
     // Delete existing entries
     await JournalEntry.deleteMany({ journal: journal._id });
-    journal.entriesCount = 0;
     
-    // Note: startDate is now calculated based on totalEntries above
+    // Create 5 raw, messy, authentic entries
+    const entries: any[] = [];
     
-    // Helper function to shuffle array
-    const shuffle = <T>(array: T[]): T[] => {
-      const shuffled = [...array];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    };
-    
-    // Define all entries for each phase with realistic variety in length and style
-    const darkEntries = [
-      `Did it again. Can't stop.`,
-      `The blade. It's the only thing that makes me feel real. Everything else is just... numb. I don't know when this started. Maybe last year? Time doesn't make sense anymore.`,
-      `Cut deeper today. The pain cuts through the fog. I'm running out of places to hide the scars. Long sleeves in summer. People ask why. I lie.`,
-      `I'm worthless. The voices won't stop. Maybe they're right. The blade understands. It's my only friend.`,
-      `Looked at my arms. A map of pain. Each line is a moment I couldn't handle. Today was worse. How much longer?`,
-      `Everything is gray. Except the blood. That's the only color I see. I need to feel something. Anything. Even if it's just pain.`,
-      `I'm drowning. Every day I cut. Hoping this time it'll be enough. It never is. The emptiness grows.`,
-      `My secret. My shame. My only release. I hate myself for needing it. But what else can I do? Where does the pain go?`,
-      `I'm a monster. The mirror shows someone I don't know. The cuts are punishment. Making the outside match the inside.`,
-      `Wake up. Feel nothing. Cut. Feel something. Then nothing again. The cycle. I can't break it.`,
-      `Long sleeves. Even when it's hot. The shame is constant. I know it's wrong. But I can't stop. Don't want to stop.`,
-      `The pain makes sense. Everything else is chaos. When I cut, for a moment, it's clear. Then the fog.`,
-      `Lost count. The scars overlap. A web of pain. Each one is a moment I couldn't handle.`,
-      `Tonight was bad. Really bad. Cut deeper. I'm scared. But also relieved. The emotional pain is gone. Replaced by something I can control.`,
-      `Don't remember when this started. Feels like always. The blade is part of me now.`,
-      `Tried to stop today. Really tried. Lasted three hours. Three hours of fighting myself. Still lost.`,
-      `The blood drips. I watch it. Almost beautiful. The way it flows. It's the only thing that feels real.`,
-      `Can't sleep. The urge is too strong. I need it. I need the release. Just one more time.`,
-      `My mom asked about my arms. I lied. Said I fell. She believed me. Or pretended to. The guilt is crushing.`,
-      `Found an old photo. Before all this. I was happy. I think. Hard to remember. That person is gone.`,
-    ];
-    
-    const awarenessEntries = [
-      `Cut again today. But something felt different. Looked at the scars. Is this really helping? The relief is so temporary. Then the shame.`,
-      `Tried not to cut. Lasted until 3pm. That's progress, right? Still gave in. The urge was too strong. I'm weak.`,
-      `Therapist asked me to try one day without cutting. Couldn't do it. Feel like a failure. But at least I'm thinking about it now. Questioning it.`,
-      `Cut less today. Only twice. Usually it's five or six times. It's something. Trying to understand why. What am I really trying to escape?`,
-      `The urges are still there. Constant. Overwhelming. But I'm starting to see patterns. I cut when I feel overwhelmed. When I can't process emotions. Maybe there's another way?`,
-      `I'm scared. Scared of stopping. Scared of continuing. This has become my identity. Who am I without it? But I'm also tired. So tired.`,
-      `Wrote in my journal instead of cutting. Didn't work as well. But it was something. I'm trying. That has to count.`,
-      `The shame. It's eating me alive. I hide my arms. My legs. My pain. But maybe... maybe I don't have to do this alone?`,
-      `Panic attack today. The urge to cut was overwhelming. But I called a crisis line instead. I didn't cut. First time in months.`,
-      `Noticing the triggers now. Stress. Rejection. Feeling worthless. Every time I feel these things, the blade calls. But I'm learning to recognize it. Before I act.`,
-      `Therapist says I'm making progress. I don't see it. But they seem to. Maybe I need to trust them. Trust myself.`,
-      `Cut today. But I stopped after one cut. Usually I can't stop. This feels different. Maybe I have some control?`,
-      `Reading about self-harm now. Understanding why people do it. What it does to the brain. Knowledge is power, they say. I hope so.`,
-      `Told my best friend. About the cutting. They didn't judge. Just listened. For the first time in forever, I didn't feel alone.`,
-      `Keeping track now. Marking the days I don't cut. It's not many. But it's more than zero. That has to mean something.`,
-      `The urges come in waves. Sometimes I can ride them out. Other times I can't. But I'm learning. I'm trying. That's all I can do.`,
-      `Had a really bad day at work. Boss yelled at me. The urge was so strong. But I didn't cut. I went for a walk instead. It helped. A little.`,
-      `Saw a scar today. An old one. It's fading. I touched it. Remembered that day. The pain. But also... I survived it.`,
-      `My roommate noticed. Asked if I'm okay. I said yes. But maybe... maybe I should tell them?`,
-      `Watched a video about recovery. Someone talking about their journey. They made it. Maybe I can too?`,
-    ];
-    
-    const recoveryEntries = [
-      `Three days. THREE DAYS without cutting. Didn't think I could do it. The urges are still there. But I'm learning to sit with them. Breathe through them.`,
-      `Told someone. My therapist. Hardest thing I've ever done. But I did it. They didn't judge. They helped me understand.`,
-      `Learning new coping skills. When the urge comes, I try to distract myself. Feel the emotion without acting. It's hard. But it's working sometimes.`,
-      `Cut today. But it was different. Stopped after one cut. Didn't go deeper. Called my therapist. Reached out. That's progress.`,
-      `The scars are healing. Some are fading. Starting to see them differently. Not just marks of shame. Reminders of how far I've come.`,
-      `Finding other ways to feel. Music. Art. Writing. Even just crying. The pain doesn't have to come from a blade. Emotions won't kill me.`,
-      `Really bad day. Everything went wrong. The urge was overwhelming. But I didn't cut. Called a friend instead. I'm proud.`,
-      `Therapist says I'm making progress. I don't always see it. But I'm trying to trust the process. Recovery isn't linear. That's okay.`,
-      `One week. A full week without cutting. Can't believe it. The urges are still there. But quieter now. Learning to ignore them.`,
-      `Relapsed today. Cut after five days clean. Disappointed. But not giving up. Recovery isn't about perfection. It's about getting back up.`,
-      `Using my coping skills more now. When the urge comes, I do breathing exercises. Call someone. Write. It's not perfect. But it's working.`,
-      `Look at my scars differently now. Not just marks of pain. Also marks of survival. I'm still here. Still fighting.`,
-      `Joined a support group. Hearing other people's stories. Knowing I'm not alone. It helps. We're all fighting the same battle.`,
-      `Had a setback. But didn't let it destroy me. I cut. But I also reached out for help. That's different. That's progress.`,
-      `Learning to be kind to myself. When I cut, I don't hate myself as much. I understand I'm in pain. I'm trying to cope. That's okay.`,
-      `The urges are getting weaker. They still come. But I'm stronger now. I have tools. I have support. I have hope.`,
-      `Wore short sleeves today. For the first time in months. People might see. But I'm trying not to care. The scars are part of me.`,
-      `Had a fight with my mom. Old me would have cut immediately. New me... I went for a run instead. It helped. A little.`,
-      `Bought a sketchbook. Drawing when the urge comes. It's not the same. But it's something. Something different.`,
-      `Two weeks clean. Two weeks. I never thought I'd make it this far. The urges are still there. But I'm stronger than them now.`,
-    ];
-    
-    const hopefulEntries = [
-      `Two weeks since I last cut. Two weeks! Never thought I could do this. The urges still come. But weaker now. I'm stronger.`,
-      `Look at my arms. See healing. The scars are fading. So is the shame. Learning to love myself. Be gentle with myself. It's a process.`,
-      `Finding joy in small things again. A good cup of coffee. A beautiful sunset. A friend's laugh. Remembering what it feels like to be alive. Without pain.`,
-      `I cut myself everyday... that used to be my reality. Not anymore. I'm choosing different. Choosing life. Choosing me.`,
-      `Learning that I'm not broken. Not a monster. I'm a person who was in pain. Found a way to cope. Now I'm finding better ways.`,
-      `The urges are rare now. When they come, I know what to do. I have tools. I have support. I have hope. I'm not alone anymore.`,
-      `I'm proud of myself. Every day I don't cut is a victory. Every day I choose myself is a win. Building a life worth living.`,
-      `I cut myself everyday... but that was then. This is now. I'm healing. Growing. Becoming someone I can be proud of. The journey isn't over. But I'm on the right path.`,
-      `Three weeks clean. Can't believe it. The person I was a month ago wouldn't recognize me now. I'm different. Better. Healing.`,
-      `Really tough day today. The old urges came back. Strong. Insistent. But I didn't cut. Used my skills. Reached out. Got through it. So proud.`,
-      `Starting to see my scars as part of my story. Not my identity. They show where I've been. But they don't define where I'm going.`,
-      `Helping others now. Sharing my story. Offering support. Feels good to use my pain for something positive. Help others who are where I was.`,
-      `Learning to feel emotions again. Real emotions. Not just numbness or pain. It's scary. But also beautiful. I'm alive. Really alive.`,
-      `One month. A full month without cutting. Never thought this was possible. But here I am. I did it. I'm doing it.`,
-      `Not perfect. Still have bad days. But I'm not cutting. Using healthy coping skills. Reaching out. Growing. That's enough.`,
-      `Look in the mirror. See someone I recognize. Someone I'm starting to like. The journey isn't over. But I'm on the right path. I'm healing.`,
-      `Went to the beach today. Wore a tank top. People might have seen my scars. But I didn't care. They're part of me. Part of my story.`,
-      `Helped someone online today. They were struggling. I shared my story. They said it helped. That felt good. Really good.`,
-      `Had a panic attack. Old me would have cut. New me... I called my therapist. Did breathing exercises. Got through it. Without cutting. I'm so proud.`,
-      `One month and five days. Every day is a record. Every day is a victory. I'm doing this. I'm really doing this.`,
-    ];
-    
-    // Shuffle each array to ensure variety
-    const shuffledDark = shuffle(darkEntries);
-    const shuffledAwareness = shuffle(awarenessEntries);
-    const shuffledRecovery = shuffle(recoveryEntries);
-    const shuffledHopeful = shuffle(hopefulEntries);
-    
-    // Use Sets to track used entries per phase to prevent duplicates
-    const usedDark = new Set<number>();
-    const usedAwareness = new Set<number>();
-    const usedRecovery = new Set<number>();
-    const usedHopeful = new Set<number>();
-    
-    // Helper to get next unused entry from a shuffled array
-    const getNextEntry = (shuffled: string[], usedSet: Set<number>): string => {
-      // If all entries have been used, reset the set
-      if (usedSet.size >= shuffled.length) {
-        usedSet.clear();
-      }
-      
-      // Find an unused index
-      let index;
-      do {
-        index = Math.floor(Math.random() * shuffled.length);
-      } while (usedSet.has(index));
-      
-      usedSet.add(index);
-      return shuffled[index];
-    };
-    
-    const entries = [];
-    
-    // Helper function to generate random time (most entries during waking hours, some late night/early morning)
-    const getRandomTime = (): { hours: number; minutes: number } => {
+    // Helper to create entry with random time (mostly late night/early morning for authenticity)
+    const createEntry = (date: Date, content: string, mood: number, tags: string[]) => {
+      // 70% late night (22-2), 20% early morning (2-6), 10% normal hours
       const rand = Math.random();
+      let hours: number;
       if (rand < 0.7) {
-        // 70% of entries during normal waking hours (6:00 - 23:00)
-        const hours = 6 + Math.floor(Math.random() * 17); // 6-22
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours, minutes };
+        hours = 22 + Math.floor(Math.random() * 4); // 22-1
+        if (hours >= 24) hours = hours % 24;
       } else if (rand < 0.9) {
-        // 20% late night entries (23:00 - 2:00)
-        const hours = 23 + Math.floor(Math.random() * 3); // 23, 0, 1
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours: hours % 24, minutes };
+        hours = 2 + Math.floor(Math.random() * 4); // 2-5
       } else {
-        // 10% early morning entries (2:00 - 6:00)
-        const hours = 2 + Math.floor(Math.random() * 4); // 2-5
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours, minutes };
+        hours = 6 + Math.floor(Math.random() * 17); // 6-22
       }
-    };
-    
-    // Use different number of entries (37 for anonymous_duck)
-    const totalEntries = 37;
-    const endDate = new Date();
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - totalEntries);
-    
-    // Generate entries with progression from dark to hopeful
-    for (let i = 0; i < totalEntries; i++) {
-      const entryDate = new Date(startDate);
-      entryDate.setDate(entryDate.getDate() + i);
+      const minutes = Math.floor(Math.random() * 60);
+      const seconds = Math.floor(Math.random() * 60);
       
-      // Add random time to make entries more believable
-      const { hours, minutes } = getRandomTime();
-      entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
-      
-      // Calculate progress (0 = very dark, 1 = hopeful)
-      const progress = i / (totalEntries - 1);
-      
-      let content = '';
-      let mood = 1;
-      let symptoms: any[] = [];
-      let tags: string[] = [];
-      
-      if (progress < 0.2) {
-        // Very dark phase (first 20% - 8 entries)
-        mood = 1 + Math.floor(Math.random() * 2); // 1-2
-        // Multiple severe conditions in early phase
-        symptoms = [
-          { condition: 'Depression', severity: 'severe' },
-          { condition: 'Anxiety Disorder', severity: 'severe' },
-          { condition: 'Sleep Problems', severity: 'severe' }
-        ];
-        tags = ['dark', 'self-harm', 'depression', 'hopeless'];
-        content = getNextEntry(shuffledDark, usedDark);
-        
-      } else if (progress < 0.5) {
-        // Still dark but some awareness (20-50% - 12 entries)
-        mood = 2 + Math.floor(Math.random() * 2); // 2-3
-        // Conditions improving but still present
-        symptoms = [
-          { condition: 'Depression', severity: 'moderate' },
-          { condition: 'Anxiety Disorder', severity: 'moderate' },
-          { condition: 'Sleep Problems', severity: 'moderate' }
-        ];
-        tags = ['self-harm', 'depression', 'struggling', 'awareness'];
-        content = getNextEntry(shuffledAwareness, usedAwareness);
-        
-      } else if (progress < 0.8) {
-        // Turning point and recovery (50-80% - 12 entries)
-        mood = 3 + Math.floor(Math.random() * 3); // 3-5
-        // Conditions becoming milder, some may be resolved
-        const recoverySymptoms = [
-          { condition: 'Depression', severity: 'mild' },
-          { condition: 'Anxiety Disorder', severity: 'mild' },
-          { condition: 'Sleep Problems', severity: 'mild' }
-        ];
-        // Sometimes only 1-2 conditions remain
-        if (Math.random() > 0.3) {
-          symptoms = recoverySymptoms.slice(0, 2);
-        } else {
-          symptoms = recoverySymptoms;
-        }
-        tags = ['recovery', 'hope', 'struggling', 'progress'];
-        content = getNextEntry(shuffledRecovery, usedRecovery);
-        
-      } else {
-        // Hopeful and healing (80-100% - 8 entries)
-        mood = 5 + Math.floor(Math.random() * 4); // 5-8
-        // Most conditions resolved or very mild
-        const hopefulSymptoms = [
-          { condition: 'Depression', severity: 'mild' }
-        ];
-        // Sometimes anxiety or sleep issues may still be present but mild
-        if (Math.random() > 0.5) {
-          hopefulSymptoms.push({ condition: 'Anxiety Disorder', severity: 'mild' });
-        }
-        symptoms = hopefulSymptoms;
-        tags = ['recovery', 'hope', 'healing', 'progress', 'strength'];
-        content = getNextEntry(shuffledHopeful, usedHopeful);
-      }
+      const entryDate = new Date(date);
+      entryDate.setHours(hours, minutes, seconds, 0);
       
       entries.push({
         author: user._id,
         journal: journal._id,
         content,
         mood,
-        symptoms,
+        symptoms: [
+          { condition: 'Depression', severity: mood <= 2 ? 'severe' : mood <= 4 ? 'moderate' : 'mild' },
+          { condition: 'Anxiety Disorder', severity: mood <= 2 ? 'severe' : mood <= 4 ? 'moderate' : 'mild' },
+          { condition: 'Sleep Problems', severity: 'moderate' },
+        ],
         tags,
-        isPrivate: false, // Public journal entries
+        isPrivate: false,
         fontFamily: 'palatino',
         createdAt: entryDate,
         updatedAt: entryDate,
       });
-    }
+    };
+    
+    // January 3, 2026 - First entry, very dark
+    createEntry(
+      new Date('2026-01-03'),
+      `I cut myself everyday.
+
+There. I wrote it. I don't know why that feels worse than actually doing it.
+
+It's not dramatic like people think. There's no loud music or crying on the floor. It's quiet. I get home. I lock my door. I sit on my bed and stare at nothing until my head gets too loud. It feels like pressure in my chest. Like someone is pressing their thumb right between my ribs and won't let go.
+
+I tell myself it's about control. That sounds better. Cleaner. The truth is I just don't know what else to do with the feeling.
+
+Today was normal. That's what messes with me. I made coffee. I joked with someone at work. I scrolled on my phone during lunch. I looked completely fine. I even caught myself smiling at something stupid.
+
+Then I came home and it all dropped. Like the floor disappeared.
+
+I don't want to die. I wish people understood that. I just want the noise to stop for five minutes. I want to feel something that makes sense.
+
+I keep thinking about what would happen if I didn't do it tonight.
+
+That thought makes my stomach twist.`,
+      2,
+      ['self-harm', 'dark', 'overwhelmed', 'isolation']
+    );
+    
+    // January 4, 2026 - Still dark but with a tiny moment
+    createEntry(
+      new Date('2026-01-04'),
+      `I told myself I wouldn't write today. But here I am.
+
+Nothing big happened. That's the problem. When nothing happens, my brain fills in the blanks with everything I've ever done wrong.
+
+I felt weird all day. Like I was slightly outside my body. I kept checking my reflection in windows, making sure I looked normal. I did. No one would guess anything.
+
+When I got home I sat on the floor instead of the bed. I don't know why. I just didn't want to follow the same exact routine. I lasted maybe fifteen minutes before the itch started. That's the only word I have for it. An itch under the skin that won't go away no matter how much you try to ignore it.
+
+I hate how predictable I am.
+
+Afterwards, everything went quiet. Not happy. Just quiet. Like the world was wrapped in cotton.
+
+A girl on the bus smiled at me today. It caught me off guard. For a second I felt… visible. I don't know if I liked it. But I haven't stopped thinking about it.
+
+It's strange how a tiny moment like that can stick.`,
+      2,
+      ['self-harm', 'depersonalization', 'small-moments', 'reflection']
+    );
+    
+    // January 5, 2026 - Dream, anger, starting to write first
+    createEntry(
+      new Date('2026-01-05'),
+      `I had a dream that my arms were covered in tattoos. Not the trendy kind. Messy ones. Words and lines and shapes that looked like they meant something. In the dream I wasn't ashamed of them. I was showing them to someone like they were art.
+
+I woke up and just stared at my ceiling for a while.
+
+Today I felt angry. At myself mostly. I snapped at someone for no reason and immediately felt guilty. I am either numb or too much. There is no middle.
+
+I kept thinking about the dream. About choosing the marks instead of hiding them. That sounds stupid written down, but it felt important when I woke up.
+
+When I got home, I opened this journal before anything else. That's new. I didn't go straight into autopilot. I just sat here and wrote about my day like a normal person.
+
+The urge is still here. I won't pretend it disappeared because I'm writing poetic sentences. It didn't.
+
+But writing makes it feel less overwhelming. Like I'm putting the feeling somewhere instead of letting it rattle around inside my chest.
+
+That's something, I guess.`,
+      3,
+      ['dreams', 'anger', 'writing', 'small-steps', 'self-harm']
+    );
+    
+    // January 6, 2026 - Short sleeves, beautiful sky, breathing exercises
+    createEntry(
+      new Date('2026-01-06'),
+      `I wore short sleeves today and almost changed three times before leaving the house.
+
+No one stared. No one said anything. All that fear and it was just… fine. I don't know why I expected people to point or whisper. Everyone was too busy with their own lives.
+
+The sky this morning was actually beautiful. I sound like an old person saying that. But it was soft pink and blue and for a second I felt small in a good way. Not small like worthless. Small like my problems weren't the entire universe.
+
+The urges came in waves today. They weren't constant. They would build and then fade a little. I tried breathing through one of them. I felt ridiculous, but it helped just enough.
+
+I'm starting to realize the feeling doesn't last forever. It just feels like it does when I'm in it.
+
+Tonight I still feel fragile. But not completely swallowed.
+
+That's new.`,
+      4,
+      ['exposure', 'beauty', 'coping-skills', 'progress', 'fragile']
+    );
+    
+    // January 7, 2026 - One week, friend, not hating reflection
+    createEntry(
+      new Date('2026-01-07'),
+      `One week of writing this down.
+
+That might be the most consistent thing I've done in months.
+
+A friend asked me how I was and I almost lied. I always lie. It's easier. But I said, "I've been better." That was it. Not a big confession. Just a crack in the wall. They didn't freak out. They just said they get it.
+
+It felt strangely relieving.
+
+I'm not cured. I'm not suddenly okay. The thoughts are still there, whispering. But they don't feel as loud tonight.
+
+When I looked at myself in the mirror earlier, I didn't immediately feel disgust. I just looked tired. And for the first time, I didn't hate that person looking back at me.
+
+I don't know if this is how things start to shift. It's not dramatic. It's not some huge breakthrough.
+
+It's just me sitting here, choosing to write instead of following the same pattern.
+
+Maybe that counts.`,
+      4,
+      ['consistency', 'vulnerability', 'self-acceptance', 'small-shifts', 'hope']
+    );
+    
+    // January 8, 2026 - Mom called, work awkward, went for a walk
+    createEntry(
+      new Date('2026-01-08'),
+      `My mom called this morning and I almost didn't pick up.
+
+I don't know why her voice always makes me feel twelve again. She asked if I was eating enough. I lied and said yes. She told me about the neighbor's new dog and how loud it is. Normal stuff. I kept staring at my wall while she talked, tracing a crack in the paint with my eyes.
+
+At one point she said, "You sound tired." I laughed it off.
+
+After the call I just sat there. It's strange how someone can love you and still not see you at all.
+
+Work was awkward today. I spilled coffee on my shirt before a meeting and had to sit there with a brown stain near my collar like some kind of walking evidence that I can't even hold a cup properly. No one cared. I cared way too much.
+
+The urge started building around late afternoon. I could feel it in my hands. That restless feeling. Like I needed to do something with all this tension.
+
+I went for a walk after dinner instead of going straight to my room. I passed the bakery on the corner and the smell of fresh bread hit me. For a second I felt grounded. Like I was just a person walking home.
+
+I'm in my room now.
+
+It's loud in my head.
+
+But I'm still just sitting here.`,
+      3,
+      ['family', 'work', 'coping', 'walking', 'resisting']
+    );
+    
+    // January 9, 2026 - Saw ex at grocery store
+    createEntry(
+      new Date('2026-01-09'),
+      `I saw my ex today.
+
+I wasn't prepared for that.
+
+I was standing in line at the grocery store holding a basket with frozen pizza and toothpaste, and suddenly they were two people ahead of me. Laughing. Looking fine. Like they hadn't shattered anything.
+
+My chest actually hurt. I had to look down at my phone so I wouldn't stare. They didn't see me. Or maybe they did and chose not to react. I don't know which is worse.
+
+All I could think was, how do you look so normal?
+
+I came home feeling humiliated for no reason. It's been months. I should be over it. That word should feels heavy tonight.
+
+The urge was immediate. Sharp. Like a reflex. I hated how predictable I am.
+
+Afterwards I just lay on my bed and replayed the grocery store scene over and over. I imagined different versions where I looked confident. Unbothered. Strong.
+
+Instead I looked small.
+
+But here's something strange. I didn't cry. Not even once. I just felt the sadness move through me like a wave instead of swallowing me whole.
+
+That has to mean something.`,
+      2,
+      ['trigger', 'ex', 'relapse', 'grief', 'reflection']
+    );
+    
+    // January 11, 2026 - Sister's dinner, didn't do it
+    createEntry(
+      new Date('2026-01-11'),
+      `I didn't write yesterday because I was at my sister's place for dinner.
+
+She made pasta and talked about her new job the entire time. I nodded and smiled and helped clear the table. At one point she looked at my arms and paused. Not long. Just a flicker. Then she kept talking.
+
+I don't know if she noticed or if I imagined it.
+
+On the way home I felt exposed. Like I had walked around with a secret half hanging out of my pocket.
+
+Tonight I sat on the edge of my bed and actually said out loud, "What do you want?" I don't know who I was talking to. Myself, I guess.
+
+The answer wasn't pain. It was to not feel like a disappointment. It was to stop comparing myself to everyone else in that room last night.
+
+I didn't do it tonight.
+
+I came close. I picked up the blade. I turned it in my fingers.
+
+Then I put it back in the drawer.
+
+My hands were shaking for ten minutes after.
+
+I don't feel triumphant. I feel fragile.
+
+But I also feel… capable. A little.`,
+      4,
+      ['family', 'exposure', 'resisting', 'self-awareness', 'small-victory']
+    );
+    
+    // January 13, 2026 - Work meeting, manager comment, writing instead
+    createEntry(
+      new Date('2026-01-13'),
+      `Work was rough.
+
+My manager pulled me aside and asked if everything was okay because I seemed "distracted lately." I wanted to laugh. If only she knew that distracted is the best version of me sometimes.
+
+I told her I've just been sleeping badly. Another half truth.
+
+The comment stuck with me all day. Am I that obvious? Can people tell something is off?
+
+When I got home, I sat in the dark for a while without turning the lights on. The room felt safer that way. Smaller.
+
+The urge showed up but it wasn't screaming. It was more like a whisper. A suggestion.
+
+I opened this journal instead.
+
+I wrote a whole page about the meeting at work. About how small I felt sitting in that chair. About how I'm terrified of being seen as weak.
+
+Somewhere in the middle of writing, I realized something. I am exhausted from pretending.
+
+Not from being sad. From hiding it.
+
+That realization didn't fix anything. But it made the urge lose a bit of its power tonight.`,
+      3,
+      ['work', 'vulnerability', 'writing', 'self-awareness', 'coping']
+    );
+    
+    // January 15, 2026 - Coffee with friend, admitted struggling
+    createEntry(
+      new Date('2026-01-15'),
+      `I had coffee with that friend today.
+
+I almost canceled. I typed out the message twice. But I went.
+
+We sat by the window and talked about random things at first. Music. A show we both hate but still watch. Then there was this pause. The kind that feels like a door opening.
+
+I said, "I've been struggling a bit lately."
+
+My voice sounded smaller than I expected.
+
+They didn't ask for details. They just said, "I'm really glad you told me." And then they told me about their own bad weeks. Not in a dramatic way. Just honest.
+
+Walking home, I felt lighter. Not healed. Not magically different. Just less alone inside my own head.
+
+The urges are still part of me. I won't lie about that. But tonight they feel further away. Like they're not the only option anymore.
+
+I keep thinking about that moment in the café. About how the world didn't end when I admitted I'm not okay.
+
+Maybe that's where this changes. Not in grand gestures.
+
+Just in small, brave sentences.`,
+      4,
+      ['friendship', 'vulnerability', 'connection', 'hope', 'progress']
+    );
     
     // Insert all entries
     await JournalEntry.insertMany(entries);
     journal.entriesCount = entries.length;
     await journal.save();
     
-    console.log(`  ✓ Created ${entries.length} journal entries`);
-    console.log(`  ✓ Journal spans from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+    console.log(`  ✓ Created ${entries.length} raw, authentic journal entries`);
+    console.log(`  ✓ Entries span from January 3 to January 15, 2026`);
     console.log('\n✅ Successfully created anonymous_duck user and journal!');
     console.log(`   Username: anonymous_duck`);
     console.log(`   Password: password123`);
     console.log(`   Journal: "I cut myself everyday..." (Public)`);
-    console.log(`   Entries: ${entries.length} entries showing recovery journey`);
+    console.log(`   Entries: ${entries.length} entries (raw, messy, authentic)`);
     
     process.exit(0);
   } catch (error) {
