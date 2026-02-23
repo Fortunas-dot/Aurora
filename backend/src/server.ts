@@ -62,9 +62,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Limit URL-enc
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
 
-// Serve static files (uploads)
+// Serve static files (uploads and public assets)
 import path from 'path';
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check
 app.get('/health', (req, res) => {

@@ -500,6 +500,30 @@ export default function AuroraScreen() {
 
           <GlassCard
             style={styles.optionCard}
+            onPress={() => router.push('/journal/browse')}
+            padding="lg"
+          >
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <LinearGradient
+                  colors={['rgba(59, 130, 246, 0.3)', 'rgba(37, 99, 235, 0.3)']}
+                  style={styles.optionIconGradient}
+                >
+                  <Ionicons name="people" size={28} color={colors.primary} />
+                </LinearGradient>
+              </View>
+              <View style={styles.optionText}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Public Journals</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+                  Read other people's journals who have chosen to share it
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
+            </View>
+          </GlassCard>
+
+          <GlassCard
+            style={styles.optionCard}
             onPress={() => router.push('/journal/insights')}
             padding="lg"
           >
@@ -637,10 +661,8 @@ export default function AuroraScreen() {
           description="Chat with your AI companion through text. Get personalized support, insights, and guidance tailored to your mental health needs. View your journal insights, track your progress, and access evidence-based mental health support."
           onNext={() => {
             nextStep();
-            // Navigate to Connect tab after a short delay to ensure state is updated
-            setTimeout(() => {
-              router.push('/(tabs)/groups');
-            }, 100);
+            // Navigate to Connect tab immediately
+            router.push('/(tabs)/groups');
           }}
           showSkip={false}
         />

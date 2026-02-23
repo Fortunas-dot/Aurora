@@ -44,29 +44,31 @@ async function createAnonymousDuck() {
     // Create public journal
     let journal = await Journal.findOne({ owner: user._id, name: 'I cut myself everyday...' });
     
-    // Copy cover image from assets to uploads if it doesn't exist
-    const uploadsDir = path.join(__dirname, '../../uploads');
+    // Copy cover image from assets to public directory (which is committed to git)
+    const publicDir = path.join(__dirname, '../../public');
     const coverImageName = 'knive-journal-cover.PNG';
-    const coverImagePath = path.join(uploadsDir, coverImageName);
+    const coverImagePath = path.join(publicDir, coverImageName);
     const sourceImagePath = path.join(__dirname, '../../../frontend/assets/knive.PNG');
     
-    // Ensure uploads directory exists
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Ensure public directory exists
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
     }
     
-    // Copy image if source exists and destination doesn't
-    if (fs.existsSync(sourceImagePath) && !fs.existsSync(coverImagePath)) {
+    // Copy image if source exists (always overwrite to ensure it's up to date)
+    if (fs.existsSync(sourceImagePath)) {
       try {
         fs.copyFileSync(sourceImagePath, coverImagePath);
-        console.log('  ✓ Copied cover image from assets to uploads');
+        console.log('  ✓ Copied cover image from assets to public directory');
       } catch (error) {
         console.log('  ⚠️  Could not copy cover image:', error);
       }
+    } else {
+      console.log('  ⚠️  Source image not found at:', sourceImagePath);
     }
     
-    // Use the uploaded image URL
-    const coverImageUrl = '/uploads/knive-journal-cover.PNG';
+    // Use the public image URL (this will be served from /public)
+    const coverImageUrl = '/public/knive-journal-cover.PNG';
     
     if (!journal) {
       journal = await Journal.create({
