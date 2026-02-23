@@ -100,10 +100,7 @@ async function createAnonymousDuck() {
     await JournalEntry.deleteMany({ journal: journal._id });
     journal.entriesCount = 0;
     
-    // Create journal entries - starting from about 40 days ago, ending on 23-2-2026
-    const endDate = new Date('2026-02-23');
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 40); // Start 40 days before
+    // Note: startDate is now calculated based on totalEntries above
     
     // Helper function to shuffle array
     const shuffle = <T>(array: T[]): T[] => {
@@ -198,11 +195,28 @@ async function createAnonymousDuck() {
     const shuffledRecovery = shuffle(recoveryEntries);
     const shuffledHopeful = shuffle(hopefulEntries);
     
-    // Track indices for each phase to ensure we use all entries before repeating
-    let darkIndex = 0;
-    let awarenessIndex = 0;
-    let recoveryIndex = 0;
-    let hopefulIndex = 0;
+    // Use Sets to track used entries per phase to prevent duplicates
+    const usedDark = new Set<number>();
+    const usedAwareness = new Set<number>();
+    const usedRecovery = new Set<number>();
+    const usedHopeful = new Set<number>();
+    
+    // Helper to get next unused entry from a shuffled array
+    const getNextEntry = (shuffled: string[], usedSet: Set<number>): string => {
+      // If all entries have been used, reset the set
+      if (usedSet.size >= shuffled.length) {
+        usedSet.clear();
+      }
+      
+      // Find an unused index
+      let index;
+      do {
+        index = Math.floor(Math.random() * shuffled.length);
+      } while (usedSet.has(index));
+      
+      usedSet.add(index);
+      return shuffled[index];
+    };
     
     const entries = [];
     
@@ -227,8 +241,14 @@ async function createAnonymousDuck() {
       }
     };
     
+    // Use different number of entries (37 for anonymous_duck)
+    const totalEntries = 37;
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - totalEntries);
+    
     // Generate entries with progression from dark to hopeful
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < totalEntries; i++) {
       const entryDate = new Date(startDate);
       entryDate.setDate(entryDate.getDate() + i);
       
@@ -237,7 +257,7 @@ async function createAnonymousDuck() {
       entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
       
       // Calculate progress (0 = very dark, 1 = hopeful)
-      const progress = i / 39;
+      const progress = i / (totalEntries - 1);
       
       let content = '';
       let mood = 1;
@@ -254,8 +274,7 @@ async function createAnonymousDuck() {
           { condition: 'Sleep Problems', severity: 'severe' }
         ];
         tags = ['dark', 'self-harm', 'depression', 'hopeless'];
-        content = shuffledDark[darkIndex % shuffledDark.length];
-        darkIndex++;
+        content = getNextEntry(shuffledDark, usedDark);
         
       } else if (progress < 0.5) {
         // Still dark but some awareness (20-50% - 12 entries)
@@ -267,8 +286,7 @@ async function createAnonymousDuck() {
           { condition: 'Sleep Problems', severity: 'moderate' }
         ];
         tags = ['self-harm', 'depression', 'struggling', 'awareness'];
-        content = shuffledAwareness[awarenessIndex % shuffledAwareness.length];
-        awarenessIndex++;
+        content = getNextEntry(shuffledAwareness, usedAwareness);
         
       } else if (progress < 0.8) {
         // Turning point and recovery (50-80% - 12 entries)
@@ -286,8 +304,7 @@ async function createAnonymousDuck() {
           symptoms = recoverySymptoms;
         }
         tags = ['recovery', 'hope', 'struggling', 'progress'];
-        content = shuffledRecovery[recoveryIndex % shuffledRecovery.length];
-        recoveryIndex++;
+        content = getNextEntry(shuffledRecovery, usedRecovery);
         
       } else {
         // Hopeful and healing (80-100% - 8 entries)
@@ -302,8 +319,7 @@ async function createAnonymousDuck() {
         }
         symptoms = hopefulSymptoms;
         tags = ['recovery', 'hope', 'healing', 'progress', 'strength'];
-        content = shuffledHopeful[hopefulIndex % shuffledHopeful.length];
-        hopefulIndex++;
+        content = getNextEntry(shuffledHopeful, usedHopeful);
       }
       
       entries.push({
