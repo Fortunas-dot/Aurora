@@ -805,8 +805,8 @@ export default function FeedScreen() {
   const emptyState = getEmptyStateText();
 
   // Show overlay on the Feed only for the Feed step of onboarding
-  // Check for step 3 or 4 to handle the case where nextStep() was called before navigation
-  const shouldShowOverlay = isOnboardingActive && currentStep >= 3;
+  // Only show overlay for step 3 (Feed)
+  const shouldShowOverlay = isOnboardingActive && currentStep === 3;
 
   return (
     <View style={styles.container}>
@@ -975,10 +975,8 @@ export default function FeedScreen() {
           onNext={() => {
             console.log('🔵 Feed Overlay - Next clicked, currentStep:', currentStep);
             nextStep();
-            // Navigate to Aurora tab after a short delay to ensure state is updated
-            setTimeout(() => {
-              router.push('/(tabs)/aurora');
-            }, 100);
+            // Navigate to Aurora tab immediately
+            router.push('/(tabs)/aurora');
           }}
           onSkip={() => {
             console.log('🔵 Feed Overlay - Skip clicked');

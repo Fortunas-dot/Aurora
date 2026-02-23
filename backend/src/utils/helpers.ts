@@ -17,6 +17,20 @@ export const sanitizeUser = (user: any) => {
   return sanitized;
 };
 
+/**
+ * Escape special regex characters in a string to prevent regex injection attacks
+ * This ensures user input is treated as literal text, not as a regex pattern
+ * @param str - The string to escape
+ * @returns The escaped string safe for use in MongoDB $regex queries
+ */
+export const escapeRegex = (str: string): string => {
+  if (typeof str !== 'string') {
+    return '';
+  }
+  // Escape all special regex characters: . * + ? ^ $ { } ( ) | [ ] \
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 
 
 

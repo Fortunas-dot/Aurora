@@ -5,6 +5,7 @@ import { AuthRequest } from '../middleware/auth';
 import { broadcastMessageReaction } from './chatWebSocket';
 import mongoose from 'mongoose';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { escapeRegex } from '../utils/helpers';
 
 // @desc    Get all conversations
 // @route   GET /api/messages/conversations
@@ -351,7 +352,7 @@ export const searchMessages = async (req: AuthRequest, res: Response): Promise<v
         { sender: req.userId, receiver: userId },
         { sender: userId, receiver: req.userId },
       ],
-      content: { $regex: q, $options: 'i' },
+      content: { $regex: escapeRegex(q), $options: 'i' },
     };
 
     const messages = await Message.find(searchQuery)

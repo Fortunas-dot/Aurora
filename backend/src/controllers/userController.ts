@@ -6,7 +6,7 @@ import Comment from '../models/Comment';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
-import { sanitizeUser } from '../utils/helpers';
+import { sanitizeUser, escapeRegex } from '../utils/helpers';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 // @desc    Get user profile
@@ -246,15 +246,16 @@ export const searchUsers = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const sanitizedQuery = escapeRegex(query);
     const users = await User.find({
-      username: { $regex: query, $options: 'i' },
+      username: { $regex: sanitizedQuery, $options: 'i' },
     })
       .select('username displayName avatar bio')
       .skip(skip)
       .limit(limit);
 
     const total = await User.countDocuments({
-      username: { $regex: query, $options: 'i' },
+      username: { $regex: sanitizedQuery, $options: 'i' },
     });
 
     res.json({

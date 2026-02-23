@@ -681,7 +681,16 @@ export default function CreateJournalEntryScreen() {
 
       console.log('Journal entry response:', response);
 
-      if (response.success) {
+      if (response.success && response.data) {
+        // Automatically trigger AI analysis for new entries
+        if (!params.entryId && response.data._id) {
+          // Trigger analysis in background (don't await - let it run async)
+          journalService.analyzeEntry(response.data._id).catch((error) => {
+            console.error('Error auto-analyzing entry:', error);
+            // Don't show error to user - analysis can happen later
+          });
+        }
+        
         // Reset saving state before navigation
         if (isMountedRef.current) {
           setSaving(false);

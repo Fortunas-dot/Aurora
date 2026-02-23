@@ -38,13 +38,13 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
     if (visible) {
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 150, // Faster animation
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 200,
+        duration: 100, // Faster animation
         useNativeDriver: true,
       }).start();
     }
@@ -59,7 +59,7 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="none"
       statusBarTranslucent={true}
       onRequestClose={() => {}} // Prevent back button from closing during onboarding
       presentationStyle="overFullScreen"

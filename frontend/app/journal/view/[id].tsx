@@ -10,7 +10,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,6 +113,15 @@ export default function JournalViewScreen() {
     }
   }, [id, loadJournal, loadEntries]);
 
+  // Reload journal when screen comes into focus to update follow status
+  useFocusEffect(
+    useCallback(() => {
+      if (id && isAuthenticated) {
+        loadJournal();
+      }
+    }, [id, isAuthenticated, loadJournal])
+  );
+
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     setPage(1);
@@ -133,12 +142,22 @@ export default function JournalViewScreen() {
     if (!journal) return;
     try {
       const response = await journalService.followJournal(journal._id);
-      if (response.success && journal) {
-        setJournal({
-          ...journal,
-          isFollowing: true,
-          followersCount: (journal.followersCount || 0) + 1,
-        });
+      if (response.success) {
+        // Use the response data if available, otherwise update optimistically
+        if (response.data) {
+          setJournal({
+            ...journal,
+            ...response.data,
+            isFollowing: response.data.isFollowing !== undefined ? response.data.isFollowing : true,
+            followersCount: response.data.followersCount || (journal.followersCount || 0) + 1,
+          });
+        } else {
+          setJournal({
+            ...journal,
+            isFollowing: true,
+            followersCount: (journal.followersCount || 0) + 1,
+          });
+        }
       }
     } catch (error) {
       console.error('Error following journal:', error);
@@ -149,12 +168,22 @@ export default function JournalViewScreen() {
     if (!journal) return;
     try {
       const response = await journalService.unfollowJournal(journal._id);
-      if (response.success && journal) {
-        setJournal({
-          ...journal,
-          isFollowing: false,
-          followersCount: Math.max(0, (journal.followersCount || 0) - 1),
-        });
+      if (response.success) {
+        // Use the response data if available, otherwise update optimistically
+        if (response.data) {
+          setJournal({
+            ...journal,
+            ...response.data,
+            isFollowing: response.data.isFollowing !== undefined ? response.data.isFollowing : false,
+            followersCount: response.data.followersCount || Math.max(0, (journal.followersCount || 0) - 1),
+          });
+        } else {
+          setJournal({
+            ...journal,
+            isFollowing: false,
+            followersCount: Math.max(0, (journal.followersCount || 0) - 1),
+          });
+        }
       }
     } catch (error) {
       console.error('Error unfollowing journal:', error);

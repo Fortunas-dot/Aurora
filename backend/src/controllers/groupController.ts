@@ -4,6 +4,7 @@ import Post from '../models/Post';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { escapeRegex } from '../utils/helpers';
 
 // @desc    Get all groups
 // @route   GET /api/groups
@@ -34,10 +35,11 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     const andConditions: any[] = [{ $or: privacyQuery }];
 
     if (search) {
+      const sanitizedSearch = escapeRegex(search);
       andConditions.push({
         $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
+          { name: { $regex: sanitizedSearch, $options: 'i' } },
+          { description: { $regex: sanitizedSearch, $options: 'i' } },
         ],
       });
     }

@@ -21,11 +21,11 @@ export default function TabsLayout() {
   const { unreadByType, loadNotifications } = useNotificationStore();
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
-  // Auto-finish onboarding if user is logged in and navigates to tabs
-  // This prevents users from getting stuck with hidden tab bar after login
-  // If a logged-in user reaches the tabs, they shouldn't be in onboarding mode
-  // BUT: Don't finish if we're in the middle of showing onboarding overlays (step 3+)
-  // Also add a delay to allow state to persist before checking
+  // Auto-finish onboarding if user is logged in and app restarts
+  // This prevents users from getting stuck with hidden tab bar after app restart
+  // If a logged-in user restarts the app and onboarding is still active, finish it
+  // The onboarding should only be active during the first use, not after app restarts
+  // BUT: Don't auto-finish if we're in the middle of onboarding (step > 0)
   useEffect(() => {
     // Add a delay to allow Zustand persist to complete and state to propagate
     const timeoutId = setTimeout(() => {
@@ -34,17 +34,20 @@ export default function TabsLayout() {
       const latestStep = latestState.currentStep;
       const latestIsActive = latestState.isActive;
       
-      if (isAuthenticated && latestIsActive && latestStep < 3) {
-        // User is logged in and in tabs, but onboarding is still active
-        // This can happen if onboarding was started but not finished
-        // Auto-finish to prevent stuck state
-        // But only if we're not in the middle of showing overlays (step 3+)
+      // Only auto-finish if onboarding is active but at step 0 (initial state)
+      // If step > 0, we're in the middle of onboarding flow, so don't interfere
+      if (isAuthenticated && latestIsActive && latestStep === 0) {
+        // User is logged in and onboarding is still active after app restart
+        // This means the user closed the app during onboarding and reopened it
+        // Auto-finish to prevent stuck state (no footer visible)
+        // The onboarding flow should be completed in one session, not across app restarts
+        console.log('🔄 Auto-finishing onboarding after app restart to prevent stuck state');
         finishOnboarding();
       }
-    }, 600); // Wait 600ms for state to persist and propagate
+    }, 1000); // Wait 1 second for state to persist and propagate (increased from 500ms)
     
     return () => clearTimeout(timeoutId);
-  }, [isAuthenticated, isOnboardingActive, finishOnboarding, currentStep]);
+  }, [isAuthenticated, finishOnboarding]);
   
   // Load total unread messages count
   const loadUnreadCount = useCallback(async () => {

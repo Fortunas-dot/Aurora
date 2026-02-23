@@ -8,6 +8,7 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { containsObjectionableContent } from '../utils/contentFilter';
+import { escapeRegex } from '../utils/helpers';
 
 // Debug logging - only in development
 const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
@@ -1281,11 +1282,12 @@ export const searchPosts = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const sanitizedSearchQuery = escapeRegex(searchQuery);
     const query: any = {
       groupId: null,
       $or: [
-        { content: { $regex: searchQuery, $options: 'i' } },
-        { tags: { $regex: searchQuery, $options: 'i' } },
+        { content: { $regex: sanitizedSearchQuery, $options: 'i' } },
+        { tags: { $regex: sanitizedSearchQuery, $options: 'i' } },
       ],
     };
 

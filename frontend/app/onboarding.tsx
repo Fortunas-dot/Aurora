@@ -440,7 +440,7 @@ export default function OnboardingScreen() {
   const { colors } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const { startOnboarding, finishOnboarding, nextStep, isActive, currentStep: onboardingStep } = useOnboardingStore();
+  const { startOnboarding, finishOnboarding, nextStep, setStep, isActive, currentStep: onboardingStep } = useOnboardingStore();
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {
@@ -485,12 +485,20 @@ export default function OnboardingScreen() {
       // currentIndex is 2 (last slide), so we need step 3
       const targetStep = 3;
       
-      // Directly set the state to step 3 instead of calling nextStep multiple times
-      // This ensures the state is set synchronously before navigation
-      useOnboardingStore.setState({ currentStep: targetStep, isActive: true });
+      // Set the step using the store method - this will persist automatically
+      setStep(targetStep);
       
-      // Navigate after a short delay to ensure state is updated
+      // Double-check the state was set correctly
+      const stateAfterSet = useOnboardingStore.getState();
+      console.log('🔵 Onboarding - State after setStep:', {
+        currentStep: stateAfterSet.currentStep,
+        isActive: stateAfterSet.isActive,
+        targetStep,
+      });
+      
+      // Use a small delay to ensure state is persisted before navigation
       setTimeout(() => {
+        // Navigate to the feed tab
         router.replace(currentSlide.route as any);
       }, 100);
       return;
@@ -641,7 +649,7 @@ export default function OnboardingScreen() {
                       <View style={[styles.therapistFeatureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
                         <Ionicons name="time" size={22} color={colors.primary} />
                       </View>
-                      <Text style={styles.therapistFeatureText} numberOfLines={2} allowFontScaling={true}>Available to answer questions under posts</Text>
+                      <Text style={styles.therapistFeatureText} numberOfLines={2} allowFontScaling={true}>Answer questions{'\n'}under posts</Text>
                     </View>
                   </GlassCard>
                 </View>

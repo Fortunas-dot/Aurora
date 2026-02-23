@@ -20,7 +20,8 @@
     "create-anonymous-duck": "ts-node src/scripts/createAnonymousDuck.ts",
     "create-whoislisa": "ts-node src/scripts/createWhoIsLisa.ts",
     "create-silentsoul": "ts-node src/scripts/createSilentSoul.ts",
-    "create-brokenwings": "ts-node src/scripts/createBrokenWings.ts"
+    "create-brokenwings": "ts-node src/scripts/createBrokenWings.ts",
+    "create-hiddenvoice": "ts-node src/scripts/createHiddenVoice.ts"
   },
   "keywords": [],
   "author": "",

@@ -44,8 +44,8 @@ const mentalHealthTopics = [
 ];
 
 // AI Insights Card Component for individual entries
-const EntryInsightsCard: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
-  if (!entry.aiInsights) return null;
+const EntryInsightsCard: React.FC<{ entry: JournalEntry; isAnalyzing?: boolean }> = ({ entry, isAnalyzing = false }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const sentimentEmoji: Record<string, string> = {
     positive: '😊',
@@ -61,13 +61,16 @@ const EntryInsightsCard: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
     mixed: 'Mixed',
   };
 
-  const sentiment = entry.aiInsights.sentiment || 'neutral';
+  const sentiment = entry.aiInsights?.sentiment || 'neutral';
   const emoji = sentimentEmoji[sentiment] || sentimentEmoji.neutral;
   const label = sentimentLabel[sentiment] || 'Neutral';
 
   return (
     <GlassCard style={styles.entryInsightsCard} padding="md">
-      <View style={styles.entryInsightsHeader}>
+      <Pressable 
+        style={styles.entryInsightsHeader}
+        onPress={() => setIsExpanded(!isExpanded)}
+      >
         <View style={styles.entryInsightsDate}>
           <Text style={styles.entryInsightsDateText}>
             {format(parseISO(entry.createdAt), 'MMM d, yyyy', { locale: enUS })}
@@ -76,11 +79,27 @@ const EntryInsightsCard: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
             {format(parseISO(entry.createdAt), 'HH:mm')}
           </Text>
         </View>
-        <View style={styles.sentimentBadge}>
-          <Text style={styles.sentimentEmoji}>{emoji}</Text>
-          <Text style={styles.sentimentText}>{label}</Text>
+        <View style={styles.entryInsightsHeaderRight}>
+          {entry.aiInsights && (
+            <View style={styles.sentimentBadge}>
+              <Text style={styles.sentimentEmoji}>{emoji}</Text>
+              <Text style={styles.sentimentText}>{label}</Text>
+            </View>
+          )}
+          {isAnalyzing && (
+            <ActivityIndicator size="small" color={COLORS.primary} style={styles.analyzingIndicator} />
+          )}
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={COLORS.textMuted} 
+            style={styles.expandIcon}
+          />
         </View>
-      </View>
+      </Pressable>
+
+      {isExpanded && entry.aiInsights && (
+        <View style={styles.expandedContent}>
 
       {/* Themes */}
       {entry.aiInsights.themes && entry.aiInsights.themes.length > 0 && (
@@ -131,6 +150,19 @@ const EntryInsightsCard: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
           ))}
         </View>
       )}
+        </View>
+      )}
+
+      {isExpanded && !entry.aiInsights && (
+        <View style={styles.expandedContent}>
+          <View style={styles.noInsightsContainer}>
+            <Ionicons name="sparkles-outline" size={32} color={COLORS.textMuted} />
+            <Text style={styles.noInsightsText}>
+              AI insights are being generated. Please refresh in a moment.
+            </Text>
+          </View>
+        </View>
+      )}
     </GlassCard>
   );
 };
@@ -148,6 +180,7 @@ export default function JournalEntriesInsightsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<7 | 14 | 30 | 'all'>(30);
   const [showJournalModal, setShowJournalModal] = useState(false);
+  const [analyzingEntries, setAnalyzingEntries] = useState<Set<string>>(new Set());
 
   const loadJournals = useCallback(async () => {
     try {
@@ -183,6 +216,37 @@ export default function JournalEntriesInsightsScreen() {
           return daysDiff <= selectedPeriod;
         });
         setEntries(filteredEntries);
+
+        // Automatically trigger AI analysis for entries without insights (created in last 24 hours)
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        for (const entry of filteredEntries) {
+          if (!entry.aiInsights && !analyzingEntries.has(entry._id)) {
+            const entryDate = parseISO(entry.createdAt);
+            // Only auto-analyze entries created in the last 24 hours
+            if (entryDate.getTime() > oneDayAgo.getTime()) {
+              setAnalyzingEntries(prev => new Set(prev).add(entry._id));
+              // Trigger analysis in background (don't await)
+              journalService.analyzeEntry(entry._id).then(() => {
+                setAnalyzingEntries(prev => {
+                  const next = new Set(prev);
+                  next.delete(entry._id);
+                  return next;
+                });
+                // Reload data after analysis completes
+                setTimeout(() => {
+                  loadData();
+                }, 1000);
+              }).catch((error) => {
+                console.error('Error auto-analyzing entry:', error);
+                setAnalyzingEntries(prev => {
+                  const next = new Set(prev);
+                  next.delete(entry._id);
+                  return next;
+                });
+              });
+            }
+          }
+        }
       }
 
       // Load insights for selected journal
@@ -199,7 +263,7 @@ export default function JournalEntriesInsightsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, selectedJournal, selectedPeriod]);
+  }, [isAuthenticated, selectedJournal, selectedPeriod, analyzingEntries]);
 
   useEffect(() => {
     loadJournals();
@@ -261,8 +325,6 @@ export default function JournalEntriesInsightsScreen() {
       </LinearGradient>
     );
   }
-
-  const entriesWithInsights = entries.filter((entry) => entry.aiInsights);
 
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
@@ -427,23 +489,27 @@ export default function JournalEntriesInsightsScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Entry Insights</Text>
             <Text style={styles.sectionSubtitle}>
-              {entriesWithInsights.length} {entriesWithInsights.length === 1 ? 'entry' : 'entries'} with insights
+              {entries.length} {entries.length === 1 ? 'entry' : 'entries'} total
             </Text>
           </View>
 
-          {entriesWithInsights.length === 0 ? (
+          {entries.length === 0 ? (
             <GlassCard style={styles.emptyCard} padding="lg">
               <View style={styles.emptyContent}>
                 <Ionicons name="sparkles-outline" size={48} color={COLORS.textMuted} />
-                <Text style={styles.emptyTitle}>No insights yet</Text>
+                <Text style={styles.emptyTitle}>No entries yet</Text>
                 <Text style={styles.emptyText}>
-                  Write more journal entries to get Aurora's AI insights and feedback.
+                  Write journal entries to get Aurora's AI insights and feedback.
                 </Text>
               </View>
             </GlassCard>
           ) : (
-            entriesWithInsights.map((entry) => (
-              <EntryInsightsCard key={entry._id} entry={entry} />
+            entries.map((entry) => (
+              <EntryInsightsCard 
+                key={entry._id} 
+                entry={entry} 
+                isAnalyzing={analyzingEntries.has(entry._id)}
+              />
             ))
           )}
         </View>
@@ -559,6 +625,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.md,
+  },
+  entryInsightsHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  expandIcon: {
+    marginLeft: SPACING.xs,
+  },
+  analyzingIndicator: {
+    marginRight: SPACING.xs,
+  },
+  expandedContent: {
+    marginTop: SPACING.md,
+  },
+  noInsightsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.lg,
+    gap: SPACING.md,
+  },
+  noInsightsText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   entryInsightsDate: {
     flex: 1,

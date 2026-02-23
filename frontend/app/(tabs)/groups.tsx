@@ -1283,10 +1283,8 @@ export default function GroupsScreen() {
           description="Join communities and find like-minded people. Connect with others who understand your experiences and build meaningful relationships."
           onNext={() => {
             nextStep();
-            // Navigate to Chats tab after a short delay to ensure state is updated
-            setTimeout(() => {
-              router.push('/(tabs)/chat');
-            }, 100);
+            // Navigate to Chats tab immediately
+            router.push('/(tabs)/chat');
           }}
           showSkip={false}
         />

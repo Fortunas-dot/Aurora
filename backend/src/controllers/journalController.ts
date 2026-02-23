@@ -8,6 +8,7 @@ import ChatContext from '../models/ChatContext';
 import { AuthRequest } from '../middleware/auth';
 import OpenAI from 'openai';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
+import { escapeRegex } from '../utils/helpers';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -103,9 +104,10 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
     const query: any = { isPublic: true };
 
     if (search) {
+      const sanitizedSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { name: { $regex: sanitizedSearch, $options: 'i' } },
+        { description: { $regex: sanitizedSearch, $options: 'i' } },
       ];
     }
 
@@ -146,9 +148,29 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
     const total = await Journal.countDocuments(query);
 
     // Check if current user is following each journal
+    // Reload journals with followers array to ensure we have the latest data
+    const journalIds = journals.map(j => j._id);
+    const journalsWithFollowers = await Journal.find({ _id: { $in: journalIds } })
+      .select('followers');
+    
+    const followersMap = new Map();
+    journalsWithFollowers.forEach(j => {
+      followersMap.set(j._id.toString(), j.followers || []);
+    });
+
     const journalsWithFollowStatus = journals.map((journal) => {
       const journalObj = journal.toObject();
-      const isFollowing = req.userId ? journal.followers.some((followerId) => followerId.toString() === req.userId) : false;
+      const followers = followersMap.get(journal._id.toString()) || journal.followers || [];
+      // More robust check for isFollowing status
+      const isFollowing = req.userId ? followers.some((followerId: any) => {
+        let followerIdStr: string;
+        if (typeof followerId === 'object' && followerId !== null && '_id' in followerId) {
+          followerIdStr = followerId._id.toString();
+        } else {
+          followerIdStr = String(followerId);
+        }
+        return followerIdStr === req.userId;
+      }) : false;
       return { ...journalObj, isFollowing };
     });
 
@@ -367,9 +389,24 @@ export const followJournal = async (req: AuthRequest, res: Response): Promise<vo
     journal.followers.push(new Types.ObjectId(req.userId));
     await journal.save();
 
+    // Reload journal to ensure we have the latest state
+    const updatedJournal = await Journal.findById(journal._id)
+      .populate('owner', 'username displayName avatar');
+    
+    if (!updatedJournal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found after update',
+      });
+      return;
+    }
+
+    const journalObj = updatedJournal.toObject();
+    const isFollowing = true; // We just followed it
+
     res.json({
       success: true,
-      data: journal,
+      data: { ...journalObj, isFollowing, followersCount: updatedJournal.followersCount },
       message: 'Journal followed successfully',
     });
   } catch (error: any) {
@@ -416,9 +453,24 @@ export const unfollowJournal = async (req: AuthRequest, res: Response): Promise<
     );
     await journal.save();
 
+    // Reload journal to ensure we have the latest state
+    const updatedJournal = await Journal.findById(journal._id)
+      .populate('owner', 'username displayName avatar');
+    
+    if (!updatedJournal) {
+      res.status(404).json({
+        success: false,
+        message: 'Journal not found after update',
+      });
+      return;
+    }
+
+    const journalObj = updatedJournal.toObject();
+    const isFollowing = false; // We just unfollowed it
+
     res.json({
       success: true,
-      data: journal,
+      data: { ...journalObj, isFollowing, followersCount: updatedJournal.followersCount },
       message: 'Journal unfollowed successfully',
     });
   } catch (error: any) {

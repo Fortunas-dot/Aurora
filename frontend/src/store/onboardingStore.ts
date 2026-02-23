@@ -9,6 +9,7 @@ interface OnboardingState {
   startOnboarding: () => void;
   completeStep: (step: number) => void;
   nextStep: () => void;
+  setStep: (step: number) => void;
   finishOnboarding: () => void;
   resetOnboarding: () => void;
 }
@@ -29,6 +30,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       nextStep: () => set((state) => ({
         currentStep: state.currentStep + 1,
       })),
+      
+      setStep: (step: number) => set({
+        currentStep: step,
+        isActive: true,
+      }),
       
       finishOnboarding: () => set({ 
         isActive: false, 

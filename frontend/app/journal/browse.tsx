@@ -67,11 +67,12 @@ export default function BrowseJournalsScreen() {
     try {
       console.log('🔍 Loading journals with topic filter:', selectedTopic, 'sort:', selectedSort);
       const response = await journalService.getPublicJournals(pageNum, 20, searchQuery, selectedTopic || undefined, selectedSort);
-      if (response.success && response.data) {
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const journalsData = response.data;
         if (append) {
-          setJournals((prev) => [...prev, ...response.data]);
+          setJournals((prev) => [...prev, ...journalsData]);
         } else {
-          setJournals(response.data);
+          setJournals(journalsData);
         }
 
         if (response.pagination) {
@@ -136,11 +137,15 @@ export default function BrowseJournalsScreen() {
     try {
       const response = await journalService.followJournal(journal._id);
       if (response.success) {
+        // Use the response data if available, otherwise update optimistically
+        const isFollowing = response.data?.isFollowing !== undefined ? response.data.isFollowing : true;
+        const followersCount = response.data?.followersCount !== undefined ? response.data.followersCount : (journal.followersCount || 0) + 1;
+        
         // Update local state
         setJournals((prev) =>
           prev.map((j) =>
             j._id === journal._id
-              ? { ...j, isFollowing: true, followersCount: (j.followersCount || 0) + 1 }
+              ? { ...j, isFollowing, followersCount }
               : j
           )
         );
@@ -154,11 +159,15 @@ export default function BrowseJournalsScreen() {
     try {
       const response = await journalService.unfollowJournal(journal._id);
       if (response.success) {
+        // Use the response data if available, otherwise update optimistically
+        const isFollowing = response.data?.isFollowing !== undefined ? response.data.isFollowing : false;
+        const followersCount = response.data?.followersCount !== undefined ? response.data.followersCount : Math.max(0, (journal.followersCount || 0) - 1);
+        
         // Update local state
         setJournals((prev) =>
           prev.map((j) =>
             j._id === journal._id
-              ? { ...j, isFollowing: false, followersCount: Math.max(0, (j.followersCount || 0) - 1) }
+              ? { ...j, isFollowing, followersCount }
               : j
           )
         );
@@ -205,7 +214,7 @@ export default function BrowseJournalsScreen() {
                   <View style={styles.ownerInfo}>
                     <Avatar
                       uri={owner.avatar}
-                      size={20}
+                      size="sm"
                       name={owner.displayName || owner.username}
                       userId={owner._id}
                       avatarCharacter={owner.avatarCharacter}
