@@ -96,23 +96,44 @@ export default function UserProfileScreen() {
   const handleFollow = async () => {
     if (!id || !isAuthenticated || isTogglingFollow) return;
 
+    // Optimistic update - update UI immediately
+    const previousFollowingState = isFollowing;
+    const previousFollowersCount = profile?.followersCount || 0;
+    
+    setIsFollowing(!previousFollowingState);
+    setProfile(prev => prev ? {
+      ...prev,
+      followersCount: previousFollowingState 
+        ? Math.max(0, previousFollowersCount - 1) 
+        : previousFollowersCount + 1
+    } : null);
+    
     setIsTogglingFollow(true);
     try {
       const response = await userService.followUser(id);
       if (response.success) {
-        // Update following state - response.data might be undefined, so toggle it
+        // Update following state from response if available
         if (response.data?.isFollowing !== undefined) {
           setIsFollowing(response.data.isFollowing);
-        } else {
-          // If response doesn't have isFollowing, toggle it
-          setIsFollowing(prev => !prev);
         }
-        // Reload profile to update counts
-        await loadProfile();
+        // Note: We don't reload the entire profile - the optimistic update is sufficient
+        // The follower count will be accurate on next page load or refresh
       } else {
+        // Revert optimistic update on failure
+        setIsFollowing(previousFollowingState);
+        setProfile(prev => prev ? {
+          ...prev,
+          followersCount: previousFollowersCount
+        } : null);
         console.error('Follow failed:', response.message);
       }
     } catch (error) {
+      // Revert optimistic update on error
+      setIsFollowing(previousFollowingState);
+      setProfile(prev => prev ? {
+        ...prev,
+        followersCount: previousFollowersCount
+      } : null);
       console.error('Error toggling follow:', error);
     } finally {
       setIsTogglingFollow(false);
