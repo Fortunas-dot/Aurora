@@ -81,7 +81,7 @@ async function createAnonymousDuck() {
       journal = await Journal.create({
         owner: user._id,
         name: 'I cut myself everyday...',
-        description: 'A journey through darkness to light',
+        description: 'Raw thoughts from someone learning to cope without the blade. This is my truth, my struggle, my path forward.',
         isPublic: true,
         entriesCount: 0,
         topics: ['self-harm', 'recovery', 'mental-health'],

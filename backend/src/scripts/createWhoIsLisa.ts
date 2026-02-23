@@ -81,7 +81,7 @@ async function createWhoIsLisa() {
       journal = await Journal.create({
         owner: user._id,
         name: 'My journey being anorexia',
-        description: 'A journey from darkness to light, from control to freedom',
+        description: 'Learning to nourish my body and my soul. One meal, one day, one step at a time.',
         isPublic: true,
         entriesCount: 0,
         topics: ['anorexia', 'eating-disorder', 'recovery', 'mental-health'],
