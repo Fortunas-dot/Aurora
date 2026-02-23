@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +19,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/
 import { journalService, Journal } from '../../src/services/journal.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
+import { getApiUrl } from '../../src/utils/apiUrl';
 
 export default function BrowseJournalsScreen() {
   const router = useRouter();
@@ -104,6 +105,18 @@ export default function BrowseJournalsScreen() {
     loadJournals(1, false);
   }, [searchQuery, selectedTopic, selectedSort, loadJournals]);
 
+  // Reload journals when screen comes into focus (e.g., after following/unfollowing a journal)
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        // Reload to get updated follow status
+        setPage(1);
+        setHasMore(true);
+        loadJournals(1, false);
+      }
+    }, [isAuthenticated, loadJournals])
+  );
+
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     setPage(1);
@@ -161,13 +174,21 @@ export default function BrowseJournalsScreen() {
 
   const renderJournalCard = ({ item }: { item: Journal }) => {
     const owner = typeof item.owner === 'object' ? item.owner : null;
+    
+    // Convert relative URL to absolute URL if needed
+    const getImageUrl = (url: string | undefined): string | undefined => {
+      if (!url) return undefined;
+      if (url.startsWith('http')) return url;
+      const baseUrl = getApiUrl().replace('/api', '');
+      return `${baseUrl}${url}`;
+    };
 
     return (
       <Pressable onPress={() => handleJournalPress(item)}>
         <GlassCard style={styles.journalCard} padding="lg">
           {/* Cover Image or Gradient */}
           {item.coverImage ? (
-            <Image source={{ uri: item.coverImage }} style={styles.coverImage} />
+            <Image source={{ uri: getImageUrl(item.coverImage) || '' }} style={styles.coverImage} />
           ) : (
             <LinearGradient
               colors={[COLORS.primary, COLORS.secondary]}

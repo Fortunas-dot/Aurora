@@ -18,6 +18,7 @@ import { GlassCard, GlassButton, Avatar, LoadingSpinner } from '../../../src/com
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../../src/constants/theme';
 import { journalService, Journal, JournalEntry } from '../../../src/services/journal.service';
 import { useAuthStore } from '../../../src/store/authStore';
+import { getApiUrl } from '../../../src/utils/apiUrl';
 import { format, parseISO } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
@@ -255,9 +256,15 @@ export default function JournalViewScreen() {
           <>
             {/* Journal Info */}
             <View style={styles.journalInfoSection}>
-              {journal.coverImage ? (
-                <Image source={{ uri: journal.coverImage }} style={styles.coverImage} />
-              ) : (
+              {journal.coverImage ? (() => {
+                // Convert relative URL to absolute URL if needed
+                const getImageUrl = (url: string): string => {
+                  if (url.startsWith('http')) return url;
+                  const baseUrl = getApiUrl().replace('/api', '');
+                  return `${baseUrl}${url}`;
+                };
+                return <Image source={{ uri: getImageUrl(journal.coverImage) }} style={styles.coverImage} />;
+              })() : (
                 <LinearGradient
                   colors={[COLORS.primary, COLORS.secondary]}
                   style={styles.coverImage}

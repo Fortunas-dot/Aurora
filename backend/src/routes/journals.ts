@@ -66,7 +66,8 @@ const updateValidation = [
 ];
 
 // Public routes (before protect middleware)
-router.get('/public', getPublicJournals);
+// Use optionalAuth so we can compute isFollowing for logged-in users on public journals
+router.get('/public', optionalAuth, getPublicJournals);
 router.get('/:id', optionalAuth, getJournal); // Allow viewing public journals without auth
 
 // All other routes require authentication
