@@ -21,11 +21,7 @@ async function createHiddenVoice() {
     let user = await User.findOne({ username: 'HiddenVoice' });
     
     if (user) {
-      console.log('  ⚠️  User HiddenVoice already exists');
-      // Delete existing journal entries and journal
-      await JournalEntry.deleteMany({ author: user._id });
-      await Journal.deleteMany({ owner: user._id });
-      console.log('  ✓ Deleted existing journal entries and journal');
+      console.log('  ✓ User HiddenVoice already exists');
     } else {
       // Create user
       const hashedPassword = await bcrypt.hash('password123', 10);
@@ -96,242 +92,252 @@ async function createHiddenVoice() {
       console.log('  ✓ Updated journal with cover image (touch.jpg from assets)');
     }
     
-    // Delete existing entries
-    await JournalEntry.deleteMany({ journal: journal._id });
-    journal.entriesCount = 0;
+    // Check existing entries count
+    const existingCount = await JournalEntry.countDocuments({ journal: journal._id });
+    console.log(`  ✓ Found ${existingCount} existing entries`);
     
-    // Helper function to generate random time
-    const getRandomTime = (): { hours: number; minutes: number } => {
+    // Create new entries to add
+    const entries: any[] = [];
+    
+    // Helper to create entry with random time (mostly late night/early morning for authenticity)
+    const createEntry = (date: Date, content: string, mood: number, tags: string[]) => {
+      // 70% late night (22-2), 20% early morning (2-6), 10% normal hours
       const rand = Math.random();
+      let hours: number;
       if (rand < 0.7) {
-        const hours = 6 + Math.floor(Math.random() * 17);
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours, minutes };
+        hours = 22 + Math.floor(Math.random() * 4); // 22-1
+        if (hours >= 24) hours = hours % 24;
       } else if (rand < 0.9) {
-        const hours = 23 + Math.floor(Math.random() * 3);
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours: hours % 24, minutes };
+        hours = 2 + Math.floor(Math.random() * 4); // 2-5
       } else {
-        const hours = 2 + Math.floor(Math.random() * 4);
-        const minutes = Math.floor(Math.random() * 60);
-        return { hours, minutes };
+        hours = 6 + Math.floor(Math.random() * 17); // 6-22
       }
-    };
-    
-    // Generate entries as a continuous story with varying lengths
-    const totalEntries = 42;
-    const endDate = new Date('2026-02-23');
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - (totalEntries - 1));
-    
-    // Story context that builds over time
-    const storyContext = {
-      daysSinceLastIncident: 0,
-      toldSomeone: false,
-      inTherapy: false,
-      daysSinceTherapy: 0,
-      daysClean: 0,
-      lastFlashback: 0,
-      supportSystem: [] as string[],
-    };
-    
-    // Function to generate entry content based on progress and story context
-    const generateEntry = (dayIndex: number, progress: number): string => {
-      const lengthType = Math.random();
-      let content = '';
+      const minutes = Math.floor(Math.random() * 60);
+      const seconds = Math.floor(Math.random() * 60);
       
-      // Determine entry length: 30% short (2-4 sentences), 50% medium (paragraph), 20% long (multiple paragraphs)
-      const isShort = lengthType < 0.3;
-      const isLong = lengthType > 0.8;
-      
-      if (progress < 0.35) {
-        // Dark phase - early abuse, silence, fear
-        storyContext.daysSinceLastIncident++;
-        
-        if (isShort) {
-          const shorts = [
-            `He came into my room again. I pretended to sleep.`,
-            `Can't tell anyone. Nobody would believe me.`,
-            `It hurts. Every time.`,
-            `Feel so dirty. Can't wash it away.`,
-            `He said it's our secret. I believed him.`,
-          ];
-          content = shorts[Math.floor(Math.random() * shorts.length)];
-        } else if (isLong) {
-          content = `Last night was bad. Really bad. He came into my room around 2am, like he always does when mom and dad are asleep. I heard the door creak and I immediately closed my eyes, tried to make my breathing even, pretended I was deep in sleep. But he knows. He always knows when I'm faking it. 
-
-I felt the bed dip as he sat down. My whole body went rigid. I wanted to scream, to run, to do something. But I just... froze. Like I always do. It's like my body isn't mine anymore. It's like I'm watching this happen to someone else, from far away. 
-
-After he left, I lay there for hours. Couldn't move. Couldn't cry. Just... empty. I took three showers this morning. Scrubbed until my skin was raw. But I still feel dirty. Like his touch is burned into me. Like I'll never be clean again.
-
-I can't tell anyone. Who would believe a 12-year-old over their favorite uncle? Everyone loves him. He's the fun one, the one who brings presents, the one who makes everyone laugh. I'm just... me. Quiet. Invisible. Nobody would believe me.`;
-        } else {
-          content = `He came into my room again last night. I pretended to be asleep, but I wasn't. I was wide awake, terrified, listening to every sound. When I felt his weight on the bed, my whole body went cold. I just lay there, frozen, waiting for it to be over. It always hurts. Every time. But I don't say anything. I can't. He told me it's our special secret, that I'm special, that I shouldn't tell anyone. I believed him. I was so young when it started. Now I'm 12 and I still can't find the words. Who would believe me anyway? He's everyone's favorite uncle. I'm just the quiet kid who doesn't talk much.`;
-        }
-      } else if (progress < 0.55) {
-        // Awareness phase - starting to question, maybe telling someone
-        if (!storyContext.toldSomeone && Math.random() > 0.7) {
-          storyContext.toldSomeone = true;
-          storyContext.supportSystem.push('teacher');
-        }
-        
-        if (isShort) {
-          const shorts = [
-            `Told my teacher today. She believed me.`,
-            `It's not my fault. I keep telling myself that.`,
-            `Starting therapy next week. I'm scared.`,
-            `Had a good day today. No flashbacks.`,
-          ];
-          content = shorts[Math.floor(Math.random() * shorts.length)];
-        } else if (isLong) {
-          content = `I did it. I actually told someone. Mrs. Johnson, my English teacher. She noticed I've been spacing out in class, that my grades dropped, that I'm always wearing long sleeves even when it's hot. She asked me to stay after class today, and I don't know what came over me, but I just... told her. Everything. The words tumbled out like they'd been waiting, like they couldn't wait any longer.
-
-She didn't look shocked. She didn't look disgusted. She just... listened. Really listened. And then she hugged me. Gently. Asked if I wanted to tell my parents, or if I wanted her to help me tell them. I said I didn't know. I'm so scared of what will happen. What if they don't believe me? What if they blame me? What if everything falls apart?
-
-But Mrs. Johnson said she believes me. She said it's not my fault. She said I'm brave for telling her. I don't feel brave. I feel like I'm breaking apart. But for the first time in years, I also feel... a tiny bit of hope. Like maybe, just maybe, this can stop. Like maybe I'm not alone anymore.
-
-She's going to help me find a therapist. Someone who specializes in... this. I'm terrified. But I'm also relieved. The secret isn't just mine anymore.`;
-        } else {
-          content = `I told someone. My teacher, Mrs. Johnson. I don't know how it happened - the words just came out. She believed me. She actually believed me. She said it's not my fault, that I'm brave for telling her. I don't feel brave. I feel scared and relieved and confused all at once. She's helping me find a therapist. I start next week. I'm terrified. But I'm also... hopeful? For the first time in so long, I feel like maybe this can stop. Maybe I'm not alone anymore.`;
-        }
-      } else if (progress < 0.80) {
-        // Recovery phase - in therapy, processing, ups and downs
-        if (!storyContext.inTherapy) {
-          storyContext.inTherapy = true;
-        }
-        storyContext.daysSinceTherapy++;
-        storyContext.daysSinceLastIncident = Math.floor(Math.random() * 30) + 10;
-        
-        if (isShort) {
-          const shorts = [
-            `Therapy was hard today. But I'm making progress.`,
-            `Went a whole week without a flashback.`,
-            `Had a nightmare last night. Used my grounding techniques.`,
-            `Starting to feel safe sometimes.`,
-          ];
-          content = shorts[Math.floor(Math.random() * shorts.length)];
-        } else if (isLong) {
-          content = `Therapy session today was intense. We talked about the first time it happened. I was 8. It was during a family barbecue. Everyone was outside, laughing, having fun. I went inside to get a drink, and he followed me. Said he wanted to show me something in the basement. I trusted him. Why wouldn't I? He was my uncle. He was supposed to keep me safe.
-
-Talking about it out loud, saying the words, describing what happened... it was like reliving it. I had a panic attack right there in Dr. Martinez's office. But she helped me through it. Taught me breathing exercises, grounding techniques. "You're safe now," she kept saying. "You're 13 now. You're safe. He can't hurt you anymore."
-
-And I am safe. He's not allowed near me anymore. My parents believed me. They were devastated, angry, guilty. But they believed me. They got a restraining order. He's not part of our lives anymore. 
-
-I'm still processing. Still healing. Some days are better than others. Yesterday I had a flashback in the grocery store - someone touched my shoulder from behind and I completely froze, couldn't breathe. But today? Today I went to school, I laughed with my friends, I felt almost normal. Almost. 
-
-The nightmares are less frequent now. Maybe once a week instead of every night. When they come, I use the techniques Dr. Martinez taught me. I remind myself I'm safe. I'm getting stronger.`;
-        } else {
-          content = `Three months in therapy now. Dr. Martinez says I'm making incredible progress. I don't always see it, but I'm trying to trust her. The nightmares are less frequent - maybe once a week instead of every night. When they come, I use the grounding techniques she taught me. I remind myself I'm safe now. He can't hurt me anymore. My parents believed me. They got a restraining order. He's not part of our lives. Some days are still hard. Flashbacks come out of nowhere. But other days... other days I feel almost normal. Almost happy. I'm learning that recovery isn't a straight line. It's messy. But I'm moving forward.`;
-        }
-      } else {
-        // Hopeful phase - healing, growth, looking forward
-        storyContext.daysSinceLastIncident = Math.floor(Math.random() * 90) + 60;
-        storyContext.daysSinceTherapy = Math.floor(Math.random() * 180) + 90;
-        storyContext.lastFlashback = Math.floor(Math.random() * 60) + 30;
-        
-        if (isShort) {
-          const shorts = [
-            `Six months since my last flashback. I'm healing.`,
-            `Started volunteering at a crisis center. Helping others.`,
-            `Went on a date. It was scary but good.`,
-            `I'm a survivor. Not a victim.`,
-          ];
-          content = shorts[Math.floor(Math.random() * shorts.length)];
-        } else if (isLong) {
-          content = `It's been almost a year since I told Mrs. Johnson. A year since my world changed. A year since I found my voice.
-
-I'm 14 now. In high school. Making friends. Real friends who know about my past, who support me, who don't treat me like I'm broken. I'm not broken. I'm healing. 
-
-I started volunteering at a local crisis center for kids. I help with the support groups, share my story when I'm ready. Seeing other kids who've been through similar things... it helps. It helps them, and it helps me. I'm not alone. None of us are alone.
-
-Therapy is less frequent now - once a month instead of twice a week. Dr. Martinez says I've done incredible work. I've processed the trauma, learned to manage triggers, built a support system. I still have bad days. Days where the memories feel too close, where I feel that old fear creeping in. But those days are rare now. Most days, I feel... good. Happy even.
-
-I went on my first date last week. With a boy from my history class. He's kind, gentle, respects my boundaries. When he asked if he could hold my hand, I said yes. And it was okay. It was actually nice. I didn't freeze. I didn't panic. I just... held his hand. And it was normal. Beautifully, wonderfully normal.
-
-I'm not defined by what happened to me. It's part of my story, but it's not the whole story. I'm a survivor. I'm strong. I'm healing. And I'm going to be okay.`;
-        } else {
-          content = `It's been almost a year since I told someone. A year of therapy, of healing, of learning to trust again. I'm 14 now, in high school, making real friends. I started volunteering at a crisis center - helping other kids who've been through similar things. It helps them, and it helps me. I'm not alone anymore. 
-
-The nightmares are rare now. Maybe once a month. When they come, I know how to handle them. I use my grounding techniques, remind myself I'm safe. Most days, I feel good. Happy even. I went on my first date last week. It was scary, but it was also... normal. Beautifully normal. I'm healing. I'm a survivor. And I'm going to be okay.`;
-        }
-      }
-      
-      return content;
-    };
-    
-    const entries = [];
-    
-    for (let i = 0; i < totalEntries; i++) {
-      const entryDate = new Date(startDate);
-      entryDate.setDate(entryDate.getDate() + i);
-      
-      const { hours, minutes } = getRandomTime();
-      entryDate.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
-      
-      const progress = i / (totalEntries - 1);
-      const content = generateEntry(i, progress);
-      
-      let mood: number;
-      let healthConditions: any[] = [];
-      
-      if (progress < 0.35) {
-        mood = 1 + Math.floor(Math.random() * 2); // 1-2
-        healthConditions = [
-          { condition: 'PTSD', type: 'Complex PTSD', severity: 'severe' },
-          { condition: 'Depression', severity: 'severe' },
-          { condition: 'Anxiety Disorder', severity: 'severe' }
-        ];
-      } else if (progress < 0.55) {
-        mood = 2 + Math.floor(Math.random() * 2); // 2-3
-        healthConditions = [
-          { condition: 'PTSD', type: 'Complex PTSD', severity: 'moderate' },
-          { condition: 'Depression', severity: 'moderate' },
-          { condition: 'Anxiety Disorder', severity: 'moderate' }
-        ];
-      } else if (progress < 0.80) {
-        mood = 3 + Math.floor(Math.random() * 3); // 3-5
-        healthConditions = [
-          { condition: 'PTSD', type: 'Complex PTSD', severity: 'mild' },
-          { condition: 'Depression', severity: 'mild' },
-          { condition: 'Anxiety Disorder', severity: 'mild' }
-        ];
-      } else {
-        mood = 5 + Math.floor(Math.random() * 4); // 5-8
-        healthConditions = [
-          { condition: 'PTSD', type: 'Complex PTSD', severity: 'mild' },
-          { condition: 'Depression', severity: 'mild' },
-          { condition: 'Anxiety Disorder', severity: 'mild' }
-        ];
-      }
+      const entryDate = new Date(date);
+      entryDate.setHours(hours, minutes, seconds, 0);
       
       entries.push({
-        journal: journal._id,
         author: user._id,
+        journal: journal._id,
         content,
         mood,
-        healthConditions,
-        symptoms: healthConditions.map((hc: any) => ({
-          condition: hc.condition,
-          severity: hc.severity,
-        })),
+        symptoms: [
+          { condition: 'PTSD', type: 'Complex PTSD', severity: mood <= 2 ? 'severe' : mood <= 4 ? 'moderate' : 'mild' },
+          { condition: 'Depression', severity: mood <= 2 ? 'severe' : mood <= 4 ? 'moderate' : 'mild' },
+          { condition: 'Anxiety Disorder', severity: mood <= 2 ? 'severe' : mood <= 4 ? 'moderate' : 'mild' },
+        ],
+        tags,
         isPrivate: false,
+        fontFamily: 'palatino',
         createdAt: entryDate,
         updatedAt: entryDate,
       });
+    };
+    
+    // February 11, 2026 - Half page, processing, feeling different
+    createEntry(
+      new Date('2026-02-11'),
+      `It's been a few days since I told Sarah about the first time.
+
+I keep thinking about it. About what I said. About how it felt to say it out loud.
+
+I thought I would feel worse. More broken. More dirty. But I don't. I feel... different. Not good. Not bad. Just different.
+
+Like maybe it's not a secret anymore. Like maybe it doesn't own me the way it used to.
+
+I still have nightmares. I still have flashbacks. But they feel... less? Like they're not as strong. Like I'm not as trapped in them.
+
+Maybe Sarah was right. Maybe talking about it does help.`,
+      3,
+      ['processing', 'different', 'less-power', 'hope']
+    );
+    
+    // February 14, 2026 - Page-long, Valentine's Day, thinking about the future
+    createEntry(
+      new Date('2026-02-14'),
+      `It's Valentine's Day.
+
+I used to hate this day. All the couples. All the love. All the happiness. It made me feel more alone. More broken. More unlovable.
+
+But today... I don't know. It's different.
+
+I'm not in love. I'm not dating anyone. I probably won't for a long time. Maybe never. And that's okay.
+
+But I'm starting to think... maybe I'm not unlovable. Maybe what happened to me doesn't make me broken. Maybe it just makes me... me.
+
+I spent today with my family. My mom made my favorite dinner. My dad watched a movie with me. We didn't talk about anything heavy. We just... were together.
+
+It was nice. Normal. Like maybe I can have normal things. Like maybe I'm allowed to be happy sometimes.
+
+Sarah says I'm allowed to be happy. That I'm allowed to have good days. That I'm allowed to feel okay. That I'm allowed to heal.
+
+I'm starting to believe her.
+
+I'm not there yet. I know that. But I'm getting there. Slowly. One day at a time.
+
+That's enough for now.`,
+      4,
+      ['valentines', 'future', 'hope', 'healing', 'allowed-to-be-happy']
+    );
+    
+    // February 18, 2026 - Half page, group at therapy, hearing other stories
+    createEntry(
+      new Date('2026-02-18'),
+      `Sarah asked if I wanted to try a group today.
+
+At first I said no. The idea of sitting in a circle and talking about this stuff with strangers made my stomach hurt.
+
+But I went anyway. I didn't talk. Not really. I just listened.
+
+There were other kids there. Some older. Some younger. They talked about nightmares. About feeling dirty. About not trusting anyone. About blaming themselves.
+
+They were saying the same things I think in my head.
+
+It felt strange. And kind of comforting. Like maybe I'm not the only broken one.
+
+I still don't know if I want to share. But I might go back.`,
+      3,
+      ['group-therapy', 'not-alone', 'listening', 'nervous']
+    );
+    
+    // February 21, 2026 - Page-long, school project, deciding what to share
+    createEntry(
+      new Date('2026-02-21'),
+      `We have to do a project at school about "something that changed your life."
+
+I wanted to roll my eyes when the teacher said that. I could think of one thing that changed my life. But I'm not putting that on a poster board.
+
+Maya asked what I'm going to do. I shrugged. Said maybe I'll talk about moving houses when I was little. Something safe. Something boring.
+
+On the way home I kept thinking about it. About how this thing that happened to me does control so much of my life. And no one at school even knows.
+
+I don't want to stand in front of the class and tell them everything. I don't owe them that.
+
+But I decided to do my project on "how to help a friend who's not okay." Sarah helped me come up with ideas. Checking in. Listening. Not pushing. Not saying things like "just get over it."
+
+I'm not saying it's about me. But it kind of is.
+
+Maybe that's enough for now. Talking around it. Without giving it all away.`,
+      4,
+      ['school', 'project', 'indirect-sharing', 'friendship', 'coping']
+    );
+    
+    // February 24, 2026 - Half page, a trigger that didn't win
+    createEntry(
+      new Date('2026-02-24'),
+      `Today something happened that would've ruined my whole day before.
+
+In class, the door slammed shut really hard. Out of nowhere. My heart jumped. My chest got tight. For a second I was back there. Small. Trapped.
+
+But I did the breathing. In for four. Hold. Out for four.
+
+It didn't make everything magically fine. I still felt shaky. But I stayed in my seat. I didn't run out of the room. I didn't freeze for ten minutes.
+
+That feels big. Like the fear was there, but it didn't get to be the boss this time.`,
+      4,
+      ['trigger', 'coping', 'breathing', 'small-win']
+    );
+    
+    // February 27, 2026 - Page-long, looking ahead without a neat ending
+    createEntry(
+      new Date('2026-02-27'),
+      `Sarah asked me today if I ever think about the future.
+
+I told her I don't. Not really. Most days I'm just trying to get through school, through the night, through the next flashback.
+
+She asked me to try anyway. Just for a minute. To imagine myself older. Away from all of this.
+
+At first my brain went blank. Then I saw something small. Me in a room that feels safe. With my own things. With a lock I control. With no one walking in without knocking.
+
+I don't see big things yet. No job. No partner. No "dream life." Just that room. That door. That feeling of not having to be scared all the time.
+
+It doesn't feel like a movie ending. There's no big music. No slow motion hug.
+
+It's just a quiet picture in my head that doesn't hurt to look at.
+
+I don't know if I'll ever get there. But for the first time, when I think about the future, I don't only see him.
+
+I see me.`,
+      3,
+      ['future', 'imagining', 'safety', 'no-neat-ending', 'hope']
+    );
+    
+    // March 3, 2026 - Half page, ordinary day that still feels strange
+    createEntry(
+      new Date('2026-03-03'),
+      `Today was boring.
+
+I mean that in a good way.
+
+I went to school. Did my work. Forgot my pen. Borrowed one from Maya. We made fun of a dumb worksheet. I came home. Ate dinner. Watched a show. That's it.
+
+No huge breakdown. No giant trigger. No big conversation.
+
+Halfway through the day I realized I hadn't thought about him for a few hours. As soon as I noticed, the thoughts came back. But still. There was a gap.
+
+It's weird how being okay can feel just as unfamiliar as being scared.`,
+      4,
+      ['ordinary-day', 'small-gap', 'strange-okay', 'school']
+    );
+    
+    // March 8, 2026 - Page-long, a bad night, but different response
+    createEntry(
+      new Date('2026-03-08'),
+      `Last night was rough.
+
+Nightmare again. The same one. Door. Bed. Him. My body doing that frozen thing even though I'm asleep.
+
+I woke up shaking and sweating. For a second I couldn't remember where I was. My chest hurt. My hands were numb.
+
+Old me would've just laid there alone and tried to pretend it wasn't happening.
+
+This time I went to my mom's room. I stood in the doorway for a minute, feeling stupid, then I just said, "I had a bad dream."
+
+She moved over without saying anything and let me lie down next to her. She didn't ask for details. She just rubbed my back and breathed slowly so I could match her.
+
+I still didn't sleep great after that. But I wasn't alone. And that made it less horrible.
+
+I hate that the nightmares are still here. But I guess the difference is I don't have to get through them by myself anymore.`,
+      2,
+      ['nightmare', 'asking-for-help', 'mom', 'not-alone']
+    );
+    
+    // March 12, 2026 - Half page, not a conclusion, just another step
+    createEntry(
+      new Date('2026-03-12'),
+      `Sarah asked me today if I ever look back at where I started.
+
+I don't like thinking about the beginning. But she meant something else. She meant the first time I walked into her office. The first time I wrote in this journal. The first time I said "it happened" out loud.
+
+I guess things are different now.
+
+I still have bad days. I still get scared for no reason. I still have moments where I feel dirty and wrong and broken.
+
+But there are also days where I laugh without feeling guilty. Moments where I feel safe in my own room. Nights where I sleep all the way through.
+
+It doesn't feel like a happy ending. More like I'm somewhere in the middle of a really long book.
+
+I'm tired. But I'm still here. And for now, that's enough.`,
+      3,
+      ['middle', 'progress', 'still-here', 'no-ending']
+    );
+    
+    // Insert new entries
+    if (entries.length > 0) {
+      await JournalEntry.insertMany(entries);
+      journal.entriesCount = existingCount + entries.length;
+      await journal.save();
+      console.log(`  ✓ Added ${entries.length} new journal entries`);
+      console.log(`  ✓ Total entries: ${journal.entriesCount}`);
+      console.log(`  ✓ New entries span from March 3 to March 12, 2026`);
+    } else {
+      console.log('  ⚠️  No new entries to add');
     }
-    
-    // Insert all entries
-    await JournalEntry.insertMany(entries);
-    journal.entriesCount = entries.length;
-    await journal.save();
-    
-    console.log(`  ✓ Created ${entries.length} journal entries`);
-    console.log('  ✓ Journal entries span from', startDate.toLocaleDateString(), 'to', endDate.toLocaleDateString());
-    console.log('  ✓ Entries form a continuous story with varying lengths');
-    console.log('  ✓ Added health conditions: PTSD (Complex), Depression, Anxiety Disorder');
-    console.log('  ✓ All entries have realistic, varied timestamps');
-    
-    console.log('\n✅ Successfully created HiddenVoice user and journal!');
+    console.log('\n✅ Successfully updated HiddenVoice journal!');
+    console.log(`   Journal: "My uncle touches me" (Public)`);
+    console.log(`   Total entries: ${journal.entriesCount}`);
     
   } catch (error) {
     console.error('❌ Error creating HiddenVoice user and journal:', error);

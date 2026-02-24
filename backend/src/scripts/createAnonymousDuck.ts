@@ -391,13 +391,205 @@ Just in small, brave sentences.`,
       ['friendship', 'vulnerability', 'connection', 'hope', 'progress']
     );
     
+    // January 17, 2026 - Therapy, ten-second window
+    createEntry(
+      new Date('2026-01-17'),
+      `I didn't write yesterday because nothing dramatic happened, and I'm realizing I only feel the need to document things when they hurt.
+
+Today I had therapy again. I almost canceled. I sat in my car outside the building for ten minutes arguing with myself. I kept thinking, if I'm functioning, if I'm going to work and answering texts and paying rent, maybe I'm exaggerating all of this.
+
+Inside, she asked me what I do in the ten seconds before I hurt myself. I didn't know there were ten seconds. I always imagined it as immediate. But when I really thought about it, there is a pause. A small window where I decide.
+
+That idea has been following me around all day. A window.
+
+After dinner I felt the familiar pressure build. Instead of going to my room, I stayed in the kitchen. I leaned against the counter and just waited. It felt unbearable for a few minutes. My hands were restless. My chest tight.
+
+But it shifted. Slightly.
+
+The feeling didn't disappear. It just… loosened.
+
+I keep thinking about those ten seconds. Maybe that's where this whole thing lives.`,
+      3,
+      ['therapy', 'self-awareness', 'urge', 'pause', 'choice']
+    );
+
+    // January 19, 2026 - Sister visit, swallowed words
+    createEntry(
+      new Date('2026-01-19'),
+      `I saw my sister again. She pretended nothing happened after our argument, which is very on brand for both of us. We sat at her table drinking tea like adults who know how to communicate, which we don't.
+
+At one point she said, casually, "You seem somewhere else lately." Not accusing. Just observing.
+
+I wanted to say, I am somewhere else. I am stuck inside my own head most of the time. I wanted to tell her I'm tired in a way sleep doesn't fix.
+
+Instead I said work has been stressful.
+
+She nodded like that made sense.
+
+Driving home I felt this wave of loneliness that surprised me. Not the dramatic kind. The quiet kind. The realization that people can sit inches from you and still not know what's going on.
+
+The urge hit harder tonight. Maybe because I felt unseen. Maybe because I didn't say what I wanted to say.
+
+I didn't act on it.
+
+But it wasn't easy. I stood in my room staring at the drawer for a long time, like it was going to open itself.
+
+I'm starting to see the pattern. The urges are louder on days I swallow things.`,
+      3,
+      ['family', 'loneliness', 'urges', 'communication', 'patterns']
+    );
+
+    // January 21, 2026 - Work embarrassment, relapse but reflecting
+    createEntry(
+      new Date('2026-01-21'),
+      `Work embarrassed me today.
+
+I blanked out during a meeting. Completely lost my train of thought mid sentence. There was this awful pause where everyone waited for me to finish. My manager gently jumped in and saved it, but I could feel my face burning.
+
+The rest of the day I replayed that moment over and over. It's ridiculous how one small mistake can take over my entire brain.
+
+By the time I got home I felt useless. Dramatic word, but that's what it was.
+
+I did it tonight.
+
+I'm not going to pretend I didn't.
+
+It wasn't intense. It wasn't chaotic. It was almost mechanical. That scares me more than when it feels emotional. The routine of it.
+
+Afterwards I sat on my bed and felt this heavy disappointment. Not self hatred. Just this tired awareness that I defaulted again.
+
+But I also noticed something new. I didn't spiral. I didn't tell myself I'll never change. I just thought, okay. That happened. Why?
+
+The answer was simple. Shame.
+
+That feels important.`,
+      2,
+      ['work', 'shame', 'relapse', 'reflection', 'patterns']
+    );
+
+    // January 23, 2026 - Moved bed, disrupted patterns
+    createEntry(
+      new Date('2026-01-23'),
+      `I moved my bed today.
+
+Not for any deep reason. I just got annoyed looking at the same wall every night. It took way more effort than I expected. I found dust and an old receipt from months ago underneath.
+
+The room feels different now. The drawer isn't in my direct line of sight anymore. I didn't plan that. I only realized after.
+
+There's something strange about disrupting your own patterns. Like the muscle memory doesn't know where to go.
+
+Tonight the urge came and it felt confused. Less automatic. I had to actually think about it instead of just moving.
+
+That thinking gave me space.
+
+I made pasta instead. Burned the garlic a little. Opened a window because the smoke alarm almost went off. It felt chaotic but normal.
+
+I ate at my desk and watched something stupid online. For a few hours I forgot about everything.
+
+This isn't some huge breakthrough. But the room feels less like a stage where I repeat the same scene.
+
+That has to matter.`,
+      4,
+      ['change', 'environment', 'coping', 'patterns', 'small-shifts']
+    );
+
+    // January 25, 2026 - Kid on train, "Not anymore"
+    createEntry(
+      new Date('2026-01-25'),
+      `Something small happened today and I can't stop thinking about it.
+
+On the train home, a kid was sitting across from me, maybe six or seven years old. He kept staring at the scar on my wrist. Not in a judgmental way. Just curious.
+
+He finally asked, "Did that hurt?"
+
+His mom looked mortified and started apologizing. I just smiled and said, "Not anymore."
+
+And that's when it hit me. Not anymore.
+
+I've been living like the pain is present tense. Like it's happening constantly. But some of it isn't. Some of it is already past.
+
+Tonight the urge is there, faint but familiar. I'm not pretending it vanished because of one moment on a train.
+
+But that sentence keeps echoing in my head.
+
+Not anymore.
+
+For the first time, I'm starting to believe that maybe this won't always define me.`,
+      5,
+      ['reflection', 'hope', 'identity', 'scars', 'future']
+    );
+    
+    // January 27, 2026 - Irritation, zoning out, testing the urge
+    createEntry(
+      new Date('2026-01-27'),
+      `I woke up already irritated and I couldn't tell why. The kind of irritation that sits just under the skin and makes everything feel like too much. The sound of my alarm. The cold floor when I stepped out of bed. Even brushing my teeth felt aggressive.
+
+Work dragged. I kept zoning out mid task and then snapping back, realizing I'd been staring at the same sentence for five minutes. I feel like my brain has been split in half lately. One half performing. The other waiting for night.
+
+I almost texted my therapist to cancel tomorrow's session. I don't know what I'd even say in there. I keep circling the same thoughts.
+
+The urge tonight wasn't loud, which somehow made it more dangerous. It just sat there in the background like an option I could pick up whenever I wanted. I tested that idea. I walked to the drawer, touched it, walked away, came back again ten minutes later.
+
+It feels ridiculous writing that. Like I'm orbiting the same planet over and over.
+
+I didn't act on it. Not because I felt strong. I just didn't want to deal with the aftermath.`,
+      3,
+      ['irritation', 'dissociation', 'testing', 'resisting', 'exhaustion']
+    );
+    
+    // January 28, 2026 - Sister visit, guilt, relapse
+    createEntry(
+      new Date('2026-01-28'),
+      `My sister called and asked if I wanted to come over for dinner. I almost said no but I heard something in her voice that made me agree. She made pasta and talked about her job and some coworker drama that I barely followed.
+
+At one point she looked at me and said, "You're really quiet lately." I shrugged. I always shrug. It's my shield.
+
+Driving home, I felt this wave of guilt. Not for anything specific. Just for being difficult to reach.
+
+Tonight the urge hit faster than usual. There wasn't a long emotional build up. Just a sharp drop in mood. I gave in.
+
+It didn't even feel dramatic. That's what bothers me. It felt routine.
+
+Afterwards I caught my reflection in the mirror and I didn't recognize the expression. It wasn't sadness. It wasn't relief. It was emptiness.
+
+I'm tired of the predictability of myself.`,
+      2,
+      ['family', 'guilt', 'relapse', 'emptiness', 'routine']
+    );
+    
+    // January 29, 2026 - Therapy, shame, naming it
+    createEntry(
+      new Date('2026-01-29'),
+      `Therapy today.
+
+I told her about last night. Saying it out loud felt worse than writing it. She didn't react dramatically. She asked what I was feeling right before. I said guilt. She asked about what. I didn't have a clear answer.
+
+That frustrates me. I want clean reasons. Instead I get this vague cloud of not enough.
+
+We talked about patterns and she mentioned that shame tends to trigger the behavior. I nodded like that was obvious.
+
+On the walk home I kept thinking about that word. Shame. It feels heavy and sticky. It clings to everything.
+
+The urge tonight was there, but it felt slightly different. Like it was connected to something I could name.
+
+I sat on my bed and just said the word out loud. Shame.
+
+It lost a bit of its power when I named it.
+
+Not all of it.
+
+But some.`,
+      3,
+      ['therapy', 'shame', 'naming', 'awareness', 'small-progress']
+    );
+    
     // Insert all entries
     await JournalEntry.insertMany(entries);
     journal.entriesCount = entries.length;
     await journal.save();
     
     console.log(`  ✓ Created ${entries.length} raw, authentic journal entries`);
-    console.log(`  ✓ Entries span from January 3 to January 15, 2026`);
+    console.log(`  ✓ Entries span from January 3 to January 29, 2026`);
     console.log('\n✅ Successfully created anonymous_duck user and journal!');
     console.log(`   Username: anonymous_duck`);
     console.log(`   Password: password123`);
