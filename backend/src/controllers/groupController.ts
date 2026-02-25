@@ -369,6 +369,7 @@ export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<vo
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
+    const sortBy = (req.query.sort as string) || 'newest';
 
     const group = await Group.findById(req.params.id);
 
@@ -392,10 +393,26 @@ export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
+    // Determine sort order
+    let sort: any;
+    switch (sortBy) {
+      case 'popular':
+        // Sort by number of likes (most liked first), then newest
+        sort = { likes: -1, createdAt: -1 };
+        break;
+      case 'oldest':
+        sort = { createdAt: 1 };
+        break;
+      case 'newest':
+      default:
+        sort = { createdAt: -1 };
+        break;
+    }
+
     const posts = await Post.find({ groupId: req.params.id })
       .populate('author', 'username displayName avatar')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(limit);
 

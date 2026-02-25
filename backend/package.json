@@ -21,7 +21,8 @@
     "create-whoislisa": "ts-node src/scripts/createWhoIsLisa.ts",
     "create-silentsoul": "ts-node src/scripts/createSilentSoul.ts",
     "create-brokenwings": "ts-node src/scripts/createBrokenWings.ts",
-    "create-hiddenvoice": "ts-node src/scripts/createHiddenVoice.ts"
+    "create-hiddenvoice": "ts-node src/scripts/createHiddenVoice.ts",
+    "remove-duplicates": "ts-node src/scripts/removeDuplicateEntries.ts"
   },
   "keywords": [],
   "author": "",
@@ -40,7 +41,8 @@
     "mongoose": "^8.0.3",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.20.1",
-    "twilio": "^5.12.1"
+    "twilio": "^5.12.1",
+    "@sendgrid/mail": "^8.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

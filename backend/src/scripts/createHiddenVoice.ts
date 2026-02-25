@@ -324,16 +324,22 @@ I'm tired. But I'm still here. And for now, that's enough.`,
       ['middle', 'progress', 'still-here', 'no-ending']
     );
     
-    // Insert new entries
-    if (entries.length > 0) {
-      await JournalEntry.insertMany(entries);
-      journal.entriesCount = existingCount + entries.length;
+    // Check for existing entries with same content to avoid duplicates
+    const existingEntries = await JournalEntry.find({ journal: journal._id }).select('content createdAt');
+    const existingContentSet = new Set(existingEntries.map(e => e.content.trim()));
+    
+    // Filter out entries that already exist (exact content match)
+    const newEntries = entries.filter(entry => !existingContentSet.has(entry.content.trim()));
+    
+    // Insert only new entries
+    if (newEntries.length > 0) {
+      await JournalEntry.insertMany(newEntries);
+      journal.entriesCount = existingCount + newEntries.length;
       await journal.save();
-      console.log(`  ✓ Added ${entries.length} new journal entries`);
+      console.log(`  ✓ Added ${newEntries.length} new journal entries (skipped ${entries.length - newEntries.length} duplicates)`);
       console.log(`  ✓ Total entries: ${journal.entriesCount}`);
-      console.log(`  ✓ New entries span from March 3 to March 12, 2026`);
     } else {
-      console.log('  ⚠️  No new entries to add');
+      console.log('  ⚠️  No new entries to add (all entries already exist)');
     }
     console.log('\n✅ Successfully updated HiddenVoice journal!');
     console.log(`   Journal: "My uncle touches me" (Public)`);

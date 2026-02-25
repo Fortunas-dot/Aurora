@@ -18,6 +18,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import { userService } from '../src/services/user.service';
 import { useAuthStore } from '../src/store/authStore';
 import { COUNTRIES, Country } from '../src/constants/countries';
+import { apiService } from '../src/services/api.service';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
@@ -32,6 +33,12 @@ export default function AccountSettingsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [verificationInfo, setVerificationInfo] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -85,6 +92,11 @@ export default function AccountSettingsScreen() {
       setPhoneLocal('');
       setSelectedCountry(COUNTRIES[0]);
     }
+    // Reset verification state when phone number changes
+    setIsPhoneVerified(false);
+    setVerificationCode('');
+    setVerificationError('');
+    setVerificationInfo('');
   }, [user?.phoneNumber, user?._id]); // Trigger when user or phoneNumber changes
 
   const filteredCountries = COUNTRIES.filter((country) => {
@@ -114,6 +126,100 @@ export default function AccountSettingsScreen() {
     return null;
   };
 
+  const handleSendVerificationCode = async () => {
+    setVerificationError('');
+    setVerificationInfo('');
+
+    const fullPhone = buildFullPhoneNumber();
+    if (!phoneLocal.trim() || !fullPhone) {
+      Alert.alert('Invalid Phone Number', 'Please enter a valid phone number first');
+      return;
+    }
+
+    if (!/^\+[1-9]\d{1,14}$/.test(fullPhone)) {
+      Alert.alert(
+        'Invalid Phone Number Format',
+        'Phone number must be in E.164 format with country code.\n\nExample: +31612345678 (Netherlands)\nExample: +12125551234 (US)\n\nPlease make sure:\n• It starts with +\n• Includes country code\n• Has enough digits'
+      );
+      return;
+    }
+
+    // Check if phone number is actually changing
+    if (fullPhone === user?.phoneNumber) {
+      Alert.alert('No Change', 'This is already your current phone number');
+      return;
+    }
+
+    setIsSendingCode(true);
+    try {
+      const response = await apiService.post('/auth/send-verification-code', {
+        phone_number: fullPhone,
+      });
+
+      if ((response as any).success) {
+        setVerificationInfo('Verification code sent to your phone. Please enter it below.');
+        setIsPhoneVerified(false);
+      } else {
+        const errorMsg = (response as any).message || 'Failed to send verification code';
+        setVerificationError(errorMsg);
+        Alert.alert('Error', errorMsg);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to send verification code. Please check your phone number and try again.';
+      setVerificationError(errorMsg);
+      Alert.alert('Error', errorMsg);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setVerificationError('');
+
+    if (!verificationCode.trim()) {
+      Alert.alert('Verification Code Required', 'Please enter the 6-digit verification code sent to your phone');
+      return;
+    }
+
+    if (verificationCode.trim().length !== 6) {
+      Alert.alert('Invalid Code', 'Verification code must be 6 digits');
+      return;
+    }
+
+    const fullPhone = buildFullPhoneNumber();
+    if (!fullPhone) {
+      Alert.alert('Invalid Phone Number', 'Please enter a valid phone number');
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const response = await apiService.post('/auth/verify-phone', {
+        phone_number: fullPhone,
+        code: verificationCode.trim(),
+      });
+
+      if ((response as any).success) {
+        setIsPhoneVerified(true);
+        setVerificationInfo('Phone number verified successfully! You can now save your changes.');
+        setVerificationError('');
+        Alert.alert('Verified', 'Phone number verified successfully!');
+      } else {
+        const errorMsg = (response as any).message || 'Verification failed';
+        setVerificationError(errorMsg);
+        setIsPhoneVerified(false);
+        Alert.alert('Verification Failed', errorMsg);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Verification failed. Please check your code and try again.';
+      setVerificationError(errorMsg);
+      setIsPhoneVerified(false);
+      Alert.alert('Error', errorMsg);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setEmailError('');
     setPhoneError('');
@@ -137,6 +243,14 @@ export default function AccountSettingsScreen() {
       return;
     }
 
+    // Check if phone number is being changed and require verification
+    if (phoneLocal.trim() && fullPhone !== user?.phoneNumber) {
+      if (!isPhoneVerified) {
+        setPhoneError('Please verify your phone number with SMS before saving');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -156,7 +270,7 @@ export default function AccountSettingsScreen() {
         const errorMsg = response.message || 'Could not update account settings';
         if (errorMsg.includes('Email already registered')) {
           setEmailError('Email already registered');
-        } else if (errorMsg.includes('Phone number')) {
+        } else if (errorMsg.includes('Phone number') || errorMsg.includes('verified')) {
           setPhoneError(errorMsg);
         } else {
           Alert.alert('Error', errorMsg);
@@ -303,6 +417,73 @@ export default function AccountSettingsScreen() {
             <Text style={styles.hintText}>
               Select your country on the left and enter your phone number without the leading zero.
             </Text>
+
+            {/* Phone Verification Section - Only show if phone number is being changed */}
+            {phoneLocal.trim() && buildFullPhoneNumber() !== user?.phoneNumber && (
+              <View style={styles.verificationSection}>
+                {!isPhoneVerified ? (
+                  <>
+                    <GlassButton
+                      title={isSendingCode ? 'Sending Code...' : 'Send Verification Code'}
+                      onPress={handleSendVerificationCode}
+                      variant="secondary"
+                      size="md"
+                      fullWidth
+                      loading={isSendingCode}
+                      style={styles.verifyButton}
+                    />
+
+                    {verificationInfo && (
+                      <View style={styles.infoContainer}>
+                        <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                        <Text style={styles.infoText}>{verificationInfo}</Text>
+                      </View>
+                    )}
+
+                    {verificationInfo && (
+                      <>
+                        <GlassInput
+                          value={verificationCode}
+                          onChangeText={(text) => {
+                            setVerificationCode(text);
+                            if (verificationError) setVerificationError('');
+                          }}
+                          placeholder="Enter 6-digit code"
+                          keyboardType="number-pad"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          icon="key-outline"
+                          maxLength={6}
+                          style={styles.verificationInput}
+                        />
+
+                        <GlassButton
+                          title={isVerifying ? 'Verifying...' : 'Verify Code'}
+                          onPress={handleVerifyCode}
+                          variant="primary"
+                          size="md"
+                          fullWidth
+                          loading={isVerifying}
+                          style={styles.verifyButton}
+                        />
+                      </>
+                    )}
+
+                    {verificationError && (
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                        <Text style={styles.errorText}>{verificationError}</Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.verifiedContainer}>
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                    <Text style={styles.verifiedText}>Phone number verified</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -436,5 +617,59 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.sm,
     fontStyle: 'italic',
+  },
+  verificationSection: {
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+  },
+  verifyButton: {
+    marginTop: SPACING.sm,
+  },
+  verificationInput: {
+    marginTop: SPACING.md,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.successGlass || 'rgba(34, 197, 94, 0.1)',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  infoText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    marginLeft: SPACING.sm,
+    flex: 1,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.errorGlass || 'rgba(239, 68, 68, 0.1)',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  errorText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.error,
+    marginLeft: SPACING.sm,
+    flex: 1,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.successGlass || 'rgba(34, 197, 94, 0.1)',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  verifiedText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.success || '#22c55e',
+    marginLeft: SPACING.sm,
+    fontWeight: '600',
   },
 });

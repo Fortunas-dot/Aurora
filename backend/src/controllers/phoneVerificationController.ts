@@ -25,9 +25,44 @@ export const sendVerificationCode = async (req: Request, res: Response): Promise
 
     const formattedPhone = smsVerificationService.formatPhoneNumber(phone_number);
     if (!formattedPhone) {
+      // Provide more specific error message
+      if (!phone_number || phone_number.trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number is required',
+        });
+        return;
+      }
+      
+      if (!phone_number.startsWith('+')) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number must start with a country code (e.g., +31 for Netherlands, +1 for US). Please include the + sign.',
+        });
+        return;
+      }
+      
+      if (phone_number.replace(/\D/g, '').length < 4) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number is too short. Please enter a complete phone number with country code (e.g., +31612345678).',
+        });
+        return;
+      }
+      
+      // Check if it contains invalid characters
+      const hasOnlyValidChars = /^\+[\d\s\-\(\)]+$/.test(phone_number);
+      if (!hasOnlyValidChars) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number contains invalid characters. Please use only numbers, spaces, hyphens, and parentheses.',
+        });
+        return;
+      }
+      
       res.status(400).json({
         success: false,
-        message: 'Invalid phone number format. Please include country code, e.g. +31612345678.',
+        message: 'Invalid phone number format. Please use E.164 format with country code (e.g., +31612345678 for Netherlands, +12125551234 for US).',
       });
       return;
     }
@@ -142,7 +177,10 @@ export const verifyPhoneCode = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    // Mark as verified
     verification.attempts += 1;
+    verification.verified = true;
+    verification.verifiedAt = new Date();
     await verification.save();
 
     res.json({

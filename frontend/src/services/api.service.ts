@@ -21,6 +21,31 @@ class ApiService {
   }
 
   /**
+   * Map low-level network errors to friendly, user-facing messages
+   */
+  private getNetworkErrorMessage(error: any): string {
+    const raw = error?.message || '';
+
+    // Generic React Native fetch error
+    if (!raw || raw === 'Network request failed') {
+      return 'Unable to connect to Aurora. Please check your internet connection and try again.';
+    }
+
+    // Timeouts are handled separately where possible, but keep a fallback here
+    if (raw.toLowerCase().includes('timeout')) {
+      return 'Request timed out. Please check your connection and try again.';
+    }
+
+    // DNS / host resolution issues
+    if (raw.toLowerCase().includes('hostname') || raw.toLowerCase().includes('failed to fetch')) {
+      return 'Cannot reach the server. Please check if you are online and try again.';
+    }
+
+    // Fallback to raw message
+    return raw;
+  }
+
+  /**
    * Get the base URL for API requests
    */
   getBaseUrl(): string {
@@ -152,7 +177,7 @@ class ApiService {
         console.error('API GET Error:', error);
         return {
           success: false,
-          message: error.message || 'Network error',
+          message: this.getNetworkErrorMessage(error),
         };
       }
     });
@@ -261,7 +286,7 @@ class ApiService {
       
       return {
         success: false,
-        message: error.message || 'Network error',
+        message: this.getNetworkErrorMessage(error),
       };
     }
   }
@@ -320,7 +345,7 @@ class ApiService {
       console.error('API PUT Error:', error);
       return {
         success: false,
-        message: error.message || 'Network error',
+        message: this.getNetworkErrorMessage(error),
       };
     }
   }
@@ -377,7 +402,7 @@ class ApiService {
       console.error('API DELETE Error:', error);
       return {
         success: false,
-        message: error.message || 'Network error',
+        message: this.getNetworkErrorMessage(error),
       };
     }
   }

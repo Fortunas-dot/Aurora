@@ -90,9 +90,14 @@ class GroupService {
   async getGroupPosts(
     id: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    sort: 'newest' | 'popular' | 'oldest' = 'newest'
   ): Promise<ApiResponse<any[]>> {
-    return apiService.get<any[]>(`/groups/${id}/posts?page=${page}&limit=${limit}`);
+    let endpoint = `/groups/${id}/posts?page=${page}&limit=${limit}`;
+    if (sort) {
+      endpoint += `&sort=${encodeURIComponent(sort)}`;
+    }
+    return apiService.get<any[]>(endpoint);
   }
 
   async reportGroup(id: string, reason: string): Promise<ApiResponse<void>> {

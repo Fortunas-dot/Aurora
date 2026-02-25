@@ -73,7 +73,8 @@ export default function RegisterScreen() {
       setUsernameStatus('Username is available');
       return true;
     } catch (e: any) {
-      // Network error – allow user to try to register anyway
+      // Network error – allow user to try to register anyway, but show a gentle info message
+      setUsernameStatus('Could not verify username right now. We will check again when you register.');
       return true;
     } finally {
       setIsCheckingUsername(false);

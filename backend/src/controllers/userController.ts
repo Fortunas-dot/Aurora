@@ -179,14 +179,37 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     
     // Handle phone number update
     if (phoneNumber !== undefined) {
-      // Validate E.164 format
-      if (phoneNumber && !/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
-        res.status(400).json({
-          success: false,
-          message: 'Phone number must be in E.164 format (e.g., +31612345678)',
-        });
-        return;
+      // If phone number is being changed (not just cleared), require verification
+      if (phoneNumber && phoneNumber !== currentUser.phoneNumber) {
+        // Validate E.164 format
+        if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+          res.status(400).json({
+            success: false,
+            message: 'Phone number must be in E.164 format (e.g., +31612345678)',
+          });
+          return;
+        }
+
+        // Check if phone number has been verified recently (within last 10 minutes)
+        const PhoneVerification = (await import('../models/PhoneVerification')).default;
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const verification = await PhoneVerification.findOne({
+          phoneNumber: phoneNumber,
+          verified: true,
+          verifiedAt: { $gte: tenMinutesAgo },
+        })
+          .sort({ verifiedAt: -1 })
+          .exec();
+
+        if (!verification) {
+          res.status(400).json({
+            success: false,
+            message: 'Phone number must be verified via SMS before it can be updated. Please verify your phone number first.',
+          });
+          return;
+        }
       }
+      
       updateData.phoneNumber = phoneNumber || null;
     }
 

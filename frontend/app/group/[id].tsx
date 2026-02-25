@@ -37,6 +37,7 @@ export default function GroupDetailScreen() {
   const [isJoining, setIsJoining] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'oldest'>('newest');
   // Facebook design is now the only design
 
   const loadGroup = useCallback(async () => {
@@ -47,8 +48,9 @@ export default function GroupDetailScreen() {
       if (response.success && response.data) {
         setGroup(response.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading group:', error);
+      Alert.alert('Error', 'Could not load group details. Please check your connection and try again.');
     }
   }, [id]);
 
@@ -56,7 +58,7 @@ export default function GroupDetailScreen() {
     if (!id) return;
 
     try {
-      const response = await groupService.getGroupPosts(id, pageNum, 20);
+      const response = await groupService.getGroupPosts(id, pageNum, 20, sortBy);
       
       if (response.success && response.data) {
         if (append) {
@@ -69,10 +71,11 @@ export default function GroupDetailScreen() {
           setHasMore(pageNum < response.pagination.pages);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading posts:', error);
+      Alert.alert('Error', 'Could not load posts. Please check your connection and try again.');
     }
-  }, [id]);
+  }, [id, sortBy]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -125,6 +128,50 @@ export default function GroupDetailScreen() {
     } finally {
       setIsJoining(false);
     }
+  };
+
+  const handleSortPress = () => {
+    if (!group?.isMember) {
+      return;
+    }
+
+    Alert.alert(
+      'Sort posts',
+      'How would you like to sort posts in this group?',
+      [
+        {
+          text: 'Newest',
+          onPress: () => {
+            setSortBy('newest');
+            setPage(1);
+            setHasMore(true);
+            loadPosts(1, false);
+          },
+        },
+        {
+          text: 'Most liked',
+          onPress: () => {
+            setSortBy('popular');
+            setPage(1);
+            setHasMore(true);
+            loadPosts(1, false);
+          },
+        },
+        {
+          text: 'Oldest',
+          onPress: () => {
+            setSortBy('oldest');
+            setPage(1);
+            setHasMore(true);
+            loadPosts(1, false);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+    );
   };
 
   const handleReportGroup = () => {
@@ -478,12 +525,14 @@ export default function GroupDetailScreen() {
               {group?.isMember && (
                 <Pressable
                   style={styles.sortButton}
-                  onPress={() => {
-                    // TODO: Add sort options
-                    console.log('Sort posts');
-                  }}
+                  onPress={handleSortPress}
                 >
                   <Ionicons name="swap-vertical" size={18} color={COLORS.textMuted} />
+                  <Text style={styles.sortButtonText}>
+                    {sortBy === 'newest' && 'Newest'}
+                    {sortBy === 'popular' && 'Most liked'}
+                    {sortBy === 'oldest' && 'Oldest'}
+                  </Text>
                 </Pressable>
               )}
             </View>
@@ -610,7 +659,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sortButton: {
-    padding: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.glass.background,
+  },
+  sortButtonText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+    marginLeft: SPACING.xs,
   },
   loadingFooter: {
     padding: SPACING.md,

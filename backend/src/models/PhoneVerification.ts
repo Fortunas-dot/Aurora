@@ -6,6 +6,8 @@ export interface IPhoneVerification extends Document {
   createdAt: Date;
   expiresAt: Date;
   attempts: number;
+  verified?: boolean; // True when code is successfully verified
+  verifiedAt?: Date; // Timestamp when verification succeeded
 }
 
 const PhoneVerificationSchema = new Schema<IPhoneVerification>(
@@ -30,6 +32,13 @@ const PhoneVerificationSchema = new Schema<IPhoneVerification>(
     attempts: {
       type: Number,
       default: 0,
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
     },
   },
   {

@@ -156,6 +156,12 @@ export default function PhoneVerificationScreen() {
             <Text style={styles.subtitle}>
               We use your phone number to keep your account secure. It will never be shared publicly.
             </Text>
+            <View style={styles.privacyNote}>
+              <Ionicons name="shield-checkmark" size={18} color={COLORS.primary} />
+              <Text style={styles.privacyNoteText}>
+                Your phone number is only used for verification to prevent bots. We won't use it for anything else.
+              </Text>
+            </View>
           </View>
 
           <GlassCard style={styles.card} padding="lg" gradient>
@@ -230,6 +236,17 @@ export default function PhoneVerificationScreen() {
                   <Text style={styles.helperText}>
                     Select your country on the left and enter your phone number without the leading zero.
                   </Text>
+                </View>
+
+                {/* Privacy & Security Note */}
+                <View style={styles.securityNote}>
+                  <Ionicons name="lock-closed" size={16} color={COLORS.primary} />
+                  <View style={styles.securityNoteContent}>
+                    <Text style={styles.securityNoteTitle}>Privacy & Security</Text>
+                    <Text style={styles.securityNoteText}>
+                      Your phone number is only used for verification to ensure you're a real person and prevent bots from accessing the app. We will never use it for marketing, spam, or share it with third parties.
+                    </Text>
+                  </View>
                 </View>
 
                 {error && (
@@ -480,6 +497,48 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     marginTop: SPACING.sm,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.2)',
+  },
+  privacyNoteText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    marginLeft: SPACING.sm,
+    flex: 1,
+    lineHeight: 20,
+  },
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  securityNoteContent: {
+    flex: 1,
+    marginLeft: SPACING.sm,
+  },
+  securityNoteTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+    fontWeight: '600',
+  },
+  securityNoteText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
 });
 

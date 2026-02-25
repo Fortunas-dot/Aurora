@@ -143,19 +143,6 @@ export default function LoginScreen() {
               <Text style={styles.registerLink}>Register</Text>
             </Pressable>
           </View>
-
-          {/* Continue as Guest */}
-          <GlassButton
-            title="Continue as guest"
-            onPress={() => {
-              // Navigate directly to tabs without checking auth
-              // User will be in guest mode (not authenticated)
-              router.replace('/(tabs)');
-            }}
-            variant="ghost"
-            icon={<Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={{ marginRight: SPACING.sm }} />}
-            style={styles.guestButton}
-          />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -238,9 +225,6 @@ const styles = StyleSheet.create({
   registerLink: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
-  },
-  guestButton: {
-    alignSelf: 'center',
   },
 });
 
