@@ -125,46 +125,67 @@ export const sendNotificationToUser = async (userId: string, notification: any):
       const notificationType = notificationData.type as NotificationType;
       const relatedUser = notificationData.relatedUser;
       const relatedGroup = notificationData.relatedGroup;
+      const relatedJournal = notificationData.relatedJournal;
+      const streakDays = typeof notificationData.streakDays === 'number' ? notificationData.streakDays : 0;
       
       // Get username for the notification message
       const username = relatedUser?.displayName || relatedUser?.username || 'Someone';
       const groupName = relatedGroup?.name || 'a group';
+      const journalName = relatedJournal?.name || 'a journal';
       
       // Get title and body based on notification type
       let title = 'Aurora';
       let body = notificationData.message || 'You have a new notification';
       
       switch (notificationType) {
-        case 'like':
+        case 'like': {
           const likeMsg = notificationMessages.like(username);
           title = likeMsg.title;
           body = likeMsg.body;
           break;
-        case 'comment':
+        }
+        case 'comment': {
           const commentMsg = notificationMessages.comment(username);
           title = commentMsg.title;
           body = commentMsg.body;
           break;
-        case 'message':
+        }
+        case 'message': {
           const messageMsg = notificationMessages.message(username);
           title = messageMsg.title;
           body = messageMsg.body;
           break;
-        case 'follow':
+        }
+        case 'follow': {
           const followMsg = notificationMessages.follow(username);
           title = followMsg.title;
           body = followMsg.body;
           break;
-        case 'group_invite':
+        }
+        case 'group_invite': {
           const inviteMsg = notificationMessages.group_invite(username, groupName);
           title = inviteMsg.title;
           body = inviteMsg.body;
           break;
-        case 'group_join':
+        }
+        case 'group_join': {
           const joinMsg = notificationMessages.group_join(username, groupName);
           title = joinMsg.title;
           body = joinMsg.body;
           break;
+        }
+        case 'journal_entry': {
+          const journalMsg = notificationMessages.journal_entry(username, journalName);
+          title = journalMsg.title;
+          body = journalMsg.body;
+          break;
+        }
+        case 'journal_streak': {
+          const streakMsg = notificationMessages.journal_streak(streakDays);
+          title = streakMsg.title;
+          body = streakMsg.body;
+          break;
+        }
       }
       
       // Send push notification
@@ -178,6 +199,8 @@ export const sendNotificationToUser = async (userId: string, notification: any):
           relatedUserId: relatedUser?._id?.toString(),
           relatedPostId: notificationData.relatedPost?._id?.toString(),
           relatedGroupId: relatedGroup?._id?.toString(),
+          relatedJournalId: relatedJournal?._id?.toString(),
+          relatedEntryId: notificationData.relatedEntry?._id?.toString(),
         },
       });
       

@@ -1,6 +1,14 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export type NotificationType = 'like' | 'comment' | 'message' | 'follow' | 'group_invite' | 'group_join';
+export type NotificationType =
+  | 'like'
+  | 'comment'
+  | 'message'
+  | 'follow'
+  | 'group_invite'
+  | 'group_join'
+  | 'journal_entry'
+  | 'journal_streak';
 
 export interface INotification extends Document {
   user: Types.ObjectId;
@@ -8,6 +16,9 @@ export interface INotification extends Document {
   relatedUser?: Types.ObjectId;
   relatedPost?: Types.ObjectId;
   relatedGroup?: Types.ObjectId;
+  relatedJournal?: Types.ObjectId;
+  relatedEntry?: Types.ObjectId;
+  streakDays?: number;
   message: string;
   read: boolean;
   createdAt: Date;
@@ -22,7 +33,16 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['like', 'comment', 'message', 'follow', 'group_invite', 'group_join'],
+      enum: [
+        'like',
+        'comment',
+        'message',
+        'follow',
+        'group_invite',
+        'group_join',
+        'journal_entry',
+        'journal_streak',
+      ],
       required: true,
     },
     relatedUser: {
@@ -36,6 +56,17 @@ const NotificationSchema = new Schema<INotification>(
     relatedGroup: {
       type: Schema.Types.ObjectId,
       ref: 'Group',
+    },
+    relatedJournal: {
+      type: Schema.Types.ObjectId,
+      ref: 'Journal',
+    },
+    relatedEntry: {
+      type: Schema.Types.ObjectId,
+      ref: 'JournalEntry',
+    },
+    streakDays: {
+      type: Number,
     },
     message: {
       type: String,

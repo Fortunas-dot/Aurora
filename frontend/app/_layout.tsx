@@ -173,6 +173,8 @@ export default function RootLayout() {
             relatedUserId?: string;
             relatedPostId?: string;
             relatedGroupId?: string;
+            relatedJournalId?: string;
+            relatedEntryId?: string;
             notificationId?: string;
           };
           
@@ -200,6 +202,19 @@ export default function RootLayout() {
                 if (data.relatedGroupId) {
                   router.push(`/group/${data.relatedGroupId}`);
                 }
+                break;
+              case 'journal_entry':
+                if (data.relatedEntryId) {
+                  router.push(`/journal/${data.relatedEntryId}`);
+                } else if (data.relatedJournalId) {
+                  router.push(`/journal/view/${data.relatedJournalId}`);
+                } else {
+                  router.push('/notifications');
+                }
+                break;
+              case 'journal_streak':
+                // Take user straight to their journal insights
+                router.push('/journal/insights');
                 break;
               default:
                 // Default: go to notifications screen

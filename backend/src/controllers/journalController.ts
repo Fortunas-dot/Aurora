@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import JournalEntry, { IJournalEntry, IAIInsights } from '../models/JournalEntry';
 import Journal, { IJournal } from '../models/Journal';
 import User from '../models/User';
+import Notification from '../models/Notification';
 import CalendarEvent from '../models/Calendar';
 import ChatContext from '../models/ChatContext';
 import { AuthRequest } from '../middleware/auth';
@@ -770,7 +771,7 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Verify journal exists and belongs to user
-    const journal = await Journal.findById(journalId);
+    const journal = await Journal.findById(journalId).populate('followers', '_id');
     if (!journal) {
       res.status(404).json({
         success: false,
@@ -805,6 +806,109 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
     // Update journal entries count
     journal.entriesCount = (journal.entriesCount || 0) + 1;
     await journal.save();
+
+    // Notify followers of public journals about new entries
+    try {
+      if (journal.isPublic && Array.isArray(journal.followers) && journal.followers.length > 0) {
+        const ownerId = journal.owner.toString();
+        const followers = journal.followers as any[];
+
+        for (const follower of followers) {
+          const followerId = (follower._id || follower).toString();
+
+          // Skip notifying the owner if they somehow appear in followers
+          if (followerId === ownerId) continue;
+
+          const notification = await Notification.create({
+            user: followerId,
+            type: 'journal_entry',
+            relatedUser: journal.owner,
+            relatedJournal: journal._id,
+            relatedEntry: entry._id,
+            message: `shared a new entry in "${journal.name}"`,
+          });
+
+          // Populate minimal fields for WebSocket/push usage
+          await notification.populate('relatedUser', 'username displayName avatar');
+          await notification.populate('relatedJournal', 'name');
+          await notification.populate('relatedEntry', '_id');
+
+          // Use existing notification pipeline (WebSocket + push + unread count)
+          const { sendNotificationToUser, sendUnreadCountUpdate } = await import('./notificationWebSocket');
+          await sendNotificationToUser(followerId, notification);
+          await sendUnreadCountUpdate(followerId);
+        }
+      }
+    } catch (notifyError) {
+      console.error('Error sending journal entry notifications:', notifyError);
+      // Do not block entry creation on notification errors
+    }
+
+    // Optional self streak reminder: "You wrote X days in a row"
+    try {
+      if (req.userId) {
+        const authorId = new Types.ObjectId(req.userId);
+
+        // Look back up to 30 days for streak calculation
+        const now = new Date();
+        const startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+
+        const authorEntries = await JournalEntry.find({
+          author: authorId,
+          createdAt: { $gte: startDate, $lte: now },
+        }).sort({ createdAt: 1 });
+
+        if (authorEntries.length > 0) {
+          // Reuse streak algorithm similar to /journal/insights
+          const sortedEntries = authorEntries
+            .filter((e) => e.createdAt)
+            .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+
+          let streakDays = 0;
+          const currentDate = new Date();
+          currentDate.setHours(0, 0, 0, 0);
+
+          for (const e of sortedEntries) {
+            if (!e.createdAt) continue;
+            const entryDate = new Date(e.createdAt);
+            entryDate.setHours(0, 0, 0, 0);
+
+            if (entryDate.getTime() === currentDate.getTime()) {
+              streakDays++;
+              currentDate.setDate(currentDate.getDate() - 1);
+            } else if (entryDate.getTime() < currentDate.getTime()) {
+              break;
+            }
+          }
+
+          // Only notify on meaningful milestones to avoid spam
+          const milestones = new Set([3, 7, 14, 21, 30]);
+          if (milestones.has(streakDays)) {
+            const message =
+              streakDays === 1
+                ? 'You wrote in your journal today. Keep going!'
+                : `You wrote ${streakDays} days in a row. Keep going!`;
+
+            const streakNotification = await Notification.create({
+              user: authorId,
+              type: 'journal_streak',
+              relatedUser: authorId,
+              streakDays,
+              message,
+            });
+
+            const { sendNotificationToUser, sendUnreadCountUpdate } = await import('./notificationWebSocket');
+            await sendNotificationToUser(authorId.toString(), streakNotification);
+            await sendUnreadCountUpdate(authorId.toString());
+          }
+        }
+      }
+    } catch (streakError) {
+      console.error('Error sending journal streak notification:', streakError);
+      // Never block entry creation on streak reminder errors
+    }
 
     res.status(201).json({
       success: true,

@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassInput, GlassButton, LoadingSpinner } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { userService } from '../src/services/user.service';
+import { authService } from '../src/services/auth.service';
 import { useAuthStore } from '../src/store/authStore';
 import { COUNTRIES, Country } from '../src/constants/countries';
 import { apiService } from '../src/services/api.service';
@@ -39,6 +40,7 @@ export default function AccountSettingsScreen() {
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [verificationInfo, setVerificationInfo] = useState('');
+  const [isSendingEmailVerification, setIsSendingEmailVerification] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -124,6 +126,30 @@ export default function AccountSettingsScreen() {
       return 'Please enter a valid email address';
     }
     return null;
+  };
+
+  const handleSendEmailVerification = async () => {
+    if (!user?.email) {
+      Alert.alert('Email required', 'Please set an email address first.');
+      return;
+    }
+
+    setIsSendingEmailVerification(true);
+    try {
+      const response = await authService.sendVerificationEmail(user.email);
+      if (response.success) {
+        Alert.alert(
+          'Verification email sent',
+          'Please check your inbox and follow the link to verify your email address.'
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Could not send verification email');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Could not send verification email');
+    } finally {
+      setIsSendingEmailVerification(false);
+    }
   };
 
   const handleSendVerificationCode = async () => {
@@ -343,6 +369,44 @@ export default function AccountSettingsScreen() {
               autoComplete="email"
               error={emailError}
             />
+
+            <View style={styles.emailVerificationRow}>
+              <View
+                style={[
+                  styles.emailStatusBadge,
+                  user?.emailVerified ? styles.emailStatusVerified : styles.emailStatusUnverified,
+                ]}
+              >
+                <Ionicons
+                  name={user?.emailVerified ? 'checkmark-circle' : 'alert-circle'}
+                  size={18}
+                  color={user?.emailVerified ? COLORS.success || '#22c55e' : COLORS.warning || '#fbbf24'}
+                />
+                <Text
+                  style={[
+                    styles.emailStatusText,
+                    user?.emailVerified ? styles.emailStatusTextVerified : styles.emailStatusTextUnverified,
+                  ]}
+                >
+                  {user?.emailVerified ? 'Email verified' : 'Email not verified'}
+                </Text>
+              </View>
+
+              {!user?.emailVerified && (
+                <GlassButton
+                  title={isSendingEmailVerification ? 'Sending...' : 'Verify email'}
+                  onPress={handleSendEmailVerification}
+                  variant="secondary"
+                  size="sm"
+                  loading={isSendingEmailVerification}
+                  style={styles.verifyEmailButton}
+                />
+              )}
+            </View>
+
+            <Text style={styles.emailHintText}>
+              We use your email for account recovery and important security alerts.
+            </Text>
           </GlassCard>
 
           {/* Phone Number */}
@@ -671,5 +735,48 @@ const styles = StyleSheet.create({
     color: COLORS.success || '#22c55e',
     marginLeft: SPACING.sm,
     fontWeight: '600',
+  },
+  emailVerificationRow: {
+    marginTop: SPACING.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  emailStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+  },
+  emailStatusVerified: {
+    borderColor: COLORS.success || '#22c55e',
+    backgroundColor: COLORS.successGlass || 'rgba(34, 197, 94, 0.08)',
+  },
+  emailStatusUnverified: {
+    borderColor: COLORS.warning || '#fbbf24',
+    backgroundColor: COLORS.warningGlass || 'rgba(251, 191, 36, 0.08)',
+  },
+  emailStatusText: {
+    ...TYPOGRAPHY.small,
+    marginLeft: SPACING.xs,
+  },
+  emailStatusTextVerified: {
+    color: COLORS.success || '#22c55e',
+    fontWeight: '600',
+  },
+  emailStatusTextUnverified: {
+    color: COLORS.warning || '#fbbf24',
+    fontWeight: '600',
+  },
+  verifyEmailButton: {
+    paddingHorizontal: SPACING.md,
+  },
+  emailHintText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
   },
 });

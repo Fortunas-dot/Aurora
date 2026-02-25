@@ -143,6 +143,19 @@ export const notificationMessages = {
     title: 'New Group Member',
     body: `${username} joined ${groupName}`,
   }),
+  
+  journal_entry: (username: string, journalName: string): { title: string; body: string } => ({
+    title: 'New Journal Entry',
+    body: `${username} shared a new entry in "${journalName}"`,
+  }),
+
+  journal_streak: (streakDays: number): { title: string; body: string } => ({
+    title: streakDays >= 7 ? 'Amazing Streak!' : 'Nice Streak!',
+    body:
+      streakDays <= 1
+        ? 'You wrote in your journal today. Keep going!'
+        : `You journaled ${streakDays} days in a row. Keep going!`,
+  }),
 };
 
 export default {

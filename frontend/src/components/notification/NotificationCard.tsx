@@ -28,6 +28,10 @@ const getNotificationIcon = (type: NotificationType): keyof typeof Ionicons.glyp
       return 'people';
     case 'group_join':
       return 'person-add';
+    case 'journal_entry':
+      return 'book';
+    case 'journal_streak':
+      return 'flame';
     default:
       return 'notifications';
   }
@@ -46,6 +50,10 @@ const getNotificationColor = (type: NotificationType): string => {
     case 'group_invite':
     case 'group_join':
       return COLORS.info;
+    case 'journal_entry':
+      return COLORS.secondary;
+    case 'journal_streak':
+      return COLORS.accent;
     default:
       return COLORS.textMuted;
   }
@@ -89,6 +97,17 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         if (notification.relatedGroup) {
           router.push(`/group/${notification.relatedGroup._id}`);
         }
+        break;
+      case 'journal_entry':
+        if (notification.relatedEntry) {
+          router.push(`/journal/${notification.relatedEntry._id}`);
+        } else if (notification.relatedJournal) {
+          router.push(`/journal/view/${notification.relatedJournal._id}`);
+        }
+        break;
+      case 'journal_streak':
+        // Take user to journal insights to see their progress
+        router.push('/journal/insights');
         break;
       default:
         // Default navigation

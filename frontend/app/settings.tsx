@@ -22,6 +22,7 @@ import { useAuthStore } from '../src/store/authStore';
 import { useConsentStore } from '../src/store/consentStore';
 import { userService, UserProfile } from '../src/services/user.service';
 import { i18n, Language } from '../src/utils/i18n';
+import { authService } from '../src/services/auth.service';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -112,6 +113,7 @@ export default function SettingsScreen() {
   const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
   const [showAiInfoModal, setShowAiInfoModal] = useState(false);
   const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent, resetConsent } = useConsentStore();
+  const [isSendingEmailVerification, setIsSendingEmailVerification] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -132,6 +134,30 @@ export default function SettingsScreen() {
       console.error('Error loading blocked users:', error);
     } finally {
       setIsLoadingBlocked(false);
+    }
+  };
+
+  const handleSendEmailVerification = async () => {
+    if (!user?.email) {
+      Alert.alert('Email required', 'Please set an email address in your account settings first.');
+      return;
+    }
+
+    setIsSendingEmailVerification(true);
+    try {
+      const response = await authService.sendVerificationEmail(user.email);
+      if (response.success) {
+        Alert.alert(
+          'Verification email sent',
+          'Please check your inbox and follow the link to verify your email address.'
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Could not send verification email');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Could not send verification email');
+    } finally {
+      setIsSendingEmailVerification(false);
     }
   };
 
@@ -484,6 +510,41 @@ export default function SettingsScreen() {
           {/* Account Data & Privacy */}
           <GlassCard padding={0} style={styles.menuCard}>
             <Text style={[styles.subsectionTitle, { color: colors.textSecondary }]}>{t.accountData}</Text>
+            <MenuItem
+              icon={user?.emailVerified ? 'shield-checkmark-outline' : 'alert-circle-outline'}
+              title="Email verification"
+              subtitle={
+                user?.emailVerified
+                  ? 'Your email is verified'
+                  : 'Verify your email to keep your account secure'
+              }
+              onPress={() => {
+                if (user?.emailVerified) {
+                  router.push('/account-settings');
+                } else {
+                  handleSendEmailVerification();
+                }
+              }}
+              showArrow={false}
+              rightComponent={
+                user?.emailVerified ? (
+                  <View style={styles.emailStatusPillVerified}>
+                    <Text style={styles.emailStatusPillTextVerified}>Verified</Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={styles.emailStatusPillUnverified}
+                    onPress={handleSendEmailVerification}
+                    disabled={isSendingEmailVerification}
+                  >
+                    <Text style={styles.emailStatusPillTextUnverified}>
+                      {isSendingEmailVerification ? 'Sending...' : 'Verify'}
+                    </Text>
+                  </Pressable>
+                )
+              }
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="trash-outline"
               title="Delete account and all data"
@@ -975,6 +1036,28 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  emailStatusPillVerified: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.successGlass || 'rgba(34, 197, 94, 0.08)',
+  },
+  emailStatusPillUnverified: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.warningGlass || 'rgba(251, 191, 36, 0.08)',
+  },
+  emailStatusPillTextVerified: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.success || '#22c55e',
+    fontWeight: '600',
+  },
+  emailStatusPillTextUnverified: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.warning || '#fbbf24',
+    fontWeight: '600',
   },
 });
 

@@ -1,7 +1,15 @@
 import { apiService, ApiResponse } from './api.service';
 import { User } from './auth.service';
 
-export type NotificationType = 'like' | 'comment' | 'message' | 'follow' | 'group_invite' | 'group_join';
+export type NotificationType =
+  | 'like'
+  | 'comment'
+  | 'message'
+  | 'follow'
+  | 'group_invite'
+  | 'group_join'
+  | 'journal_entry'
+  | 'journal_streak';
 
 export interface Notification {
   _id: string;
@@ -16,6 +24,14 @@ export interface Notification {
     _id: string;
     name: string;
   };
+  relatedJournal?: {
+    _id: string;
+    name: string;
+  };
+  relatedEntry?: {
+    _id: string;
+  };
+  streakDays?: number;
   message: string;
   read: boolean;
   createdAt: string;
