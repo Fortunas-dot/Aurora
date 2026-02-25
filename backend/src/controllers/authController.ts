@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import User from '../models/User';
 import { generateToken, sanitizeUser } from '../utils/helpers';
 import { AuthRequest } from '../middleware/auth';
 import { getRandomCharacter } from '../utils/characters';
+import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -26,6 +28,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+
     // Create user with random avatar character
     const user = await User.create({
       email,
@@ -33,10 +38,30 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       username,
       displayName: displayName || username,
       avatarCharacter: getRandomCharacter(),
+      emailVerified: false,
+      emailVerificationToken,
     });
 
     // Generate token
     const token = generateToken(user._id.toString());
+
+    // Fire-and-forget welcome & verification emails (do not block registration on failures)
+    (async () => {
+      try {
+        await sendWelcomeEmail({
+          to: user.email,
+          username: user.displayName || user.username,
+          verificationToken: emailVerificationToken,
+        });
+        await sendVerificationEmail({
+          to: user.email,
+          username: user.displayName || user.username,
+          verificationToken: emailVerificationToken,
+        });
+      } catch (emailError) {
+        console.error('Error sending welcome/verification email:', emailError);
+      }
+    })();
 
     res.status(201).json({
       success: true,
@@ -283,6 +308,364 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
     });
   }
 };
+
+// @desc    Request password reset email
+// @route   POST /api/auth/request-password-reset
+// @access  Public
+export const requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      // Do not leak whether the email exists
+      res.json({
+        success: true,
+        message: 'If the email exists, a password reset link has been sent',
+      });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = resetTokenExpires;
+    await user.save();
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        username: user.displayName || user.username,
+        resetToken,
+      });
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+      // Still return generic success to the client
+    }
+
+    res.json({
+      success: true,
+      message: 'If the email exists, a password reset link has been sent',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error while requesting password reset',
+    });
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body as { token?: string; newPassword?: string };
+
+    if (!token || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: 'Token and new password are required',
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters',
+      });
+      return;
+    }
+
+    const user = await User.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() },
+    }).select('+password');
+
+    if (!user) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token',
+      });
+      return;
+    }
+
+    // Set new password – pre-save hook will hash it
+    user.password = newPassword;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password successfully reset',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error while resetting password',
+    });
+  }
+};
+
+// @desc    Verify email via API (token from app)
+// @route   POST /api/auth/verify-email
+// @access  Public
+export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.body as { token?: string };
+
+    if (!token) {
+      res.status(400).json({
+        success: false,
+        message: 'Verification token is required',
+      });
+      return;
+    }
+
+    const user = await User.findOne({ emailVerificationToken: token });
+
+    if (!user) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid verification token',
+      });
+      return;
+    }
+
+    if (!user.emailVerified) {
+      user.emailVerified = true;
+    }
+    user.emailVerificationToken = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email successfully verified',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error while verifying email',
+    });
+  }
+};
+
+// @desc    Resend verification email
+// @route   POST /api/auth/send-verification-email
+// @access  Public
+export const sendVerificationEmailEndpoint = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    if (user.emailVerified) {
+      res.json({
+        success: true,
+        message: 'Email already verified',
+      });
+      return;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.emailVerificationToken = verificationToken;
+    await user.save();
+
+    try {
+      await sendVerificationEmail({
+        to: user.email,
+        username: user.displayName || user.username,
+        verificationToken,
+      });
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification email sent',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error while sending verification email',
+    });
+  }
+};
+
+// @desc    HTML redirect for email verification (from email clients)
+// @route   GET /api/auth/verify-email-redirect?token=...
+// @access  Public
+export const verifyEmailRedirect = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = (req.query.token as string | undefined) || '';
+
+    if (!token) {
+      res.status(400).send(getSimpleStatusPage('Verification failed', 'No verification token provided.', false));
+      return;
+    }
+
+    const user = await User.findOne({ emailVerificationToken: token });
+
+    if (!user) {
+      res.status(400).send(getSimpleStatusPage('Verification failed', 'Invalid verification token.', false));
+      return;
+    }
+
+    if (!user.emailVerified) {
+      user.emailVerified = true;
+    }
+    user.emailVerificationToken = null;
+    await user.save();
+
+    res.send(
+      getSimpleStatusPage(
+        'Email verified',
+        'Your email has been successfully verified. You can now return to the Aurora app.',
+        true,
+        'aurora://email-verified'
+      )
+    );
+  } catch (error) {
+    console.error('Error in verifyEmailRedirect:', error);
+    res.status(500).send(
+      getSimpleStatusPage('Verification failed', 'An error occurred while verifying your email. Please try again.', false)
+    );
+  }
+};
+
+// @desc    HTML redirect for password reset (from email clients)
+// @route   GET /api/auth/reset-password-redirect?token=...
+// @access  Public
+export const resetPasswordRedirect = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = (req.query.token as string | undefined) || '';
+
+    if (!token) {
+      res.status(400).send(getSimpleStatusPage('Reset link invalid', 'No reset token provided.', false));
+      return;
+    }
+
+    const user = await User.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      res
+        .status(400)
+        .send(
+          getSimpleStatusPage(
+            'Reset link invalid',
+            'This password reset link is invalid or has expired. Please request a new one from the app.',
+            false
+          )
+        );
+      return;
+    }
+
+    // Deep link back into the app with the token so the app can complete the reset
+    const deepLink = `aurora://reset-password?token=${encodeURIComponent(token)}`;
+
+    res.send(
+      getSimpleStatusPage(
+        'Reset your password',
+        'We are redirecting you back to Aurora to choose a new password.',
+        true,
+        deepLink
+      )
+    );
+  } catch (error) {
+    console.error('Error in resetPasswordRedirect:', error);
+    res
+      .status(500)
+      .send(
+        getSimpleStatusPage('Reset link invalid', 'An error occurred while preparing your reset link. Please try again.', false)
+      );
+  }
+};
+
+// Simple HTML status page used by redirect endpoints
+function getSimpleStatusPage(title: string, message: string, success: boolean, deepLink?: string): string {
+  const background = success
+    ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+    : 'linear-gradient(135deg,#ef4444,#b91c1c)';
+
+  const deepLinkScript = deepLink
+    ? `<script>
+         setTimeout(function() {
+           window.location.href = '${deepLink}';
+         }, 800);
+       </script>`
+    : '';
+
+  const deepLinkHint = deepLink
+    ? `<p style="margin-top:16px;font-size:14px;color:#e5e7eb;">
+         If you are not redirected automatically, open the Aurora app on your device.
+       </p>`
+    : '';
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>${title}</title>
+        ${deepLinkScript}
+      </head>
+      <body style="margin:0;padding:0;background:#020617;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+          <div style="max-width:480px;width:100%;background:radial-gradient(circle at top,#020617,#020617);border-radius:24px;border:1px solid rgba(148,163,184,0.4);box-shadow:0 24px 80px rgba(15,23,42,0.9);padding:32px 24px;text-align:center;">
+            <div style="width:56px;height:56px;margin:0 auto 16px auto;border-radius:999px;background:${background};display:flex;align-items:center;justify-content:center;color:#f9fafb;font-size:28px;">
+              ${success ? '✓' : '!'}
+            </div>
+            <h1 style="margin:0 0 12px 0;color:#e5e7eb;font-size:22px;">${title}</h1>
+            <p style="margin:0;color:#9ca3af;font-size:14px;line-height:1.6;">
+              ${message}
+            </p>
+            ${deepLinkHint}
+          </div>
+        </div>
+      </body>
+    </html>
+  `.trim();
+}
+
 
 
 

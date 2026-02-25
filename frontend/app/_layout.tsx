@@ -328,6 +328,10 @@ export default function RootLayout() {
         >
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="verify-email" />
+          <Stack.Screen name="email-verified" />
           <Stack.Screen
             name="voice"
             options={{

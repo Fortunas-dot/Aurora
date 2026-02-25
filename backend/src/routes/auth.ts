@@ -1,6 +1,19 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, logout, facebookAuth, checkUsername } from '../controllers/authController';
+import {
+  register,
+  login,
+  getMe,
+  logout,
+  facebookAuth,
+  checkUsername,
+  requestPasswordReset,
+  resetPassword,
+  verifyEmail,
+  sendVerificationEmailEndpoint,
+  verifyEmailRedirect,
+  resetPasswordRedirect,
+} from '../controllers/authController';
 import { sendVerificationCode, verifyPhoneCode } from '../controllers/phoneVerificationController';
 import { protect } from '../middleware/auth';
 
@@ -28,6 +41,16 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.post('/facebook', facebookAuth);
+
+// Email verification
+router.post('/verify-email', verifyEmail);
+router.post('/send-verification-email', sendVerificationEmailEndpoint);
+router.get('/verify-email-redirect', verifyEmailRedirect);
+
+// Password reset
+router.post('/request-password-reset', requestPasswordReset);
+router.post('/reset-password', resetPassword);
+router.get('/reset-password-redirect', resetPasswordRedirect);
 
 // Username availability
 router.get('/check-username', checkUsername);

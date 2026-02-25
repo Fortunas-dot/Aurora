@@ -32,6 +32,11 @@ export interface IUser extends Document {
     reason: string;
     createdAt: Date;
   }>;
+  // Email verification & password reset
+  emailVerified?: boolean;
+  emailVerificationToken?: string | null;
+  passwordResetToken?: string | null;
+  passwordResetExpires?: Date | null;
   healthInfo?: {
     mentalHealth?: Array<{
       condition: string;
@@ -175,6 +180,22 @@ const UserSchema = new Schema<IUser>(
         default: Date.now,
       },
     }],
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      default: null,
+    },
+    passwordResetToken: {
+      type: String,
+      default: null,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
     healthInfo: {
       mentalHealth: [{
         condition: {

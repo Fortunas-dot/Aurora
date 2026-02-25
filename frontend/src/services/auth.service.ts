@@ -6,6 +6,7 @@ export interface User {
   email: string;
   username: string;
   displayName?: string;
+  emailVerified?: boolean;
   avatar?: string;
   avatarCharacter?: string;
   avatarBackgroundColor?: string;
@@ -119,6 +120,43 @@ class AuthService {
     }
 
     return response;
+  }
+
+  /**
+   * Request a password reset email
+   */
+  async requestPasswordReset(email: string): Promise<ApiResponse<{ message: string }>> {
+    return apiService.post<{ message: string }>('/auth/request-password-reset', {
+      email,
+    });
+  }
+
+  /**
+   * Reset password using a reset token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return apiService.post<{ message: string }>('/auth/reset-password', {
+      token,
+      newPassword,
+    });
+  }
+
+  /**
+   * Verify email using a verification token
+   */
+  async verifyEmail(token: string): Promise<ApiResponse<{ message: string }>> {
+    return apiService.post<{ message: string }>('/auth/verify-email', {
+      token,
+    });
+  }
+
+  /**
+   * Resend verification email to a given address
+   */
+  async sendVerificationEmail(email: string): Promise<ApiResponse<{ message: string }>> {
+    return apiService.post<{ message: string }>('/auth/send-verification-email', {
+      email,
+    });
   }
 }
 
