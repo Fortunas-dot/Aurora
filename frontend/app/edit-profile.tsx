@@ -26,8 +26,9 @@ import { AVATAR_BACKGROUND_COLORS } from '../src/utils/avatarColors';
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated, setUser } = useAuthStore();
+  const { user, isAuthenticated, updateUser } = useAuthStore();
 
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatar || null);
@@ -134,6 +135,7 @@ export default function EditProfileScreen() {
       }
 
       const response = await userService.updateProfile({
+        displayName: displayName.trim() || undefined,
         username: username.trim() || undefined,
         bio: bio.trim() || undefined,
         avatar: finalAvatar,
@@ -142,9 +144,23 @@ export default function EditProfileScreen() {
       });
 
       if (response.success && response.data) {
-        setUser(response.data);
+        // Update local user state in auth store
+        await updateUser({
+          displayName: response.data.displayName,
+          username: response.data.username,
+          bio: response.data.bio,
+          avatar: response.data.avatar,
+          avatarCharacter: response.data.avatarCharacter,
+          avatarBackgroundColor: response.data.avatarBackgroundColor,
+        });
+
+        // Show a clear success message so the user knows it worked
+        Alert.alert('Profile updated', 'Your profile has been updated.');
+
+        // Go back to the previous screen
         router.back();
       } else {
+        // Show the exact error message from the backend (e.g. 30 day username rule)
         Alert.alert('Error', response.message || 'Could not update profile');
       }
     } catch (error: any) {
@@ -338,6 +354,21 @@ export default function EditProfileScreen() {
                 </View>
               )}
             </View>
+          </GlassCard>
+
+          {/* Display Name */}
+          <GlassCard style={styles.inputCard} padding="lg">
+            <Text style={styles.label}>Name</Text>
+            <GlassInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder={user.displayName || 'Your name'}
+              style={styles.input}
+              maxLength={50}
+            />
+            <Text style={styles.hintText}>
+              This is the name people see next to your username.
+            </Text>
           </GlassCard>
 
           {/* Username */}
