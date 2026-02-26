@@ -343,16 +343,19 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
     user.passwordResetExpires = resetTokenExpires;
     await user.save();
 
-    try {
-      await sendPasswordResetEmail({
-        to: user.email,
-        username: user.displayName || user.username,
-        resetToken,
-      });
-    } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      // Still return generic success to the client
-    }
+    // Send the email in the background so the API responds quickly
+    (async () => {
+      try {
+        await sendPasswordResetEmail({
+          to: user.email,
+          username: user.displayName || user.username,
+          resetToken,
+        });
+      } catch (emailError) {
+        console.error('Error sending password reset email:', emailError);
+        // Intentionally do not throw – the client already received a response
+      }
+    })();
 
     res.json({
       success: true,
@@ -635,8 +638,25 @@ function getSimpleStatusPage(title: string, message: string, success: boolean, d
     : '';
 
   const deepLinkHint = deepLink
-    ? `<p style="margin-top:16px;font-size:14px;color:#e5e7eb;">
-         If you are not redirected automatically, open the Aurora app on your device.
+    ? `
+       <a 
+         href="${deepLink}" 
+         style="
+           display:inline-block;
+           margin-top:20px;
+           padding:12px 28px;
+           border-radius:999px;
+           background:linear-gradient(135deg,#6366f1,#a855f7);
+           color:#f9fafb;
+           text-decoration:none;
+           font-weight:600;
+           font-size:15px;
+         "
+       >
+         Open Aurora
+       </a>
+       <p style="margin-top:12px;font-size:13px;color:#9ca3af;">
+         If nothing happens, tap the button above again or copy and paste the link into your browser&apos;s address bar.
        </p>`
     : '';
 

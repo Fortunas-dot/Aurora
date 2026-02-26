@@ -198,33 +198,37 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* Title or Full Content */}
       {showFullContent ? (
         <>
-          {post.title && (
-            <Text style={styles.titleFull}>{post.title}</Text>
+          {(post.title || post.content) && (
+            <Text style={styles.titleFull}>
+              {post.title && post.title.trim().length > 0
+                ? post.title
+                : getFirstSentence(post.content)}
+            </Text>
           )}
           <Text style={styles.content}>{post.content}</Text>
         </>
       ) : (
         <>
-          {post.title ? (
-            <Pressable style={styles.titleContainer} onPress={onPress}>
-              <View style={styles.titleContentContainer}>
-                <Text style={styles.title}>{post.title}</Text>
-                {post.content && (
-                  <Text style={styles.contentPreview} numberOfLines={2}>
-                    {getFirstSentence(post.content)}
-                  </Text>
-                )}
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.titleArrow} />
-            </Pressable>
-          ) : (
-            <Pressable style={styles.titleContainer} onPress={onPress}>
-              <Text style={styles.contentPreview} numberOfLines={2}>
-                {post.content}
+          <Pressable style={styles.titleContainer} onPress={onPress}>
+            <View style={styles.titleContentContainer}>
+              <Text style={styles.title}>
+                {post.title && post.title.trim().length > 0
+                  ? post.title
+                  : getFirstSentence(post.content)}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.titleArrow} />
-            </Pressable>
-          )}
+              {post.content && (
+                <Text style={styles.contentPreview} numberOfLines={2}>
+                  {getFirstSentence(post.content)}
+                </Text>
+              )}
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={COLORS.textMuted}
+              style={styles.titleArrow}
+            />
+          </Pressable>
         </>
       )}
 
@@ -426,14 +430,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    marginBottom: SPACING.xs,
+    fontWeight: '600',
+    marginBottom: SPACING.xs / 2,
   },
   titleFull: {
-    ...TYPOGRAPHY.h2,
+    ...TYPOGRAPHY.h3,
     color: COLORS.text,
+    fontWeight: '600',
     paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
     paddingBottom: SPACING.sm,
   },
   titleArrow: {

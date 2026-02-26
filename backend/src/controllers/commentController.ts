@@ -14,22 +14,59 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const comments = await Comment.find({ post: req.params.postId })
+    // Only paginate top-level comments; replies are nested under them
+    const topLevelQuery: any = {
+      post: req.params.postId,
+      $or: [{ parentComment: null }, { parentComment: { $exists: false } }],
+    };
+
+    const topLevelComments = await Comment.find(topLevelQuery)
       .populate('author', 'username displayName avatar')
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Comment.countDocuments({ post: req.params.postId });
+    const totalTopLevel = await Comment.countDocuments(topLevelQuery);
+
+    // Fetch all replies for these top-level comments in one query
+    const topIds = topLevelComments.map((c) => c._id);
+
+    const replies = await Comment.find({
+      post: req.params.postId,
+      parentComment: { $in: topIds },
+    })
+      .populate('author', 'username displayName avatar')
+      .sort({ createdAt: 1 });
+
+    const repliesByParent: Record<string, any[]> = {};
+    replies.forEach((reply: any) => {
+      const parentId = reply.parentComment?.toString();
+      if (!parentId) return;
+      if (!repliesByParent[parentId]) {
+        repliesByParent[parentId] = [];
+      }
+      repliesByParent[parentId].push(reply);
+    });
+
+    const result = topLevelComments.map((comment: any) => {
+      const obj = comment.toObject();
+      const nestedReplies = (repliesByParent[comment._id.toString()] || []).map((r) => r.toObject());
+
+      return {
+        ...obj,
+        replies: nestedReplies,
+        repliesCount: nestedReplies.length,
+      };
+    });
 
     res.json({
       success: true,
-      data: comments,
+      data: result,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit),
+        total: totalTopLevel,
+        pages: Math.ceil(totalTopLevel / limit),
       },
     });
   } catch (error: any) {
@@ -45,7 +82,7 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
 // @access  Private
 export const createComment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { postId, content } = req.body;
+    const { postId, content, parentCommentId } = req.body;
 
     // Check if post exists
     const post = await Post.findById(postId);
@@ -61,6 +98,7 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
       post: postId,
       author: req.userId,
       content,
+      parentComment: parentCommentId || null,
     });
 
     // Update post comment count

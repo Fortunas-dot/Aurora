@@ -14,6 +14,7 @@ interface CommentCardProps {
   onReplyAdded?: (reply: Comment) => void;
   onCommentUpdated?: (comment: Comment) => void;
   onCommentDeleted?: (commentId: string) => void;
+  onReplyModeChange?: (commentId: string, isReplying: boolean) => void;
   currentUserId?: string;
   isAuthenticated?: boolean;
   postId: string;
@@ -26,6 +27,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
   onReplyAdded,
   onCommentUpdated,
   onCommentDeleted,
+  onReplyModeChange,
   currentUserId,
   isAuthenticated = false,
   postId,
@@ -65,6 +67,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
         setReplies((prev) => [response.data!, ...prev]);
         setReplyText('');
         setShowReplyInput(false);
+        onReplyModeChange?.(comment._id, false);
         onReplyAdded?.(response.data);
       }
     } catch (error) {
@@ -231,7 +234,9 @@ export const CommentCard: React.FC<CommentCardProps> = ({
                 style={styles.actionButton} 
                 onPress={() => {
                   if (isAuthenticated) {
-                    setShowReplyInput(!showReplyInput);
+                    const next = !showReplyInput;
+                    setShowReplyInput(next);
+                    onReplyModeChange?.(comment._id, next);
                   } else {
                     router.push('/(auth)/login');
                   }
@@ -268,7 +273,12 @@ export const CommentCard: React.FC<CommentCardProps> = ({
               style={styles.replyInput}
             />
             <View style={styles.replyActions}>
-              <Pressable onPress={() => setShowReplyInput(false)}>
+              <Pressable
+                onPress={() => {
+                  setShowReplyInput(false);
+                  onReplyModeChange?.(comment._id, false);
+                }}
+              >
                 <Text style={styles.cancelButton}>Cancel</Text>
               </Pressable>
               <GlassButton

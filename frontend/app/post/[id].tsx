@@ -35,6 +35,7 @@ export default function PostDetailsScreen() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMoreComments, setHasMoreComments] = useState(true);
+  const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
 
   const loadPost = useCallback(async () => {
     if (!id) return;
@@ -258,6 +259,14 @@ export default function PostDetailsScreen() {
               currentUserId={user?._id}
               isAuthenticated={isAuthenticated}
               postId={post._id}
+              onReplyModeChange={(commentId, isReplying) => {
+                setActiveReplyCommentId((prev) => {
+                  if (isReplying) {
+                    return commentId;
+                  }
+                  return prev === commentId ? null : prev;
+                });
+              }}
             />
           )}
           keyExtractor={(item) => item._id}
@@ -315,8 +324,8 @@ export default function PostDetailsScreen() {
           }
         />
 
-        {/* Comment Input */}
-        {isAuthenticated && (
+        {/* Comment Input (hidden while replying to a specific comment to avoid confusion) */}
+        {isAuthenticated && !activeReplyCommentId && (
           <View style={[styles.commentInputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : SPACING.sm }]}>
             <GlassInput
               value={commentText}
@@ -327,7 +336,7 @@ export default function PostDetailsScreen() {
               inputStyle={styles.commentInputText}
             />
             <GlassButton
-              title="Verzend"
+              title="Send"
               onPress={handleSubmitComment}
               variant="primary"
               size="sm"

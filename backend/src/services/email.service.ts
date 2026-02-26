@@ -167,7 +167,7 @@ function baseEmailLayout(content: { title: string; body: string; ctaLabel?: stri
       ? `<tr>
            <td align="center" style="padding: 24px 0 8px 0;">
              <a href="${ctaUrl}" 
-                style="display: inline-block; padding: 12px 28px; border-radius: 999px; background: linear-gradient(90deg,#4f46e5,#22c1c3); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">
+                style="display: inline-block; padding: 12px 28px; border-radius: 999px; background: linear-gradient(135deg,#6366f1,#a855f7); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">
                ${ctaLabel}
              </a>
            </td>
@@ -182,35 +182,35 @@ function baseEmailLayout(content: { title: string; body: string; ctaLabel?: stri
 
   return `
   <html>
-    <body style="margin:0;padding:0;background:#020617;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#020617;padding:32px 16px;">
+    <body style="margin:0;padding:0;background:#050816;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#050816;padding:32px 16px;">
         <tr>
           <td align="center">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:radial-gradient(circle at top,#1f2937,#020617);border-radius:24px;border:1px solid rgba(148,163,184,0.3);box-shadow:0 24px 80px rgba(15,23,42,0.8);overflow:hidden;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:linear-gradient(145deg,#020617,#050816 40%,#020617 100%);border-radius:24px;border:1px solid rgba(148,163,184,0.35);box-shadow:0 32px 80px rgba(15,23,42,0.9);overflow:hidden;">
               <tr>
-                <td align="center" style="padding:32px 24px 8px 24px;">
-                  <div style="width:48px;height:48px;border-radius:999px;background:radial-gradient(circle at top,#4f46e5,#22c1c3);display:flex;align-items:center;justify-content:center;color:#e5e7eb;font-size:28px;font-weight:700;">
-                    A
-                  </div>
+                <td align="left" style="padding:20px 24px 4px 24px;">
+                  <span style="display:inline-block;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:#9ca3af;">
+                    Aurora
+                  </span>
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding:8px 24px 0 24px;">
-                  <h1 style="margin:0;color:#e5e7eb;font-size:22px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                <td align="left" style="padding:4px 24px 0 24px;">
+                  <h1 style="margin:0;color:#e5e7eb;font-size:22px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:600;letter-spacing:0.02em;">
                     ${title}
                   </h1>
                 </td>
               </tr>
               <tr>
-                <td align="left" style="padding:16px 32px 8px 32px;color:#9ca3af;font-size:14px;line-height:1.6;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                <td align="left" style="padding:16px 24px 8px 24px;color:#cbd5f5;font-size:14px;line-height:1.7;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
                   ${body}
                 </td>
               </tr>
               ${ctaSection}
               <tr>
                 <td align="center" style="padding:16px 24px 24px 24px;color:#6b7280;font-size:11px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-                  You received this email because you created an account with Aurora.<br/>
-                  If this wasn’t you, you can safely ignore this message.
+                  You’re receiving this email because it’s related to your Aurora account.<br/>
+                  If this wasn’t you, you can ignore this message and your account will stay as it is.
                 </td>
               </tr>
             </table>

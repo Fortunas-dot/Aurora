@@ -5,6 +5,11 @@ export interface IComment extends Document {
   author: Types.ObjectId;
   content: string;
   likes: Types.ObjectId[];
+  /**
+   * Optional parent comment ID for nested replies.
+   * If set, this comment is considered a reply to another comment on the same post.
+   */
+  parentComment?: Types.ObjectId | null;
   reports: {
     user: Types.ObjectId;
     reason: string;
@@ -36,6 +41,11 @@ const CommentSchema = new Schema<IComment>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     }],
+    parentComment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+    },
     reports: [{
       user: {
         type: Schema.Types.ObjectId,
@@ -59,6 +69,7 @@ const CommentSchema = new Schema<IComment>(
 
 // Index for efficient querying
 CommentSchema.index({ post: 1, createdAt: 1 });
+CommentSchema.index({ post: 1, parentComment: 1, createdAt: 1 });
 
 export default mongoose.model<IComment>('Comment', CommentSchema);
 
