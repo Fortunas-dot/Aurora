@@ -179,6 +179,29 @@ IMPORTANT: You have FULL ACCESS to:
 - Their calendar/agenda events and appointments
 
 You should actively use this information to provide personalized, continuous support. When the user mentions something you know about them, acknowledge it and reference it naturally. Do NOT say you cannot remember personal details or that you do not have access to their health information, journal, or calendar - you have access to this information and should use it to help them.`;
+
+  // Add crisis resources section if high risk detected
+  const isHighRisk = riskLevel && (
+    riskLevel === RiskLevel.HIGH_RISK_SELF_HARM ||
+    riskLevel === RiskLevel.HIGH_RISK_SUICIDE ||
+    riskLevel === RiskLevel.ABUSE_VIOLENCE ||
+    riskLevel === RiskLevel.EATING_DISORDER ||
+    riskLevel === RiskLevel.SUBSTANCE_ABUSE
+  );
+
+  if (isHighRisk) {
+    return `${basePrompt}
+
+CRISIS RESOURCES - If you detect high-risk content, include these resources in your response:
+- National Suicide Prevention Lifeline: 988 (US) or text HOME to 741741
+- Crisis Text Line: Text HOME to 741741
+- International Association for Suicide Prevention: https://www.iasp.info/resources/Crisis_Centres/
+- Emergency Services: 911 (US) or local emergency number
+
+Remember: Your priority is the user's immediate safety. Provide these resources clearly and encourage immediate action.`;
+  }
+
+  return basePrompt;
 };
 
 const shouldUseAdvancedModel = (messages: ChatMessage[]): boolean => {
