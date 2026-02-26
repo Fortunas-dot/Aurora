@@ -183,20 +183,21 @@ export const CommentCard: React.FC<CommentCardProps> = ({
               <Text style={styles.authorName}>
                 {comment.author.displayName || comment.author.username}
               </Text>
-              {isTherapist && (
-                <View style={styles.therapistBadge}>
-                  <Ionicons name="star" size={11} color="#fbbf24" />
-                  <Text style={styles.therapistBadgeText}>Certified therapist</Text>
-                </View>
-              )}
               <Text style={styles.timestamp}>{formattedDate}</Text>
             </View>
           </Pressable>
-          {isOwner && isAuthenticated && (
-            <Pressable style={styles.optionsButton} onPress={handleOptionsPress}>
-              <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textSecondary} />
-            </Pressable>
-          )}
+          <View style={styles.headerRight}>
+            {isTherapist && (
+              <View style={styles.therapistPill}>
+                <Text style={styles.therapistPillText}>Certified therapist</Text>
+              </View>
+            )}
+            {isOwner && isAuthenticated && (
+              <Pressable style={styles.optionsButton} onPress={handleOptionsPress}>
+                <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textSecondary} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Edit Mode */}
@@ -339,8 +340,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   therapistContainer: {
-    borderWidth: 1,
-    borderColor: 'rgba(250, 204, 21, 0.6)', // gold-ish
+    borderWidth: 2,
+    borderColor: '#fbbf24', // stronger gold border
   },
   headerRow: {
     flexDirection: 'row',
@@ -357,16 +358,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: SPACING.sm,
   },
-  therapistBadge: {
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
-    gap: 4,
-  },
-  therapistBadgeText: {
-    ...TYPOGRAPHY.caption,
-    color: '#fbbf24',
-    fontWeight: '600',
+    gap: SPACING.xs,
   },
   optionsButton: {
     padding: SPACING.xs,
@@ -380,6 +375,19 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     marginTop: 2,
+  },
+  therapistPill: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: 'rgba(250, 204, 21, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(250, 204, 21, 0.8)',
+  },
+  therapistPillText: {
+    ...TYPOGRAPHY.caption,
+    color: '#facc15',
+    fontWeight: '600',
   },
   content: {
     ...TYPOGRAPHY.body,
