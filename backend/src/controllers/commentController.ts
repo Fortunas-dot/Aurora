@@ -48,16 +48,34 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
       repliesByParent[parentId].push(reply);
     });
 
+    const sortByTherapistThenTime = (a: any, b: any) => {
+      const aTherapist = a?.author?.isTherapist ? 1 : 0;
+      const bTherapist = b?.author?.isTherapist ? 1 : 0;
+
+      if (aTherapist !== bTherapist) {
+        // Therapists first
+        return bTherapist - aTherapist;
+      }
+
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return aTime - bTime;
+    };
+
     const result = topLevelComments.map((comment: any) => {
       const obj = comment.toObject();
-      const nestedReplies = (repliesByParent[comment._id.toString()] || []).map((r) => r.toObject());
+      const rawReplies = repliesByParent[comment._id.toString()] || [];
+
+      const nestedReplies = rawReplies
+        .map((r) => r.toObject())
+        .sort(sortByTherapistThenTime);
 
       return {
         ...obj,
         replies: nestedReplies,
         repliesCount: nestedReplies.length,
       };
-    });
+    }).sort(sortByTherapistThenTime);
 
     res.json({
       success: true,
