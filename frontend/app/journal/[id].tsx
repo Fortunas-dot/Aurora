@@ -195,11 +195,25 @@ export default function JournalEntryScreen() {
   }, [entry, user]);
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'journal/[id].tsx:197',message:'useEffect triggered with id param',data:{id,fromPublicJournal},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     loadEntry();
   }, [id]);
 
   const loadEntry = async () => {
     if (!id) return;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'journal/[id].tsx:202',message:'loadEntry called with id',data:{id,isValidObjectId:/^[0-9a-fA-F]{24}$/.test(id)},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    // Validate that the ID looks like a valid MongoDB ObjectId (24 hex characters)
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      console.warn(`[JournalEntryScreen] Invalid entry ID format: ${id}`);
+      setLoading(false);
+      return;
+    }
     
     try {
       const response = await journalService.getEntry(id);

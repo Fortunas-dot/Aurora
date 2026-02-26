@@ -669,6 +669,21 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Private (own entries) or Public (if journal is public)
 export const getEntry = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // #region agent log
+    const mongoose = require('mongoose');
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    console.log(JSON.stringify({location:'journalController.ts:670',message:'getEntry called with params.id',data:{id:req.params.id,isValidObjectId,url:req.url},timestamp:Date.now(),runId:'run1',hypothesisId:'C'}));
+    // #endregion
+    
+    // Validate that the ID is a valid ObjectId
+    if (!Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid journal entry ID',
+      });
+      return;
+    }
+    
     // First, try to find entry by ID
     const entry = await JournalEntry.findById(req.params.id)
       .populate('journal', 'name isPublic owner')
