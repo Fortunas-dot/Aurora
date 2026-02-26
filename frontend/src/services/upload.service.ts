@@ -67,10 +67,6 @@ class UploadService {
         }
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:68',message:'Creating FormData for upload',data:{uri,type,mimeType,fileExtension,platform:Platform.OS},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-
       // Create form data
       const formData = new FormData();
       
@@ -84,9 +80,6 @@ class UploadService {
         name: `${type}-${Date.now()}.${fileExtension}`,
       } as any);
 
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:78',message:'FormData created, sending request',data:{fileUri,uploadUrl:`${apiService.getBaseUrl()}/upload`},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
 
       // Upload to server
       const baseUrl = apiService.getBaseUrl();
@@ -101,9 +94,6 @@ class UploadService {
         body: formData,
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:95',message:'Upload response received',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -114,9 +104,6 @@ class UploadService {
           errorData = { message: errorText || `HTTP ${response.status}` };
         }
         
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:107',message:'Upload failed',data:{status:response.status,errorData},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         
         return {
           success: false,
@@ -126,9 +113,6 @@ class UploadService {
 
       const result = await response.json();
       
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:118',message:'Upload result',data:{success:result.success,hasData:!!result.data,hasUrl:!!result.data?.url,message:result.message},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       if (result.success && result.data?.url) {
         // Convert relative URL to absolute URL
@@ -150,10 +134,6 @@ class UploadService {
         message: result.message || 'Upload failed - no URL returned',
       };
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'upload.service.ts:140',message:'Upload exception',data:{errorMessage:error.message,errorName:error.name,errorStack:error.stack?.substring(0,200)},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       console.error('📤 Error uploading file:', error);
       return {
         success: false,

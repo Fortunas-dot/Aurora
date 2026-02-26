@@ -165,6 +165,8 @@ export default function JournalEntryScreen() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [isFullscreenBookPage, setIsFullscreenBookPage] = useState(false);
+  const [invalidId, setInvalidId] = useState(false);
+  const redirectingRef = React.useRef(false);
   
   // If coming from public journal view, always show book page style
   const showBookPageStyle = fromPublicJournal === 'true';
@@ -195,22 +197,37 @@ export default function JournalEntryScreen() {
   }, [entry, user]);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'journal/[id].tsx:197',message:'useEffect triggered with id param',data:{id,fromPublicJournal},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    loadEntry();
-  }, [id]);
+    // Early return if ID is "browse" - redirect immediately without calling loadEntry
+    // Use ref to prevent multiple redirects
+    if (id === 'browse' && !redirectingRef.current) {
+      redirectingRef.current = true;
+      // Use setTimeout to ensure redirect happens after render
+      setTimeout(() => {
+        router.replace('/journal/browse');
+      }, 0);
+      return;
+    }
+    
+    // Reset redirecting flag if ID changes to something else
+    if (id !== 'browse') {
+      redirectingRef.current = false;
+    }
+    
+    // Only load entry if ID is valid and not "browse"
+    if (id && id !== 'browse') {
+      loadEntry();
+    }
+  }, [id, router]);
 
   const loadEntry = async () => {
     if (!id) return;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'journal/[id].tsx:202',message:'loadEntry called with id',data:{id,isValidObjectId:/^[0-9a-fA-F]{24}$/.test(id)},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    
+
     // Validate that the ID looks like a valid MongoDB ObjectId (24 hex characters)
     if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       console.warn(`[JournalEntryScreen] Invalid entry ID format: ${id}`);
+      
+      // For invalid IDs, set invalid flag (browse is already handled in useEffect)
+      setInvalidId(true);
       setLoading(false);
       return;
     }
@@ -264,6 +281,17 @@ export default function JournalEntryScreen() {
     }
   };
 
+  // Early return if ID is "browse" - don't render anything, redirect is handled in useEffect
+  if (id === 'browse') {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </LinearGradient>
+    );
+  }
+
   if (loading) {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
@@ -274,11 +302,47 @@ export default function JournalEntryScreen() {
     );
   }
 
+  if (invalidId) {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Invalid Entry</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Invalid journal entry ID</Text>
+          <Pressable 
+            style={styles.backToJournalButton}
+            onPress={() => router.push('/journal')}
+          >
+            <Text style={styles.backToJournalText}>Back to Journal</Text>
+          </Pressable>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   if (!entry) {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Entry</Text>
+          <View style={styles.headerRight} />
+        </View>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Entry not found</Text>
+          <Pressable 
+            style={styles.backToJournalButton}
+            onPress={() => router.push('/journal')}
+          >
+            <Text style={styles.backToJournalText}>Back to Journal</Text>
+          </Pressable>
         </View>
       </LinearGradient>
     );
@@ -754,6 +818,20 @@ const styles = StyleSheet.create({
   errorText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
+    marginBottom: SPACING.md,
+  },
+  backToJournalButton: {
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    alignSelf: 'center',
+  },
+  backToJournalText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.background,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -773,6 +851,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 44,
   },
   headerActions: {
     flexDirection: 'row',

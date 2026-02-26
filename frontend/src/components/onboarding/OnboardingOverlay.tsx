@@ -38,13 +38,13 @@ export const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
     if (visible) {
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 150, // Faster animation
+        duration: 100, // Very fast animation
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 100, // Faster animation
+        duration: 50, // Very fast animation
         useNativeDriver: true,
       }).start();
     }

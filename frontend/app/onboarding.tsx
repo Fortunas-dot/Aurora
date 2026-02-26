@@ -39,13 +39,13 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
   const rotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Staggered entrance animation
-    const entranceDelay = index * 200;
+    // Simplified entrance animation - faster
+    const entranceDelay = index * 100;
     
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 600,
+        duration: 300,
         delay: entranceDelay,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
@@ -53,32 +53,32 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
       Animated.spring(scale, {
         toValue: 1,
         delay: entranceDelay,
-        tension: 50,
-        friction: 7,
+        tension: 60,
+        friction: 8,
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 600,
+        duration: 300,
         delay: entranceDelay,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Continuous gentle pulse animation (starts after entrance)
+    // Simplified pulse animation - less frequent
     const startPulse = () => {
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, {
-            toValue: 1.08,
-            duration: 2000 + index * 200,
+            toValue: 1.05,
+            duration: 3000,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(pulse, {
             toValue: 1,
-            duration: 2000 + index * 200,
+            duration: 3000,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
@@ -88,18 +88,18 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
       return pulseAnimation;
     };
 
-    // Subtle rotation animation
+    // Simplified rotation - slower and less frequent
     const rotationAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(rotation, {
           toValue: 1,
-          duration: 5000 + index * 1000,
+          duration: 8000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(rotation, {
           toValue: 0,
-          duration: 5000 + index * 1000,
+          duration: 8000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -115,7 +115,7 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
         pulseAnim.stop();
         rotationAnimation.stop();
       };
-    }, entranceDelay + 600);
+    }, entranceDelay + 300);
 
     return () => {
       clearTimeout(timeoutId);
@@ -170,21 +170,20 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
   );
 });
 
-// Animated star component for background
-const AnimatedStar = ({ index }: { index: number }) => {
+// Animated star component for background - optimized for performance
+const AnimatedStar = React.memo(({ index }: { index: number }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.3)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
   const initialX = Math.random() * 100;
   const initialY = Math.random() * 100;
-  const speed = 20 + Math.random() * 30;
   const direction = Math.random() * Math.PI * 2;
-  const distance = 30 + Math.random() * 50;
+  const distance = 20 + Math.random() * 30; // Reduced distance
 
   useEffect(() => {
-    const duration = 3000 + Math.random() * 4000;
+    const duration = 4000 + Math.random() * 3000; // Longer, smoother animations
 
     const animate = () => {
       Animated.loop(
@@ -217,34 +216,6 @@ const AnimatedStar = ({ index }: { index: number }) => {
               useNativeDriver: true,
             }),
           ]),
-          Animated.sequence([
-            Animated.timing(opacity, {
-              toValue: 0.1,
-              duration: duration * 0.8,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0.3 + Math.random() * 0.4,
-              duration: duration * 0.8,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.timing(scale, {
-              toValue: 0.5,
-              duration: duration * 0.6,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(scale, {
-              toValue: 1,
-              duration: duration * 0.6,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
         ])
       ).start();
     };
@@ -263,13 +234,12 @@ const AnimatedStar = ({ index }: { index: number }) => {
           transform: [
             { translateX },
             { translateY },
-            { scale },
           ],
         },
       ]}
     />
   );
-};
+});
 
 // Floating sparkle component
 const FloatingSparkle = React.memo(({ delay, startX, startY, size }: { delay: number; startX: number; startY: number; size: number }) => {
@@ -334,25 +304,26 @@ const AnimatedIconContainer = ({ icon, delay = 0, useAurora = false, compact = f
   useEffect(() => {
     Animated.sequence([
       Animated.delay(delay),
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(rotateAnim, {
-              toValue: 1,
-              duration: 20000,
-              useNativeDriver: true,
-            }),
-          ])
-        ),
-      ]),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, []);
+    
+    // Simplified rotation - only if not using Aurora
+    if (!useAurora) {
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 20000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [delay, useAurora]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -537,6 +508,10 @@ export default function OnboardingScreen() {
   };
 
   const renderSlide = React.useCallback(({ item, index }: { item: OnboardingSlide; index: number }) => {
+    // Early return optimization - don't render if not visible
+    if (Math.abs(index - currentIndex) > 1) {
+      return <View style={[styles.slide, { width: SCREEN_WIDTH }]} />;
+    }
     const isLastSlide = item.id === onboardingSlides[onboardingSlides.length - 1].id;
 
     return (
@@ -544,7 +519,7 @@ export default function OnboardingScreen() {
         {/* Star field background for first and second slide - reduced for performance */}
         {(index === 0 || index === 1) && (
           <View style={styles.starField} pointerEvents="none">
-            {Array.from({ length: 20 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <AnimatedStar key={i} index={i} />
             ))}
           </View>
@@ -694,7 +669,7 @@ export default function OnboardingScreen() {
         )}
       </View>
     );
-  }, [colors.text]);
+  }, [colors.text, currentIndex]);
 
   return (
     <LinearGradient
@@ -712,10 +687,7 @@ export default function OnboardingScreen() {
       <FlatList
         ref={flatListRef}
         data={onboardingSlides}
-        renderItem={({ item, index }) => {
-          // Use React.memo pattern for better performance
-          return renderSlide({ item, index });
-        }}
+        renderItem={renderSlide}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
@@ -723,7 +695,7 @@ export default function OnboardingScreen() {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={onScrollToIndexFailed}
-        scrollEventThrottle={16}
+        scrollEventThrottle={32}
         decelerationRate="fast"
         snapToInterval={SCREEN_WIDTH}
         snapToAlignment="start"
@@ -736,8 +708,8 @@ export default function OnboardingScreen() {
         removeClippedSubviews={true}
         initialNumToRender={1}
         maxToRenderPerBatch={1}
-        windowSize={3}
-        updateCellsBatchingPeriod={50}
+        windowSize={2}
+        updateCellsBatchingPeriod={100}
         legacyImplementation={false}
         disableVirtualization={false}
       />

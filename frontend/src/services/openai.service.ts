@@ -84,6 +84,20 @@ export class OpenAIService {
           return;
         }
 
+        // Check for crisis resources
+        if (parsed.type === 'crisis_resources') {
+          // Store crisis resources in a callback or return them
+          // For now, we'll handle this in the hook
+          if (options.onCrisisResources) {
+            options.onCrisisResources({
+              riskLevel: parsed.riskLevel,
+              message: parsed.message,
+              resources: parsed.resources,
+            });
+          }
+          return;
+        }
+
         const content = parsed.content;
         if (content) {
           onChunk(content);

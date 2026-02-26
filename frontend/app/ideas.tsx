@@ -404,13 +404,13 @@ export default function IdeasScreen() {
         ListHeaderComponent={
           ideas.length === 0 && !isLoading ? (
             <View style={styles.infoBannerContainer}>
-              <GlassCard style={styles.infoBanner} padding="md" gradient>
+              <GlassCard style={styles.infoBanner} padding="sm" gradient>
                 <View style={styles.infoBannerContent}>
-                  <Ionicons name="eye" size={24} color={COLORS.primary} />
+                  <Ionicons name="eye" size={22} color={COLORS.primary} />
                   <View style={styles.infoBannerText}>
                     <Text style={styles.infoBannerTitle}>Your Voice Matters</Text>
-                    <Text style={styles.infoBannerDescription}>
-                      We watch this page 24/7 and listen to our users. You decide what we'll add next to Aurora.
+                    <Text style={styles.infoBannerDescription} numberOfLines={2}>
+                      We watch this page and listen to our users. You decide what we'll add next to Aurora.
                     </Text>
                   </View>
                 </View>
@@ -462,7 +462,7 @@ export default function IdeasScreen() {
             style={styles.modalBackdrop}
             onPress={() => setShowCreateModal(false)}
           />
-          <GlassCard style={styles.modalContent} padding="lg">
+          <GlassCard style={styles.modalContent} padding="lg" variant="dark">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Submit New Idea</Text>
               <Pressable onPress={() => setShowCreateModal(false)}>
@@ -745,8 +745,8 @@ const styles = StyleSheet.create({
   },
   infoBannerContainer: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
   },
   infoBanner: {
     marginBottom: 0,
@@ -787,6 +787,9 @@ const styles = StyleSheet.create({
     width: '90%',
     maxHeight: '80%',
     borderRadius: BORDER_RADIUS.xl,
+    // Make the form easier to read by using a more solid background
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.glass.border,
   },
   modalHeader: {
     flexDirection: 'row',

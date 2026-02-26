@@ -60,9 +60,10 @@ const IdeaSchema = new Schema<IIdea>(
   }
 );
 
-// Index for sorting by votes
+// Index for sorting by creation date
 IdeaSchema.index({ createdAt: -1 });
-IdeaSchema.index({ upvotes: -1, downvotes: 1 });
+// Note: Cannot create compound index on parallel arrays (upvotes, downvotes)
+// Sorting by vote score is handled in application logic
 
 export default mongoose.model<IIdea>('Idea', IdeaSchema);
 

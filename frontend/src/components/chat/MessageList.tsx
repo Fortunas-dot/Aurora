@@ -9,11 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
 import { ContextIndicator } from './ContextIndicator';
+import { CrisisResources } from './CrisisResources';
 import { useChatStore } from '../../store/chatStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants/theme';
 
 export const MessageList: React.FC = () => {
-  const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext } = useChatStore();
+  const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext, crisisResources } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
   const streamingStartTime = useRef<number | null>(null);
   const isUserScrolling = useRef(false);
@@ -106,11 +107,17 @@ export const MessageList: React.FC = () => {
           ) : (
             <TypingIndicator />
           )}
+          {/* Show crisis resources if available during streaming */}
+          {crisisResources && <CrisisResources resources={crisisResources} />}
         </View>
       );
     }
+    // Show crisis resources after streaming completes
+    if (crisisResources && !isStreaming) {
+      return <CrisisResources resources={crisisResources} />;
+    }
     return null;
-  }, [isStreaming, messages.length, availableContext, currentStreamingMessage]);
+  }, [isStreaming, messages.length, availableContext, currentStreamingMessage, crisisResources]);
 
   // Memoize onContentSizeChange to prevent unnecessary re-renders
   const handleContentSizeChange = useCallback(() => {

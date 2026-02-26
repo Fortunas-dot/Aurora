@@ -851,7 +851,7 @@ export default function GroupsScreen() {
     >
       {/* Star field effect */}
       <View style={styles.starField}>
-        {Array.from({ length: 50 }).map((_, i) => (
+        {Array.from({ length: 18 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>

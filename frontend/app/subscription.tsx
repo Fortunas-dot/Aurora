@@ -614,6 +614,17 @@ export default function SubscriptionScreen() {
             )}
           </Animated.View>
 
+          {/* Free Trial Notice */}
+          {!isPremium && (
+            <View style={styles.freeTrialNotice}>
+              <Ionicons name="gift-outline" size={20} color="#9B59B6" />
+              <Text style={styles.freeTrialText}>
+                <Text style={styles.freeTrialBold}>3-day free trial</Text>
+                {' '}included - Cancel anytime
+              </Text>
+            </View>
+          )}
+
           {/* Features Section */}
           <View style={[styles.featuresSection, { backgroundColor: '#FFFFFF', borderColor: '#E8E8E8' }]}>
             {featuresList.map((feature, index) => (
@@ -888,6 +899,27 @@ const styles = StyleSheet.create({
   planCoffeeNote: {
     fontSize: 13,
     color: '#6C757D',
+  },
+  freeTrialNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  freeTrialText: {
+    fontSize: 14,
+    color: '#6C757D',
+    fontWeight: '500',
+  },
+  freeTrialBold: {
+    fontWeight: '700',
+    color: '#9B59B6',
   },
   featuresSection: {
     marginTop: 16,

@@ -11,6 +11,7 @@ import {
   Easing,
   Modal,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -814,7 +815,7 @@ export default function FeedScreen() {
       
       {/* Star field effect */}
       <View style={feedStyles.starField}>
-        {Array.from({ length: 50 }).map((_, i) => (
+        {Array.from({ length: 18 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>
@@ -893,11 +894,11 @@ export default function FeedScreen() {
         contentContainerStyle={styles.feedContent}
         ListHeaderComponent={!isSearching ? listHeader : null}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews={false}
-        maxToRenderPerBatch={15}
-        windowSize={21}
-        initialNumToRender={15}
-        updateCellsBatchingPeriod={100}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
         getItemLayout={undefined}
         scrollEventThrottle={16}
         decelerationRate="normal"
@@ -974,11 +975,7 @@ export default function FeedScreen() {
             // Navigate to Aurora tab immediately
             router.push('/(tabs)/aurora');
           }}
-          onSkip={() => {
-            console.log('🔵 Feed Overlay - Skip clicked');
-            finishOnboarding();
-          }}
-          showSkip={true}
+          showSkip={false}
         />
       )}
 
@@ -1169,6 +1166,9 @@ const feedStyles = StyleSheet.create({
     top: 0,
     left: 0,
     zIndex: 0,
+    pointerEvents: 'none',
+    ...(Platform.OS === 'ios' && { shouldRasterizeIOS: true }),
+    ...(Platform.OS === 'android' && { renderToHardwareTextureAndroid: true }),
   },
   star: {
     position: 'absolute',

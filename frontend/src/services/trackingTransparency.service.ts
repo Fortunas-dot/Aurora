@@ -1,9 +1,5 @@
 import { Platform } from 'react-native';
 
-// #region agent log
-fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:1',message:'Module file loaded',data:{platform:Platform.OS},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-// #endregion
-
 /**
  * Service to handle App Tracking Transparency (ATT) on iOS
  * Required for iOS 14.5+ when using analytics/tracking services like PostHog
@@ -46,17 +42,8 @@ class TrackingTransparencyService {
       // Wrap in additional try-catch to handle module loading errors
       let module: any;
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:45',message:'Attempting dynamic import',data:{platform:Platform.OS},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         module = await import('expo-tracking-transparency');
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:47',message:'Dynamic import succeeded',data:{hasModule:!!module},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
       } catch (importError: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:49',message:'Dynamic import failed',data:{error:importError?.message,code:importError?.code},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         // Handle import errors (module not available, native module missing, etc.)
         if (
           importError?.message?.includes('native module') ||
@@ -232,16 +219,8 @@ let serviceInstance: TrackingTransparencyService | StubTrackingTransparencyServi
  * This lazy initialization helps avoid module loading errors during bundling
  */
 export const getTrackingTransparencyService = (): TrackingTransparencyService | StubTrackingTransparencyService => {
-  // #region agent log
-  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:221',message:'getTrackingTransparencyService called',data:{hasInstance:!!serviceInstance,platform:Platform.OS},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
   if (!serviceInstance) {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:225',message:'Creating service instance',data:{platform:Platform.OS,isIOS:Platform.OS==='ios'},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       // Only create the real service if we're on iOS
       // This prevents the module from being loaded during bundling
       if (Platform.OS === 'ios') {
@@ -250,10 +229,6 @@ export const getTrackingTransparencyService = (): TrackingTransparencyService | 
         serviceInstance = new StubTrackingTransparencyService();
       }
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'trackingTransparency.service.ts:233',message:'Error creating service',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       // If there's any error creating the service, use the stub
       console.warn('⚠️ Error creating tracking transparency service, using stub:', error);
       serviceInstance = new StubTrackingTransparencyService();

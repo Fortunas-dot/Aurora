@@ -323,7 +323,7 @@ export default function ChatScreen() {
     >
       {/* Star field effect */}
       <View style={[styles.starField, { pointerEvents: 'none' }]}>
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 16 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>

@@ -38,24 +38,15 @@ import { userService, UserProfile } from '../../src/services/user.service';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
-  // #region agent log
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:40',message:'AnimatedStar render',data:{index,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  // #region agent log
   const initialXValue = Math.random() * 100;
   const initialYValue = Math.random() * 100;
   const directionValue = Math.random() * Math.PI * 2;
   const distanceValue = 30 + Math.random() * 50;
-  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:50',message:'Random values recalculated',data:{index,initialX:initialXValue,initialY:initialYValue,direction:directionValue,distance:distanceValue,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
 
   const initialX = initialXValue;
   const initialY = initialYValue;
@@ -64,10 +55,6 @@ const AnimatedStar = ({ index }: { index: number }) => {
   const distance = distanceValue;
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:60',message:'useEffect called',data:{index,renderCount:renderCount.current},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
     const duration = 3000 + Math.random() * 4000;
 
     const animate = () => {
@@ -215,11 +202,7 @@ export default function ConversationScreen() {
           attachments: msg.attachments || [],
         }));
         
-        // #region agent log
         const messagesWithNonEmptyAttachments = messagesWithAttachments.filter(m => m.attachments && m.attachments.length > 0);
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:211',message:'Loading messages',data:{totalMessages:messagesWithAttachments.length,messagesWithNonEmptyAttachments:messagesWithNonEmptyAttachments.length,attachmentsSample:messagesWithNonEmptyAttachments.slice(0,3).map(m=>({id:m._id,attachments:m.attachments}))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
         if (append) {
           setMessages((prev) => [...messagesWithAttachments, ...prev]);
         } else {
@@ -632,10 +615,6 @@ export default function ConversationScreen() {
 
   // Handle typing indicator
   const handleTextChange = (text: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:555',message:'Text changed',data:{textLength:text.length,textPreview:text.substring(0,20)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     setMessageText(text);
     
     if (text.trim() && userId && chatWebSocketService.isConnected()) {
@@ -820,7 +799,7 @@ export default function ConversationScreen() {
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
       {/* Star field effect */}
       <View style={[styles.starField, { pointerEvents: 'none' }]}>
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 16 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>

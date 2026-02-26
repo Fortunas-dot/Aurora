@@ -33,10 +33,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   // Cleanup on unmount - use ref to avoid stale closure
   useEffect(() => {
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:35',message:'Component unmounting, cleaning up',data:{hasRecording:!!recordingRef.current},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       if (recordingRef.current) {
         recordingRef.current.stopAndUnloadAsync().catch(console.error);
         recordingRef.current = null;
@@ -52,23 +48,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   }, [previewSound]); // Cleanup preview sound on unmount
 
   const startRecording = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:42',message:'startRecording called',data:{isStarting:isStartingRef.current,hasRecording:!!recordingRef.current},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
     // Prevent multiple simultaneous calls
     if (isStartingRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:46',message:'startRecording already in progress, returning',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       return;
     }
     
     // Clean up any existing recording first
     if (recordingRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:52',message:'Cleaning up existing recording before starting new one',data:{},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       try {
         await recordingRef.current.stopAndUnloadAsync();
       } catch (error) {
@@ -99,10 +85,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
       });
-
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:78',message:'Creating new recording',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
 
       // Create recording with proper options - use simpler preset with metering enabled
       const { recording: newRecording } = await Audio.Recording.createAsync(
@@ -140,10 +122,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setDuration(0);
       setAudioLevel(0);
       
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:120',message:'Recording started successfully',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       // Clear any existing interval first
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
@@ -198,10 +176,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         ])
       ).start();
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.tsx:160',message:'Failed to start recording',data:{error:error.message,errorName:error.name},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       console.error('Failed to start recording:', error);
       isStartingRef.current = false;
       setIsReady(true); // Return to ready state

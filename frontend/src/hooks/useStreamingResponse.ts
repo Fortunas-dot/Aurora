@@ -25,6 +25,7 @@ export const useStreamingResponse = () => {
     setStreaming,
     setError,
     setAvailableContext,
+    setCrisisResources,
   } = useChatStore();
 
   // Load journal context when component mounts or user changes
@@ -117,9 +118,82 @@ export const useStreamingResponse = () => {
         { role: 'user' as const, content: userMessage.trim() },
       ];
 
+      // Full response as received from the stream (raw)
       let fullResponse = '';
+      // What we actually show to the user (typed out progressively)
+      let displayedResponse = '';
+      // Flags and timers
       let hasReceivedData = false;
       let timeoutId: NodeJS.Timeout | null = null;
+      let typingInterval: NodeJS.Timeout | null = null;
+      let streamCompleted = false;
+
+      // Typing speed configuration (characters per second)
+      const TYPING_CHARS_PER_SECOND = 28; // ~30 chars/sec feels human but not too slow
+      const TYPING_INTERVAL_MS = 50; // interval between updates
+
+      const clearTypingInterval = () => {
+        if (typingInterval) {
+          clearInterval(typingInterval);
+          typingInterval = null;
+        }
+      };
+
+      const finalizeMessage = () => {
+        // Called once typing has finished and stream is complete
+        const finalContent = fullResponse || displayedResponse;
+        if (!finalContent.trim()) {
+          // Nothing meaningful to add
+          updateStreamingMessage('');
+          setStreaming(false);
+          setIsLoading(false);
+          return;
+        }
+
+        const assistantMsg = {
+          id: uuidv4(),
+          role: 'assistant' as const,
+          content: finalContent,
+          timestamp: new Date().toISOString(),
+        };
+
+        addMessage(assistantMsg);
+        updateStreamingMessage('');
+        setStreaming(false);
+        setIsLoading(false);
+        // Keep context available for showing badge on completed message
+        cleanupRef.current = null;
+      };
+
+      const startTyping = () => {
+        if (typingInterval) {
+          return;
+        }
+
+        typingInterval = setInterval(() => {
+          // Nothing new to type yet
+          if (displayedResponse.length >= fullResponse.length) {
+            // If the stream has finished and we've typed everything, we can finalize
+            if (streamCompleted) {
+              clearTypingInterval();
+              finalizeMessage();
+            }
+            return;
+          }
+
+          const charsPerTick = Math.max(
+            1,
+            Math.round((TYPING_CHARS_PER_SECOND * TYPING_INTERVAL_MS) / 1000)
+          );
+          const targetLength = Math.min(
+            fullResponse.length,
+            displayedResponse.length + charsPerTick
+          );
+
+          displayedResponse = fullResponse.slice(0, targetLength);
+          updateStreamingMessage(displayedResponse);
+        }, TYPING_INTERVAL_MS);
+      };
 
       // Set a timeout to reset streaming state if no data is received within 30 seconds
       timeoutId = setTimeout(() => {
@@ -148,7 +222,8 @@ export const useStreamingResponse = () => {
               timeoutId = null;
             }
             fullResponse += chunk;
-            updateStreamingMessage(fullResponse);
+             // Start or continue typing effect
+             startTyping();
           },
           // On complete
           () => {
@@ -156,19 +231,13 @@ export const useStreamingResponse = () => {
               clearTimeout(timeoutId);
               timeoutId = null;
             }
-            const assistantMsg = {
-              id: uuidv4(),
-              role: 'assistant' as const,
-              content: fullResponse,
-              timestamp: new Date().toISOString(),
-            };
+            // Mark stream as finished; finalization happens after typing catches up
+            streamCompleted = true;
 
-            addMessage(assistantMsg);
-            updateStreamingMessage('');
-            setStreaming(false);
-            setIsLoading(false);
-            // Keep context available for showing badge on completed message
-            cleanupRef.current = null;
+            // If nothing is typing (e.g. very short answer), finalize immediately
+            if (!typingInterval) {
+              finalizeMessage();
+            }
           },
           // On error
           (err) => {
@@ -176,12 +245,19 @@ export const useStreamingResponse = () => {
               clearTimeout(timeoutId);
               timeoutId = null;
             }
+            clearTypingInterval();
             console.error('Streaming error:', err);
             setError(err.message);
             setStreaming(false);
             setIsLoading(false);
             updateStreamingMessage('');
             cleanupRef.current = null;
+          },
+          // Options with crisis resources callback
+          {
+            onCrisisResources: (resources) => {
+              setCrisisResources(resources);
+            },
           }
         );
 
@@ -190,6 +266,7 @@ export const useStreamingResponse = () => {
             clearTimeout(timeoutId);
             timeoutId = null;
           }
+          clearTypingInterval();
           cleanup();
         };
       } catch (err) {
@@ -197,6 +274,7 @@ export const useStreamingResponse = () => {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
+        clearTypingInterval();
         console.error('Failed to start streaming:', err);
         setError('Failed to send message. Please try again.');
         setStreaming(false);

@@ -16,13 +16,7 @@ import { useConsentStore } from '../src/store/consentStore';
 import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
-// #region agent log
-fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:18',message:'Importing trackingTransparencyService',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-// #endregion
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
-// #region agent log
-fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:19',message:'Import completed',data:{hasService:!!trackingTransparencyService},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-// #endregion
 import * as Updates from 'expo-updates';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {

@@ -13,10 +13,17 @@ export interface Chat {
   updatedAt: string;
 }
 
+export interface CrisisResources {
+  riskLevel: string;
+  message: string;
+  resources: Array<{ name: string; number: string; available: string }>;
+}
+
 export interface StreamingOptions {
   model: 'gpt-4o' | 'gpt-4o-mini' | 'gpt-3.5-turbo';
   temperature?: number;
   maxTokens?: number;
+  onCrisisResources?: (resources: CrisisResources) => void;
 }
 
 export interface OpenAIMessage {
