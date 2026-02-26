@@ -81,6 +81,10 @@ class MessageService {
   async searchMessages(userId: string, query: string): Promise<ApiResponse<Message[]>> {
     return apiService.get<Message[]>(`/messages/conversation/${userId}/search?q=${encodeURIComponent(query)}`);
   }
+
+  async deleteConversation(userId: string): Promise<ApiResponse<{ deletedCount: number }>> {
+    return apiService.delete<{ deletedCount: number }>(`/messages/conversation/${userId}`);
+  }
 }
 
 export const messageService = new MessageService();

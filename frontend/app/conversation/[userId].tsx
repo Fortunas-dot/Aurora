@@ -954,7 +954,8 @@ export default function ConversationScreen() {
                           height: calculatedHeight,
                           maxHeight: maxHeight,
                         },
-                        !messageText.includes('\n') && messageText.length <= 40 && { textAlignVertical: 'center', paddingTop: SPACING.sm, paddingBottom: SPACING.sm },
+                        // Use centered single-line style when there's no newline and text is short
+                        !messageText.includes('\n') && messageText.length <= 40 && styles.messageInputTextCentered,
                         messageText.length > 0 && { paddingRight: 60 },
                       ]}
                       maxLength={2000}
@@ -1182,12 +1183,13 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
     ...TYPOGRAPHY.body,
     color: COLORS.text,
-    paddingTop: 0,
+    // Slight padding to visually center placeholder text in the bubble
+    paddingTop: 2,
     paddingBottom: 0,
     paddingRight: SPACING.md,
     paddingLeft: SPACING.md,
     includeFontPadding: false,
-    lineHeight: Platform.OS === 'android' ? 24 : 24,
+    lineHeight: Platform.OS === 'android' ? 22 : 22,
   },
   charCountContainer: {
     position: 'absolute',

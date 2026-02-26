@@ -110,7 +110,10 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const progress = duration > 0 ? (position / duration) * 100 : 0;
+  // Clamp progress between 0% and 100% so the bar never overflows its container
+  const progress = duration > 0
+    ? Math.min(Math.max((position / duration) * 100, 0), 100)
+    : 0;
 
   return (
     <Pressable

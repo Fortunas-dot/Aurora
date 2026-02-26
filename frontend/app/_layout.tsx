@@ -153,8 +153,9 @@ export default function RootLayout() {
       // Register for push notifications
       pushNotificationService.registerForPushNotifications().catch(console.error);
 
-      // Setup notification listeners
-      const cleanup = pushNotificationService.setupNotificationListeners(
+      // Setup notification listeners (async)
+      let cleanup: (() => void) | null = null;
+      pushNotificationService.setupNotificationListeners(
         (notification) => {
           console.log('Notification received:', notification);
           // Update unread count when notification is received
@@ -216,10 +217,14 @@ export default function RootLayout() {
             }
           }
         }
-      );
+      ).then((cleanupFn) => {
+        cleanup = cleanupFn;
+      }).catch(console.error);
 
       return () => {
-        cleanup();
+        if (cleanup) {
+          cleanup();
+        }
       };
     }
   }, [isAuthenticated, user, updateUnreadCount]);

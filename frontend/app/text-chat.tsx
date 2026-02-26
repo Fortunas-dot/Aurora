@@ -7,7 +7,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MessageList } from '../src/components/chat/MessageList';
 import { ChatInput } from '../src/components/chat/ChatInput';
 import { ContextIndicator } from '../src/components/chat/ContextIndicator';
-import { SafetyDisclaimer } from '../src/components/chat/SafetyDisclaimer';
 import { useStreamingResponse } from '../src/hooks/useStreamingResponse';
 import { useChatHistory } from '../src/hooks/useChatHistory';
 import { useChatStore } from '../src/store/chatStore';
@@ -1068,12 +1067,6 @@ export default function TextChatScreen() {
           </View>
         )}
 
-        {/* Safety Disclaimer - show only when no messages yet */}
-        {!hasMessages && (
-          <View style={{ paddingTop: SPACING.sm }}>
-            <SafetyDisclaimer />
-          </View>
-        )}
 
         <MessageList />
         {/* Toolbar with action buttons */}

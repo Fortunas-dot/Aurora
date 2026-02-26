@@ -1,17 +1,36 @@
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { apiService } from './api.service';
 
-// Configure how notifications are handled when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Lazy load expo-notifications to avoid native module loading errors
+let Notifications: typeof import('expo-notifications') | null = null;
+
+// Function to safely load the notifications module
+async function loadNotificationsModule() {
+  if (Notifications) return Notifications;
+  
+  try {
+    Notifications = await import('expo-notifications');
+    
+    // Configure how notifications are handled when app is in foreground
+    // Only set handler if module loaded successfully
+    if (Notifications) {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    }
+    
+    return Notifications;
+  } catch (error) {
+    console.warn('Failed to load expo-notifications module:', error);
+    return null;
+  }
+}
 
 export interface PushNotificationToken {
   token: string;
@@ -32,11 +51,17 @@ class PushNotificationService {
     }
 
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const notificationsModule = await loadNotificationsModule();
+      if (!notificationsModule) {
+        console.warn('Notifications module not available');
+        return false;
+      }
+
+      const { status: existingStatus } = await notificationsModule.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await notificationsModule.requestPermissionsAsync();
         finalStatus = status;
       }
 
@@ -74,8 +99,15 @@ class PushNotificationService {
         return null;
       }
 
+      // Load notifications module
+      const notificationsModule = await loadNotificationsModule();
+      if (!notificationsModule) {
+        console.warn('Notifications module not available');
+        return null;
+      }
+
       // Get push token
-      const tokenData = await Notifications.getExpoPushTokenAsync({
+      const tokenData = await notificationsModule.getExpoPushTokenAsync({
         projectId: projectId,
       });
 
@@ -87,9 +119,9 @@ class PushNotificationService {
 
       // Configure notification channel for Android
       if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
+        await notificationsModule.setNotificationChannelAsync('default', {
           name: 'Default',
-          importance: Notifications.AndroidImportance.MAX,
+          importance: notificationsModule.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#60A5FA',
         });
@@ -132,29 +164,40 @@ class PushNotificationService {
   /**
    * Setup notification listeners
    */
-  setupNotificationListeners(
-    onNotificationReceived: (notification: Notifications.Notification) => void,
-    onNotificationTapped: (response: Notifications.NotificationResponse) => void
-  ): () => void {
-    // Listener for notifications received while app is foregrounded
-    const receivedListener = Notifications.addNotificationReceivedListener(onNotificationReceived);
-
-    // Listener for when user taps on notification
-    const responseListener = Notifications.addNotificationResponseReceivedListener(onNotificationTapped);
-
-    // Check if app was opened from a notification (cold start)
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        console.log('App opened from notification (cold start):', response);
-        onNotificationTapped(response);
+  async setupNotificationListeners(
+    onNotificationReceived: (notification: any) => void,
+    onNotificationTapped: (response: any) => void
+  ): Promise<() => void> {
+    try {
+      const notificationsModule = await loadNotificationsModule();
+      if (!notificationsModule) {
+        console.warn('Notifications module not available');
+        return () => {}; // Return empty cleanup function
       }
-    });
 
-    // Return cleanup function
-    return () => {
-      receivedListener.remove();
-      responseListener.remove();
-    };
+      // Listener for notifications received while app is foregrounded
+      const receivedListener = notificationsModule.addNotificationReceivedListener(onNotificationReceived);
+
+      // Listener for when user taps on notification
+      const responseListener = notificationsModule.addNotificationResponseReceivedListener(onNotificationTapped);
+
+      // Check if app was opened from a notification (cold start)
+      notificationsModule.getLastNotificationResponseAsync().then((response) => {
+        if (response) {
+          console.log('App opened from notification (cold start):', response);
+          onNotificationTapped(response);
+        }
+      });
+
+      // Return cleanup function
+      return () => {
+        receivedListener.remove();
+        responseListener.remove();
+      };
+    } catch (error) {
+      console.error('Error setting up notification listeners:', error);
+      return () => {}; // Return empty cleanup function
+    }
   }
 
   /**
@@ -165,7 +208,11 @@ class PushNotificationService {
     body: string,
     data?: any
   ): Promise<string> {
-    return await Notifications.scheduleNotificationAsync({
+    const notificationsModule = await loadNotificationsModule();
+    if (!notificationsModule) {
+      throw new Error('Notifications module not available');
+    }
+    return await notificationsModule.scheduleNotificationAsync({
       content: {
         title,
         body,
@@ -180,21 +227,33 @@ class PushNotificationService {
    * Cancel all notifications
    */
   async cancelAllNotifications(): Promise<void> {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    const notificationsModule = await loadNotificationsModule();
+    if (!notificationsModule) {
+      return;
+    }
+    await notificationsModule.cancelAllScheduledNotificationsAsync();
   }
 
   /**
    * Get badge count
    */
   async getBadgeCount(): Promise<number> {
-    return await Notifications.getBadgeCountAsync();
+    const notificationsModule = await loadNotificationsModule();
+    if (!notificationsModule) {
+      return 0;
+    }
+    return await notificationsModule.getBadgeCountAsync();
   }
 
   /**
    * Set badge count
    */
   async setBadgeCount(count: number): Promise<void> {
-    await Notifications.setBadgeCountAsync(count);
+    const notificationsModule = await loadNotificationsModule();
+    if (!notificationsModule) {
+      return;
+    }
+    await notificationsModule.setBadgeCountAsync(count);
   }
 }
 

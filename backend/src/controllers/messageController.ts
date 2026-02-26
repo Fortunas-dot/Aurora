@@ -410,6 +410,42 @@ export const markAsRead = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+// @desc    Delete an entire conversation between the current user and another user
+// @route   DELETE /api/messages/conversation/:userId
+// @access  Private
+export const deleteConversation = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const otherUserId = req.params.userId;
+
+    if (!otherUserId || !mongoose.Types.ObjectId.isValid(otherUserId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid user ID',
+      });
+      return;
+    }
+
+    const result = await Message.deleteMany({
+      $or: [
+        { sender: req.userId, receiver: otherUserId },
+        { sender: otherUserId, receiver: req.userId },
+      ],
+    });
+
+    res.json({
+      success: true,
+      data: {
+        deletedCount: (result as any).deletedCount ?? 0,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error deleting conversation',
+    });
+  }
+};
+
 
 
 

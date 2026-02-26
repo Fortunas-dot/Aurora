@@ -234,6 +234,39 @@ export default function ChatScreen() {
     router.push('/search-users');
   };
 
+  const handleDeleteConversation = useCallback((userId: string, displayName?: string) => {
+    const name = displayName || 'this conversation';
+    // Confirm with the user before deleting
+    // Use native alert instead of custom modal to keep UX simple
+    // eslint-disable-next-line no-alert
+    import('react-native').then(({ Alert }) => {
+      Alert.alert(
+        'Delete conversation',
+        `Are you sure you want to delete your conversation with ${name}? This will remove all messages for you.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const response = await messageService.deleteConversation(userId);
+                if (!response.success) {
+                  console.error('Error deleting conversation:', response.message);
+                  return;
+                }
+                // Optimistically remove from local state
+                setConversations(prev => prev.filter(c => c.user._id !== userId));
+              } catch (error) {
+                console.error('Error deleting conversation:', error);
+              }
+            },
+          },
+        ]
+      );
+    });
+  }, []);
+
   const renderConversation = ({ item }: { item: Conversation }) => {
     const formattedDate = formatDistanceToNow(new Date(item.lastMessage.createdAt), {
       addSuffix: false,
@@ -241,51 +274,55 @@ export default function ChatScreen() {
     });
 
     return (
-      <GlassCard
-        style={styles.conversationCard}
-        padding={0}
+      <Pressable
         onPress={() => router.push(`/conversation/${item.user._id}`)}
+        onLongPress={() => handleDeleteConversation(item.user._id, item.user.displayName || item.user.username)}
       >
-        <View style={styles.conversationContent}>
-          <Avatar
-            uri={item.user.avatar}
-            name={item.user.displayName || item.user.username}
-            userId={item.user._id}
-            avatarCharacter={item.user.avatarCharacter}
-            avatarBackgroundColor={item.user.avatarBackgroundColor}
-            size="lg"
-          />
-          
-          <View style={styles.conversationInfo}>
-            <View style={styles.conversationHeader}>
-              <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
-                {item.user.displayName || item.user.username}
-              </Text>
-              <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formattedDate}</Text>
-            </View>
+        <GlassCard
+          style={styles.conversationCard}
+          padding={0}
+        >
+          <View style={styles.conversationContent}>
+            <Avatar
+              uri={item.user.avatar}
+              name={item.user.displayName || item.user.username}
+              userId={item.user._id}
+              avatarCharacter={item.user.avatarCharacter}
+              avatarBackgroundColor={item.user.avatarBackgroundColor}
+              size="lg"
+            />
             
-            <View style={styles.messageRow}>
-              <Text
-                style={[
-                  styles.lastMessage,
-                  { color: colors.textSecondary },
-                  item.unreadCount > 0 && [styles.lastMessageUnread, { color: colors.text, fontWeight: '500' }],
-                ]}
-                numberOfLines={1}
-              >
-                {item.lastMessage.isOwn && 'You: '}
-                {item.lastMessage.content}
-              </Text>
+            <View style={styles.conversationInfo}>
+              <View style={styles.conversationHeader}>
+                <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+                  {item.user.displayName || item.user.username}
+                </Text>
+                <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formattedDate}</Text>
+              </View>
               
-              {item.unreadCount > 0 && (
-                <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={[styles.unreadCount, { color: colors.white }]}>{item.unreadCount}</Text>
-                </View>
-              )}
+              <View style={styles.messageRow}>
+                <Text
+                  style={[
+                    styles.lastMessage,
+                    { color: colors.textSecondary },
+                    item.unreadCount > 0 && [styles.lastMessageUnread, { color: colors.text, fontWeight: '500' }],
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.lastMessage.isOwn && 'You: '}
+                  {item.lastMessage.content}
+                </Text>
+                
+                {item.unreadCount > 0 && (
+                  <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.unreadCount, { color: colors.white }]}>{item.unreadCount}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </GlassCard>
+        </GlassCard>
+      </Pressable>
     );
   };
 
