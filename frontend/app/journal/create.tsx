@@ -808,7 +808,9 @@ export default function CreateJournalEntryScreen() {
             { paddingBottom: insets.bottom + SPACING.xl },
           ]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          // Keep taps on other inputs (like the tags field) from first dismissing the keyboard.
+          // This prevents the keyboard from opening and immediately closing when switching focus.
+          keyboardShouldPersistTaps="always"
           removeClippedSubviews={true}
           scrollEventThrottle={16}
           decelerationRate="normal"

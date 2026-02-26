@@ -136,9 +136,9 @@ async function createHiddenVoice() {
       });
     };
     
-    // February 11, 2026 - Half page, processing, feeling different
+    // February 11, 2025 - Half page, processing, feeling different
     createEntry(
-      new Date('2026-02-11'),
+      new Date('2025-02-11'),
       `It's been a few days since I told Sarah about the first time.
 
 I keep thinking about it. About what I said. About how it felt to say it out loud.
@@ -154,9 +154,9 @@ Maybe Sarah was right. Maybe talking about it does help.`,
       ['processing', 'different', 'less-power', 'hope']
     );
     
-    // February 14, 2026 - Page-long, Valentine's Day, thinking about the future
+    // February 14, 2025 - Page-long, Valentine's Day, thinking about the future
     createEntry(
-      new Date('2026-02-14'),
+      new Date('2025-02-14'),
       `It's Valentine's Day.
 
 I used to hate this day. All the couples. All the love. All the happiness. It made me feel more alone. More broken. More unlovable.
@@ -182,9 +182,9 @@ That's enough for now.`,
       ['valentines', 'future', 'hope', 'healing', 'allowed-to-be-happy']
     );
     
-    // February 18, 2026 - Half page, group at therapy, hearing other stories
+    // February 18, 2025 - Half page, group at therapy, hearing other stories
     createEntry(
-      new Date('2026-02-18'),
+      new Date('2025-02-18'),
       `Sarah asked if I wanted to try a group today.
 
 At first I said no. The idea of sitting in a circle and talking about this stuff with strangers made my stomach hurt.
@@ -202,9 +202,9 @@ I still don't know if I want to share. But I might go back.`,
       ['group-therapy', 'not-alone', 'listening', 'nervous']
     );
     
-    // February 21, 2026 - Page-long, school project, deciding what to share
+    // February 21, 2025 - Page-long, school project, deciding what to share
     createEntry(
-      new Date('2026-02-21'),
+      new Date('2025-02-21'),
       `We have to do a project at school about "something that changed your life."
 
 I wanted to roll my eyes when the teacher said that. I could think of one thing that changed my life. But I'm not putting that on a poster board.
@@ -224,9 +224,9 @@ Maybe that's enough for now. Talking around it. Without giving it all away.`,
       ['school', 'project', 'indirect-sharing', 'friendship', 'coping']
     );
     
-    // February 24, 2026 - Half page, a trigger that didn't win
+    // February 24, 2025 - Half page, a trigger that didn't win
     createEntry(
-      new Date('2026-02-24'),
+      new Date('2025-02-24'),
       `Today something happened that would've ruined my whole day before.
 
 In class, the door slammed shut really hard. Out of nowhere. My heart jumped. My chest got tight. For a second I was back there. Small. Trapped.
@@ -240,9 +240,9 @@ That feels big. Like the fear was there, but it didn't get to be the boss this t
       ['trigger', 'coping', 'breathing', 'small-win']
     );
     
-    // February 27, 2026 - Page-long, looking ahead without a neat ending
+    // February 27, 2025 - Page-long, looking ahead without a neat ending
     createEntry(
-      new Date('2026-02-27'),
+      new Date('2025-02-27'),
       `Sarah asked me today if I ever think about the future.
 
 I told her I don't. Not really. Most days I'm just trying to get through school, through the night, through the next flashback.
@@ -264,9 +264,9 @@ I see me.`,
       ['future', 'imagining', 'safety', 'no-neat-ending', 'hope']
     );
     
-    // March 3, 2026 - Half page, ordinary day that still feels strange
+    // March 3, 2025 - Half page, ordinary day that still feels strange
     createEntry(
-      new Date('2026-03-03'),
+      new Date('2025-03-03'),
       `Today was boring.
 
 I mean that in a good way.
@@ -282,9 +282,9 @@ It's weird how being okay can feel just as unfamiliar as being scared.`,
       ['ordinary-day', 'small-gap', 'strange-okay', 'school']
     );
     
-    // March 8, 2026 - Page-long, a bad night, but different response
+    // March 8, 2025 - Page-long, a bad night, but different response
     createEntry(
-      new Date('2026-03-08'),
+      new Date('2025-03-08'),
       `Last night was rough.
 
 Nightmare again. The same one. Door. Bed. Him. My body doing that frozen thing even though I'm asleep.
@@ -304,9 +304,9 @@ I hate that the nightmares are still here. But I guess the difference is I don't
       ['nightmare', 'asking-for-help', 'mom', 'not-alone']
     );
     
-    // March 12, 2026 - Half page, not a conclusion, just another step
+    // March 12, 2025 - Half page, not a conclusion, just another step
     createEntry(
-      new Date('2026-03-12'),
+      new Date('2025-03-12'),
       `Sarah asked me today if I ever look back at where I started.
 
 I don't like thinking about the beginning. But she meant something else. She meant the first time I walked into her office. The first time I wrote in this journal. The first time I said "it happened" out loud.

@@ -70,14 +70,15 @@ const MoodTrendChart: React.FC<{
   const chartHeight = 150;
   const pointRadius = 4;
 
-  // Calculate points - distribute evenly across available width
-  // Account for y-axis width (30px from styles)
-  const yAxisWidth = 30;
-  const availableWidth = CHART_WIDTH - yAxisWidth;
+  // Measure actual chart width so points align perfectly with x-axis labels
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const X_PADDING = 16;
+  const effectiveWidth = Math.max((measuredWidth ?? CHART_WIDTH) - X_PADDING * 2, 1);
+
   const points = sortedData.map((item, index) => {
     const x = sortedData.length > 1 
-      ? yAxisWidth + (index / (sortedData.length - 1)) * availableWidth 
-      : yAxisWidth + availableWidth / 2;
+      ? X_PADDING + (index / (sortedData.length - 1)) * effectiveWidth
+      : (measuredWidth ?? CHART_WIDTH) / 2;
     const y = chartHeight - ((item.mood - minMood) / (maxMood - minMood)) * chartHeight;
     return { x, y, mood: item.mood, date: item.date };
   });
@@ -100,7 +101,15 @@ const MoodTrendChart: React.FC<{
         <Text style={chartStyles.axisLabel}>5</Text>
         <Text style={chartStyles.axisLabel}>1</Text>
       </View>
-      <View style={chartStyles.chartArea}>
+      <View
+        style={chartStyles.chartArea}
+        onLayout={(event) => {
+          const width = event.nativeEvent.layout.width;
+          if (!measuredWidth || Math.abs(measuredWidth - width) > 1) {
+            setMeasuredWidth(width);
+          }
+        }}
+      >
         {/* Grid lines */}
         <View style={[chartStyles.gridLine, { top: 0 }]} />
         <View style={[chartStyles.gridLine, { top: chartHeight / 2 }]} />
@@ -296,6 +305,7 @@ const chartStyles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
   axisLabel: {
     ...TYPOGRAPHY.caption,
@@ -889,7 +899,13 @@ export default function JournalInsightsScreen() {
                         Mood over time
                       </Text>
                     </View>
-                    <MoodTrendChart data={insights.moodTrend || entries.map(e => ({ date: e.createdAt, mood: e.mood }))} />
+                    {/* Use actual journal entries for the line graph so the line stops at the last day with an entry */}
+                    <MoodTrendChart
+                      data={entries
+                        .slice()
+                        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                        .map((e) => ({ date: e.createdAt, mood: e.mood }))}
+                    />
                   </GlassCard>
                 )}
               </View>

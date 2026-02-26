@@ -1092,15 +1092,36 @@ export const getSavedPosts = async (req: AuthRequest, res: Response): Promise<vo
 
     const posts = await Post.find({ _id: { $in: savedPostIds } })
       .populate('author', 'username displayName avatar')
+      .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
     const total = savedPostIds.length;
 
+    // Format posts with group information (same format as getPosts)
+    const formattedPosts = posts.map((post: any) => {
+      const groupIdObj = post.groupId as any;
+      const group = (groupIdObj && typeof groupIdObj === 'object' && groupIdObj._id) ? {
+        _id: groupIdObj._id,
+        name: groupIdObj.name,
+        description: groupIdObj.description,
+        tags: groupIdObj.tags,
+        memberCount: groupIdObj.memberCount,
+        isPrivate: groupIdObj.isPrivate,
+        avatar: groupIdObj.avatar,
+      } : undefined;
+      
+      return {
+        ...post.toObject(),
+        isSaved: true, // All posts in saved list are saved
+        group,
+      };
+    });
+
     res.json({
       success: true,
-      data: posts,
+      data: formattedPosts,
       pagination: {
         page,
         limit,
