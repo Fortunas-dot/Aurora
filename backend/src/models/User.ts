@@ -32,6 +32,7 @@ export interface IUser extends Document {
     reason: string;
     createdAt: Date;
   }>;
+  isTherapist?: boolean;
   // Email verification & password reset
   emailVerified?: boolean;
   emailVerificationToken?: string | null;
@@ -252,6 +253,10 @@ const UserSchema = new Schema<IUser>(
         trim: true,
         maxlength: [5000, 'Life context cannot exceed 5000 characters'],
       },
+    },
+    isTherapist: {
+      type: Boolean,
+      default: false,
     },
   },
   {

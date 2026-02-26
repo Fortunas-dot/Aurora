@@ -50,6 +50,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   
   const isOwner = currentUserId === comment.author._id;
+  const isTherapist = !!comment.author.isTherapist;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -158,7 +159,13 @@ export const CommentCard: React.FC<CommentCardProps> = ({
 
   return (
     <View style={[styles.wrapper, isReply && styles.replyWrapper]}>
-      <GlassCard style={styles.container} padding="md">
+      <GlassCard
+        style={[
+          styles.container,
+          isTherapist && styles.therapistContainer,
+        ]}
+        padding="md"
+      >
         <View style={styles.headerRow}>
           <Pressable 
             style={styles.header}
@@ -176,6 +183,12 @@ export const CommentCard: React.FC<CommentCardProps> = ({
               <Text style={styles.authorName}>
                 {comment.author.displayName || comment.author.username}
               </Text>
+              {isTherapist && (
+                <View style={styles.therapistBadge}>
+                  <Ionicons name="star" size={11} color="#fbbf24" />
+                  <Text style={styles.therapistBadgeText}>Certified therapist</Text>
+                </View>
+              )}
               <Text style={styles.timestamp}>{formattedDate}</Text>
             </View>
           </Pressable>
@@ -325,6 +338,10 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 0,
   },
+  therapistContainer: {
+    borderWidth: 1,
+    borderColor: 'rgba(250, 204, 21, 0.6)', // gold-ish
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,6 +356,17 @@ const styles = StyleSheet.create({
   headerInfo: {
     flex: 1,
     marginLeft: SPACING.sm,
+  },
+  therapistBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 4,
+  },
+  therapistBadgeText: {
+    ...TYPOGRAPHY.caption,
+    color: '#fbbf24',
+    fontWeight: '600',
   },
   optionsButton: {
     padding: SPACING.xs,

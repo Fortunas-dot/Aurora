@@ -497,21 +497,17 @@ export default function FeedScreen() {
     }, [isAuthenticated]) // Removed posts.length from dependencies
   );
 
-  // Reload posts when filters change (with debounce to prevent rapid requests)
+  // Reload posts when filters change.
   // NOTE: loadPosts is NOT in dependencies to prevent infinite loops
-  // We use loadPostsRef.current instead
+  // We use loadPostsRef.current instead.
+  // For a more responsive feel when switching tabs, we removed the debounce here.
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-    
-    // Debounce to prevent rapid successive requests
-    const timeoutId = setTimeout(() => {
-      if (loadPostsRef.current) {
-        loadPostsRef.current(1, false);
-      }
-    }, 300);
-    
-    return () => clearTimeout(timeoutId);
+
+    if (loadPostsRef.current) {
+      loadPostsRef.current(1, false);
+    }
   }, [activeTab, selectedCommunity, sortOption, isSearching, searchQuery, showAllPublicPosts]);
 
   // Store updateUnreadCount in ref to prevent infinite loops

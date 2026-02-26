@@ -21,7 +21,7 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
     };
 
     const topLevelComments = await Comment.find(topLevelQuery)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar isTherapist')
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
@@ -35,7 +35,7 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
       post: req.params.postId,
       parentComment: { $in: topIds },
     })
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar isTherapist')
       .sort({ createdAt: 1 });
 
     const repliesByParent: Record<string, any[]> = {};
@@ -123,7 +123,7 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
       await sendUnreadCountUpdate(post.author.toString());
     }
 
-    await comment.populate('author', 'username displayName avatar');
+    await comment.populate('author', 'username displayName avatar isTherapist');
 
     res.status(201).json({
       success: true,
@@ -167,7 +167,7 @@ export const updateComment = async (req: AuthRequest, res: Response): Promise<vo
       req.params.id,
       { content },
       { new: true, runValidators: true }
-    ).populate('author', 'username displayName avatar');
+    ).populate('author', 'username displayName avatar isTherapist');
 
     res.json({
       success: true,

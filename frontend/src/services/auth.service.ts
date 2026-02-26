@@ -14,6 +14,7 @@ export interface User {
   isAnonymous: boolean;
   showEmail: boolean;
   phoneNumber?: string;
+   isTherapist?: boolean;
   healthInfo?: {
     mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
     physicalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
