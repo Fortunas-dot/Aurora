@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
+import { facebookAnalytics } from '../services/facebookAnalytics.service';
 import { revenueCatService } from '../services/revenuecat.service';
 
 interface AuthState {
@@ -43,6 +44,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           last_login: new Date().toISOString(),
         });
         
+        // Facebook: log login event (email)
+        facebookAnalytics.logLogin('email');
+
         // Track login event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_LOGGED_IN, {
           [POSTHOG_PROPERTIES.USER_ID]: user._id,
@@ -110,6 +114,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           signup_method: 'email',
         });
         
+        // Facebook: log signup event (email)
+        facebookAnalytics.logSignup('email');
+
         // Track signup event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_SIGNED_UP, {
           [POSTHOG_PROPERTIES.USER_ID]: user._id,
@@ -251,6 +258,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           login_method: 'facebook',
           timestamp: new Date().toISOString(),
         });
+
+        // Facebook: log login via Facebook
+        facebookAnalytics.logLogin('facebook');
         
         // Cache user data for persistence
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
@@ -310,6 +320,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     posthogService.trackEvent(POSTHOG_EVENTS.USER_LOGGED_OUT, {
       timestamp: new Date().toISOString(),
     });
+
+    // Facebook: log logout
+    facebookAnalytics.logLogout();
     
     try {
       await authService.logout();

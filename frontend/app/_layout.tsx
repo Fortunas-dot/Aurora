@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet } from 'react-native';
@@ -17,7 +17,7 @@ import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
-import { initializeFacebookSDK } from '../src/services/facebookAnalytics.service';
+import { initializeFacebookSDK, facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import * as Updates from 'expo-updates';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
@@ -33,6 +33,7 @@ function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors
 
 export default function RootLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { checkAuth, isLoading, isAuthenticated, user } = useAuthStore();
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
@@ -268,6 +269,20 @@ export default function RootLayout() {
       // posthogService.reset();
     }
   }, [isAuthenticated, user, checkPremiumStatus]);
+
+  // Track screen views in PostHog + Facebook (best-effort, after SDK init)
+  useEffect(() => {
+    if (!pathname) return;
+    const screenName = pathname.replace(/^\//, '') || 'home';
+    // PostHog custom screen event (in addition to any automatic capture)
+    if (posthogService.isInitialized()) {
+      posthogService.trackScreenView(screenName, {
+        pathname,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    facebookAnalytics.logScreenView(screenName);
+  }, [pathname]);
 
   // Setup WebSocket connection for real-time notifications
   // Use refs to store stable callbacks that don't cause re-renders

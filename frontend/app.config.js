@@ -126,7 +126,8 @@ module.exports = {
       // For local physical device testing, set your computer's IP (e.g., '192.168.1.100')
       PROXY_HOST: process.env.PROXY_HOST || null,
       // PostHog Analytics
-      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || null,
+      // Prefer EXPO_PUBLIC_POSTHOG_API_KEY (recommended by PostHog) but keep POSTHOG_API_KEY for backwards compatibility
+      POSTHOG_API_KEY: process.env.EXPO_PUBLIC_POSTHOG_API_KEY || process.env.POSTHOG_API_KEY || null,
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
     },
   },

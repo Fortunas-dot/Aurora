@@ -20,6 +20,7 @@ import { useTheme } from '../src/hooks/useTheme';
 import { useAuthStore } from '../src/store/authStore';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuecat.service';
+import { facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -433,6 +434,16 @@ export default function SubscriptionScreen() {
       const success = await purchasePackage(monthlyPackage);
 
       if (success) {
+        // Facebook: track subscription purchase (best-effort; guard product data)
+        const product = monthlyPackage.product as any;
+        const price = typeof product?.price === 'number' ? product.price : 0;
+        const currency = product?.currency || 'EUR';
+        facebookAnalytics.logSubscriptionPurchased(
+          product?.identifier || 'com.aurora.app.monthly',
+          price,
+          currency
+        );
+
         Alert.alert(
           'Welcome to Premium! 🎉',
           'Your subscription is now active. Enjoy all premium features!',
@@ -468,6 +479,7 @@ export default function SubscriptionScreen() {
       const success = await restorePurchases();
 
       if (success) {
+        // Facebook: treat restore as an active subscription (no separate event in guide)
         Alert.alert('Purchases Restored', 'Your previous purchases have been restored successfully.');
       } else {
         Alert.alert('No Purchases Found', "We couldn't find any previous purchases to restore.");

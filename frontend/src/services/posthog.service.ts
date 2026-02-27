@@ -1,7 +1,10 @@
 import * as PostHog from 'posthog-react-native';
 import Constants from 'expo-constants';
 
-const POSTHOG_API_KEY = Constants.expoConfig?.extra?.POSTHOG_API_KEY;
+// Prefer EXPO_PUBLIC_POSTHOG_API_KEY if present (as in PawBuddies guide), fallback to legacy POSTHOG_API_KEY
+const POSTHOG_API_KEY =
+  (Constants.expoConfig?.extra as any)?.EXPO_PUBLIC_POSTHOG_API_KEY ||
+  Constants.expoConfig?.extra?.POSTHOG_API_KEY;
 const POSTHOG_HOST = Constants.expoConfig?.extra?.POSTHOG_HOST || 'https://eu.i.posthog.com';
 
 // Event names - use these constants to ensure consistency
