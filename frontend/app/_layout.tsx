@@ -17,6 +17,7 @@ import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
+import { initializeFacebookSDK } from '../src/services/facebookAnalytics.service';
 import * as Updates from 'expo-updates';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
@@ -89,7 +90,7 @@ export default function RootLayout() {
         if (!isMounted) return;
         
         // Request App Tracking Transparency permission (iOS only, required before analytics)
-        // This should be done before initializing analytics services like PostHog
+        // This should be done before initializing analytics services like PostHog / Facebook
         // Wrap in try-catch to handle any module loading errors gracefully
         try {
           // Use a setTimeout to defer the call and avoid bundling issues
@@ -117,14 +118,19 @@ export default function RootLayout() {
           ) {
             console.log('⚠️ Tracking transparency not available (expected in dev/web)');
           } else {
-          console.warn('⚠️ Error requesting tracking permission:', error);
+            console.warn('⚠️ Error requesting tracking permission:', error);
           }
         }
         
-        // Initialize PostHog (non-blocking) - only for analytics, not tracking
+        // Initialize analytics / monetization SDKs (non-blocking)
         // PostHog will respect the tracking permission status
         posthogService.initialize().catch((error) => {
           console.warn('PostHog initialization failed:', error);
+        });
+
+        // Initialize Facebook SDK so Meta can recognize the SDK is installed
+        initializeFacebookSDK().catch((error) => {
+          console.warn('Facebook SDK initialization failed:', error);
         });
 
         // Initialize RevenueCat (non-blocking)

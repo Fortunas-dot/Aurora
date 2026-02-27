@@ -14,7 +14,9 @@ class TrackingTransparencyService {
    * Returns false for web, development, or non-iOS platforms
    */
   private isNativeIOS(): boolean {
-    return Platform.OS === 'ios' && Platform.OS !== 'web';
+    // On React Native web, Platform.OS will be 'web', so this will naturally be false there.
+    // The extra check against 'web' is unnecessary and causes a TypeScript warning.
+    return Platform.OS === 'ios';
   }
 
   /**
