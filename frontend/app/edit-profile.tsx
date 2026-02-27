@@ -498,22 +498,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.sm,
     marginTop: SPACING.md,
-    width: '100%',
+    justifyContent: 'center',
   },
   modeButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    minWidth: 100,
-    flexShrink: 0,
+    minWidth: 120,
   },
   modeButtonActive: {
     borderColor: COLORS.primary,
@@ -522,7 +520,6 @@ const styles = StyleSheet.create({
   modeButtonText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.textMuted,
-    flexShrink: 1,
   },
   modeButtonTextActive: {
     color: COLORS.primary,
@@ -533,6 +530,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     marginBottom: SPACING.sm,
     width: '100%',
+    justifyContent: 'center',
   },
   removeButton: {
     borderColor: COLORS.error,

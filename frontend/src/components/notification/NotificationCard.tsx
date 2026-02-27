@@ -69,6 +69,16 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   const icon = getNotificationIcon(notification.type);
   const iconColor = getNotificationColor(notification.type);
 
+  const senderName =
+    notification.relatedUser?.displayName || notification.relatedUser?.username;
+
+  const prependNameTypes: NotificationType[] = ['like', 'comment', 'message', 'follow'];
+
+  const displayMessage =
+    senderName && prependNameTypes.includes(notification.type)
+      ? `${senderName} ${notification.message}`
+      : notification.message;
+
   const handlePress = () => {
     if (onMarkAsRead && isUnread) {
       onMarkAsRead(notification._id);
@@ -155,7 +165,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
           {/* Content */}
           <View style={styles.textContainer}>
             <Text style={[styles.message, isUnread && styles.unreadMessage]}>
-              {notification.message}
+              {displayMessage}
             </Text>
             <Text style={styles.time}>{timeAgo}</Text>
           </View>
