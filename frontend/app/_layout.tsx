@@ -18,6 +18,9 @@ import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
 import { initializeFacebookSDK, facebookAnalytics } from '../src/services/facebookAnalytics.service';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PostHogProvider, PostHog, usePostHog } from 'posthog-react-native';
 import * as Updates from 'expo-updates';
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
@@ -29,6 +32,89 @@ function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors
       <ActivityIndicator size="large" color={colors.primary} />
     </LinearGradient>
   );
+}
+
+// Read PostHog configuration similar to PawBuddies guide
+const posthogApiKey =
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_POSTHOG_API_KEY) ||
+  (typeof Constants !== 'undefined' &&
+    (Constants.expoConfig?.extra as any)?.EXPO_PUBLIC_POSTHOG_API_KEY) ||
+  (typeof Constants !== 'undefined' && Constants.expoConfig?.extra?.POSTHOG_API_KEY) ||
+  '';
+
+const posthogHost =
+  (typeof Constants !== 'undefined' && Constants.expoConfig?.extra?.POSTHOG_HOST) ||
+  'https://eu.i.posthog.com';
+
+// Create a single global PostHog client if we have a valid API key
+const posthogClient = posthogApiKey
+  ? new PostHog(posthogApiKey, {
+      host: posthogHost,
+      enableSessionReplay: true,
+      autocapture: true,
+      captureScreenViews: true,
+      debug: __DEV__,
+    })
+  : null;
+
+function PostHogInitializer() {
+  const postHog = usePostHog();
+
+  useEffect(() => {
+    if (postHog) {
+      posthogService.initialize(postHog);
+      console.log('✅ PostHog initialized via PostHogProvider');
+    }
+  }, [postHog]);
+
+  return null;
+}
+
+function PostHogScreenTracker() {
+  const pathname = usePathname();
+  const postHog = usePostHog();
+  const lastTrackedPath = useRef<string | null>(null);
+
+  // Track screen views
+  useEffect(() => {
+    if (!postHog || !pathname || !posthogService.isInitialized()) return;
+
+    const screenName = pathname.replace(/^\//, '') || 'home';
+
+    posthogService.trackScreenView(screenName, {
+      pathname,
+      timestamp: new Date().toISOString(),
+    });
+
+    lastTrackedPath.current = pathname;
+  }, [pathname, postHog]);
+
+  // Track daily app opens (once per day per device)
+  useEffect(() => {
+    if (!postHog || !posthogService.isInitialized()) return;
+
+    const trackDailyAppOpen = async () => {
+      try {
+        const lastAppOpenDate = await AsyncStorage.getItem('lastPostHogAppOpen');
+        const today = new Date().toDateString();
+
+        if (lastAppOpenDate !== today) {
+          posthogService.trackEvent(POSTHOG_EVENTS.APP_OPENED_DAILY, {
+            date: today,
+            timestamp: new Date().toISOString(),
+          });
+
+          await AsyncStorage.setItem('lastPostHogAppOpen', today);
+        }
+      } catch (error) {
+        console.warn('PostHog daily app open tracking failed:', error);
+      }
+    };
+
+    trackDailyAppOpen();
+  }, [postHog]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -124,11 +210,7 @@ export default function RootLayout() {
         }
         
         // Initialize analytics / monetization SDKs (non-blocking)
-        // PostHog will respect the tracking permission status
-        posthogService.initialize().catch((error) => {
-          console.warn('PostHog initialization failed:', error);
-        });
-
+        // PostHog is initialized via PostHogProvider + PostHogInitializer
         // Initialize Facebook SDK so Meta can recognize the SDK is installed
         initializeFacebookSDK().catch((error) => {
           console.warn('Facebook SDK initialization failed:', error);
@@ -270,17 +352,10 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, user, checkPremiumStatus]);
 
-  // Track screen views in PostHog + Facebook (best-effort, after SDK init)
+  // Track screen views in Facebook (PostHog screen tracking is handled by PostHogScreenTracker)
   useEffect(() => {
     if (!pathname) return;
     const screenName = pathname.replace(/^\//, '') || 'home';
-    // PostHog custom screen event (in addition to any automatic capture)
-    if (posthogService.isInitialized()) {
-      posthogService.trackScreenView(screenName, {
-        pathname,
-        timestamp: new Date().toISOString(),
-      });
-    }
     facebookAnalytics.logScreenView(screenName);
   }, [pathname]);
 
@@ -337,21 +412,19 @@ export default function RootLayout() {
 
   // Show loading screen while app is initializing
   // Don't block on font loading - fonts will load in background and apply when ready
-  if (isLoading) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <ResponsiveWrapper>
-          <LoadingScreen colors={colors} />
-        </ResponsiveWrapper>
-      </SafeAreaProvider>
-    );
-  }
-
-  return (
+  const content = isLoading ? (
     <SafeAreaProvider>
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ResponsiveWrapper>
+        <LoadingScreen colors={colors} />
+      </ResponsiveWrapper>
+    </SafeAreaProvider>
+  ) : (
+    <SafeAreaProvider>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <ResponsiveWrapper>
+        <PostHogInitializer />
+        <PostHogScreenTracker />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -392,6 +465,12 @@ export default function RootLayout() {
       </ResponsiveWrapper>
     </SafeAreaProvider>
   );
+
+  if (posthogClient) {
+    return <PostHogProvider client={posthogClient}>{content}</PostHogProvider>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
