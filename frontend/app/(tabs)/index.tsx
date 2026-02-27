@@ -319,7 +319,20 @@ export default function FeedScreen() {
       // Load all groups and filter for joined ones
       const response = await groupService.getGroups(1, 100);
       if (response.success && response.data) {
-        const joined = response.data.filter(group => group.isMember);
+        const currentUserId = user?._id;
+
+        const joined = response.data.filter((group: Group) => {
+          // Prefer backend flag when available
+          if (group.isMember) return true;
+
+          // Fallback: check members array in case isMember isn't set correctly
+          if (!currentUserId || !group.members) return false;
+
+          return group.members.some((member: any) =>
+            ((member && member._id) || member)?.toString() === currentUserId
+          );
+        });
+
         setJoinedGroups(joined);
       }
     } catch (error) {
@@ -393,14 +406,27 @@ export default function FeedScreen() {
       } else {
         // All, Post, Question, Story: Filter by post type
         const postType = activeTab === 'all' ? undefined : activeTab;
-        response = await postService.getPosts({
-          page: pageNum,
-          limit: 20,
-          groupId: showAllPublicPosts ? undefined : groupId, // Don't filter by specific group if showing all public posts
-          postType,
-          sortBy: sortOption,
-          publicOnly: showAllPublicPosts, // Only show posts from public communities
-        });
+
+        // When a specific community is selected, use the joined-groups endpoint
+        // so we only see posts from joined communities, and for that exact group.
+        if (groupId && !showAllPublicPosts) {
+          response = await postService.getJoinedGroupsPosts({
+            page: pageNum,
+            limit: 20,
+            groupId,
+            postType,
+            sortBy: sortOption,
+          });
+        } else {
+          response = await postService.getPosts({
+            page: pageNum,
+            limit: 20,
+            groupId: showAllPublicPosts ? undefined : undefined, // no specific group when not selected
+            postType,
+            sortBy: sortOption,
+            publicOnly: showAllPublicPosts, // Only show posts from public communities
+          });
+        }
       }
       
       
@@ -1330,6 +1356,8 @@ const styles = StyleSheet.create({
   },
   filterBar: {
     marginTop: SPACING.xs,
+    // Stretch filters to screen edges so chips aren't visually cut off by FlatList padding
+    marginHorizontal: -SPACING.md,
   },
   sortContainer: {
     flexDirection: 'row',

@@ -259,6 +259,9 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
             <Text style={styles.emptyText}>No communities yet</Text>
           </View>
         )}
+
+        {/* Spacer at end to prevent last chip from being visually cut off */}
+        <View style={styles.endSpacer} />
       </ScrollView>
     </View>
   );
@@ -280,7 +283,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.md,
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xxl,
     gap: SPACING.sm,
   },
   loadingContainer: {
@@ -304,7 +308,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glass.backgroundDark,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
-    marginRight: SPACING.xs,
   },
   selectedChip: {
     backgroundColor: COLORS.primary,
@@ -329,6 +332,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     fontStyle: 'italic',
+  },
+  endSpacer: {
+    width: SPACING.xxl,
   },
 });
 

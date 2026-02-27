@@ -579,12 +579,11 @@ const styles = StyleSheet.create({
   },
   sortFiltersContainer: {
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.glass.border,
   },
   sortFiltersScrollContent: {
-    paddingRight: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
   },
   sortFilterChip: {
     flexDirection: 'row',
