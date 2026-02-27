@@ -301,15 +301,49 @@ export const searchUsers = async (req: AuthRequest, res: Response): Promise<void
 
 // @desc    Get user's posts
 // @route   GET /api/users/:id/posts
-// @access  Public
+// @access  Public (but respects block relationships)
 export const getUserPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
+    const targetUserId = req.params.id;
+
+    // If someone is blocked (either direction), do not expose posts between them
+    if (req.userId) {
+      const currentUserId = req.userId.toString();
+
+      const [currentUser, targetUser] = await Promise.all([
+        User.findById(req.userId).select('blockedUsers'),
+        User.findById(targetUserId).select('blockedUsers'),
+      ]);
+
+      const hasBlockedTarget = currentUser?.blockedUsers?.some(
+        (id: any) => id.toString() === targetUserId
+      );
+      const isBlockedByTarget = targetUser?.blockedUsers?.some(
+        (id: any) => id.toString() === currentUserId
+      );
+
+      if (hasBlockedTarget || isBlockedByTarget) {
+        // Return empty list but with valid pagination, so UI doesn't break
+        res.json({
+          success: true,
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0,
+          },
+        });
+        return;
+      }
+    }
+
     const posts = await Post.find({ 
-      author: req.params.id,
+      author: targetUserId,
       groupId: null, // Only public posts
     })
       .populate('author', 'username displayName avatar')

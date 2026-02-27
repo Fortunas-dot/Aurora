@@ -5,7 +5,7 @@ module.exports = {
     name: 'Aurora',
     slug: 'aurora',
     owner: 'pawbuddies',
-    version: '1.0.0',
+    version: '1.0.1',
     runtimeVersion: {
       policy: 'appVersion', // Use app version as runtime version
     },
@@ -127,7 +127,14 @@ module.exports = {
       PROXY_HOST: process.env.PROXY_HOST || null,
       // PostHog Analytics
       // Prefer EXPO_PUBLIC_POSTHOG_API_KEY (recommended by PostHog) but keep POSTHOG_API_KEY for backwards compatibility
-      POSTHOG_API_KEY: process.env.EXPO_PUBLIC_POSTHOG_API_KEY || process.env.POSTHOG_API_KEY || null,
+      EXPO_PUBLIC_POSTHOG_API_KEY:
+        process.env.EXPO_PUBLIC_POSTHOG_API_KEY ||
+        process.env.POSTHOG_API_KEY ||
+        'phc_6BMEJjnxrz3BAfLj8Y1N0lOizGAhnk1d9XNp3Tl2HRB',
+      POSTHOG_API_KEY:
+        process.env.POSTHOG_API_KEY ||
+        process.env.EXPO_PUBLIC_POSTHOG_API_KEY ||
+        'phc_6BMEJjnxrz3BAfLj8Y1N0lOizGAhnk1d9XNp3Tl2HRB',
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
     },
   },

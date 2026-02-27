@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
+import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { broadcastMessageReaction } from './chatWebSocket';
 import mongoose from 'mongoose';
@@ -185,6 +186,30 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       res.status(400).json({
         success: false,
         message: 'Message must have either content or attachments',
+      });
+      return;
+    }
+
+    // Prevent sending messages when there is a block relationship
+    // - If current user has blocked the receiver
+    // - Or if receiver has blocked the current user
+    const [currentUser, targetUser] = await Promise.all([
+      User.findById(req.userId).select('blockedUsers'),
+      User.findById(receiverId).select('blockedUsers'),
+    ]);
+
+    const currentUserId = req.userId!.toString();
+    const hasBlockedReceiver = currentUser?.blockedUsers?.some(
+      (id: any) => id.toString() === receiverId
+    );
+    const isBlockedByReceiver = targetUser?.blockedUsers?.some(
+      (id: any) => id.toString() === currentUserId
+    );
+
+    if (hasBlockedReceiver || isBlockedByReceiver) {
+      res.status(403).json({
+        success: false,
+        message: 'You cannot send messages to this user.',
       });
       return;
     }

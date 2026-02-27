@@ -80,6 +80,17 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
         return;
       }
 
+      // Ensure audio plays even when iPhone is in silent mode, and configure session safely
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        });
+      } catch (modeError) {
+        console.warn('VoiceMessagePlayer: Failed to set audio mode, continuing anyway:', modeError);
+      }
+
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: true }

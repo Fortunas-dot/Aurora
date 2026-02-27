@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Alert, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { LoadingSpinner } from '../common';
@@ -50,6 +50,22 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const startRecording = async () => {
     // Prevent multiple simultaneous calls
     if (isStartingRef.current) {
+      return;
+    }
+
+    // On iOS, starting a recording while the app is not active can cause
+    // "This experience is currently in the background, so the audio session could not be activated."
+    // Guard against this and show a friendly message instead of throwing.
+    const appState = AppState.currentState;
+    if (appState !== 'active') {
+      console.warn(
+        'VoiceRecorder: Cannot start recording because app state is',
+        appState
+      );
+      Alert.alert(
+        'Recording not available',
+        'Please make sure Aurora is open in the foreground before starting an audio recording.'
+      );
       return;
     }
     

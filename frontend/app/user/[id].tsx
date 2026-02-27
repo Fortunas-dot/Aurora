@@ -389,6 +389,13 @@ export default function UserProfileScreen() {
                 <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">
                   @{profile.username}
                 </Text>
+                {/* Show blocked status close to the name, instead of under the follow button */}
+                {!isOwnProfile && isAuthenticated && isBlocked && (
+                  <View style={styles.blockedBadge}>
+                    <Ionicons name="ban" size={14} color={COLORS.error} />
+                    <Text style={styles.blockedText}>Blocked</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -404,12 +411,6 @@ export default function UserProfileScreen() {
                     style={styles.followButton}
                 icon={isFollowing ? 'checkmark' : 'person-add-outline'}
               />
-              {isBlocked && (
-                <View style={styles.blockedBadge}>
-                  <Ionicons name="ban" size={14} color={COLORS.error} />
-                  <Text style={styles.blockedText}>Blocked</Text>
-                </View>
-              )}
             </View>
           )}
 
@@ -598,13 +599,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: SPACING.xs + 1,
+    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.error + '20',
+    // Zorg dat de rode achtergrond alleen om de tekst heen zit
+    alignSelf: 'flex-start',
+    marginTop: SPACING.xs,
   },
   blockedText: {
-    ...TYPOGRAPHY.caption,
+    // Nog iets grotere tekst zodat "Blocked" duidelijk opvalt
+    ...TYPOGRAPHY.body,
     color: COLORS.error,
     fontWeight: '600',
   },

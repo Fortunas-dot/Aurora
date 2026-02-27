@@ -497,14 +497,16 @@ export default function GroupDetailScreen() {
       <FlatList
         data={posts}
         renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            onPress={() => router.push(`/post/${item._id}`)}
-            onLike={() => handleLikePost(item._id)}
-            onComment={() => router.push(`/post/${item._id}`)}
-            onShare={() => handleSharePost(item)}
-            currentUserId={user?._id}
-          />
+          <View style={{ paddingHorizontal: SPACING.md }}>
+            <PostCard
+              post={item}
+              onPress={() => router.push(`/post/${item._id}`)}
+              onLike={() => handleLikePost(item._id)}
+              onComment={() => router.push(`/post/${item._id}`)}
+              onShare={() => handleSharePost(item)}
+              currentUserId={user?._id}
+            />
+          </View>
         )}
         keyExtractor={(item) => item._id}
         removeClippedSubviews={false}
@@ -642,7 +644,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 100,
     paddingTop: 0,
-    paddingHorizontal: SPACING.md,
   },
   postsHeader: {
     flexDirection: 'row',
@@ -657,6 +658,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
     fontWeight: '600',
+    // Nudge the "X posts" label slightly to the right so it lines up more visually
+    // with the post cards below the banner
+    marginLeft: SPACING.sm,
   },
   sortButton: {
     flexDirection: 'row',

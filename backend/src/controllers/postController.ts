@@ -127,9 +127,23 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Filter out blocked users if authenticated
     if (req.userId) {
+      const blockedIds: string[] = [];
+
+      // Users that the current user has blocked
       const currentUser = await User.findById(req.userId).select('blockedUsers');
-      if (currentUser && currentUser.blockedUsers.length > 0) {
-        query.author = { $nin: currentUser.blockedUsers };
+      if (currentUser?.blockedUsers?.length) {
+        blockedIds.push(...currentUser.blockedUsers.map((id: any) => id.toString()));
+      }
+
+      // Users who have blocked the current user (so they also can't see each other's posts)
+      const blockedByUsers = await User.find({ blockedUsers: req.userId }).select('_id');
+      if (blockedByUsers.length > 0) {
+        blockedByUsers.forEach((u: any) => blockedIds.push(u._id.toString()));
+      }
+
+      const uniqueBlockedIds = Array.from(new Set(blockedIds));
+      if (uniqueBlockedIds.length > 0) {
+        query.author = { $nin: uniqueBlockedIds };
       }
     }
 

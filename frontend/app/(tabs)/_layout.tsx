@@ -216,10 +216,7 @@ export default function TabsLayout() {
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
-            <Ionicons name="person" size={size} color={color} />
-              {unreadByType.profile > 0 && (
-                <Badge count={unreadByType.profile} size="sm" />
-              )}
+              <Ionicons name="person" size={size} color={color} />
             </View>
           ),
         }}

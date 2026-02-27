@@ -35,12 +35,13 @@ function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors
 }
 
 // Read PostHog configuration similar to PawBuddies guide
+// Fallback to the provided Aurora PostHog API key if env/extra are not set
 const posthogApiKey =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_POSTHOG_API_KEY) ||
   (typeof Constants !== 'undefined' &&
     (Constants.expoConfig?.extra as any)?.EXPO_PUBLIC_POSTHOG_API_KEY) ||
   (typeof Constants !== 'undefined' && Constants.expoConfig?.extra?.POSTHOG_API_KEY) ||
-  '';
+  'phc_6BMEJjnxrz3BAfLj8Y1N0lOizGAhnk1d9XNp3Tl2HRB';
 
 const posthogHost =
   (typeof Constants !== 'undefined' && Constants.expoConfig?.extra?.POSTHOG_HOST) ||

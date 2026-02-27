@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { WebSocket } from 'ws';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
+import User from '../models/User';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
 interface AuthenticatedWebSocket extends WebSocket {
@@ -139,6 +140,45 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
         senderWs.send(JSON.stringify({
           type: 'error',
           message: 'Message must have either content or attachments',
+        }));
+      }
+      return;
+    }
+
+    // Prevent sending messages when there is a block relationship
+    // - If sender has blocked the receiver
+    // - Or if receiver has blocked the sender
+    try {
+      const [senderUser, receiverUser] = await Promise.all([
+        User.findById(senderId).select('blockedUsers'),
+        User.findById(receiverId).select('blockedUsers'),
+      ]);
+
+      const hasBlockedReceiver = senderUser?.blockedUsers?.some(
+        (id: any) => id.toString() === receiverId
+      );
+      const isBlockedByReceiver = receiverUser?.blockedUsers?.some(
+        (id: any) => id.toString() === senderId
+      );
+
+      if (hasBlockedReceiver || isBlockedByReceiver) {
+        const senderWs = activeChatConnections.get(senderId);
+        if (senderWs && senderWs.readyState === 1) {
+          senderWs.send(JSON.stringify({
+            type: 'error',
+            message: 'You cannot send messages to this user.',
+          }));
+        }
+        return;
+      }
+    } catch (blockError) {
+      console.error('Error checking block status for chat message:', blockError);
+      // If we fail to check block state, fail safe and do NOT send the message
+      const senderWs = activeChatConnections.get(senderId);
+      if (senderWs && senderWs.readyState === 1) {
+        senderWs.send(JSON.stringify({
+          type: 'error',
+          message: 'Could not send message. Please try again later.',
         }));
       }
       return;

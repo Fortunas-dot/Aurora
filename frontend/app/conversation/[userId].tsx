@@ -853,7 +853,14 @@ export default function ConversationScreen() {
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            {
+              // Extra bottom padding so last messages are always visible above the input + keyboard,
+              // especially on devices like iPhone 12 with different safe area / keyboard heights
+              paddingBottom: SPACING.xl + insets.bottom + 80,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -960,6 +967,13 @@ export default function ConversationScreen() {
                       ]}
                       maxLength={2000}
                       showCharCount={false}
+                      onFocus={() => {
+                        // When the keyboard opens, make sure we scroll to the very bottom
+                        // so the latest messages are above the keyboard on all iPhones
+                        setTimeout(() => {
+                          flatListRef.current?.scrollToEnd({ animated: true });
+                        }, 150);
+                      }}
                     />
                   </View>
                 </View>
