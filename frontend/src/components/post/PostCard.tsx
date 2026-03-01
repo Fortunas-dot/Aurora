@@ -274,16 +274,13 @@ export const PostCard: React.FC<PostCardProps> = ({
           contentContainerStyle={styles.imagesContent}
         >
           {post.images.map((imageUrl, index) => {
-            // Normalize image URL to ensure it's absolute
-            const normalizedImageUrl = useMemo(() => {
-              if (!imageUrl) return '';
-              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-                return imageUrl;
-              }
+            // Normalize image URL to ensure it's absolute (LazyImage will also normalize, but this ensures consistency)
+            let normalizedImageUrl = imageUrl;
+            if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
               const baseUrl = 'https://aurora-production.up.railway.app';
               const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-              return `${baseUrl}${relativeUrl}`;
-            }, [imageUrl]);
+              normalizedImageUrl = `${baseUrl}${relativeUrl}`;
+            }
             
             return (
               <LazyImage
