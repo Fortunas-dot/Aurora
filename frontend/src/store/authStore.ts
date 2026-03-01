@@ -19,6 +19,7 @@ interface AuthState {
   checkAuth: () => Promise<void>;
   clearError: () => void;
   updateUser: (user: Partial<User>) => void;
+  normalizeAvatarUrl: (url: string | null | undefined) => string | null;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
