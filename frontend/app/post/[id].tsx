@@ -17,6 +17,30 @@ import { PostCard } from '../../src/components/post/PostCard';
 import { CommentCard } from '../../src/components/post/CommentCard';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
 import { postService, Post } from '../../src/services/post.service';
+
+// Helper function to normalize URLs (same as in post.service.ts)
+const normalizeUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
+// Helper function to normalize post data
+const normalizePost = (post: Post): Post => {
+  return {
+    ...post,
+    images: post.images?.map(img => normalizeUrl(img) || img).filter((img): img is string => !!img),
+    video: normalizeUrl(post.video),
+    author: {
+      ...post.author,
+      avatar: normalizeUrl(post.author.avatar),
+    },
+  };
+};
 import { commentService, Comment } from '../../src/services/comment.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
@@ -43,7 +67,8 @@ export default function PostDetailsScreen() {
     try {
       const response = await postService.getPost(id);
       if (response.success && response.data) {
-        setPost(response.data);
+        // Ensure post is normalized (getPost should already normalize, but double-check)
+        setPost(normalizePost(response.data));
       } else {
         console.error('Error loading post:', response.message);
       }
@@ -102,12 +127,13 @@ export default function PostDetailsScreen() {
       const response = await postService.likePost(post._id);
       if (response.success) {
         const isLiked = post.likes.includes(user!._id);
-        setPost({
+        // Ensure post data remains normalized when updating
+        setPost(normalizePost({
           ...post,
           likes: isLiked
             ? post.likes.filter((id) => id !== user!._id)
             : [...post.likes, user!._id],
-        });
+        }));
       }
     } catch (error) {
       console.error('Error liking post:', error);
@@ -168,10 +194,11 @@ export default function PostDetailsScreen() {
       
       if (response.success && response.data) {
         setComments((prev) => [response.data!, ...prev]);
-        setPost({
+        // Ensure post data remains normalized when updating
+        setPost(normalizePost({
           ...post,
           commentsCount: post.commentsCount + 1,
-        });
+        }));
         setCommentText('');
       }
     } catch (error) {
