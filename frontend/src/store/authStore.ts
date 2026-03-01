@@ -349,6 +349,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  // Helper function to normalize avatar URL
+  normalizeAvatarUrl: (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const baseUrl = 'https://aurora-production.up.railway.app';
+    const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${relativeUrl}`;
+  },
+
   checkAuth: async () => {
     set({ isLoading: true });
     
@@ -361,6 +372,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
           const cachedUser = JSON.parse(cachedUserJson);
           console.log('✅ Found cached user:', cachedUser.email || cachedUser.username);
+          
+          // Normalize avatar URL if present
+          if (cachedUser.avatar) {
+            const { normalizeAvatarUrl } = get();
+            cachedUser.avatar = normalizeAvatarUrl(cachedUser.avatar) || undefined;
+          }
+          
           // Set cached user immediately for faster UI
           set({
             user: cachedUser,
@@ -409,6 +427,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (cachedUserJson) {
           try {
             const cachedUser = JSON.parse(cachedUserJson);
+            
+            // Normalize avatar URL if present
+            if (cachedUser.avatar) {
+              const { normalizeAvatarUrl } = get();
+              cachedUser.avatar = normalizeAvatarUrl(cachedUser.avatar) || undefined;
+            }
+            
             set({
               user: cachedUser,
               isAuthenticated: true,
@@ -431,6 +456,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.success && response.data) {
         const user = response.data;
         console.log('✅ Auth verified successfully for user:', user.email || user.username);
+        
+        // Normalize avatar URL if present
+        if (user.avatar) {
+          const { normalizeAvatarUrl } = get();
+          user.avatar = normalizeAvatarUrl(user.avatar) || undefined;
+        }
         
         // Cache user data for faster next startup
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
