@@ -11,6 +11,8 @@ import {
   Image,
   Modal,
   FlatList,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -62,12 +64,30 @@ export default function CreatePostScreen() {
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, router]);
+
+  // Handle keyboard visibility on Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      });
+      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardHeight(0);
+      });
+
+      return () => {
+        keyboardDidShowListener.remove();
+        keyboardDidHideListener.remove();
+      };
+    }
+  }, []);
 
   // Load groups and set initial group if provided
   useEffect(() => {
@@ -305,7 +325,7 @@ export default function CreatePostScreen() {
   return (
     <LinearGradient
       colors={COLORS.backgroundGradient}
-      style={styles.container}
+      style={[styles.container, keyboardHeight > 0 && Platform.OS === 'android' && { height: Dimensions.get('window').height - keyboardHeight }]}
     >
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView
@@ -339,9 +359,12 @@ export default function CreatePostScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
-            removeClippedSubviews={true}
+            keyboardDismissMode="none"
+            removeClippedSubviews={false}
             scrollEventThrottle={16}
             decelerationRate="normal"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
           >
           {/* Post Type Selection */}
           <GlassCard style={styles.postTypeCard} padding="lg">
@@ -612,7 +635,7 @@ export default function CreatePostScreen() {
         </ScrollView>
         </KeyboardAvoidingView>
       ) : (
-        <>
+        <View style={[styles.androidContainer, keyboardHeight > 0 && { flex: 0, height: Dimensions.get('window').height - keyboardHeight }]}>
           {/* Header */}
           <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
             <Pressable
@@ -639,9 +662,12 @@ export default function CreatePostScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
-            removeClippedSubviews={true}
+            keyboardDismissMode="none"
+            removeClippedSubviews={false}
             scrollEventThrottle={16}
             decelerationRate="normal"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
           >
             {/* Post Type Selection */}
             <GlassCard style={styles.postTypeCard} padding="lg">
@@ -910,7 +936,7 @@ export default function CreatePostScreen() {
               </View>
             </GlassCard>
           </ScrollView>
-        </>
+        </View>
       )}
 
       {/* Group Selection Modal */}
@@ -999,9 +1025,14 @@ export default function CreatePostScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(Platform.OS === 'android' && { overflow: 'hidden' }),
   },
   keyboardView: {
     flex: 1,
+  },
+  androidContainer: {
+    flex: 1,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

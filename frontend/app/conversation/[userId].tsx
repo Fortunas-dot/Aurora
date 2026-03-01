@@ -234,8 +234,21 @@ export default function ConversationScreen() {
       const response = await messageService.getConversation(userId, pageNum, 50);
       
       if (response.success && response.data) {
+        // #region agent log
+        const sampleMessage = response.data.find((m: Message) => m.attachments && m.attachments.length > 0);
+        if (sampleMessage) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:237',message:'loadMessages - URLs from messageService BEFORE normalization',data:{messageId:sampleMessage._id,attachments:sampleMessage.attachments,attachmentUrls:sampleMessage.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:sampleMessage.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        }
+        // #endregion
         // Normalize all messages using the helper function
         const messagesWithAttachments = response.data.map((msg: Message) => normalizeMessageAttachments(msg));
+        
+        // #region agent log
+        const sampleNormalized = messagesWithAttachments.find((m: Message) => m.attachments && m.attachments.length > 0);
+        if (sampleNormalized) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:243',message:'loadMessages - URLs AFTER normalization (setting in state)',data:{messageId:sampleNormalized._id,attachments:sampleNormalized.attachments,attachmentUrls:sampleNormalized.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:sampleNormalized.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
         
         const messagesWithNonEmptyAttachments = messagesWithAttachments.filter(m => m.attachments && m.attachments.length > 0);
         if (append) {

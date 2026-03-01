@@ -431,6 +431,12 @@ export default function FeedScreen() {
       
       
       if (response.success && response.data) {
+        // #region agent log
+        const samplePost = response.data.find((p: Post) => (p.images && p.images.length > 0) || p.video);
+        if (samplePost) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:433',message:'loadPosts - URLs from backend BEFORE normalization',data:{postId:samplePost._id,images:samplePost.images,video:samplePost.video,authorAvatar:samplePost.author?.avatar,imagesAreAbsolute:samplePost.images?.map((img:string)=>img?.startsWith('http')),videoIsAbsolute:samplePost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        }
+        // #endregion
         // Filter out posts with invalid IDs
         const validPosts = response.data.filter((post: Post) => {
           if (!post || !post._id) return false;
@@ -438,6 +444,13 @@ export default function FeedScreen() {
           const postId = post._id.toString();
           return /^[0-9a-fA-F]{24}$/.test(postId);
         });
+        
+        // #region agent log
+        const sampleValidPost = validPosts.find((p: Post) => (p.images && p.images.length > 0) || p.video);
+        if (sampleValidPost) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:441',message:'loadPosts - URLs AFTER normalization (from postService)',data:{postId:sampleValidPost._id,images:sampleValidPost.images,video:sampleValidPost.video,authorAvatar:sampleValidPost.author?.avatar,imagesAreAbsolute:sampleValidPost.images?.map((img:string)=>img?.startsWith('http')),videoIsAbsolute:sampleValidPost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
         
         // Update therapist count banner:
         // 1) Prefer explicit value from backend when available

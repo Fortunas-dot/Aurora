@@ -445,6 +445,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let response;
       try {
         response = await Promise.race([authPromise, timeoutPromise]) as any;
+        
+        // #region agent log
+        if (response?.success && response?.data?.avatar) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:448',message:'checkAuth - Avatar URL from backend BEFORE normalization',data:{avatar:response.data.avatar,isAbsolute:response.data.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        }
+        // #endregion
       } catch (timeoutError) {
         // Network timeout or error - if we have cached user and token, assume still authenticated
         console.warn('Auth check timeout or network error, using cached user if available');

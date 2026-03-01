@@ -336,6 +336,14 @@ const getMoodIcon = (mood: number): keyof typeof Ionicons.glyphMap => {
   return 'happy';  // Excellent (5)
 };
 
+// Get trend icon based on trend value
+const getTrendIcon = (trend: 'up' | 'down' | 'equal' | null): keyof typeof Ionicons.glyphMap => {
+  if (trend === 'up') return 'arrow-up-circle';
+  if (trend === 'down') return 'arrow-down-circle';
+  if (trend === 'equal') return 'remove-circle';
+  return 'ellipse-outline'; // Default when no trend
+};
+
 // Stat card component
 const StatCard: React.FC<{
   icon: keyof typeof Ionicons.glyphMap;
@@ -343,39 +351,29 @@ const StatCard: React.FC<{
   value: string | number;
   color?: string;
   trend?: 'up' | 'down' | 'equal' | null;
-}> = ({ icon, label, value, color = COLORS.primary, trend }) => (
-  <GlassCard style={styles.statCard} padding="md">
-    <View style={styles.statContent}>
-      <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon} size={24} color={color} />
+  useTrendAsIcon?: boolean; // If true, use trend icon instead of provided icon
+}> = ({ icon, label, value, color = COLORS.primary, trend, useTrendAsIcon = false }) => {
+  // If useTrendAsIcon is true, use trend icon; otherwise use provided icon
+  const displayIcon = useTrendAsIcon && trend ? getTrendIcon(trend) : icon;
+  // Trend color for icon
+  const iconColor = useTrendAsIcon && trend 
+    ? (trend === 'up' ? COLORS.success : trend === 'down' ? COLORS.error : COLORS.textMuted)
+    : color;
+
+  return (
+    <GlassCard style={styles.statCard} padding="md">
+      <View style={styles.statContent}>
+        <View style={[styles.statIconContainer, { backgroundColor: `${iconColor}20` }]}>
+          <Ionicons name={displayIcon} size={24} color={iconColor} />
+        </View>
+        <View style={styles.statValueContainer}>
+          <Text style={styles.statValue}>{value}</Text>
+        </View>
+        <Text style={styles.statLabel}>{label}</Text>
       </View>
-      <View style={styles.statValueContainer}>
-        <Text style={styles.statValue}>{value}</Text>
-        {trend && (
-          <Ionicons
-            name={
-              trend === 'up'
-                ? 'arrow-up'
-                : trend === 'down'
-                ? 'arrow-down'
-                : 'remove'
-            }
-            size={16}
-            color={
-              trend === 'up'
-                ? COLORS.success
-                : trend === 'down'
-                ? COLORS.error
-                : COLORS.textMuted
-            }
-            style={styles.trendIcon}
-          />
-        )}
-      </View>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  </GlassCard>
-);
+    </GlassCard>
+  );
+};
 
 // Theme/Pattern item
 const InsightItem: React.FC<{
@@ -913,11 +911,12 @@ export default function JournalInsightsScreen() {
                 color={COLORS.primary}
               />
               <StatCard
-                icon={insights.averageMood ? getMoodIcon(insights.averageMood) : 'remove-circle-outline'}
+                icon="happy-outline"
                 label="Avg. mood"
                 value={insights.averageMood ? `${insights.averageMood.toFixed(1)}/5` : '-'}
                 color={insights.averageMood ? getMoodColor(insights.averageMood) : COLORS.textMuted}
                 trend={moodTrend}
+                useTrendAsIcon={true}
               />
             </View>
 
@@ -1168,10 +1167,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   statValueContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.xs,
     width: '100%',
   },
   statValue: {
