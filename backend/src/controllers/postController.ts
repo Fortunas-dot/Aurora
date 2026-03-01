@@ -251,10 +251,6 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       return post;
     });
 
-    // #region agent log
-    logDebug({location:'postController.ts:61',message:'getPosts - After validation filter',data:{validPostsCount:validPosts.length,filteredOut:posts.length-validPosts.length,validPostIds:validPosts.map((p:any)=>p._id?.toString()).slice(0,5)},hypothesisId:'A'});
-    // #endregion
-
     // Add isSaved status and format group info if user is authenticated
     let postsWithSavedStatus = validPosts;
     if (req.userId) {
