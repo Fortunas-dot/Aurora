@@ -265,12 +265,12 @@ export default function ConversationScreen() {
       if (message.sender._id === userId || message.receiver._id === userId) {
         setMessages((prev) => {
           if (prev.some((m) => m._id === message._id)) return prev;
-          // Ensure attachments are included
-          const messageWithAttachments = {
+          // Normalize attachments URLs before adding to state
+          const normalizedMessage = normalizeMessageAttachments({
             ...message,
             attachments: message.attachments || [],
-          };
-          return [...prev, messageWithAttachments];
+          });
+          return [...prev, normalizedMessage];
         });
 
         // Scroll to bottom
@@ -674,20 +674,33 @@ export default function ConversationScreen() {
     const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: enUS });
     const showDate = false; // Could add date separators if needed
 
-    const imageUrl = (url: string) => {
-      if (!url) return url;
-      // If already absolute, return as-is
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return url;
+    // Helper function to normalize URLs to absolute URLs
+    const normalizeUrl = (url: string | undefined | null): string | undefined => {
+      if (!url || typeof url !== 'string' || url.trim() === '') return undefined;
+      const trimmedUrl = url.trim();
+      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+        return trimmedUrl;
       }
-      // If relative, make it absolute
       const baseUrl = 'https://aurora-production.up.railway.app';
-      if (url.startsWith('/')) {
-        return `${baseUrl}${url}`;
-      }
-      // If it doesn't start with /, add it
-      return `${baseUrl}/${url}`;
+      const relativeUrl = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
+      return `${baseUrl}${relativeUrl}`.replace(/([^:]\/)\/+/g, '$1');
     };
+
+    // Helper function to normalize message attachments
+    const normalizeMessageAttachments = (message: any): any => {
+      if (!message) return message;
+      const normalized = { ...message };
+      if (message.attachments && Array.isArray(message.attachments)) {
+        normalized.attachments = message.attachments.map((attachment: any) => ({
+          ...attachment,
+          url: normalizeUrl(attachment.url) || attachment.url,
+        }));
+      }
+      return normalized;
+    };
+
+    // Alias for backward compatibility
+    const imageUrl = (url: string) => normalizeUrl(url) || url;
 
     const hasUserReacted = (reaction: { emoji: string; users: any[] }) => {
       return reaction.users.some((user) => user._id === currentUser?._id);
