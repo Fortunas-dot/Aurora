@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { Video, ResizeMode } from 'expo-av';
 import { GlassCard, Avatar, TagChip, LazyImage } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Post } from '../../services/post.service';
@@ -232,6 +233,31 @@ export const PostCard: React.FC<PostCardProps> = ({
         </>
       )}
 
+      {/* Video */}
+      {post.video && (() => {
+        // Normalize video URL to ensure it's always absolute
+        const videoUrl = post.video.startsWith('http') 
+          ? post.video 
+          : `https://aurora-production.up.railway.app${post.video}`;
+        
+        console.log('PostCard: Rendering video with URL:', videoUrl);
+        
+        return (
+          <View style={styles.videoContainer}>
+            <Video
+              source={{ uri: videoUrl }}
+              style={styles.postVideo}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay={false}
+              useNativeControls={true}
+              onError={(error) => {
+                console.error('Video playback error:', error);
+              }}
+            />
+          </View>
+        );
+      })()}
+
       {/* Images */}
       {post.images && post.images.length > 0 && (
         <ScrollView
@@ -457,6 +483,15 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
+  },
+  videoContainer: {
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  postVideo: {
+    width: Dimensions.get('window').width - SPACING.md * 4,
+    height: 300,
+    borderRadius: BORDER_RADIUS.md,
   },
   imagesContainer: {
     marginBottom: SPACING.sm,

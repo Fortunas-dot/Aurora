@@ -28,10 +28,22 @@ export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, updateUser } = useAuthStore();
 
+  // Helper function to normalize avatar URL
+  const normalizeAvatarUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/')) {
+      return `https://aurora-production.up.railway.app${url}`;
+    }
+    return url;
+  };
+
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
-  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatar || null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(normalizeAvatarUrl(user?.avatar));
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(user?.avatarCharacter || null);
   const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string | null>(user?.avatarBackgroundColor || null);
   const [avatarMode, setAvatarMode] = useState<'photo' | 'character'>(user?.avatar ? 'photo' : 'character');
@@ -43,6 +55,20 @@ export default function EditProfileScreen() {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, router]);
+
+  // Update avatarUri when user data changes (e.g., after app restart or when user data is refreshed)
+  useEffect(() => {
+    if (user?.avatar) {
+      const normalizedAvatar = normalizeAvatarUrl(user.avatar);
+      setAvatarUri(normalizedAvatar);
+      setAvatarMode('photo');
+    } else if (user?.avatarCharacter) {
+      setAvatarUri(null);
+      setSelectedCharacter(user.avatarCharacter);
+      setSelectedBackgroundColor(user.avatarBackgroundColor || null);
+      setAvatarMode('character');
+    }
+  }, [user?.avatar, user?.avatarCharacter, user?.avatarBackgroundColor]);
 
   const requestMediaPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

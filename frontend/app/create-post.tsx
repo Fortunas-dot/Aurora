@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,7 +154,11 @@ export default function CreatePostScreen() {
           uri: result.assets[0].uri,
           type: 'video' as const,
         };
-        setMedia([...media, newMedia].slice(0, 1)); // Max 1 video
+        // Clear existing media (since max 1 video) and add new video
+        setMedia([newMedia]);
+        console.log('Video selected:', newMedia.uri);
+      } else {
+        console.log('Video selection canceled or no assets');
       }
     } catch (error) {
       console.error('Error picking video:', error);
@@ -208,26 +213,47 @@ export default function CreatePostScreen() {
     setUploadingMedia(true);
     
     try {
-      // Upload images first
+      // Upload images and video
       const imageUrls: string[] = [];
+      let videoUrl: string | undefined = undefined;
+      
       for (const item of media) {
         if (item.type === 'image') {
           const uploadResult = await uploadService.uploadImage(item.uri);
           if (uploadResult.success && uploadResult.data) {
             imageUrls.push(uploadResult.data.url);
           }
+        } else if (item.type === 'video') {
+          const uploadResult = await uploadService.uploadVideo(item.uri);
+          if (uploadResult.success && uploadResult.data) {
+            videoUrl = uploadResult.data.url;
+            console.log('Video uploaded successfully:', videoUrl);
+          } else {
+            console.error('Video upload failed:', uploadResult.message);
+            Alert.alert('Error', 'Could not upload video');
+            setIsSubmitting(false);
+            setUploadingMedia(false);
+            return;
+          }
         }
-        // Videos can be added later if needed
       }
 
+      console.log('Creating post with video:', videoUrl);
       const response = await postService.createPost(
         content.trim(),
         tags,
         selectedGroup?._id,
         imageUrls.length > 0 ? imageUrls : undefined,
         postType,
-        title.trim()
+        title.trim(),
+        videoUrl
       );
+      
+      if (response.success) {
+        console.log('Post created successfully:', response.data);
+      } else {
+        console.error('Post creation failed:', response.message);
+      }
       
       if (response.success) {
         router.back();
@@ -375,12 +401,21 @@ export default function CreatePostScreen() {
             {media.length > 0 && (
               <View style={styles.mediaPreview}>
                 {media.map((item, index) => (
-                  <View key={index} style={styles.mediaItem}>
+                  <View key={`${item.type}-${index}-${item.uri}`} style={styles.mediaItem}>
                     {item.type === 'image' ? (
                       <Image source={{ uri: item.uri }} style={styles.mediaImage} />
                     ) : (
-                      <View style={styles.mediaVideo}>
-                        <Ionicons name="videocam" size={32} color={COLORS.text} />
+                      <View style={styles.mediaVideoContainer}>
+                        <Video
+                          source={{ uri: item.uri }}
+                          style={styles.mediaVideo}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={false}
+                        />
+                        <View style={styles.mediaVideoOverlay}>
+                          <Ionicons name="play-circle" size={40} color={COLORS.white} />
+                        </View>
                       </View>
                     )}
                     <Pressable
@@ -719,10 +754,24 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  mediaVideoContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
   mediaVideo: {
     width: '100%',
     height: '100%',
-    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  mediaVideoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },

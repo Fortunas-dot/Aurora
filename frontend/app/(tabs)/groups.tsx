@@ -300,7 +300,7 @@ export default function GroupsScreen() {
   // Groups state
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'joined' | 'created'>('all');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null); // null = all, country code = specific country
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
   const [showCountrySearch, setShowCountrySearch] = useState(false);
@@ -590,11 +590,27 @@ export default function GroupsScreen() {
   }, [activeTab, isLoading, hasMore, page, groupSearchQuery, selectedCountry, selectedHealthCondition, loadGroups]);
 
   const filteredGroups = useMemo(() => {
+    if (!currentUser?._id) return groups;
+    
     return groups.filter((group) => {
-      const matchesFilter = selectedFilter === 'all' || group.isMember;
-      return matchesFilter;
+      if (selectedFilter === 'all') {
+        return true;
+      } else if (selectedFilter === 'joined') {
+        return group.isMember;
+      } else if (selectedFilter === 'created') {
+        // Check if current user is in the admins array
+        if (group.admins && Array.isArray(group.admins)) {
+          return group.admins.some((admin: any) => {
+            const adminId = (admin._id || admin)?.toString();
+            return adminId === currentUser._id;
+          });
+        }
+        // Fallback: check isAdmin flag if available
+        return group.isAdmin === true;
+      }
+      return true;
     });
-  }, [groups, selectedFilter]);
+  }, [groups, selectedFilter, currentUser?._id]);
 
   const displayBuddies = useMemo(() => {
     return buddySearchQuery.trim() ? searchResults : buddies;
@@ -943,7 +959,15 @@ export default function GroupsScreen() {
                 onPress={() => setSelectedFilter('joined')}
               >
                 <Text style={[styles.filterChipText, selectedFilter === 'joined' && styles.filterChipTextActive]}>
-                  My Groups
+                  Groups Joined
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.filterChip, selectedFilter === 'created' && styles.filterChipActive]}
+                onPress={() => setSelectedFilter('created')}
+              >
+                <Text style={[styles.filterChipText, selectedFilter === 'created' && styles.filterChipTextActive]}>
+                  Groups Created
                 </Text>
               </Pressable>
               {selectedCountry && (
@@ -1369,16 +1393,18 @@ const styles = StyleSheet.create({
   filterChipsContainer: {
     flex: 1,
     flexDirection: 'row',
-    gap: SPACING.sm,
-    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    flexWrap: 'nowrap',
   },
   filterChip: {
     paddingVertical: SPACING.xs + 2,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.glass.backgroundDark,
     borderWidth: 1,
     borderColor: COLORS.glass.border,
+    flexShrink: 1,
+    minWidth: 0,
   },
   filterChipActive: {
     backgroundColor: 'rgba(96, 165, 250, 0.2)',
@@ -1397,6 +1423,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     ...TYPOGRAPHY.small,
     color: COLORS.textSecondary,
+    fontSize: 12,
   },
   filterChipTextActive: {
     color: COLORS.primary,

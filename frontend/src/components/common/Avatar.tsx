@@ -47,6 +47,11 @@ export const Avatar: React.FC<AvatarProps> = ({
   const sizeValue = getSize();
   const fontSize = getFontSize();
 
+  // Normalize avatar URL to ensure it's always absolute
+  const normalizedUri = uri && !uri.startsWith('http') && uri.startsWith('/')
+    ? `https://aurora-production.up.railway.app${uri}`
+    : uri;
+
   // Get character to display (prefer avatarCharacter, fallback to user-based character, then initials)
   const getDisplayCharacter = (): string => {
     if (avatarCharacter) {
@@ -91,9 +96,9 @@ export const Avatar: React.FC<AvatarProps> = ({
         style,
       ]}
     >
-      {uri ? (
+      {normalizedUri ? (
         <Image
-          source={{ uri }}
+          source={{ uri: normalizedUri }}
           style={[
             styles.image,
             {

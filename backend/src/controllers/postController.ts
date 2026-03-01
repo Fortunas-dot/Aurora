@@ -385,7 +385,7 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 // @access  Private
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, content, tags, groupId, images, postType } = req.body;
+    const { title, content, tags, groupId, images, video, postType } = req.body;
 
     // Check for objectionable content
     const contentToCheck = `${title || ''} ${content || ''}`.trim();
@@ -404,6 +404,7 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
       postType: postType || 'post',
       tags: tags || [],
       images: images || [],
+      video: video || undefined,
       groupId: groupId || null,
     });
 

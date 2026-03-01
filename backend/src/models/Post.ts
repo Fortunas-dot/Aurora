@@ -9,6 +9,7 @@ export interface IPost extends Document {
   postType: PostType;
   tags: string[];
   images?: string[];
+  video?: string;
   groupId?: Types.ObjectId;
   likes: Types.ObjectId[];
   commentsCount: number;
@@ -52,6 +53,9 @@ const PostSchema = new Schema<IPost>(
     images: [{
       type: String,
     }],
+    video: {
+      type: String,
+    },
     groupId: {
       type: Schema.Types.ObjectId,
       ref: 'Group',

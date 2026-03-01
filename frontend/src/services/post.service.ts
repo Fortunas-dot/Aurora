@@ -13,6 +13,7 @@ export interface Post {
   postType: PostType;
   tags: string[];
   images?: string[];
+  video?: string;
   groupId?: string;
   group?: Group; // Group/community information
   likes: string[];
@@ -116,7 +117,8 @@ class PostService {
     groupId?: string,
     images?: string[],
     postType?: PostType,
-    title?: string
+    title?: string,
+    video?: string
   ): Promise<ApiResponse<Post>> {
     return apiService.post<Post>('/posts', {
       title,
@@ -124,6 +126,7 @@ class PostService {
       tags,
       groupId,
       images,
+      video,
       postType: postType || 'post',
     });
   }
