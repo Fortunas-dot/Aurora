@@ -158,10 +158,6 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       sortOption = { commentsCount: -1, createdAt: -1 };
     }
 
-    // #region agent log
-    logDebug({location:'postController.ts:45',message:'getPosts - Query built',data:{query,page,limit,skip,tag,groupId,postType,sortBy,queryString:JSON.stringify(query)},hypothesisId:'B'});
-    // #endregion
-
     // Debug logging (only in development)
     if (process.env.NODE_ENV === 'development') {
       console.log('[DEBUG] getPosts query:', JSON.stringify(query, null, 2));
@@ -174,10 +170,6 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       .skip(skip)
       .limit(limit)
       .lean();
-
-    // #region agent log
-    logDebug({location:'postController.ts:75',message:'getPosts - Raw posts before populate',data:{rawPostsCount:postsRaw.length,rawPostIds:postsRaw.map((p:any)=>p._id?.toString()).slice(0,5),rawAuthorIds:postsRaw.map((p:any)=>p.author?.toString()||'null').slice(0,5),rawGroupIds:postsRaw.map((p:any)=>p.groupId?.toString()||'null').slice(0,5)},hypothesisId:'B'});
-    // #endregion
 
     // Store original author IDs before populate
     const authorIdMap = new Map<string, string>();
@@ -218,10 +210,6 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       .limit(limit);
 
     const total = await Post.countDocuments(query);
-
-    // #region agent log
-    logDebug({location:'postController.ts:52',message:'getPosts - Posts found from DB',data:{postsCount:posts.length,total,postsWithAuthor:posts.filter((p:any)=>p.author).length,postsWithoutAuthor:posts.filter((p:any)=>!p.author).length,postIds:posts.map((p:any)=>p._id?.toString()).slice(0,5),authorIds:posts.map((p:any)=>p.author?._id?.toString()||'null').slice(0,5),authorUsernames:posts.map((p:any)=>p.author?.username||'null').slice(0,5)},hypothesisId:'A'});
-    // #endregion
 
     // Filter out posts with invalid IDs
     // Note: We allow posts with null authors (they will get a fallback author)
@@ -332,10 +320,6 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
       });
     }
 
-    // #region agent log
-    logDebug({location:'postController.ts:140',message:'getPosts - Sending response',data:{responsePostsCount:postsWithSavedStatus.length,responsePostIds:postsWithSavedStatus.map((p:any)=>p._id?.toString()).slice(0,5),pagination:{page,limit,total,pages:Math.ceil(total/limit)}},hypothesisId:'E'});
-    // #endregion
-
     // Therapist availability banner: return a backend-driven random number between 3 and 5
     // This keeps the randomness on the server so the frontend cannot see or infer it.
     const therapistCount = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5
@@ -433,16 +417,8 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
       }
     }
 
-    // #region agent log
-    logDebug({location:'postController.ts:421',message:'getPost - URLs from DB before normalization',data:{postId:postWithSavedStatus._id, images:postWithSavedStatus.images, video:postWithSavedStatus.video, imagesSample:postWithSavedStatus.images?.[0], imagesAreAbsolute:postWithSavedStatus.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:postWithSavedStatus.video?.startsWith('http')},hypothesisId:'G'});
-    // #endregion
-
     // Normalize URLs before sending
     const normalizedPost = normalizePostData(postWithSavedStatus);
-
-    // #region agent log
-    logDebug({location:'postController.ts:425',message:'getPost - URLs after normalization (returning to frontend)',data:{postId:normalizedPost._id, images:normalizedPost.images, video:normalizedPost.video, imagesSample:normalizedPost.images?.[0], imagesAreAbsolute:normalizedPost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalizedPost.video?.startsWith('http')},hypothesisId:'H'});
-    // #endregion
 
     res.json({
       success: true,
@@ -462,10 +438,6 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { title, content, tags, groupId, images, video, postType } = req.body;
-
-    // #region agent log
-    logDebug({location:'postController.ts:440',message:'createPost - URLs received from frontend',data:{images, video, imagesSample:images?.[0], imagesAreAbsolute:images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:video?.startsWith('http')},hypothesisId:'A'});
-    // #endregion
 
     // Check for objectionable content
     const contentToCheck = `${title || ''} ${content || ''}`.trim();
@@ -488,23 +460,10 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
       groupId: groupId || null,
     });
 
-    // #region agent log
-    logDebug({location:'postController.ts:460',message:'createPost - URLs stored in database',data:{postId:post._id, images:post.images, video:post.video, imagesSample:post.images?.[0], imagesAreAbsolute:post.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:post.video?.startsWith('http')},hypothesisId:'B'});
-    // #endregion
-
     await post.populate('author', 'username displayName avatar');
 
-    // #region agent log
-    const postObj = post.toObject();
-    logDebug({location:'postController.ts:466',message:'createPost - URLs from DB before normalization',data:{postId:postObj._id, images:postObj.images, video:postObj.video, imagesSample:postObj.images?.[0], imagesAreAbsolute:postObj.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:postObj.video?.startsWith('http')},hypothesisId:'C'});
-    // #endregion
-
     // Normalize URLs before returning
-    const normalizedPost = normalizePostData(postObj);
-
-    // #region agent log
-    logDebug({location:'postController.ts:470',message:'createPost - URLs after normalization (returning to frontend)',data:{postId:normalizedPost._id, images:normalizedPost.images, video:normalizedPost.video, imagesSample:normalizedPost.images?.[0], imagesAreAbsolute:normalizedPost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalizedPost.video?.startsWith('http')},hypothesisId:'D'});
-    // #endregion
+    const normalizedPost = normalizePostData(post.toObject());
 
     res.status(201).json({
       success: true,
