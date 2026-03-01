@@ -42,12 +42,18 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       return null;
     }
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:45',message:'LazyImage - URI is already absolute',data:{uri, uriLength:uri.length},timestamp:Date.now(),runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
       return uri;
     }
     // If relative URL, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:52',message:'LazyImage - Normalized relative URI to absolute',data:{originalUri:uri, normalized, uriLength:uri.length},timestamp:Date.now(),runId:'run1',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     if (__DEV__) {
       console.log('LazyImage: Normalized URL:', normalized);
     }

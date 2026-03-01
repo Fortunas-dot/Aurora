@@ -239,12 +239,19 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         // Normalize video URL to ensure it's always absolute
         const videoUrl = useMemo(() => {
           if (!post.video) return '';
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:240',message:'PostCard - Video URL received from post prop',data:{postId:post._id, video:post.video, isAbsolute:post.video.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'K'})}).catch(()=>{});
+          // #endregion
           if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
             return post.video;
           }
           const baseUrl = 'https://aurora-production.up.railway.app';
           const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
-          return `${baseUrl}${relativeUrl}`;
+          const normalized = `${baseUrl}${relativeUrl}`;
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:248',message:'PostCard - Video URL normalized',data:{postId:post._id, original:post.video, normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'L'})}).catch(()=>{});
+          // #endregion
+          return normalized;
         }, [post.video]);
         
         if (__DEV__) {
@@ -318,12 +325,18 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           contentContainerStyle={styles.imagesContent}
         >
           {post.images.map((imageUrl, index) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:320',message:'PostCard - Image URL received from post prop',data:{postId:post._id, imageUrl, index, isAbsolute:imageUrl?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'M'})}).catch(()=>{});
+            // #endregion
             // Normalize image URL to ensure it's absolute (LazyImage will also normalize, but this ensures consistency)
             let normalizedImageUrl = imageUrl;
             if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
               const baseUrl = 'https://aurora-production.up.railway.app';
               const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
               normalizedImageUrl = `${baseUrl}${relativeUrl}`;
+              // #region agent log
+              fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:327',message:'PostCard - Image URL normalized',data:{postId:post._id, original:imageUrl, normalized:normalizedImageUrl, index},timestamp:Date.now(),runId:'run1',hypothesisId:'N'})}).catch(()=>{});
+              // #endregion
             }
             
             return (

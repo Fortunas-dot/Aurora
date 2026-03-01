@@ -417,8 +417,16 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
       }
     }
 
+    // #region agent log
+    logDebug({location:'postController.ts:421',message:'getPost - URLs from DB before normalization',data:{postId:postWithSavedStatus._id, images:postWithSavedStatus.images, video:postWithSavedStatus.video, imagesSample:postWithSavedStatus.images?.[0], imagesAreAbsolute:postWithSavedStatus.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:postWithSavedStatus.video?.startsWith('http')},hypothesisId:'G'});
+    // #endregion
+
     // Normalize URLs before sending
     const normalizedPost = normalizePostData(postWithSavedStatus);
+
+    // #region agent log
+    logDebug({location:'postController.ts:425',message:'getPost - URLs after normalization (returning to frontend)',data:{postId:normalizedPost._id, images:normalizedPost.images, video:normalizedPost.video, imagesSample:normalizedPost.images?.[0], imagesAreAbsolute:normalizedPost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalizedPost.video?.startsWith('http')},hypothesisId:'H'});
+    // #endregion
 
     res.json({
       success: true,
@@ -438,6 +446,10 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { title, content, tags, groupId, images, video, postType } = req.body;
+
+    // #region agent log
+    logDebug({location:'postController.ts:440',message:'createPost - URLs received from frontend',data:{images, video, imagesSample:images?.[0], imagesAreAbsolute:images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:video?.startsWith('http')},hypothesisId:'A'});
+    // #endregion
 
     // Check for objectionable content
     const contentToCheck = `${title || ''} ${content || ''}`.trim();
@@ -460,10 +472,23 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
       groupId: groupId || null,
     });
 
+    // #region agent log
+    logDebug({location:'postController.ts:460',message:'createPost - URLs stored in database',data:{postId:post._id, images:post.images, video:post.video, imagesSample:post.images?.[0], imagesAreAbsolute:post.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:post.video?.startsWith('http')},hypothesisId:'B'});
+    // #endregion
+
     await post.populate('author', 'username displayName avatar');
 
+    // #region agent log
+    const postObj = post.toObject();
+    logDebug({location:'postController.ts:466',message:'createPost - URLs from DB before normalization',data:{postId:postObj._id, images:postObj.images, video:postObj.video, imagesSample:postObj.images?.[0], imagesAreAbsolute:postObj.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:postObj.video?.startsWith('http')},hypothesisId:'C'});
+    // #endregion
+
     // Normalize URLs before returning
-    const normalizedPost = normalizePostData(post.toObject());
+    const normalizedPost = normalizePostData(postObj);
+
+    // #region agent log
+    logDebug({location:'postController.ts:470',message:'createPost - URLs after normalization (returning to frontend)',data:{postId:normalizedPost._id, images:normalizedPost.images, video:normalizedPost.video, imagesSample:normalizedPost.images?.[0], imagesAreAbsolute:normalizedPost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalizedPost.video?.startsWith('http')},hypothesisId:'D'});
+    // #endregion
 
     res.status(201).json({
       success: true,
