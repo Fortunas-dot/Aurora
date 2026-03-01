@@ -425,15 +425,42 @@ export default function CreatePostScreen() {
                     ) : (
                       <View style={styles.mediaVideoContainer}>
                         <Video
+                          ref={(ref) => {
+                            if (ref) {
+                              videoRefs.current[index] = ref;
+                            }
+                          }}
                           source={{ uri: item.uri }}
                           style={styles.mediaVideo}
                           resizeMode={ResizeMode.COVER}
-                          shouldPlay={false}
-                          useNativeControls={false}
+                          shouldPlay={playingVideoIndex === index}
+                          useNativeControls={playingVideoIndex === index}
+                          isLooping={false}
+                          onPlaybackStatusUpdate={(status) => {
+                            if (status.isLoaded && status.didJustFinish) {
+                              setPlayingVideoIndex(null);
+                            }
+                          }}
                         />
-                        <View style={styles.mediaVideoOverlay}>
-                          <Ionicons name="play-circle" size={40} color={COLORS.white} />
-                        </View>
+                        {playingVideoIndex !== index && (
+                          <Pressable
+                            style={styles.mediaVideoOverlay}
+                            onPress={async () => {
+                              setPlayingVideoIndex(index);
+                              const videoRef = videoRefs.current[index];
+                              if (videoRef) {
+                                try {
+                                  await videoRef.playAsync();
+                                } catch (error) {
+                                  console.error('Error playing video:', error);
+                                  setPlayingVideoIndex(null);
+                                }
+                              }
+                            }}
+                          >
+                            <Ionicons name="play-circle" size={40} color={COLORS.white} />
+                          </Pressable>
+                        )}
                       </View>
                     )}
                     <Pressable
