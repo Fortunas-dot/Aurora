@@ -706,13 +706,16 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker overlay for better contrast
     justifyContent: 'flex-end',
   },
   modalCard: {
     maxHeight: '80%',
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.background, // Solid background instead of glass effect
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
   },
   modalHeader: {
     flexDirection: 'row',
