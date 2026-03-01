@@ -249,7 +249,14 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         console.log('PostCard: Rendering video with URL:', videoUrl);
         
         return (
-          <View style={styles.videoContainer}>
+          <Pressable
+            style={styles.videoContainer}
+            onPress={(e) => {
+              // Stop event propagation to prevent opening the post when clicking on video
+              e.stopPropagation();
+            }}
+            onStartShouldSetResponder={() => true}
+          >
             <Video
               source={{ uri: videoUrl }}
               style={styles.postVideo}
@@ -260,7 +267,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                 console.error('PostCard: Video playback error:', error);
               }}
             />
-          </View>
+          </Pressable>
         );
       })()}
 
