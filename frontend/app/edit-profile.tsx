@@ -180,12 +180,17 @@ export default function EditProfileScreen() {
           ? normalizeAvatarUrl(response.data.avatar) 
           : null;
 
+        // Normalize avatar URL from response before updating store
+        const avatarToStore = response.data.avatar 
+          ? normalizeAvatarUrl(response.data.avatar) 
+          : undefined;
+
         // Update local user state in auth store
         await updateUser({
           displayName: response.data.displayName,
           username: response.data.username,
           bio: response.data.bio,
-          avatar: response.data.avatar,
+          avatar: avatarToStore || undefined,
           avatarCharacter: response.data.avatarCharacter,
           avatarBackgroundColor: response.data.avatarBackgroundColor,
         });

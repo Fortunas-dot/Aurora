@@ -548,7 +548,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updateUser: async (userData: Partial<User>) => {
     const currentUser = get().user;
     if (currentUser) {
-      const updatedUser = { ...currentUser, ...userData };
+      // Normalize avatar URL before updating
+      const normalizedUserData = { ...userData };
+      if (userData.avatar !== undefined) {
+        const { normalizeAvatarUrl } = get();
+        normalizedUserData.avatar = normalizeAvatarUrl(userData.avatar) || undefined;
+      }
+      
+      const updatedUser = { ...currentUser, ...normalizedUserData };
       set({ user: updatedUser });
       
       // Update cached user data

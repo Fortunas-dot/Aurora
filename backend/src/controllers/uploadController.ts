@@ -64,8 +64,10 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       size: req.file.size,
     });
 
-    // Return file URL (in production, this would be a CDN URL)
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // Return file URL - use absolute URL for production
+    const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+    const relativeUrl = `/uploads/${req.file.filename}`;
+    const fileUrl = `${baseUrl}${relativeUrl}`;
 
     res.json({
       success: true,
