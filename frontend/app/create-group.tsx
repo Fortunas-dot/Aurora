@@ -934,11 +934,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background, // Solid background for better readability
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     maxHeight: '80%',
     paddingBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    opacity: 1, // Ensure full opacity
   },
   modalHeader: {
     flexDirection: 'row',

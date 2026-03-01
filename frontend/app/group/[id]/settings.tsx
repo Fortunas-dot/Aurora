@@ -469,7 +469,8 @@ export default function GroupSettingsScreen() {
                 </Pressable>
               )}
             />
-          </GlassCard>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -506,7 +507,8 @@ export default function GroupSettingsScreen() {
                 </Pressable>
               )}
             />
-          </GlassCard>
+            </View>
+          </View>
         </View>
       </Modal>
     </LinearGradient>
@@ -716,6 +718,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background, // Solid background instead of glass effect
     borderWidth: 1,
     borderColor: COLORS.glass.border,
+    opacity: 1, // Ensure full opacity
+  },
+  modalCardContent: {
+    padding: SPACING.lg,
   },
   modalHeader: {
     flexDirection: 'row',
