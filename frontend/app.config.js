@@ -77,6 +77,7 @@ module.exports = {
       'expo-secure-store',
       'expo-updates', // Required for OTA updates
       'expo-tracking-transparency', // Required for iOS App Tracking Transparency
+      'expo-localization', // Required for locale detection
       // Note: Metro config replaces this module with stub for non-iOS platforms to prevent bundling errors
       [
         'expo-notifications',

@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
-import * as Localization from 'expo-localization';
 import { useTheme } from '../src/hooks/useTheme';
 import { useAuthStore } from '../src/store/authStore';
 import { useNotificationStore } from '../src/store/notificationStore';
@@ -150,15 +149,8 @@ export default function RootLayout() {
     const initialize = async () => {
       try {
         // Force English locale for native components (ImagePicker, etc.)
-        // Note: This logs the current locale for debugging
-        if (Platform.OS === 'ios' || Platform.OS === 'android') {
-          try {
-            const locales = await Localization.getLocales();
-            console.log('Current device locales:', locales.map(l => `${l.languageCode}-${l.regionCode || ''}`));
-          } catch (error) {
-            console.warn('Could not get locales:', error);
-          }
-        }
+        // Note: Locale is forced via app.config.js (CFBundleDevelopmentRegion for iOS, plugin for Android)
+        // This requires a new build to take effect
         
         // First check authentication status (this is critical for app state)
         await checkAuth();
