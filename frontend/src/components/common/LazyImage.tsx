@@ -36,7 +36,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   // Normalize URL to always be absolute
   const imageUrl = useMemo(() => {
     if (!uri || uri.trim() === '') {
-      console.warn('LazyImage: Empty or invalid URI provided');
+      if (__DEV__) {
+        console.warn('LazyImage: Empty or invalid URI provided');
+      }
       return null;
     }
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
