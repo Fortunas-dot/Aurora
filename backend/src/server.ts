@@ -55,9 +55,29 @@ app.use(helmetConfig);
 app.use(securityHeaders);
 app.use(cors(corsOptions));
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Limit URL-encoded payload size
+// Body parsing middleware - skip for upload routes (multer handles multipart/form-data)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/upload')) {
+    // Skip body parsing for upload routes - multer will handle it
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/upload')) {
+    // Skip body parsing for upload routes - multer will handle it
+    return next();
+  }
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
+
+// Increase timeout for uploads (especially for large video files)
+app.use('/api/upload', (req, res, next) => {
+  req.setTimeout(300000); // 5 minutes timeout for uploads
+  res.setTimeout(300000);
+  next();
+});
 
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
