@@ -239,19 +239,12 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         // Normalize video URL to ensure it's always absolute
         const videoUrl = useMemo(() => {
           if (!post.video) return '';
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:240',message:'PostCard - Video URL received from post prop',data:{postId:post._id, video:post.video, isAbsolute:post.video.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'K'})}).catch(()=>{});
-          // #endregion
           if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
             return post.video;
           }
           const baseUrl = 'https://aurora-production.up.railway.app';
           const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
-          const normalized = `${baseUrl}${relativeUrl}`;
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:248',message:'PostCard - Video URL normalized',data:{postId:post._id, original:post.video, normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-          // #endregion
-          return normalized;
+          return `${baseUrl}${relativeUrl}`;
         }, [post.video]);
         
         if (__DEV__) {
@@ -267,6 +260,11 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                 <Text style={styles.videoErrorText}>
                   {videoError || 'Video unavailable'}
                 </Text>
+                {videoError && videoError.includes('not found') && (
+                  <Text style={[styles.videoErrorText, { fontSize: 12, marginTop: SPACING.xs, opacity: 0.7 }]}>
+                    The video file may have been removed from the server
+                  </Text>
+                )}
               </View>
             </View>
           );
@@ -290,6 +288,16 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
               onError={(error) => {
                 const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Failed to load video';
                 const errorCode = error?.code || error?.nativeEvent?.code;
+                
+                // More specific error message based on error code
+                let userMessage = 'Video could not be loaded';
+                if (errorCode === -1100 || errorMessage?.includes('NSURLErrorFileDoesNotExist') || errorMessage?.includes('-1100')) {
+                  userMessage = 'Video file not found on server';
+                } else if (errorCode === -1009 || errorMessage?.includes('network')) {
+                  userMessage = 'Network error loading video';
+                }
+                
+                // Only log in dev mode to avoid cluttering production logs
                 if (__DEV__) {
                   console.error('PostCard: Video playback error:', {
                     message: errorMessage,
@@ -298,13 +306,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                     fullError: error,
                   });
                 }
-                // More specific error message based on error code
-                let userMessage = 'Video could not be loaded';
-                if (errorCode === -1100 || errorMessage?.includes('NSURLErrorFileDoesNotExist')) {
-                  userMessage = 'Video file not found';
-                } else if (errorCode === -1009 || errorMessage?.includes('network')) {
-                  userMessage = 'Network error loading video';
-                }
+                
                 setVideoError(userMessage);
               }}
               onLoadStart={() => {
@@ -325,18 +327,12 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           contentContainerStyle={styles.imagesContent}
         >
           {post.images.map((imageUrl, index) => {
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:320',message:'PostCard - Image URL received from post prop',data:{postId:post._id, imageUrl, index, isAbsolute:imageUrl?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'M'})}).catch(()=>{});
-            // #endregion
             // Normalize image URL to ensure it's absolute (LazyImage will also normalize, but this ensures consistency)
             let normalizedImageUrl = imageUrl;
             if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
               const baseUrl = 'https://aurora-production.up.railway.app';
               const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
               normalizedImageUrl = `${baseUrl}${relativeUrl}`;
-              // #region agent log
-              fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PostCard.tsx:327',message:'PostCard - Image URL normalized',data:{postId:post._id, original:imageUrl, normalized:normalizedImageUrl, index},timestamp:Date.now(),runId:'run1',hypothesisId:'N'})}).catch(()=>{});
-              // #endregion
             }
             
             return (
