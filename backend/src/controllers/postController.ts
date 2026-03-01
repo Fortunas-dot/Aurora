@@ -462,9 +462,12 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
 
     await post.populate('author', 'username displayName avatar');
 
+    // Normalize URLs before returning
+    const normalizedPost = normalizePostData(post.toObject());
+
     res.status(201).json({
       success: true,
-      data: post,
+      data: normalizedPost,
     });
   } catch (error: any) {
     res.status(500).json({
