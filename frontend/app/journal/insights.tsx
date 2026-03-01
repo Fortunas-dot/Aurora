@@ -342,13 +342,36 @@ const StatCard: React.FC<{
   label: string;
   value: string | number;
   color?: string;
-}> = ({ icon, label, value, color = COLORS.primary }) => (
+  trend?: 'up' | 'down' | 'equal' | null;
+}> = ({ icon, label, value, color = COLORS.primary, trend }) => (
   <GlassCard style={styles.statCard} padding="md">
     <View style={styles.statContent}>
       <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
         <Ionicons name={icon} size={24} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
+      <View style={styles.statValueContainer}>
+        <Text style={styles.statValue}>{value}</Text>
+        {trend && (
+          <Ionicons
+            name={
+              trend === 'up'
+                ? 'arrow-up'
+                : trend === 'down'
+                ? 'arrow-down'
+                : 'remove'
+            }
+            size={16}
+            color={
+              trend === 'up'
+                ? COLORS.success
+                : trend === 'down'
+                ? COLORS.error
+                : COLORS.textMuted
+            }
+            style={styles.trendIcon}
+          />
+        )}
+      </View>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   </GlassCard>
@@ -623,6 +646,51 @@ export default function JournalInsightsScreen() {
     return 'Excellent';
   };
 
+  // Calculate mood trend by comparing first half vs second half of selected period
+  const calculateMoodTrend = (): 'up' | 'down' | 'equal' | null => {
+    if (!entries || entries.length === 0 || !insights?.averageMood) {
+      return null;
+    }
+
+    const periodDays = selectedPeriod === 'all' ? 30 : selectedPeriod;
+    const now = new Date();
+    const periodStart = new Date(now);
+    periodStart.setDate(periodStart.getDate() - periodDays);
+
+    // Filter entries within the selected period
+    const periodEntries = entries
+      .filter(entry => {
+        const entryDate = parseISO(entry.createdAt);
+        return entryDate >= periodStart && entryDate <= now && entry.mood;
+      })
+      .sort((a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime());
+
+    if (periodEntries.length < 2) {
+      return null;
+    }
+
+    // Split into first half and second half
+    const midPoint = Math.floor(periodEntries.length / 2);
+    const firstHalf = periodEntries.slice(0, midPoint);
+    const secondHalf = periodEntries.slice(midPoint);
+
+    // Calculate average mood for each half
+    const firstHalfAvg = firstHalf.reduce((sum, entry) => sum + entry.mood, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, entry) => sum + entry.mood, 0) / secondHalf.length;
+
+    // Compare with a small threshold to account for floating point precision
+    const threshold = 0.1;
+    if (secondHalfAvg > firstHalfAvg + threshold) {
+      return 'up'; // Mood is improving
+    } else if (secondHalfAvg < firstHalfAvg - threshold) {
+      return 'down'; // Mood is declining
+    } else {
+      return 'equal'; // Mood is stable
+    }
+  };
+
+  const moodTrend = calculateMoodTrend();
+
   // Redirect non‑premium users to subscription via effect (avoid navigation in render)
   // TEMPORARILY DISABLED FOR TESTING
   // useEffect(() => {
@@ -849,6 +917,7 @@ export default function JournalInsightsScreen() {
                 label="Avg. mood"
                 value={insights.averageMood ? `${insights.averageMood.toFixed(1)}/5` : '-'}
                 color={insights.averageMood ? getMoodColor(insights.averageMood) : COLORS.textMuted}
+                trend={moodTrend}
               />
             </View>
 
@@ -1098,11 +1167,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
+  statValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    width: '100%',
+  },
   statValue: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
     textAlign: 'center',
-    width: '100%',
+  },
+  trendIcon: {
+    marginLeft: SPACING.xs,
   },
   statLabel: {
     ...TYPOGRAPHY.caption,
