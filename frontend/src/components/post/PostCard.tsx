@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -236,9 +236,15 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* Video */}
       {post.video && (() => {
         // Normalize video URL to ensure it's always absolute
-        const videoUrl = post.video.startsWith('http') 
-          ? post.video 
-          : `https://aurora-production.up.railway.app${post.video}`;
+        const videoUrl = useMemo(() => {
+          if (!post.video) return '';
+          if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
+            return post.video;
+          }
+          const baseUrl = 'https://aurora-production.up.railway.app';
+          const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
+          return `${baseUrl}${relativeUrl}`;
+        }, [post.video]);
         
         console.log('PostCard: Rendering video with URL:', videoUrl);
         
@@ -251,7 +257,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               shouldPlay={false}
               useNativeControls={true}
               onError={(error) => {
-                console.error('Video playback error:', error);
+                console.error('PostCard: Video playback error:', error);
               }}
             />
           </View>

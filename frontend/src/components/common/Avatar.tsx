@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS } from '../../constants/theme';
@@ -48,9 +48,16 @@ export const Avatar: React.FC<AvatarProps> = ({
   const fontSize = getFontSize();
 
   // Normalize avatar URL to ensure it's always absolute
-  const normalizedUri = uri && !uri.startsWith('http') && uri.startsWith('/')
-    ? `https://aurora-production.up.railway.app${uri}`
-    : uri;
+  const normalizedUri = useMemo(() => {
+    if (!uri) return null;
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+    // If relative URL, make it absolute
+    const baseUrl = 'https://aurora-production.up.railway.app';
+    const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
+    return `${baseUrl}${relativeUrl}`;
+  }, [uri]);
 
   // Get character to display (prefer avatarCharacter, fallback to user-based character, then initials)
   const getDisplayCharacter = (): string => {

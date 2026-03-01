@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../constants/theme';
 
@@ -22,12 +22,23 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     setIsLoading(false);
   };
 
-  const handleError = () => {
+  const handleError = (error: any) => {
+    console.error('LazyImage: Error loading image:', uri, error);
     setIsLoading(false);
     setHasError(true);
   };
 
-  const imageUrl = uri.startsWith('http') ? uri : `https://aurora-production.up.railway.app${uri}`;
+  // Normalize URL to always be absolute
+  const imageUrl = useMemo(() => {
+    if (!uri) return '';
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+    // If relative URL, make it absolute
+    const baseUrl = 'https://aurora-production.up.railway.app';
+    const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
+    return `${baseUrl}${relativeUrl}`;
+  }, [uri]);
 
   return (
     <View style={[styles.container, style]}>

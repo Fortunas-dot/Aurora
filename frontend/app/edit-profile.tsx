@@ -128,17 +128,22 @@ export default function EditProfileScreen() {
     try {
       let avatarUrl = avatarUri;
 
-      // Upload new avatar if changed
+      // Upload new avatar if changed (only if it's a local file URI, not already uploaded)
       if (avatarUri && avatarUri !== user?.avatar && !avatarUri.startsWith('http')) {
         const uploadResult = await uploadService.uploadImage(avatarUri);
         if (uploadResult.success && uploadResult.data) {
+          // uploadService always returns absolute URL now
           avatarUrl = uploadResult.data.url;
+          console.log('✅ Avatar uploaded, absolute URL:', avatarUrl);
         } else {
           Alert.alert('Error', 'Could not upload avatar');
           setIsSubmitting(false);
           setIsUploadingAvatar(false);
           return;
         }
+      } else if (avatarUri && avatarUri.startsWith('http')) {
+        // If avatarUri is already an absolute URL (from backend), use it as-is
+        avatarUrl = avatarUri;
       }
 
       // Determine avatar and character based on mode

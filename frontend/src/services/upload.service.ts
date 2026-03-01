@@ -144,20 +144,27 @@ class UploadService {
 
         const result = await response.json();
         
-        if (result.success && result.data?.url) {
-          // Convert relative URL to absolute URL
-          const absoluteUrl = result.data.url.startsWith('http') 
-            ? result.data.url 
-            : `${baseUrl.replace('/api', '')}${result.data.url}`;
-          
-          return {
-            success: true,
-            data: {
-              ...result.data,
-              url: absoluteUrl,
-            },
-          };
+      if (result.success && result.data?.url) {
+        // Always convert relative URL to absolute URL
+        let absoluteUrl = result.data.url;
+        if (!absoluteUrl.startsWith('http://') && !absoluteUrl.startsWith('https://')) {
+          // Remove /api from baseUrl if present, then append the relative URL
+          const baseUrlWithoutApi = baseUrl.replace('/api', '');
+          // Ensure the relative URL starts with /
+          const relativeUrl = absoluteUrl.startsWith('/') ? absoluteUrl : `/${absoluteUrl}`;
+          absoluteUrl = `${baseUrlWithoutApi}${relativeUrl}`;
         }
+        
+        console.log(`📤 Upload successful: ${absoluteUrl}`);
+        
+        return {
+          success: true,
+          data: {
+            ...result.data,
+            url: absoluteUrl, // Always return absolute URL
+          },
+        };
+      }
 
         return {
           success: false,
