@@ -420,7 +420,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
       </Modal>
     </GlassCard>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
