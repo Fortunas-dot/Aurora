@@ -10,6 +10,7 @@ export interface User {
   avatar?: string;
   avatarCharacter?: string;
   avatarBackgroundColor?: string;
+  nameColor?: string | null;
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;

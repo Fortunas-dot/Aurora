@@ -203,7 +203,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Now get posts with populate
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sortOption)
       .skip(skip)
@@ -379,7 +379,7 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
     }
 
     const post = await Post.findById(id)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar');
 
     if (!post) {
@@ -839,7 +839,7 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -957,7 +957,7 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
       }
 
       const posts = await Post.find(query)
-        .populate('author', 'username displayName avatar')
+        .populate('author', 'username displayName avatar nameColor')
         .populate('groupId', 'name description tags memberCount isPrivate avatar')
         .sort(sortOption)
         .skip(skip)
@@ -1072,7 +1072,7 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sortOption)
       .skip(skip)
@@ -1175,7 +1175,7 @@ export const getSavedPosts = async (req: AuthRequest, res: Response): Promise<vo
     const savedPostIds = user.savedPosts || [];
 
     const posts = await Post.find({ _id: { $in: savedPostIds } })
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -1404,7 +1404,7 @@ export const searchPosts = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar nameColor')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

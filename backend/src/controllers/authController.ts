@@ -6,6 +6,15 @@ import { AuthRequest } from '../middleware/auth';
 import { getRandomCharacter } from '../utils/characters';
 import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
 
+// Available name colors
+const NAME_COLORS = ['Yellow', 'Blue', 'Pink', 'Green', 'Red', 'Purple'];
+
+// Helper function to get a random name color
+const getRandomNameColor = (): string => {
+  const randomIndex = Math.floor(Math.random() * NAME_COLORS.length);
+  return NAME_COLORS[randomIndex];
+};
+
 // Helper function to normalize URLs to absolute URLs
 const normalizeUrl = (url: string | undefined | null): string | undefined => {
   if (!url) return undefined;
@@ -42,13 +51,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Generate email verification token
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Create user with random avatar character
+    // Create user with random avatar character and random name color
     const user = await User.create({
       email,
       password,
       username,
       displayName: displayName || username,
       avatarCharacter: getRandomCharacter(),
+      nameColor: getRandomNameColor(),
       emailVerified: false,
       emailVerificationToken,
     });
@@ -296,6 +306,7 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
         displayName: name || username,
         avatar: picture?.data?.url,
         avatarCharacter: getRandomCharacter(), // Assign random character
+        nameColor: getRandomNameColor(), // Assign random name color
         facebookId,
         isAnonymous: false,
       };

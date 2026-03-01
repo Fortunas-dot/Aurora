@@ -16,6 +16,7 @@ import { GlassCard, GlassInput, Avatar, LoadingSpinner } from '../src/components
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { userService, UserProfile } from '../src/services/user.service';
 import { useAuthStore } from '../src/store/authStore';
+import { getUsernameColor } from '../src/utils/usernameColors';
 
 // Simple debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -91,7 +92,7 @@ export default function SearchUsersScreen() {
           size="md"
         />
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>
+          <Text style={[styles.userName, { color: getUsernameColor(item._id, item) }]}>
             {item.displayName || item.username}
           </Text>
           <Text style={styles.userUsername}>@{item.username}</Text>

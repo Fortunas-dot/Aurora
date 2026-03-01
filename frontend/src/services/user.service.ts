@@ -7,6 +7,7 @@ export interface UserProfile {
   avatar?: string;
   avatarCharacter?: string;
   avatarBackgroundColor?: string;
+  nameColor?: string | null;
   bio?: string;
   email?: string;
   postCount: number;
@@ -47,6 +48,7 @@ class UserService {
     avatar?: string;
     avatarCharacter?: string;
     avatarBackgroundColor?: string;
+    nameColor?: string | null;
     isAnonymous?: boolean;
     showEmail?: boolean;
     email?: string;

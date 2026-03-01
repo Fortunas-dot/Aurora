@@ -22,6 +22,7 @@ import { ideaService, Idea } from '../src/services/idea.service';
 import { useAuthStore } from '../src/store/authStore';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { getUsernameColor } from '../src/utils/usernameColors';
 
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: 'apps-outline' },
@@ -250,7 +251,7 @@ export default function IdeasScreen() {
               size={32}
             />
             <View style={styles.ideaAuthorInfo}>
-              <Text style={styles.ideaAuthorName}>
+              <Text style={[styles.ideaAuthorName, { color: getUsernameColor(author._id, author) }]}>
                 {author.displayName || author.username}
               </Text>
               <Text style={styles.ideaDate}>

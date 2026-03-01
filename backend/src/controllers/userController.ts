@@ -108,7 +108,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, isAnonymous, showEmail, email, phoneNumber } = req.body;
+    const { username, displayName, bio, avatar, avatarCharacter, avatarBackgroundColor, nameColor, isAnonymous, showEmail, email, phoneNumber } = req.body;
 
     // Get current user first to check username change restrictions
     const currentUser = await User.findById(req.userId);
@@ -171,6 +171,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     // Avatar is already normalized above
     if (avatarCharacter !== undefined) updateData.avatarCharacter = avatarCharacter;
     if (avatarBackgroundColor !== undefined) updateData.avatarBackgroundColor = avatarBackgroundColor;
+    if (nameColor !== undefined) updateData.nameColor = nameColor || null;
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
     if (showEmail !== undefined) updateData.showEmail = showEmail;
     if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;
@@ -739,7 +740,7 @@ export const blockUser = async (req: AuthRequest, res: Response): Promise<void> 
 export const getBlockedUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const currentUser = await User.findById(req.userId)
-      .populate('blockedUsers', 'username displayName avatar avatarCharacter avatarBackgroundColor')
+      .populate('blockedUsers', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
       .select('blockedUsers');
 
     if (!currentUser) {

@@ -181,8 +181,8 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor')
-      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
+      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
 
     const total = await Message.countDocuments({
       $or: [
@@ -416,7 +416,7 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
     // Populate all necessary fields for response
     await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor');
     await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
-    await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+    await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
 
     // Broadcast reaction update via WebSocket to both users
     await broadcastMessageReaction(message);

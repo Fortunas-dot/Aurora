@@ -10,6 +10,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/them
 import { Post } from '../../services/post.service';
 import { postService } from '../../services/post.service';
 import { useTheme } from '../../hooks/useTheme';
+import { getUsernameColor } from '../../utils/usernameColors';
 
 interface PostCardProps {
   post: Post;
@@ -199,7 +200,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           size="md"
         />
         <View style={styles.headerInfo}>
-          <Text style={styles.authorName}>
+          <Text style={[styles.authorName, { color: getUsernameColor(post.author._id, post.author) }]}>
             {post.author.displayName || post.author.username}
           </Text>
           <Text style={styles.username}>@{post.author.username}</Text>

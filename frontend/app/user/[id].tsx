@@ -21,6 +21,7 @@ import { postService, Post } from '../../src/services/post.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
+import { getUsernameColor } from '../../src/utils/usernameColors';
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -383,7 +384,7 @@ export default function UserProfileScreen() {
             />
             <View style={styles.profileInfoContainer}>
               <View style={styles.profileInfo}>
-                <Text style={styles.displayName} numberOfLines={2} ellipsizeMode="tail">
+                <Text style={[styles.displayName, { color: getUsernameColor(profile._id, profile) }]} numberOfLines={2} ellipsizeMode="tail">
                   {profile.displayName || profile.username}
                 </Text>
                 <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">

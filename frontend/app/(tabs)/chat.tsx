@@ -24,6 +24,7 @@ import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOve
 import { messageService, Conversation } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
+import { getUsernameColor } from '../../src/utils/usernameColors';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -294,7 +295,7 @@ export default function ChatScreen() {
             
             <View style={styles.conversationInfo}>
               <View style={styles.conversationHeader}>
-                <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+                <Text style={[styles.userName, { color: getUsernameColor(item.user._id, item.user) }]} numberOfLines={1}>
                   {item.user.displayName || item.user.username}
                 </Text>
                 <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formattedDate}</Text>

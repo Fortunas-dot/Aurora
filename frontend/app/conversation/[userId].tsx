@@ -35,6 +35,7 @@ import { uploadService } from '../../src/services/upload.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { userService, UserProfile } from '../../src/services/user.service';
+import { getUsernameColor } from '../../src/utils/usernameColors';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -900,7 +901,7 @@ export default function ConversationScreen() {
                 size="sm"
               />
               <View style={styles.headerUserInfo}>
-                <Text style={styles.headerUserName}>
+                <Text style={[styles.headerUserName, { color: getUsernameColor(otherUser._id, otherUser) }]}>
                   {otherUser.displayName || otherUser.username}
                 </Text>
                 <Text style={[

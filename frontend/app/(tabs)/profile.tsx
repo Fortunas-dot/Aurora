@@ -16,6 +16,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { userService } from '../../src/services/user.service';
 import { groupService } from '../../src/services/group.service';
+import { getUsernameColor } from '../../src/utils/usernameColors';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -201,7 +202,7 @@ export default function ProfileScreen() {
                 size="xl"
               />
               <View style={styles.profileInfo}>
-                <Text style={[styles.displayName, { color: colors.text }]}>
+                <Text style={[styles.displayName, { color: getUsernameColor(user._id, user) }]}>
                   {user.displayName || user.username}
                 </Text>
                 <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>

@@ -16,6 +16,7 @@ export interface IUser extends Document {
   avatar?: string;
   avatarCharacter?: string; // Emoji character for avatar when no photo is set
   avatarBackgroundColor?: string; // Background color for avatar character
+  nameColor?: string; // Color for the user's display name (Yellow, Blue, Pink, Green, Red, Purple)
   bio?: string;
   lastUsernameChange?: Date; // Track when username was last changed
   isAnonymous: boolean;
@@ -101,6 +102,11 @@ const UserSchema = new Schema<IUser>(
     avatarBackgroundColor: {
       type: String,
       default: null,
+    },
+    nameColor: {
+      type: String,
+      default: null,
+      enum: ['Yellow', 'Blue', 'Pink', 'Green', 'Red', 'Purple'],
     },
     bio: {
       type: String,

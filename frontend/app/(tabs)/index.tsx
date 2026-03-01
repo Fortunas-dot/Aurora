@@ -24,7 +24,7 @@ import { PostCard } from '../../src/components/post/PostCard';
 import { FeedTabs, FeedTab, CommunityFilter, SortDropdown, SortOption, SearchBar } from '../../src/components/feed';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
-import { postService, Post } from '../../src/services/post.service';
+import { postService, Post, normalizePost } from '../../src/services/post.service';
 import { groupService, Group } from '../../src/services/group.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
@@ -667,12 +667,14 @@ export default function FeedScreen() {
           prev.map((post) => {
             if (post._id === postId) {
               const isLiked = post.likes.includes(user!._id);
-              return {
+              const updatedPost = {
                 ...post,
                 likes: isLiked
                   ? post.likes.filter((id) => id !== user!._id)
                   : [...post.likes, user!._id],
               };
+              // Re-normalize URLs to ensure they're always absolute
+              return normalizePost(updatedPost);
             }
             return post;
           })
@@ -715,11 +717,15 @@ export default function FeedScreen() {
     try {
       const response = await postService.savePost(postId);
       if (response.success && response.data) {
-        // Update post in list
+        // Update post in list and re-normalize URLs
         setPosts((prev) =>
-          prev.map((p) =>
-            p._id === postId ? { ...p, isSaved: response.data!.isSaved } : p
-          )
+          prev.map((p) => {
+            if (p._id === postId) {
+              const updated = { ...p, isSaved: response.data!.isSaved };
+              return normalizePost(updated);
+            }
+            return p;
+          })
         );
       }
     } catch (error) {

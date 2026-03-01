@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Post from '../models/Post';
 import User from '../models/User';
+import Message from '../models/Message';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -106,9 +107,43 @@ async function normalizePostUrls() {
       }
     }
 
+    // Also normalize message attachments
+    const messages = await Message.find({}).lean();
+    console.log(`💬 Found ${messages.length} messages to check`);
+
+    let updatedMessagesCount = 0;
+    let skippedMessagesCount = 0;
+
+    for (const message of messages) {
+      if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {
+        let needsUpdate = false;
+        const normalizedAttachments = message.attachments.map((attachment: any) => {
+          const normalizedUrl = normalizeUrl(attachment.url);
+          if (normalizedUrl !== attachment.url) {
+            needsUpdate = true;
+          }
+          return {
+            ...attachment,
+            url: normalizedUrl || attachment.url,
+          };
+        });
+
+        if (needsUpdate) {
+          await Message.updateOne({ _id: message._id }, { $set: { attachments: normalizedAttachments } });
+          updatedMessagesCount++;
+          console.log(`✅ Updated message ${message._id}`);
+        } else {
+          skippedMessagesCount++;
+        }
+      } else {
+        skippedMessagesCount++;
+      }
+    }
+
     console.log('\n📊 Summary:');
     console.log(`Posts: ${updatedCount} updated, ${skippedCount} skipped`);
     console.log(`Users: ${updatedUsersCount} updated, ${skippedUsersCount} skipped`);
+    console.log(`Messages: ${updatedMessagesCount} updated, ${skippedMessagesCount} skipped`);
 
     await mongoose.disconnect();
     console.log('✅ Disconnected from MongoDB');

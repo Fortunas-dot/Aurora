@@ -30,7 +30,8 @@ const normalizeUrl = (url: string | undefined): string | undefined => {
 };
 
 // Helper function to normalize post data (images and video URLs)
-const normalizePost = (post: Post): Post => {
+// Export it so it can be used in components for state updates
+export const normalizePost = (post: Post): Post => {
   // #region agent log
   fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:33',message:'normalizePost - Input URLs',data:{postId:post._id,images:post.images,video:post.video,imagesSample:post.images?.[0],imagesAreAbsolute:post.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:post.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
   // #endregion

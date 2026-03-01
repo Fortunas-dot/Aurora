@@ -53,9 +53,19 @@ export default function EditProfileScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(normalizeAvatarUrl(user?.avatar));
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(user?.avatarCharacter || null);
   const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string | null>(user?.avatarBackgroundColor || null);
+  const [selectedNameColor, setSelectedNameColor] = useState<string | null>(user?.nameColor || null);
   const [avatarMode, setAvatarMode] = useState<'photo' | 'character'>(user?.avatar ? 'photo' : 'character');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const NAME_COLORS = [
+    { label: 'Yellow', value: 'Yellow', color: '#FFFF00' },
+    { label: 'Blue', value: 'Blue', color: '#00BFFF' },
+    { label: 'Pink', value: 'Pink', color: '#FF69B4' },
+    { label: 'Green', value: 'Green', color: '#00FF00' },
+    { label: 'Red', value: 'Red', color: '#FF4500' },
+    { label: 'Purple', value: 'Purple', color: '#FF00FF' },
+  ];
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -179,6 +189,7 @@ export default function EditProfileScreen() {
         avatar: finalAvatar,
         avatarCharacter: finalCharacter,
         avatarBackgroundColor: finalBackgroundColor,
+        nameColor: selectedNameColor || null,
       });
 
       if (response.success && response.data) {
@@ -203,6 +214,7 @@ export default function EditProfileScreen() {
           avatar: avatarToStore || undefined,
           avatarCharacter: response.data.avatarCharacter,
           avatarBackgroundColor: response.data.avatarBackgroundColor,
+          nameColor: response.data.nameColor,
         });
 
         // Update local avatarUri state immediately so it shows in the UI
@@ -431,6 +443,34 @@ export default function EditProfileScreen() {
             <Text style={styles.hintText}>
               This is the name people see next to your username.
             </Text>
+            
+            {/* Name Color Picker */}
+            <Text style={[styles.label, { marginTop: SPACING.lg, marginBottom: SPACING.md }]}>
+              Name Color
+            </Text>
+            <View style={styles.colorGrid}>
+              {NAME_COLORS.map((colorOption) => (
+                <Pressable
+                  key={colorOption.value}
+                  style={[
+                    styles.nameColorOption,
+                    {
+                      backgroundColor: colorOption.color,
+                      borderColor: selectedNameColor === colorOption.value 
+                        ? COLORS.primary 
+                        : COLORS.glass.border,
+                      borderWidth: selectedNameColor === colorOption.value ? 3 : 2,
+                    },
+                    selectedNameColor === colorOption.value && styles.nameColorOptionSelected,
+                  ]}
+                  onPress={() => setSelectedNameColor(colorOption.value)}
+                >
+                  {selectedNameColor === colorOption.value && (
+                    <Ionicons name="checkmark" size={20} color={COLORS.white} />
+                  )}
+                </Pressable>
+              ))}
+            </View>
           </GlassCard>
 
           {/* Username */}
@@ -658,6 +698,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: SPACING.md,
     fontStyle: 'italic',
+  },
+  nameColorOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  nameColorOptionSelected: {
+    transform: [{ scale: 1.1 }],
   },
 });
 

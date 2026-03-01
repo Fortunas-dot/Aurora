@@ -7,6 +7,7 @@ import { enUS } from 'date-fns/locale';
 import { GlassCard, Avatar, GlassInput, GlassButton } from '../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Comment, commentService } from '../../services/comment.service';
+import { getUsernameColor } from '../../utils/usernameColors';
 
 interface CommentCardProps {
   comment: Comment;
@@ -180,7 +181,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
               size="sm"
             />
             <View style={styles.headerInfo}>
-              <Text style={styles.authorName}>
+              <Text style={[styles.authorName, { color: getUsernameColor(comment.author._id, comment.author) }]}>
                 {comment.author.displayName || comment.author.username}
               </Text>
               <Text style={styles.timestamp}>{formattedDate}</Text>

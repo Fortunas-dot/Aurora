@@ -23,6 +23,7 @@ import { useConsentStore } from '../src/store/consentStore';
 import { userService, UserProfile } from '../src/services/user.service';
 import { i18n, Language } from '../src/utils/i18n';
 import { authService } from '../src/services/auth.service';
+import { getUsernameColor } from '../src/utils/usernameColors';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -678,7 +679,7 @@ export default function SettingsScreen() {
                       size="md"
                     />
                     <View style={styles.blockedUserInfo}>
-                      <Text style={[styles.blockedUserName, { color: colors.text }]}>
+                      <Text style={[styles.blockedUserName, { color: getUsernameColor(blockedUser._id, blockedUser) }]}>
                         {blockedUser.displayName || blockedUser.username}
                       </Text>
                       <Text style={[styles.blockedUserUsername, { color: colors.textMuted }]}>
