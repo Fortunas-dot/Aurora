@@ -779,9 +779,12 @@ export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise
       };
     });
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = postsWithGroup.map((post: any) => normalizePostData(post));
+
     res.json({
       success: true,
-      data: postsWithGroup,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
@@ -870,9 +873,12 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
       };
     });
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = postsWithGroup.map((post: any) => normalizePostData(post));
+
     res.json({
       success: true,
-      data: postsWithGroup,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
@@ -1009,9 +1015,12 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
         });
       }
 
+      // Normalize URLs in all posts before sending
+      const normalizedPosts = postsWithSavedStatus.map((post: any) => normalizePostData(post));
+
       res.json({
         success: true,
-        data: postsWithSavedStatus,
+        data: normalizedPosts,
         pagination: {
           page,
           limit,
@@ -1121,9 +1130,12 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
       });
     }
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = postsWithSavedStatus.map((post: any) => normalizePostData(post));
+
     res.json({
       success: true,
-      data: postsWithSavedStatus,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
@@ -1189,9 +1201,12 @@ export const getSavedPosts = async (req: AuthRequest, res: Response): Promise<vo
       };
     });
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = formattedPosts.map((post: any) => normalizePostData(post));
+
     res.json({
       success: true,
-      data: formattedPosts,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
@@ -1394,9 +1409,12 @@ export const searchPosts = async (req: AuthRequest, res: Response): Promise<void
 
     const total = await Post.countDocuments(query);
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = posts.map((post: any) => normalizePostData(post.toObject()));
+
     res.json({
       success: true,
-      data: posts,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,

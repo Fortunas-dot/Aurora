@@ -401,9 +401,35 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
 
     const total = validPosts.length;
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = postsWithGroup.map((post: any) => {
+      // Use the normalizePostData function from postController
+      // For now, we'll normalize manually here
+      const normalized: any = { ...post };
+      if (post.images && Array.isArray(post.images)) {
+        normalized.images = post.images.map((img: string) => normalizeUrl(img)).filter((img: string | undefined): img is string => !!img);
+      }
+      if (post.video) {
+        normalized.video = normalizeUrl(post.video);
+      }
+      if (post.author && post.author.avatar) {
+        normalized.author = {
+          ...post.author,
+          avatar: normalizeUrl(post.author.avatar),
+        };
+      }
+      if (post.group && post.group.avatar) {
+        normalized.group = {
+          ...post.group,
+          avatar: normalizeUrl(post.group.avatar),
+        };
+      }
+      return normalized;
+    });
+
     res.json({
       success: true,
-      data: postsWithGroup,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
