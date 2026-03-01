@@ -84,7 +84,21 @@ app.use('/api', apiLimiter);
 
 // Serve static files (uploads and public assets)
 import path from 'path';
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploads with proper headers for video streaming
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, filePath) => {
+    // Set CORS headers for static files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    
+    // Set proper content type for video files
+    if (filePath.endsWith('.mp4') || filePath.endsWith('.mov') || filePath.endsWith('.m4v')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      // Enable range requests for video streaming
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
+  },
+}));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check

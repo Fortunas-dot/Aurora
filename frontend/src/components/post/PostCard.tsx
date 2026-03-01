@@ -281,11 +281,24 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
               shouldPlay={false}
               useNativeControls={true}
               onError={(error) => {
-                const errorMessage = error?.message || error?.localizedDescription || 'Failed to load video';
+                const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Failed to load video';
+                const errorCode = error?.code || error?.nativeEvent?.code;
                 if (__DEV__) {
-                  console.error('PostCard: Video playback error:', errorMessage, 'URL:', videoUrl);
+                  console.error('PostCard: Video playback error:', {
+                    message: errorMessage,
+                    code: errorCode,
+                    url: videoUrl,
+                    fullError: error,
+                  });
                 }
-                setVideoError('Video could not be loaded');
+                // More specific error message based on error code
+                let userMessage = 'Video could not be loaded';
+                if (errorCode === -1100 || errorMessage?.includes('NSURLErrorFileDoesNotExist')) {
+                  userMessage = 'Video file not found';
+                } else if (errorCode === -1009 || errorMessage?.includes('network')) {
+                  userMessage = 'Network error loading video';
+                }
+                setVideoError(userMessage);
               }}
               onLoadStart={() => {
                 setVideoError(null);
