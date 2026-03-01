@@ -912,13 +912,16 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker overlay for better contrast
   },
   modalContent: {
     flex: 1,
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     marginTop: 40,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    opacity: 1, // Ensure full opacity
   },
   modalHeader: {
     flexDirection: 'row',

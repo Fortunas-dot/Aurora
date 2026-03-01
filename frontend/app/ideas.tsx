@@ -781,15 +781,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker overlay for better contrast
   },
   modalContent: {
     width: '90%',
     maxHeight: '80%',
     borderRadius: BORDER_RADIUS.xl,
-    // Make the form easier to read by using a more solid background
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background, // Solid background for better readability
+    borderWidth: 1,
     borderColor: COLORS.glass.border,
+    opacity: 1, // Ensure full opacity
+    padding: SPACING.lg,
   },
   modalHeader: {
     flexDirection: 'row',
