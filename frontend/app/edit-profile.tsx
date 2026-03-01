@@ -29,11 +29,18 @@ export default function EditProfileScreen() {
   const { user, isAuthenticated, updateUser } = useAuthStore();
 
   // Helper function to normalize avatar URL
+  // Keep local file URIs (file://) as-is for immediate preview
   const normalizeAvatarUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
+    // Keep local file URIs as-is (for image picker previews)
+    if (url.startsWith('file://')) {
+      return url;
+    }
+    // Keep absolute HTTP/HTTPS URLs as-is
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
+    // If relative URL, make it absolute
     if (url.startsWith('/')) {
       return `https://aurora-production.up.railway.app${url}`;
     }

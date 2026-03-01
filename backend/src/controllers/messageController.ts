@@ -8,6 +8,50 @@ import mongoose from 'mongoose';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { escapeRegex } from '../utils/helpers';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
+// Helper function to normalize message data (attachments and user avatars)
+const normalizeMessageData = (message: any): any => {
+  if (!message) return message;
+  
+  const normalized: any = { ...message };
+  
+  // Normalize attachments array
+  if (message.attachments && Array.isArray(message.attachments)) {
+    normalized.attachments = message.attachments.map((attachment: any) => ({
+      ...attachment,
+      url: normalizeUrl(attachment.url) || attachment.url,
+    }));
+  }
+  
+  // Normalize sender avatar
+  if (message.sender && message.sender.avatar) {
+    normalized.sender = {
+      ...message.sender,
+      avatar: normalizeUrl(message.sender.avatar),
+    };
+  }
+  
+  // Normalize receiver avatar
+  if (message.receiver && message.receiver.avatar) {
+    normalized.receiver = {
+      ...message.receiver,
+      avatar: normalizeUrl(message.receiver.avatar),
+    };
+  }
+  
+  return normalized;
+};
+
 // @desc    Get all conversations
 // @route   GET /api/messages/conversations
 // @access  Private
@@ -136,13 +180,15 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
       { readAt: new Date() }
     );
 
-    // Ensure attachments are properly serialized
+    // Ensure attachments are properly serialized and normalize URLs
     const serializedMessages = messages.reverse().map((msg: any) => {
       const msgObj = msg.toObject ? msg.toObject() : msg;
-      return {
+      const messageWithAttachments = {
         ...msgObj,
         attachments: msgObj.attachments || [], // Ensure attachments is always an array
       };
+      // Normalize URLs in message (attachments and user avatars)
+      return normalizeMessageData(messageWithAttachments);
     });
 
     res.json({
@@ -238,16 +284,18 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     await sendNotificationToUser(receiverId, notification);
     await sendUnreadCountUpdate(receiverId);
 
-    // Ensure attachments are included in response
+    // Ensure attachments are included in response and normalize URLs
     const messageObj = message.toObject ? message.toObject() : message;
-    const responseMessage = {
+    const messageWithAttachments = {
       ...messageObj,
       attachments: messageObj.attachments || [], // Ensure attachments is always an array
     };
+    // Normalize URLs in message (attachments and user avatars)
+    const normalizedMessage = normalizeMessageData(messageWithAttachments);
 
     res.status(201).json({
       success: true,
-      data: responseMessage,
+      data: normalizedMessage,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -344,9 +392,13 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
     // Broadcast reaction update via WebSocket to both users
     await broadcastMessageReaction(message);
 
+    // Normalize URLs in message (attachments and user avatars)
+    const messageObj = message.toObject ? message.toObject() : message;
+    const normalizedMessage = normalizeMessageData(messageObj);
+
     res.json({
       success: true,
-      data: message,
+      data: normalizedMessage,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -387,9 +439,15 @@ export const searchMessages = async (req: AuthRequest, res: Response): Promise<v
       .sort({ createdAt: -1 })
       .limit(50);
 
+    // Normalize URLs in all messages
+    const normalizedMessages = messages.map((msg: any) => {
+      const msgObj = msg.toObject ? msg.toObject() : msg;
+      return normalizeMessageData(msgObj);
+    });
+
     res.json({
       success: true,
-      data: messages,
+      data: normalizedMessages,
     });
   } catch (error: any) {
     res.status(500).json({

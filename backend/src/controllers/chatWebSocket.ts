@@ -5,6 +5,50 @@ import Notification from '../models/Notification';
 import User from '../models/User';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
+// Helper function to normalize message data (attachments and user avatars)
+const normalizeMessageData = (message: any): any => {
+  if (!message) return message;
+  
+  const normalized: any = { ...message };
+  
+  // Normalize attachments array
+  if (message.attachments && Array.isArray(message.attachments)) {
+    normalized.attachments = message.attachments.map((attachment: any) => ({
+      ...attachment,
+      url: normalizeUrl(attachment.url) || attachment.url,
+    }));
+  }
+  
+  // Normalize sender avatar
+  if (message.sender && message.sender.avatar) {
+    normalized.sender = {
+      ...message.sender,
+      avatar: normalizeUrl(message.sender.avatar),
+    };
+  }
+  
+  // Normalize receiver avatar
+  if (message.receiver && message.receiver.avatar) {
+    normalized.receiver = {
+      ...message.receiver,
+      avatar: normalizeUrl(message.receiver.avatar),
+    };
+  }
+  
+  return normalized;
+};
+
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
   isTyping?: boolean;
@@ -195,20 +239,16 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
     await message.populate('sender', 'username displayName avatar');
     await message.populate('receiver', 'username displayName avatar');
 
+    // Normalize message data (attachments and user avatars)
+    const messageObj = message.toObject ? message.toObject() : message;
+    const normalizedMessage = normalizeMessageData(messageObj);
+
     // Send message to receiver if online
     const receiverWs = activeChatConnections.get(receiverId);
     if (receiverWs && receiverWs.readyState === 1) {
       receiverWs.send(JSON.stringify({
         type: 'new_message',
-        message: {
-          _id: message._id,
-          sender: message.sender,
-          receiver: message.receiver,
-          content: message.content,
-          attachments: message.attachments,
-          createdAt: message.createdAt,
-          readAt: message.readAt,
-        },
+        message: normalizedMessage,
       }));
     }
 
@@ -217,15 +257,7 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
     if (senderWs && senderWs.readyState === 1) {
       senderWs.send(JSON.stringify({
         type: 'message_sent',
-        message: {
-          _id: message._id,
-          sender: message.sender,
-          receiver: message.receiver,
-          content: message.content,
-          attachments: message.attachments,
-          createdAt: message.createdAt,
-          readAt: message.readAt,
-        },
+        message: normalizedMessage,
       }));
     }
 
@@ -362,6 +394,10 @@ const broadcastOnlineStatus = (userId: string, isOnline: boolean): void => {
 const updateConversationList = (userId: string, otherUserId: string, message: any): void => {
   const userWs = activeChatConnections.get(userId);
   if (userWs && userWs.readyState === 1) {
+    // Normalize avatar URL
+    const avatar = message.sender.avatar || message.receiver.avatar;
+    const normalizedAvatar = normalizeUrl(avatar);
+    
     userWs.send(JSON.stringify({
       type: 'conversation_updated',
       conversation: {
@@ -369,7 +405,7 @@ const updateConversationList = (userId: string, otherUserId: string, message: an
           _id: otherUserId,
           username: message.sender.username || message.receiver.username,
           displayName: message.sender.displayName || message.receiver.displayName,
-          avatar: message.sender.avatar || message.receiver.avatar,
+          avatar: normalizedAvatar,
         },
         lastMessage: {
           _id: message._id,

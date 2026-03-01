@@ -48,8 +48,14 @@ export const Avatar: React.FC<AvatarProps> = ({
   const fontSize = getFontSize();
 
   // Normalize avatar URL to ensure it's always absolute
+  // Keep local file URIs (file://) as-is for immediate preview
   const normalizedUri = useMemo(() => {
     if (!uri) return null;
+    // Keep local file URIs as-is (for image picker previews)
+    if (uri.startsWith('file://')) {
+      return uri;
+    }
+    // Keep absolute HTTP/HTTPS URLs as-is
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
       return uri;
     }
