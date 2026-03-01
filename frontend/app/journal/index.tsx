@@ -1419,15 +1419,18 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker overlay for better contrast
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background, // Solid background for better readability
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
     maxHeight: '80%',
     paddingBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    opacity: 1, // Ensure full opacity
   },
   modalHeader: {
     flexDirection: 'row',

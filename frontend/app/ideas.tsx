@@ -462,7 +462,7 @@ export default function IdeasScreen() {
             style={styles.modalBackdrop}
             onPress={() => setShowCreateModal(false)}
           />
-          <GlassCard style={styles.modalContent} padding="lg" variant="dark">
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Submit New Idea</Text>
               <Pressable onPress={() => setShowCreateModal(false)}>
