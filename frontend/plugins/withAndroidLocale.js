@@ -11,6 +11,11 @@ module.exports = function withAndroidLocale(config) {
       if (!application.$) {
         application.$ = {};
       }
+      
+      // Add locale configuration to force English
+      if (!androidManifest.$) {
+        androidManifest.$ = {};
+      }
       // Note: This doesn't directly force locale, but ensures manifest is ready
     }
     

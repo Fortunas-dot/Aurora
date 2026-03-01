@@ -38,6 +38,7 @@ module.exports = {
         ITSAppUsesNonExemptEncryption: false,
         NSUserTrackingUsageDescription: 'We use your data to improve your experience and provide personalized mental health support. Your privacy is important to us.',
         CFBundleDevelopmentRegion: 'en', // Force English locale for native components
+        CFBundleLocalizations: ['en'], // Only allow English locale
         ...(process.env.FACEBOOK_CLIENT_TOKEN ? { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN } : {}),
       },
     },
