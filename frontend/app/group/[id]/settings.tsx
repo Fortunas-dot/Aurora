@@ -169,7 +169,28 @@ export default function GroupSettingsScreen() {
         try {
           const uploadResponse = await uploadService.uploadImage(result.assets[0].uri);
           if (uploadResponse.success && uploadResponse.data) {
-            setAvatarUri(uploadResponse.data.url);
+            const avatarUrl = uploadResponse.data.url;
+            setAvatarUri(avatarUrl);
+            
+            // Immediately update the group in the backend
+            if (id) {
+              try {
+                const updateResponse = await groupService.updateGroup(id, {
+                  avatar: avatarUrl,
+                });
+                if (updateResponse.success && updateResponse.data) {
+                  // Update local group state immediately
+                  setGroup({
+                    ...group!,
+                    avatar: avatarUrl,
+                  });
+                  console.log('✅ Avatar updated immediately');
+                }
+              } catch (updateError) {
+                console.error('Error updating group avatar:', updateError);
+                // Don't show error - avatar is uploaded, will be saved on form submit
+              }
+            }
           }
         } catch (error) {
           console.error('Error uploading avatar:', error);

@@ -116,6 +116,15 @@ export default function GroupDetailScreen() {
     };
   }, [id, loadPosts]);
 
+  // Refresh group data when screen comes into focus (e.g., returning from settings)
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        loadGroup();
+      }
+    }, [id, loadGroup])
+  );
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     setPage(1);
