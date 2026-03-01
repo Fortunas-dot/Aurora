@@ -77,16 +77,44 @@ export default function GroupDetailScreen() {
     }
   }, [id, sortBy]);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([loadGroup(), loadPosts(1, false)]);
-    setIsLoading(false);
-  }, [loadGroup, loadPosts]);
-
-
+  // Load group first (fast), then posts (can be slower)
   useEffect(() => {
+    let mounted = true;
+    
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      // Load group first - show it immediately when ready
+      if (id) {
+        try {
+          const groupResponse = await groupService.getGroup(id);
+          if (mounted && groupResponse.success && groupResponse.data) {
+            setGroup(groupResponse.data);
+            setIsLoading(false); // Show group immediately, don't wait for posts
+          }
+        } catch (error: any) {
+          console.error('Error loading group:', error);
+          if (mounted) {
+            setIsLoading(false);
+            Alert.alert('Error', 'Could not load group details. Please check your connection and try again.');
+          }
+        }
+      }
+      
+      // Load posts in parallel (but don't block UI)
+      if (id) {
+        loadPosts(1, false).catch((error) => {
+          console.error('Error loading posts:', error);
+        });
+      }
+    };
+    
     loadData();
-  }, [loadData]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [id, loadPosts]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -377,11 +405,32 @@ export default function GroupDetailScreen() {
   };
 
   // Early return if group is not loaded yet
+  // Show loading only if we don't have group data yet
   if (isLoading && !group) {
     return (
       <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="lg" />
+        </View>
+      </LinearGradient>
+    );
+  }
+  
+  // Show error if group failed to load
+  if (!isLoading && !group && id) {
+    return (
+      <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+          <Text style={styles.errorText}>Could not load group</Text>
+          <GlassButton
+            label="Retry"
+            onPress={() => {
+              setIsLoading(true);
+              loadGroup();
+            }}
+            style={{ marginTop: SPACING.md }}
+          />
         </View>
       </LinearGradient>
     );

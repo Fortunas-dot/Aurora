@@ -26,7 +26,7 @@ interface PostCardProps {
   showFullContent?: boolean; // If true, show full content instead of just title
 }
 
-export const PostCard: React.FC<PostCardProps> = ({
+export const PostCard: React.FC<PostCardProps> = React.memo(({
   post,
   onPress,
   onLike,
