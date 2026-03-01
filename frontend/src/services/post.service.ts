@@ -2,6 +2,35 @@ import { apiService, ApiResponse } from './api.service';
 import { User } from './auth.service';
 import { Group } from './group.service';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
+// Helper function to normalize post data (images and video URLs)
+const normalizePost = (post: Post): Post => {
+  return {
+    ...post,
+    images: post.images?.map(img => normalizeUrl(img) || img).filter((img): img is string => !!img),
+    video: normalizeUrl(post.video),
+    author: {
+      ...post.author,
+      avatar: normalizeUrl(post.author.avatar),
+    },
+  };
+};
+
+// Helper function to normalize array of posts
+const normalizePosts = (posts: Post[]): Post[] => {
+  return posts.map(normalizePost);
+};
+
 export type PostType = 'post' | 'question' | 'story';
 export type SortOption = 'newest' | 'popular' | 'discussed';
 
@@ -53,7 +82,14 @@ class PostService {
     if (sortBy) endpoint += `&sortBy=${sortBy}`;
     if (publicOnly) endpoint += `&publicOnly=true`;
     
-    return apiService.get<Post[]>(endpoint);
+    const response = await apiService.get<Post[]>(endpoint);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async getTrendingPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
@@ -63,7 +99,14 @@ class PostService {
     if (groupId) endpoint += `&groupId=${groupId}`;
     if (postType) endpoint += `&postType=${postType}`;
     
-    return apiService.get<Post[]>(endpoint);
+    const response = await apiService.get<Post[]>(endpoint);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async getFollowingPosts(params: GetPostsParams = {}): Promise<ApiResponse<Post[]>> {
@@ -72,7 +115,14 @@ class PostService {
     if (tag && tag !== 'all') endpoint += `&tag=${tag}`;
     if (postType) endpoint += `&postType=${postType}`;
     
-    return apiService.get<Post[]>(endpoint);
+    const response = await apiService.get<Post[]>(endpoint);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   // Get posts from joined groups (Reddit-style Home feed)
@@ -84,15 +134,36 @@ class PostService {
     if (postType) endpoint += `&postType=${postType}`;
     if (sortBy) endpoint += `&sortBy=${sortBy}`;
     
-    return apiService.get<Post[]>(endpoint);
+    const response = await apiService.get<Post[]>(endpoint);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async getSavedPosts(page: number = 1, limit: number = 20): Promise<ApiResponse<Post[]>> {
-    return apiService.get<Post[]>(`/posts/saved?page=${page}&limit=${limit}`);
+    const response = await apiService.get<Post[]>(`/posts/saved?page=${page}&limit=${limit}`);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async getUserPosts(userId: string, page: number = 1, limit: number = 20): Promise<ApiResponse<Post[]>> {
-    return apiService.get<Post[]>(`/users/${userId}/posts?page=${page}&limit=${limit}`);
+    const response = await apiService.get<Post[]>(`/users/${userId}/posts?page=${page}&limit=${limit}`);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async savePost(id: string): Promise<ApiResponse<{ isSaved: boolean }>> {
@@ -104,11 +175,25 @@ class PostService {
     let endpoint = `/posts/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
     if (postType) endpoint += `&postType=${postType}`;
     
-    return apiService.get<Post[]>(endpoint);
+    const response = await apiService.get<Post[]>(endpoint);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePosts(response.data),
+      };
+    }
+    return response;
   }
 
   async getPost(id: string): Promise<ApiResponse<Post>> {
-    return apiService.get<Post>(`/posts/${id}`);
+    const response = await apiService.get<Post>(`/posts/${id}`);
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePost(response.data),
+      };
+    }
+    return response;
   }
 
   async createPost(
@@ -120,7 +205,7 @@ class PostService {
     title?: string,
     video?: string
   ): Promise<ApiResponse<Post>> {
-    return apiService.post<Post>('/posts', {
+    const response = await apiService.post<Post>('/posts', {
       title,
       content,
       tags,
@@ -129,6 +214,13 @@ class PostService {
       video,
       postType: postType || 'post',
     });
+    if (response.success && response.data) {
+      return {
+        ...response,
+        data: normalizePost(response.data),
+      };
+    }
+    return response;
   }
 
   async updatePost(
