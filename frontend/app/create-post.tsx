@@ -257,6 +257,9 @@ export default function CreatePostScreen() {
       }
 
       console.log('Creating post with video:', videoUrl);
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-post.tsx:260',message:'Creating post - URLs before sending to backend',data:{imageUrls, videoUrl, imageUrlsSample:imageUrls[0], imageUrlsAreAbsolute:imageUrls.map((u: string) => u?.startsWith('http')), videoUrlIsAbsolute:videoUrl?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const response = await postService.createPost(
         content.trim(),
         tags,
@@ -266,6 +269,11 @@ export default function CreatePostScreen() {
         title.trim(),
         videoUrl
       );
+      // #region agent log
+      if (response.success && response.data) {
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-post.tsx:272',message:'Post created - URLs in response from backend',data:{postId:response.data._id, images:response.data.images, video:response.data.video, imagesSample:response.data.images?.[0], imagesAreAbsolute:response.data.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:response.data.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
       
       if (response.success) {
         console.log('Post created successfully:', response.data);

@@ -6,6 +6,17 @@ import { AuthRequest } from '../middleware/auth';
 import { getRandomCharacter } from '../utils/characters';
 import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
@@ -188,9 +199,15 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    // Normalize avatar URL before returning
+    const userData = sanitizeUser(user);
+    if (userData.avatar) {
+      userData.avatar = normalizeUrl(userData.avatar);
+    }
+
     res.json({
       success: true,
-      data: sanitizeUser(user),
+      data: userData,
     });
   } catch (error: any) {
     res.status(500).json({

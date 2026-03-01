@@ -9,6 +9,17 @@ import { AuthRequest } from '../middleware/auth';
 import { sanitizeUser, escapeRegex } from '../utils/helpers';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
 // @desc    Get user profile
 // @route   GET /api/users/:id
 // @access  Public
@@ -64,7 +75,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       _id: user._id,
       username: user.username,
       displayName: user.displayName,
-      avatar: user.avatar,
+      avatar: normalizeUrl(user.avatar), // Normalize avatar URL
       avatarCharacter: user.avatarCharacter,
       avatarBackgroundColor: user.avatarBackgroundColor,
       bio: user.bio,
@@ -239,9 +250,15 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    // Normalize avatar URL before returning
+    const userData = sanitizeUser(user);
+    if (userData.avatar) {
+      userData.avatar = normalizeUrl(userData.avatar);
+    }
+
     res.json({
       success: true,
-      data: sanitizeUser(user),
+      data: userData,
     });
   } catch (error: any) {
     res.status(500).json({

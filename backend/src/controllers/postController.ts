@@ -10,6 +10,52 @@ import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWeb
 import { containsObjectionableContent } from '../utils/contentFilter';
 import { escapeRegex } from '../utils/helpers';
 
+// Helper function to normalize URLs to absolute URLs
+const normalizeUrl = (url: string | undefined | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativeUrl}`;
+};
+
+// Helper function to normalize post data (images and video URLs)
+const normalizePostData = (post: any): any => {
+  if (!post) return post;
+  
+  const normalized: any = { ...post };
+  
+  // Normalize images array
+  if (post.images && Array.isArray(post.images)) {
+    normalized.images = post.images.map((img: string) => normalizeUrl(img)).filter((img: string | undefined): img is string => !!img);
+  }
+  
+  // Normalize video URL
+  if (post.video) {
+    normalized.video = normalizeUrl(post.video);
+  }
+  
+  // Normalize author avatar
+  if (post.author && post.author.avatar) {
+    normalized.author = {
+      ...post.author,
+      avatar: normalizeUrl(post.author.avatar),
+    };
+  }
+  
+  // Normalize group avatar if present
+  if (post.group && post.group.avatar) {
+    normalized.group = {
+      ...post.group,
+      avatar: normalizeUrl(post.group.avatar),
+    };
+  }
+  
+  return normalized;
+};
+
 // Debug logging - only in development
 const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
 const logDebug = (data: any) => {
@@ -278,9 +324,12 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
     // This keeps the randomness on the server so the frontend cannot see or infer it.
     const therapistCount = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5
 
+    // Normalize URLs in all posts before sending
+    const normalizedPosts = postsWithSavedStatus.map((post: any) => normalizePostData(post));
+
     res.json({
       success: true,
-      data: postsWithSavedStatus,
+      data: normalizedPosts,
       pagination: {
         page,
         limit,
@@ -368,9 +417,12 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
       }
     }
 
+    // Normalize URLs before sending
+    const normalizedPost = normalizePostData(postWithSavedStatus);
+
     res.json({
       success: true,
-      data: postWithSavedStatus,
+      data: normalizedPost,
     });
   } catch (error: any) {
     res.status(500).json({
