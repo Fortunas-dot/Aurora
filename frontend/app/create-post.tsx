@@ -224,13 +224,17 @@ export default function CreatePostScreen() {
             imageUrls.push(uploadResult.data.url);
           }
         } else if (item.type === 'video') {
+          console.log('Starting video upload:', item.uri);
           const uploadResult = await uploadService.uploadVideo(item.uri);
           if (uploadResult.success && uploadResult.data) {
             videoUrl = uploadResult.data.url;
             console.log('Video uploaded successfully:', videoUrl);
           } else {
             console.error('Video upload failed:', uploadResult.message);
-            Alert.alert('Error', 'Could not upload video');
+            Alert.alert(
+              'Upload Failed',
+              uploadResult.message || 'Could not upload video. Please check your internet connection and try again.'
+            );
             setIsSubmitting(false);
             setUploadingMedia(false);
             return;

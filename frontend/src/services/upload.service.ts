@@ -22,6 +22,8 @@ class UploadService {
    */
   async uploadFile(uri: string, type: 'image' | 'video' | 'audio'): Promise<UploadResponse> {
     try {
+      console.log(`📤 Starting ${type} upload from:`, uri);
+      
       const token = await secureStorage.getItemAsync('auth_token');
       
       if (!token) {
@@ -85,59 +87,93 @@ class UploadService {
       const baseUrl = apiService.getBaseUrl();
       const uploadUrl = `${baseUrl}/upload`;
       
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type for FormData - browser will set it with boundary
-        },
-        body: formData,
-      });
+      // Create an AbortController for timeout handling (especially important for large video files)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, type === 'video' ? 300000 : 60000); // 5 minutes for videos, 1 minute for images/audio
+      
+      try {
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // Don't set Content-Type for FormData - browser will set it with boundary
+          },
+          body: formData,
+          signal: controller.signal, // Add abort signal for timeout
+        });
+        
+        clearTimeout(timeoutId); // Clear timeout if request completes
 
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText || `HTTP ${response.status}` };
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || `HTTP ${response.status}` };
+          }
+          
+          return {
+            success: false,
+            message: errorData.message || `Upload failed: ${response.status}`,
+          };
         }
+
+        const result = await response.json();
         
-        
+        if (result.success && result.data?.url) {
+          // Convert relative URL to absolute URL
+          const absoluteUrl = result.data.url.startsWith('http') 
+            ? result.data.url 
+            : `${baseUrl.replace('/api', '')}${result.data.url}`;
+          
+          return {
+            success: true,
+            data: {
+              ...result.data,
+              url: absoluteUrl,
+            },
+          };
+        }
+
         return {
           success: false,
-          message: errorData.message || `Upload failed: ${response.status}`,
+          message: result.message || 'Upload failed - no URL returned',
         };
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId); // Ensure timeout is cleared
+        if (fetchError.name === 'AbortError') {
+          console.error('📤 Upload timeout:', type, uri);
+          return {
+            success: false,
+            message: type === 'video' 
+              ? 'Video upload timed out. The video may be too large or your connection is too slow. Please try a smaller video or check your internet connection.'
+              : 'Upload timed out. Please check your connection and try again.',
+          };
+        }
+        throw fetchError; // Re-throw to be caught by outer catch
       }
-
-      const result = await response.json();
-      
-
-      if (result.success && result.data?.url) {
-        // Convert relative URL to absolute URL
-        const absoluteUrl = result.data.url.startsWith('http') 
-          ? result.data.url 
-          : `${baseUrl.replace('/api', '')}${result.data.url}`;
-        
-        return {
-          success: true,
-          data: {
-            ...result.data,
-            url: absoluteUrl,
-          },
-        };
-      }
-
-      return {
-        success: false,
-        message: result.message || 'Upload failed - no URL returned',
-      };
     } catch (error: any) {
       console.error('📤 Error uploading file:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Upload failed';
+      if (error.message?.includes('Network request failed')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = type === 'video'
+          ? 'Video upload timed out. The video may be too large. Please try a smaller video.'
+          : 'Upload timed out. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        message: error.message || 'Upload failed',
+        message: errorMessage,
       };
     }
   }
