@@ -48,6 +48,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const [likesCount, setLikesCount] = useState(post.likes.length);
   const [saved, setSaved] = useState(isSaved ?? post.isSaved ?? false);
   const [showMenu, setShowMenu] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
   
   const isOwnPost = currentUserId === post.author._id;
 
@@ -246,7 +247,23 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           return `${baseUrl}${relativeUrl}`;
         }, [post.video]);
         
-        console.log('PostCard: Rendering video with URL:', videoUrl);
+        if (__DEV__) {
+          console.log('PostCard: Rendering video with URL:', videoUrl);
+        }
+        
+        // Don't render video if there's an error or invalid URL
+        if (videoError || !videoUrl) {
+          return (
+            <View style={styles.videoContainer}>
+              <View style={styles.videoErrorContainer}>
+                <Ionicons name="videocam-off" size={32} color={COLORS.textMuted} />
+                <Text style={styles.videoErrorText}>
+                  {videoError || 'Video unavailable'}
+                </Text>
+              </View>
+            </View>
+          );
+        }
         
         return (
           <Pressable
@@ -264,7 +281,14 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
               shouldPlay={false}
               useNativeControls={true}
               onError={(error) => {
-                console.error('PostCard: Video playback error:', error);
+                const errorMessage = error?.message || error?.localizedDescription || 'Failed to load video';
+                if (__DEV__) {
+                  console.error('PostCard: Video playback error:', errorMessage, 'URL:', videoUrl);
+                }
+                setVideoError('Video could not be loaded');
+              }}
+              onLoadStart={() => {
+                setVideoError(null);
               }}
             />
           </Pressable>
@@ -515,6 +539,20 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width - SPACING.md * 4,
     height: 300,
     borderRadius: BORDER_RADIUS.md,
+  },
+  videoErrorContainer: {
+    width: Dimensions.get('window').width - SPACING.md * 4,
+    height: 300,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.glass.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  videoErrorText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   imagesContainer: {
     marginBottom: SPACING.sm,
