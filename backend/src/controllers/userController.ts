@@ -122,6 +122,11 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
 
     const updateData: any = {};
     
+    // Normalize avatar URL before storing in database
+    if (avatar !== undefined) {
+      updateData.avatar = normalizeUrl(avatar) || avatar;
+    }
+    
     // Check if username is being changed
     if (username && username !== currentUser.username) {
       // Username is being changed - check if it's been less than 30 days since last change
@@ -163,7 +168,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
     if (displayName !== undefined) updateData.displayName = displayName;
     if (bio !== undefined) updateData.bio = bio;
-    if (avatar !== undefined) updateData.avatar = avatar;
+    // Avatar is already normalized above
     if (avatarCharacter !== undefined) updateData.avatarCharacter = avatarCharacter;
     if (avatarBackgroundColor !== undefined) updateData.avatarBackgroundColor = avatarBackgroundColor;
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;

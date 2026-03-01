@@ -281,11 +281,19 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    // Normalize attachment URLs before storing in database
+    const normalizedAttachments = Array.isArray(attachments) 
+      ? attachments.map((attachment: any) => ({
+          ...attachment,
+          url: normalizeUrl(attachment.url) || attachment.url,
+        }))
+      : [];
+
     const message = await Message.create({
       sender: req.userId,
       receiver: receiverId,
       content: content || '',
-      attachments: Array.isArray(attachments) ? attachments : [],
+      attachments: normalizedAttachments,
     });
 
     await message.populate('sender', 'username displayName avatar');

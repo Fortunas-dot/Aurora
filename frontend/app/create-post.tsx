@@ -64,30 +64,12 @@ export default function CreatePostScreen() {
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, router]);
-
-  // Handle keyboard visibility on Android
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      });
-      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-        setKeyboardHeight(0);
-      });
-
-      return () => {
-        keyboardDidShowListener.remove();
-        keyboardDidHideListener.remove();
-      };
-    }
-  }, []);
 
   // Load groups and set initial group if provided
   useEffect(() => {
@@ -325,47 +307,45 @@ export default function CreatePostScreen() {
   return (
     <LinearGradient
       colors={COLORS.backgroundGradient}
-      style={[styles.container, keyboardHeight > 0 && Platform.OS === 'android' && { height: Dimensions.get('window').height - keyboardHeight }]}
+      style={styles.container}
     >
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={styles.keyboardView}
-          keyboardVerticalOffset={insets.top}
-        >
-          {/* Header */}
-          <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-            <Pressable
-              style={styles.headerIconButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </Pressable>
-            <Text style={styles.headerTitle}>New Post</Text>
-            <Pressable
-              style={[styles.headerIconButton, (!title.trim() || !content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting || uploadingMedia || !title.trim() || !content.trim()}
-            >
-              {(isSubmitting || uploadingMedia) ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color={COLORS.primary} />
-              )}
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="none"
-            removeClippedSubviews={false}
-            scrollEventThrottle={16}
-            decelerationRate="normal"
-            nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={true}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable
+            style={styles.headerIconButton}
+            onPress={() => router.back()}
           >
+            <Ionicons name="close" size={24} color={COLORS.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>New Post</Text>
+          <Pressable
+            style={[styles.headerIconButton, (!title.trim() || !content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || uploadingMedia || !title.trim() || !content.trim()}
+          >
+            {(isSubmitting || uploadingMedia) ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <Ionicons name="checkmark" size={24} color={COLORS.primary} />
+            )}
+          </Pressable>
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          removeClippedSubviews={false}
+          scrollEventThrottle={16}
+          decelerationRate="normal"
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={true}
+        >
           {/* Post Type Selection */}
           <GlassCard style={styles.postTypeCard} padding="lg">
             <Text style={styles.label}>Type *</Text>
@@ -633,311 +613,7 @@ export default function CreatePostScreen() {
             </View>
           </GlassCard>
         </ScrollView>
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={[styles.androidContainer, keyboardHeight > 0 && { flex: 0, height: Dimensions.get('window').height - keyboardHeight }]}>
-          {/* Header */}
-          <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-            <Pressable
-              style={styles.headerIconButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </Pressable>
-            <Text style={styles.headerTitle}>New Post</Text>
-            <Pressable
-              style={[styles.headerIconButton, (!title.trim() || !content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting || uploadingMedia || !title.trim() || !content.trim()}
-            >
-              {(isSubmitting || uploadingMedia) ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color={COLORS.primary} />
-              )}
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="none"
-            removeClippedSubviews={false}
-            scrollEventThrottle={16}
-            decelerationRate="normal"
-            nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-          >
-            {/* Post Type Selection */}
-            <GlassCard style={styles.postTypeCard} padding="lg">
-              <Text style={styles.label}>Type *</Text>
-              <View style={styles.postTypeContainer}>
-                <Pressable
-                  style={[styles.postTypeButton, postType === 'post' && styles.postTypeButtonActive]}
-                  onPress={() => setPostType('post')}
-                >
-                  <Ionicons 
-                    name="document-text-outline" 
-                    size={20} 
-                    color={postType === 'post' ? COLORS.primary : COLORS.textMuted} 
-                  />
-                  <Text style={[styles.postTypeText, postType === 'post' && styles.postTypeTextActive]}>
-                    Post
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.postTypeButton, postType === 'question' && styles.postTypeButtonActive]}
-                  onPress={() => setPostType('question')}
-                >
-                  <Ionicons 
-                    name="help-circle-outline" 
-                    size={20} 
-                    color={postType === 'question' ? COLORS.primary : COLORS.textMuted} 
-                  />
-                  <Text style={[styles.postTypeText, postType === 'question' && styles.postTypeTextActive]}>
-                    Question
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.postTypeButton, postType === 'story' && styles.postTypeButtonActive]}
-                  onPress={() => setPostType('story')}
-                >
-                  <Ionicons 
-                    name="book-outline" 
-                    size={20} 
-                    color={postType === 'story' ? COLORS.primary : COLORS.textMuted} 
-                  />
-                  <Text style={[styles.postTypeText, postType === 'story' && styles.postTypeTextActive]}>
-                    Story
-                  </Text>
-                </Pressable>
-              </View>
-            </GlassCard>
-
-            {/* Title Input */}
-            <GlassCard style={styles.titleCard} padding="md">
-              <Text style={styles.label}>Title *</Text>
-              <GlassInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder={
-                  postType === 'question' 
-                    ? "What's your question?" 
-                    : postType === 'story'
-                    ? "What's your story about?"
-                    : "Enter a title for your post..."
-                }
-                style={styles.titleInput}
-                maxLength={200}
-              />
-            </GlassCard>
-
-            {/* Content Input */}
-            <GlassCard style={styles.contentCard} padding="lg">
-              <Text style={styles.label}>Content *</Text>
-              <GlassInput
-                value={content}
-                onChangeText={setContent}
-                placeholder={
-                  postType === 'question'
-                    ? "Ask your question here... Be specific so others can help you."
-                    : postType === 'story'
-                    ? "Share your story... What happened? How did it make you feel?"
-                    : "Share your thoughts, experiences, or ask a question..."
-                }
-                multiline
-                numberOfLines={8}
-                style={styles.contentInput}
-                inputStyle={styles.contentInputText}
-                maxLength={2000}
-              />
-              
-              {/* Media Preview */}
-              {media.length > 0 && (
-                <View style={styles.mediaPreview}>
-                  {media.map((item, index) => (
-                    <View key={`${item.type}-${index}-${item.uri}`} style={styles.mediaItem}>
-                      {item.type === 'image' ? (
-                        <Image source={{ uri: item.uri }} style={styles.mediaImage} />
-                      ) : (
-                        <View style={styles.mediaVideoContainer}>
-                          <Video
-                            ref={(ref) => {
-                              if (ref) {
-                                videoRefs.current[index] = ref;
-                              }
-                            }}
-                            source={{ uri: item.uri }}
-                            style={styles.mediaVideo}
-                            resizeMode={ResizeMode.COVER}
-                            shouldPlay={playingVideoIndex === index}
-                            useNativeControls={playingVideoIndex === index}
-                            isLooping={false}
-                            onPlaybackStatusUpdate={(status) => {
-                              if (status.isLoaded && status.didJustFinish) {
-                                setPlayingVideoIndex(null);
-                              }
-                            }}
-                          />
-                          {playingVideoIndex !== index && (
-                            <Pressable
-                              style={styles.mediaVideoOverlay}
-                              onPress={async () => {
-                                setPlayingVideoIndex(index);
-                                const videoRef = videoRefs.current[index];
-                                if (videoRef) {
-                                  try {
-                                    await videoRef.playAsync();
-                                  } catch (error) {
-                                    console.error('Error playing video:', error);
-                                    setPlayingVideoIndex(null);
-                                  }
-                                }
-                              }}
-                            >
-                              <Ionicons name="play-circle" size={40} color={COLORS.white} />
-                            </Pressable>
-                          )}
-                        </View>
-                      )}
-                      <Pressable
-                        style={styles.removeMediaButton}
-                        onPress={() => handleRemoveMedia(index)}
-                      >
-                        <Ionicons name="close-circle" size={24} color={COLORS.error} />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* Media Actions */}
-              <View style={styles.mediaActions}>
-                <Pressable style={styles.mediaButton} onPress={handlePickImage}>
-                  <Ionicons name="image-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.mediaButtonText}>Photo</Text>
-                </Pressable>
-                <Pressable style={styles.mediaButton} onPress={handlePickVideo}>
-                  <Ionicons name="videocam-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.mediaButtonText}>Video</Text>
-                </Pressable>
-                <View style={styles.mediaSpacer} />
-                <Text style={styles.charCount}>
-                  {content.length} / 2000
-                </Text>
-              </View>
-            </GlassCard>
-
-            {/* Community/Group Selection */}
-            <GlassCard style={styles.groupCard} padding="lg">
-              <Text style={styles.sectionTitle}>Community (optional)</Text>
-              <Text style={styles.sectionSubtitle}>
-                Post in a specific community or leave empty for general feed
-              </Text>
-
-              {selectedGroup ? (
-                <View style={styles.selectedGroupContainer}>
-                  <View style={styles.selectedGroupInfo}>
-                    <View style={styles.selectedGroupIcon}>
-                      <Ionicons name="people" size={20} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.selectedGroupDetails}>
-                      <Text style={styles.selectedGroupName}>{selectedGroup.name}</Text>
-                      {selectedGroup.description && (
-                        <Text style={styles.selectedGroupDescription} numberOfLines={1}>
-                          {selectedGroup.description}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <Pressable
-                    style={styles.removeGroupButton}
-                    onPress={() => setSelectedGroup(null)}
-                  >
-                    <Ionicons name="close-circle" size={24} color={COLORS.error} />
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  style={styles.selectGroupButton}
-                  onPress={() => setShowGroupModal(true)}
-                >
-                  <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.selectGroupButtonText}>Select a community</Text>
-                </Pressable>
-              )}
-            </GlassCard>
-
-            {/* Tags Section */}
-            <GlassCard style={styles.tagsCard} padding="lg">
-              <Text style={styles.sectionTitle}>Tags (optional)</Text>
-              <Text style={styles.sectionSubtitle}>
-                Add tags to make your post more discoverable
-              </Text>
-
-              {/* Current Tags */}
-              {tags.length > 0 && (
-                <View style={styles.currentTags}>
-                  {tags.map((tag) => (
-                    <View key={tag} style={styles.tagWrapper}>
-                      <TagChip label={tag} size="sm" />
-                      <Ionicons
-                        name="close-circle"
-                        size={18}
-                        color={COLORS.textMuted}
-                        style={styles.removeTagIcon}
-                        onPress={() => handleRemoveTag(tag)}
-                      />
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* Tag Input */}
-              {tags.length < 5 && (
-                <View style={styles.tagInputContainer}>
-                  <GlassInput
-                    value={tagInput}
-                    onChangeText={setTagInput}
-                    placeholder="Add a tag..."
-                    style={styles.tagInput}
-                    onSubmitEditing={() => handleAddTag(tagInput)}
-                    returnKeyType="done"
-                  />
-                  <Pressable
-                    style={[styles.addTagIconButton, !tagInput.trim() && styles.addTagIconButtonDisabled]}
-                    onPress={() => handleAddTag(tagInput)}
-                    disabled={!tagInput.trim()}
-                  >
-                    <Ionicons
-                      name="add-circle"
-                      size={24}
-                      color={tagInput.trim() ? COLORS.primary : COLORS.textMuted}
-                    />
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Suggested Tags */}
-              <View style={styles.suggestedTags}>
-                <Text style={styles.suggestedTagsTitle}>Suggestions:</Text>
-                <View style={styles.suggestedTagsList}>
-                  {SUGGESTED_TAGS.filter((tag) => !tags.includes(tag)).map((tag) => (
-                    <Pressable
-                      key={tag}
-                      style={styles.suggestedTag}
-                      onPress={() => handleSuggestedTagPress(tag)}
-                    >
-                      <Text style={styles.suggestedTagText}>#{tag}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </GlassCard>
-          </ScrollView>
-        </View>
-      )}
+      </KeyboardAvoidingView>
 
       {/* Group Selection Modal */}
       <Modal
@@ -1025,14 +701,9 @@ export default function CreatePostScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    ...(Platform.OS === 'android' && { overflow: 'hidden' }),
   },
   keyboardView: {
     flex: 1,
-  },
-  androidContainer: {
-    flex: 1,
-    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

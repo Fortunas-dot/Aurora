@@ -445,14 +445,20 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    // Normalize URLs before storing in database
+    const normalizedImages = images && Array.isArray(images) 
+      ? images.map((img: string) => normalizeUrl(img)).filter((img: string | undefined): img is string => !!img)
+      : [];
+    const normalizedVideo = video ? normalizeUrl(video) : undefined;
+
     const post = await Post.create({
       author: req.userId,
       title: title?.trim() || undefined,
       content,
       postType: postType || 'post',
       tags: tags || [],
-      images: images || [],
-      video: video || undefined,
+      images: normalizedImages,
+      video: normalizedVideo,
       groupId: groupId || null,
     });
 
