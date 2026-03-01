@@ -374,19 +374,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const cachedUser = JSON.parse(cachedUserJson);
           console.log('✅ Found cached user:', cachedUser.email || cachedUser.username);
           
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:372',message:'checkAuth - Avatar URL from cache BEFORE normalization',data:{avatar:cachedUser.avatar, isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          
           // Normalize avatar URL if present
           if (cachedUser.avatar) {
             const { normalizeAvatarUrl } = get();
             cachedUser.avatar = normalizeAvatarUrl(cachedUser.avatar) || undefined;
           }
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:381',message:'checkAuth - Avatar URL from cache AFTER normalization',data:{avatar:cachedUser.avatar, isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
           
           // Set cached user immediately for faster UI
           set({
@@ -466,19 +458,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = response.data;
         console.log('✅ Auth verified successfully for user:', user.email || user.username);
         
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:457',message:'checkAuth - Avatar URL from backend BEFORE normalization',data:{avatar:user.avatar, isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
         // Normalize avatar URL if present
         if (user.avatar) {
           const { normalizeAvatarUrl } = get();
           user.avatar = normalizeAvatarUrl(user.avatar) || undefined;
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:465',message:'checkAuth - Avatar URL from backend AFTER normalization',data:{avatar:user.avatar, isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         
         // Cache user data for faster next startup
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
