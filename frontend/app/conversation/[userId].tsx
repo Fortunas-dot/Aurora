@@ -675,7 +675,18 @@ export default function ConversationScreen() {
     const showDate = false; // Could add date separators if needed
 
     const imageUrl = (url: string) => {
-      return url.startsWith('http') ? url : `https://aurora-production.up.railway.app${url}`;
+      if (!url) return url;
+      // If already absolute, return as-is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // If relative, make it absolute
+      const baseUrl = 'https://aurora-production.up.railway.app';
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // If it doesn't start with /, add it
+      return `${baseUrl}/${url}`;
     };
 
     const hasUserReacted = (reaction: { emoji: string; users: any[] }) => {

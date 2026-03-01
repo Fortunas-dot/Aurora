@@ -352,13 +352,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Helper function to normalize avatar URL
   normalizeAvatarUrl: (url: string | null | undefined): string | null => {
-    if (!url) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
+    if (!url || typeof url !== 'string' || url.trim() === '') return null;
+    
+    // Remove any whitespace
+    const trimmedUrl = url.trim();
+    
+    // If already absolute, return as-is
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      return trimmedUrl;
     }
+    
+    // If relative, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
-    const relativeUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${baseUrl}${relativeUrl}`;
+    
+    // Ensure the relative URL starts with /
+    let relativeUrl = trimmedUrl;
+    if (!relativeUrl.startsWith('/')) {
+      relativeUrl = `/${relativeUrl}`;
+    }
+    
+    // Remove any double slashes (except after http:// or https://)
+    const normalized = `${baseUrl}${relativeUrl}`.replace(/([^:]\/)\/+/g, '$1');
+    
+    return normalized;
   },
 
   checkAuth: async () => {

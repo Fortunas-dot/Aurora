@@ -12,13 +12,29 @@ import { escapeRegex } from '../utils/helpers';
 
 // Helper function to normalize URLs to absolute URLs
 const normalizeUrl = (url: string | undefined | null): string | undefined => {
-  if (!url) return undefined;
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
+  if (!url || typeof url !== 'string' || url.trim() === '') return undefined;
+  
+  // Remove any whitespace
+  const trimmedUrl = url.trim();
+  
+  // If already absolute, return as-is (but ensure it's a valid URL)
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    return trimmedUrl;
   }
+  
+  // If relative, make it absolute
   const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
-  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
-  return `${baseUrl}${relativeUrl}`;
+  
+  // Ensure the relative URL starts with /
+  let relativeUrl = trimmedUrl;
+  if (!relativeUrl.startsWith('/')) {
+    relativeUrl = `/${relativeUrl}`;
+  }
+  
+  // Remove any double slashes (except after http:// or https://)
+  const normalized = `${baseUrl}${relativeUrl}`.replace(/([^:]\/)\/+/g, '$1');
+  
+  return normalized;
 };
 
 // Helper function to normalize post data (images and video URLs)
