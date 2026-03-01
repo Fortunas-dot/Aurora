@@ -284,7 +284,15 @@ export default function GroupSettingsScreen() {
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
           <Text style={styles.headerTitle}>Group Settings</Text>
-          <View style={styles.headerSpacer} />
+          <Pressable
+            style={styles.saveButton}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={[styles.saveButtonText, isSubmitting && styles.saveButtonTextDisabled]}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Text>
+          </Pressable>
         </View>
 
         <ScrollView
@@ -410,15 +418,6 @@ export default function GroupSettingsScreen() {
             )}
           </GlassCard>
 
-          {/* Submit Button */}
-          <GlassButton
-            title={isSubmitting ? 'Saving...' : 'Save Changes'}
-            onPress={handleSubmit}
-            variant="primary"
-            isLoading={isSubmitting}
-            disabled={isSubmitting}
-            style={styles.submitButton}
-          />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -561,8 +560,22 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.h2,
     color: COLORS.text,
   },
-  headerSpacer: {
-    width: 40,
+  saveButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    minWidth: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    opacity: 0.6,
   },
   scrollView: {
     flex: 1,
