@@ -232,8 +232,8 @@ export default function CreatePostScreen() {
           } else {
             console.error('Video upload failed:', uploadResult.message);
             Alert.alert(
-              'Upload Failed',
-              uploadResult.message || 'Could not upload video. Please check your internet connection and try again.'
+              'Video Upload Failed',
+              uploadResult.message || 'Could not upload video. Please check your internet connection and try again. If the problem persists, try a smaller video file.'
             );
             setIsSubmitting(false);
             setUploadingMedia(false);

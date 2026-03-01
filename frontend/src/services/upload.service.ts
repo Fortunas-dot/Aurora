@@ -130,15 +130,47 @@ class UploadService {
         if (!response.ok) {
           const errorText = await response.text();
           let errorData;
+          let errorMessage = `Upload failed: HTTP ${response.status}`;
+          
           try {
             errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
           } catch {
-            errorData = { message: errorText || `HTTP ${response.status}` };
+            // Handle HTML error responses (like 503 from Varnish)
+            if (errorText.includes('<!DOCTYPE') || errorText.includes('<html>')) {
+              // Extract error message from HTML if possible
+              const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
+              const h1Match = errorText.match(/<h1>(.*?)<\/h1>/i);
+              const pMatch = errorText.match(/<p>(.*?)<\/p>/i);
+              
+              if (response.status === 503) {
+                errorMessage = 'Server is temporarily unavailable. The video may be too large or the server is experiencing issues. Please try again later or use a smaller video.';
+              } else if (titleMatch) {
+                errorMessage = titleMatch[1];
+              } else if (h1Match) {
+                errorMessage = h1Match[1];
+              } else if (pMatch) {
+                errorMessage = pMatch[1];
+              } else {
+                errorMessage = errorText.substring(0, 200); // First 200 chars
+              }
+            } else {
+              errorMessage = errorText || errorMessage;
+            }
+          }
+          
+          // Provide specific error messages for common status codes
+          if (response.status === 503) {
+            errorMessage = 'Server is temporarily unavailable. The video may be too large or the server is experiencing issues. Please try again later or use a smaller video.';
+          } else if (response.status === 413) {
+            errorMessage = 'File is too large. Maximum size is 50MB.';
+          } else if (response.status === 500) {
+            errorMessage = 'Server error occurred while uploading. Please try again.';
           }
           
           return {
             success: false,
-            message: errorData.message || `Upload failed: ${response.status}`,
+            message: errorMessage,
           };
         }
 
