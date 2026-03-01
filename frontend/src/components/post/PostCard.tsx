@@ -273,14 +273,27 @@ export const PostCard: React.FC<PostCardProps> = ({
           style={styles.imagesContainer}
           contentContainerStyle={styles.imagesContent}
         >
-          {post.images.map((imageUrl, index) => (
-            <LazyImage
-              key={index}
-              uri={imageUrl}
-              style={styles.postImage}
-              resizeMode="cover"
-            />
-          ))}
+          {post.images.map((imageUrl, index) => {
+            // Normalize image URL to ensure it's absolute
+            const normalizedImageUrl = useMemo(() => {
+              if (!imageUrl) return '';
+              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                return imageUrl;
+              }
+              const baseUrl = 'https://aurora-production.up.railway.app';
+              const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+              return `${baseUrl}${relativeUrl}`;
+            }, [imageUrl]);
+            
+            return (
+              <LazyImage
+                key={`${normalizedImageUrl}-${index}`}
+                uri={normalizedImageUrl}
+                style={styles.postImage}
+                resizeMode="cover"
+              />
+            );
+          })}
         </ScrollView>
       )}
 

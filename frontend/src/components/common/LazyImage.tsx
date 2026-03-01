@@ -30,15 +30,31 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
   // Normalize URL to always be absolute
   const imageUrl = useMemo(() => {
-    if (!uri) return '';
+    if (!uri || uri.trim() === '') {
+      console.warn('LazyImage: Empty or invalid URI provided');
+      return null;
+    }
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
       return uri;
     }
     // If relative URL, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
-    return `${baseUrl}${relativeUrl}`;
+    const normalized = `${baseUrl}${relativeUrl}`;
+    console.log('LazyImage: Normalized URL:', normalized);
+    return normalized;
   }, [uri]);
+
+  // Don't render if no valid URL
+  if (!imageUrl) {
+    return (
+      <View style={[styles.container, style]}>
+        <View style={[styles.errorContainer, style]}>
+          {placeholder || <ActivityIndicator size="small" color={COLORS.textMuted} />}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]}>
@@ -47,13 +63,17 @@ export const LazyImage: React.FC<LazyImageProps> = ({
           {placeholder || <ActivityIndicator size="small" color={COLORS.primary} />}
         </View>
       )}
-      {!hasError && (
+      {!hasError && imageUrl && (
         <Image
           source={{ uri: imageUrl }}
-          style={[styles.image, style]}
+          style={[styles.image, style, isLoading && { opacity: 0 }]}
           resizeMode={resizeMode}
           onLoad={handleLoad}
           onError={handleError}
+          onLoadStart={() => {
+            setIsLoading(true);
+            setHasError(false);
+          }}
         />
       )}
       {hasError && (
