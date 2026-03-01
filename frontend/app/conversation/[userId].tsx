@@ -291,12 +291,14 @@ export default function ConversationScreen() {
     const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
       setMessages((prev) => {
         if (prev.some((m) => m._id === message._id)) {
-          // Update existing message to ensure attachments are preserved
-          return prev.map((m) => 
-            m._id === message._id 
-              ? { ...m, ...message, attachments: message.attachments || m.attachments || [] }
-              : m
-          );
+          // Update existing message and normalize attachments
+          return prev.map((m) => {
+            if (m._id === message._id) {
+              const updatedMessage = { ...m, ...message, attachments: message.attachments || m.attachments || [] };
+              return normalizeMessageAttachments(updatedMessage);
+            }
+            return m;
+          });
         }
 
         // Check for duplicate by content within 2 seconds
@@ -313,12 +315,12 @@ export default function ConversationScreen() {
         });
 
         if (isDuplicate) return prev;
-        // Ensure attachments are included
-        const messageWithAttachments = {
+        // Normalize attachments URLs before adding to state
+        const normalizedMessage = normalizeMessageAttachments({
           ...message,
           attachments: message.attachments || [],
-        };
-        return [...prev, messageWithAttachments];
+        });
+        return [...prev, normalizedMessage];
       });
 
       setTimeout(() => {
