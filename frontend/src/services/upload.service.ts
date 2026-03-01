@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { secureStorage } from '../utils/secureStorage';
 import { apiService } from './api.service';
 
@@ -23,6 +24,25 @@ class UploadService {
   async uploadFile(uri: string, type: 'image' | 'video' | 'audio'): Promise<UploadResponse> {
     try {
       console.log(`📤 Starting ${type} upload from:`, uri);
+      
+      // Check file size before uploading (max 50MB)
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (fileInfo.exists && 'size' in fileInfo) {
+          const fileSizeMB = fileInfo.size / (1024 * 1024);
+          console.log(`📊 File size: ${fileSizeMB.toFixed(2)} MB`);
+          
+          if (fileSizeMB > 50) {
+            return {
+              success: false,
+              message: `File is too large (${fileSizeMB.toFixed(2)} MB). Maximum size is 50 MB.`,
+            };
+          }
+        }
+      } catch (fileInfoError) {
+        console.warn('Could not check file size:', fileInfoError);
+        // Continue with upload even if we can't check file size
+      }
       
       const token = await secureStorage.getItemAsync('auth_token');
       
