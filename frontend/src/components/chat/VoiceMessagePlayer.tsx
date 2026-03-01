@@ -22,35 +22,18 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
 
   // Normalize URI to ensure it's always absolute
   const normalizedUri = useMemo(() => {
-    if (!uri) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:25',message:'VoiceMessagePlayer - Empty URI',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'O'})}).catch(()=>{});
-      // #endregion
-      return uri;
-    }
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:28',message:'VoiceMessagePlayer - URI received',data:{uri, isAbsolute:uri.startsWith('http'), startsWithSlash:uri.startsWith('/')},timestamp:Date.now(),runId:'run1',hypothesisId:'P'})}).catch(()=>{});
-    // #endregion
+    if (!uri) return uri;
     // If already absolute, return as-is
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:32',message:'VoiceMessagePlayer - URI is already absolute',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
       return uri;
     }
     // If relative, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
-    let normalized: string;
     if (uri.startsWith('/')) {
-      normalized = `${baseUrl}${uri}`;
-    } else {
-      // If it doesn't start with /, add it
-      normalized = `${baseUrl}/${uri}`;
+      return `${baseUrl}${uri}`;
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:42',message:'VoiceMessagePlayer - URI normalized',data:{original:uri, normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-    // #endregion
-    return normalized;
+    // If it doesn't start with /, add it
+    return `${baseUrl}/${uri}`;
   }, [uri]);
 
   // Calculate container width based on duration
@@ -145,17 +128,13 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
       }
 
       // Always create a fresh sound object to ensure the URI is valid
-      console.log('VoiceMessagePlayer: Creating new sound with URI:', normalizedUri);
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:131',message:'VoiceMessagePlayer - Attempting to create sound',data:{normalizedUri, uriLength:normalizedUri?.length},timestamp:Date.now(),runId:'run1',hypothesisId:'S'})}).catch(()=>{});
-      // #endregion
+      if (__DEV__) {
+        console.log('VoiceMessagePlayer: Creating new sound with URI:', normalizedUri);
+      }
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: normalizedUri },
         { shouldPlay: true }
       );
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:137',message:'VoiceMessagePlayer - Sound created successfully',data:{normalizedUri},timestamp:Date.now(),runId:'run1',hypothesisId:'T'})}).catch(()=>{});
-      // #endregion
 
       setSound(newSound);
       setIsPlaying(true);
@@ -167,27 +146,62 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
             setIsPlaying(false);
             setPosition(0);
             // Reset sound position to beginning for next play
-            newSound.setPositionAsync(0).catch(console.error);
+            newSound.setPositionAsync(0).catch((err) => {
+              if (__DEV__) console.error('Error resetting sound position:', err);
+            });
           }
         } else if (status.error) {
           // Handle playback errors
-          console.error('VoiceMessagePlayer: Playback error:', status.error);
+          const errorCode = status.error?.code || status.error?.nativeEvent?.code;
+          const errorMessage = status.error?.message || status.error?.localizedDescription || status.error?.error || 'Unknown error';
+          
+          // Only log in dev mode
+          if (__DEV__) {
+            console.error('VoiceMessagePlayer: Playback error:', {
+              error: status.error,
+              code: errorCode,
+              message: errorMessage,
+              uri: normalizedUri,
+            });
+          }
+          
+          // Error -1100 means file not found (same as video error)
+          if (errorCode === -1100 || errorMessage?.includes('-1100') || errorMessage?.includes('NSURLErrorFileDoesNotExist')) {
+            if (__DEV__) {
+              console.warn('VoiceMessagePlayer: Audio file not found on server:', normalizedUri);
+            }
+          }
+          
           setIsPlaying(false);
           setPosition(0);
+          setSound(null);
         }
       });
     } catch (error: any) {
-      console.error('Error playing audio:', error);
-      // #region agent log
-      const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Unknown error';
       const errorCode = error?.code || error?.nativeEvent?.code;
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:156',message:'VoiceMessagePlayer - Error playing audio',data:{errorMessage, errorCode, normalizedUri, uriLength:normalizedUri?.length, fullError:JSON.stringify(error)},timestamp:Date.now(),runId:'run1',hypothesisId:'U'})}).catch(()=>{});
-      // #endregion
+      const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Unknown error';
+      
+      // Only log in dev mode
+      if (__DEV__) {
+        console.error('VoiceMessagePlayer: Error playing audio:', {
+          error,
+          code: errorCode,
+          message: errorMessage,
+          uri: normalizedUri,
+        });
+      }
+      
       // Reset state on error
       setIsPlaying(false);
       setPosition(0);
       setSound(null);
-      // Show user-friendly error (optional - you might want to show an alert here)
+      
+      // Error -1100 means file not found
+      if (errorCode === -1100 || errorMessage?.includes('-1100') || errorMessage?.includes('NSURLErrorFileDoesNotExist')) {
+        if (__DEV__) {
+          console.warn('VoiceMessagePlayer: Audio file not found on server:', normalizedUri);
+        }
+      }
     }
   };
 
