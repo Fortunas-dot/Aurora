@@ -54,6 +54,8 @@ export default function CreatePostScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [media, setMedia] = useState<{ uri: string; type: 'image' | 'video' }[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [playingVideoIndex, setPlayingVideoIndex] = useState<number | null>(null);
+  const videoRefs = useRef<{ [key: number]: any }>({});
   
   // Group selection state
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -167,6 +169,18 @@ export default function CreatePostScreen() {
   };
 
   const handleRemoveMedia = (index: number) => {
+    // Stop video if it's playing
+    if (playingVideoIndex === index) {
+      const videoRef = videoRefs.current[index];
+      if (videoRef) {
+        videoRef.pauseAsync();
+        videoRef.unloadAsync();
+      }
+      setPlayingVideoIndex(null);
+    }
+    // Remove video ref
+    delete videoRefs.current[index];
+    // Remove media
     setMedia(media.filter((_, i) => i !== index));
   };
 
