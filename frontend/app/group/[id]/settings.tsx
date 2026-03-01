@@ -429,46 +429,47 @@ export default function GroupSettingsScreen() {
         onRequestClose={() => setShowCountryModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalCard} padding="lg">
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country</Text>
-              <Pressable onPress={() => {
-                setShowCountryModal(false);
-                setCountrySearchQuery('');
-              }}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </Pressable>
-            </View>
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <GlassInput
-                placeholder="Search countries..."
-                value={countrySearchQuery}
-                onChangeText={setCountrySearchQuery}
-                style={styles.searchInput}
-                icon="search"
-              />
-            </View>
-            <FlatList
-              data={[{ code: 'global', name: 'Global' }, ...COUNTRIES].filter((country) =>
-                country.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
-              )}
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setCountry(item.code);
-                    setShowCountryModal(false);
-                  }}
-                >
-                  <Text style={styles.modalItemText}>{item.name}</Text>
-                  {country === item.code && (
-                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-                  )}
+          <View style={styles.modalCard}>
+            <View style={styles.modalCardContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Country</Text>
+                <Pressable onPress={() => {
+                  setShowCountryModal(false);
+                  setCountrySearchQuery('');
+                }}>
+                  <Ionicons name="close" size={24} color={COLORS.text} />
                 </Pressable>
-              )}
-            />
+              </View>
+              {/* Search Bar */}
+              <View style={styles.searchContainer}>
+                <GlassInput
+                  placeholder="Search countries..."
+                  value={countrySearchQuery}
+                  onChangeText={setCountrySearchQuery}
+                  style={styles.searchInput}
+                  icon="search"
+                />
+              </View>
+              <FlatList
+                data={[{ code: 'global', name: 'Global' }, ...COUNTRIES].filter((country) =>
+                  country.name.toLowerCase().includes(countrySearchQuery.toLowerCase())
+                )}
+                keyExtractor={(item) => item.code}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setCountry(item.code);
+                      setShowCountryModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                    {country === item.code && (
+                      <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
             </View>
           </View>
         </View>
@@ -482,31 +483,32 @@ export default function GroupSettingsScreen() {
         onRequestClose={() => setShowHealthConditionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalCard} padding="lg">
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Health Condition</Text>
-              <Pressable onPress={() => setShowHealthConditionModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={[{ label: 'None', value: null }, ...HEALTH_CONDITIONS.map((hc) => ({ label: hc, value: hc }))]}
-              keyExtractor={(item) => item.value || 'none'}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setHealthCondition(item.value);
-                    setShowHealthConditionModal(false);
-                  }}
-                >
-                  <Text style={styles.modalItemText}>{item.label}</Text>
-                  {healthCondition === item.value && (
-                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-                  )}
+          <View style={styles.modalCard}>
+            <View style={styles.modalCardContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Health Condition</Text>
+                <Pressable onPress={() => setShowHealthConditionModal(false)}>
+                  <Ionicons name="close" size={24} color={COLORS.text} />
                 </Pressable>
-              )}
-            />
+              </View>
+              <FlatList
+                data={[{ label: 'None', value: null }, ...HEALTH_CONDITIONS.map((hc) => ({ label: hc, value: hc }))]}
+                keyExtractor={(item) => item.value || 'none'}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setHealthCondition(item.value);
+                      setShowHealthConditionModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item.label}</Text>
+                    {healthCondition === item.value && (
+                      <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
             </View>
           </View>
         </View>
