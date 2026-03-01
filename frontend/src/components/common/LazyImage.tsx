@@ -23,7 +23,12 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   const handleError = (error: any) => {
-    console.error('LazyImage: Error loading image:', uri, error);
+    // React Native Image onError may receive a native event, not always an error object
+    // Only log in development to avoid console noise
+    if (__DEV__) {
+      const errorMessage = error?.message || error?.nativeEvent?.error || 'Unknown error';
+      console.warn('LazyImage: Failed to load image:', imageUrl, errorMessage);
+    }
     setIsLoading(false);
     setHasError(true);
   };
