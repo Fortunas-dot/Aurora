@@ -953,8 +953,9 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.glass.border,
   },
   modalTitle: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.bodyLarge,
     color: COLORS.text,
+    fontWeight: '600',
   },
   modalCloseButton: {
     width: 40,
