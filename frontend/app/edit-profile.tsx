@@ -175,6 +175,11 @@ export default function EditProfileScreen() {
       });
 
       if (response.success && response.data) {
+        // Normalize the avatar URL from response
+        const normalizedAvatar = response.data.avatar 
+          ? normalizeAvatarUrl(response.data.avatar) 
+          : null;
+
         // Update local user state in auth store
         await updateUser({
           displayName: response.data.displayName,
@@ -184,6 +189,17 @@ export default function EditProfileScreen() {
           avatarCharacter: response.data.avatarCharacter,
           avatarBackgroundColor: response.data.avatarBackgroundColor,
         });
+
+        // Update local avatarUri state immediately so it shows in the UI
+        if (normalizedAvatar) {
+          setAvatarUri(normalizedAvatar);
+          setAvatarMode('photo');
+        } else if (response.data.avatarCharacter) {
+          setAvatarUri(null);
+          setSelectedCharacter(response.data.avatarCharacter);
+          setSelectedBackgroundColor(response.data.avatarBackgroundColor || null);
+          setAvatarMode('character');
+        }
 
         // Show a clear success message so the user knows it worked
         Alert.alert('Profile updated', 'Your profile has been updated.');
