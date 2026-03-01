@@ -46,7 +46,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
-    console.log('LazyImage: Normalized URL:', normalized);
+    if (__DEV__) {
+      console.log('LazyImage: Normalized URL:', normalized);
+    }
     return normalized;
   }, [uri]);
 
