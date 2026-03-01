@@ -558,11 +558,11 @@ export default function GroupDetailScreen() {
           </View>
         )}
         keyExtractor={(item) => item._id}
-        removeClippedSubviews={false}
-        maxToRenderPerBatch={15}
-        windowSize={21}
-        initialNumToRender={15}
-        updateCellsBatchingPeriod={100}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
         scrollEventThrottle={16}
         decelerationRate="normal"
         ListHeaderComponent={
