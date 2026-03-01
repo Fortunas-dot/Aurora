@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { groupService, Group } from '../../services/group.service';
@@ -165,6 +166,30 @@ export const CommunityFilter: React.FC<CommunityFilterProps> = React.memo(({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // Reload communities when screen comes into focus
+  // This ensures that if a user joins a community from another screen,
+  // the communities list will be refreshed when they return to the feed
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && mountedRef.current) {
+        // Force reload by resetting the blocking refs
+        // This allows communities to be refreshed even if we previously determined there were none
+        const shouldReload = emptyStateDeterminedRef.current && communitiesLengthRef.current === 0;
+        
+        if (shouldReload) {
+          // Reset refs to allow reloading
+          emptyStateDeterminedRef.current = false;
+          loadAttemptedRef.current = false;
+          hasEverHadCommunitiesRef.current = false;
+          setShouldShowEmptyState(false);
+        }
+        
+        // Reload communities (will be skipped if refs still block it, but we just reset them)
+        loadCommunities();
+      }
+    }, [isAuthenticated, loadCommunities])
+  );
 
   if (!isAuthenticated) {
     return null;

@@ -20,6 +20,21 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
 
+  // Normalize URI to ensure it's always absolute
+  const normalizedUri = useMemo(() => {
+    if (!uri) return uri;
+    // If already absolute, return as-is
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+    // If relative, make it absolute
+    if (uri.startsWith('/')) {
+      return `https://aurora-production.up.railway.app${uri}`;
+    }
+    // Return as-is if it's already in an unexpected format
+    return uri;
+  }, [uri]);
+
   // Calculate container width based on duration
   // Message bubble has maxWidth: 75% and paddingHorizontal: SPACING.md
   // Audio player container width (which includes its padding) must fit within bubble
@@ -48,36 +63,56 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
     return containerWidth - containerPadding - playButtonWidth - gap;
   }, [containerWidth]);
 
+  // Unload sound when component unmounts or when URI changes
   useEffect(() => {
     return () => {
       if (sound) {
         sound.unloadAsync().catch(console.error);
+        setSound(null);
+        setIsPlaying(false);
+        setPosition(0);
       }
     };
-  }, [sound]);
+  }, [sound, normalizedUri]);
 
   const playSound = async () => {
     try {
       if (sound) {
-        if (isPlaying) {
-          await sound.pauseAsync();
-          setIsPlaying(false);
-        } else {
-          // Check if audio finished - if so, reset to beginning
+        // Check if the sound is still valid before trying to play
+        try {
           const status = await sound.getStatusAsync();
           if (status.isLoaded) {
-            // If position is at or near the end (within 0.1 seconds), reset to beginning
-            const currentPos = status.positionMillis / 1000;
-            const totalDuration = status.durationMillis ? status.durationMillis / 1000 : duration;
-            if (totalDuration > 0 && currentPos >= totalDuration - 0.1) {
-              await sound.setPositionAsync(0);
-              setPosition(0);
+            if (isPlaying) {
+              await sound.pauseAsync();
+              setIsPlaying(false);
+            } else {
+              // Check if audio finished - if so, reset to beginning
+              const currentPos = status.positionMillis / 1000;
+              const totalDuration = status.durationMillis ? status.durationMillis / 1000 : duration;
+              if (totalDuration > 0 && currentPos >= totalDuration - 0.1) {
+                await sound.setPositionAsync(0);
+                setPosition(0);
+              }
+              await sound.playAsync();
+              setIsPlaying(true);
             }
+            return;
+          } else {
+            // Sound is not loaded, unload it and create a new one
+            console.log('VoiceMessagePlayer: Sound not loaded, creating new sound');
+            await sound.unloadAsync().catch(console.error);
+            setSound(null);
           }
-          await sound.playAsync();
-          setIsPlaying(true);
+        } catch (statusError) {
+          // Sound object is invalid, unload it and create a new one
+          console.warn('VoiceMessagePlayer: Error checking sound status, creating new sound:', statusError);
+          try {
+            await sound.unloadAsync().catch(console.error);
+          } catch (unloadError) {
+            // Ignore unload errors
+          }
+          setSound(null);
         }
-        return;
       }
 
       // Ensure audio plays even when iPhone is in silent mode, and configure session safely
@@ -91,8 +126,10 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
         console.warn('VoiceMessagePlayer: Failed to set audio mode, continuing anyway:', modeError);
       }
 
+      // Always create a fresh sound object to ensure the URI is valid
+      console.log('VoiceMessagePlayer: Creating new sound with URI:', normalizedUri);
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri },
+        { uri: normalizedUri },
         { shouldPlay: true }
       );
 
@@ -108,10 +145,20 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
             // Reset sound position to beginning for next play
             newSound.setPositionAsync(0).catch(console.error);
           }
+        } else if (status.error) {
+          // Handle playback errors
+          console.error('VoiceMessagePlayer: Playback error:', status.error);
+          setIsPlaying(false);
+          setPosition(0);
         }
       });
     } catch (error) {
       console.error('Error playing audio:', error);
+      // Reset state on error
+      setIsPlaying(false);
+      setPosition(0);
+      setSound(null);
+      // Show user-friendly error (optional - you might want to show an alert here)
     }
   };
 
