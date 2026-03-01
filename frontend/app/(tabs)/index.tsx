@@ -431,13 +431,6 @@ export default function FeedScreen() {
       
       
       if (response.success && response.data) {
-        // #region agent log
-        const samplePost = response.data[0];
-        if (samplePost) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:433',message:'loadPosts - URLs in response.data before filtering',data:{postId:samplePost._id, images:samplePost.images, video:samplePost.video, imagesAreAbsolute:samplePost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:samplePost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        }
-        // #endregion
-        
         // Filter out posts with invalid IDs
         const validPosts = response.data.filter((post: Post) => {
           if (!post || !post._id) return false;
@@ -445,12 +438,6 @@ export default function FeedScreen() {
           const postId = post._id.toString();
           return /^[0-9a-fA-F]{24}$/.test(postId);
         });
-        
-        // #region agent log
-        if (validPosts[0]) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:442',message:'loadPosts - URLs in validPosts before setState',data:{postId:validPosts[0]._id, images:validPosts[0].images, video:validPosts[0].video, imagesAreAbsolute:validPosts[0].images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:validPosts[0].video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        }
-        // #endregion
         
         // Update therapist count banner:
         // 1) Prefer explicit value from backend when available

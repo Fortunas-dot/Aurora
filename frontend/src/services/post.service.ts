@@ -84,20 +84,10 @@ class PostService {
     
     const response = await apiService.get<Post[]>(endpoint);
     if (response.success && response.data) {
-      // #region agent log
-      const samplePost = response.data[0];
-      if (samplePost) {
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:47',message:'getPosts - URLs from backend before normalization',data:{postId:samplePost._id, images:samplePost.images, video:samplePost.video, imagesAreAbsolute:samplePost.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:samplePost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      }
-      const normalized = normalizePosts(response.data);
-      if (normalized[0]) {
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:56',message:'getPosts - URLs after normalization',data:{postId:normalized[0]._id, images:normalized[0].images, video:normalized[0].video, imagesAreAbsolute:normalized[0].images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalized[0].video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      }
       return {
         ...response,
-        data: normalized,
+        data: normalizePosts(response.data),
       };
-      // #endregion
     }
     return response;
   }
@@ -215,9 +205,6 @@ class PostService {
     title?: string,
     video?: string
   ): Promise<ApiResponse<Post>> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:114',message:'createPost - URLs before API call',data:{images, video, imagesAreAbsolute:images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const response = await apiService.post<Post>('/posts', {
       title,
       content,
@@ -227,17 +214,12 @@ class PostService {
       video,
       postType: postType || 'post',
     });
-    // #region agent log
     if (response.success && response.data) {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:130',message:'createPost - URLs from backend before normalization',data:{postId:response.data._id, images:response.data.images, video:response.data.video, imagesAreAbsolute:response.data.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:response.data.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      const normalized = normalizePost(response.data);
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:135',message:'createPost - URLs after normalization',data:{postId:normalized._id, images:normalized.images, video:normalized.video, imagesAreAbsolute:normalized.images?.map((u: string) => u?.startsWith('http')), videoIsAbsolute:normalized.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       return {
         ...response,
-        data: normalized,
+        data: normalizePost(response.data),
       };
     }
-    // #endregion
     return response;
   }
 
