@@ -55,8 +55,6 @@ module.exports = {
         facebookDisplayName: 'Aurora',
       },
       permissions: [],
-      // Force English locale for native components
-      locale: 'en',
     },
     web: {
       favicon: './assets/favicon.png',
@@ -107,6 +105,7 @@ module.exports = {
           return config;
         })(),
       ],
+      require('./plugins/withAndroidLocale'),
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
