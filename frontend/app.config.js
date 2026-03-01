@@ -49,7 +49,7 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      softwareKeyboardLayoutMode: 'resize',
+      softwareKeyboardLayoutMode: 'pan',
       package: 'com.auroracommune.app',
       config: {
         facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),

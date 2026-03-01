@@ -35,6 +35,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
   // Normalize URL to always be absolute
   const imageUrl = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:37',message:'LazyImage - Input URI',data:{uri,uriLength:uri?.length,isAbsolute:uri?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     if (!uri || uri.trim() === '') {
       if (__DEV__) {
         console.warn('LazyImage: Empty or invalid URI provided');
@@ -43,7 +46,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     }
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
       // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:45',message:'LazyImage - URI is already absolute',data:{uri, uriLength:uri.length},timestamp:Date.now(),runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:45',message:'LazyImage - URI already absolute',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
       return uri;
     }
@@ -52,7 +55,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
     // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:52',message:'LazyImage - Normalized relative URI to absolute',data:{originalUri:uri, normalized, uriLength:uri.length},timestamp:Date.now(),runId:'run1',hypothesisId:'J'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:52',message:'LazyImage - Normalized relative URI',data:{originalUri:uri,normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
     if (__DEV__) {
       console.log('LazyImage: Normalized URL:', normalized);

@@ -31,6 +31,9 @@ const normalizeUrl = (url: string | undefined): string | undefined => {
 
 // Helper function to normalize post data (images and video URLs)
 const normalizePost = (post: Post): Post => {
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:33',message:'normalizePost - Input URLs',data:{postId:post._id,images:post.images,video:post.video,imagesSample:post.images?.[0],imagesAreAbsolute:post.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:post.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const normalized: Post = {
     ...post,
     images: post.images?.map(img => normalizeUrl(img) || img).filter((img): img is string => !!img),
@@ -49,6 +52,9 @@ const normalizePost = (post: Post): Post => {
     };
   }
   
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:50',message:'normalizePost - Output URLs',data:{postId:normalized._id,images:normalized.images,video:normalized.video,imagesSample:normalized.images?.[0],imagesAreAbsolute:normalized.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:normalized.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   return normalized;
 };
 
@@ -110,9 +116,21 @@ class PostService {
     
     const response = await apiService.get<Post[]>(endpoint);
     if (response.success && response.data) {
+      // #region agent log
+      const samplePost = response.data[0];
+      if (samplePost) {
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:111',message:'getPosts - URLs from backend BEFORE normalization',data:{postId:samplePost._id,images:samplePost.images,video:samplePost.video,imagesSample:samplePost.images?.[0],imagesAreAbsolute:samplePost.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:samplePost.video?.startsWith('http'),authorAvatar:samplePost.author?.avatar,authorAvatarIsAbsolute:samplePost.author?.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
+      const normalized = normalizePosts(response.data);
+      // #region agent log
+      if (normalized[0]) {
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:116',message:'getPosts - URLs AFTER normalization',data:{postId:normalized[0]._id,images:normalized[0].images,video:normalized[0].video,imagesSample:normalized[0].images?.[0],imagesAreAbsolute:normalized[0].images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:normalized[0].video?.startsWith('http'),authorAvatar:normalized[0].author?.avatar,authorAvatarIsAbsolute:normalized[0].author?.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
       return {
         ...response,
-        data: normalizePosts(response.data),
+        data: normalized,
       };
     }
     return response;

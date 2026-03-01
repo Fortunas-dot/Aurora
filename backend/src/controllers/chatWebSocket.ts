@@ -398,6 +398,15 @@ const updateConversationList = (userId: string, otherUserId: string, message: an
     const avatar = message.sender.avatar || message.receiver.avatar;
     const normalizedAvatar = normalizeUrl(avatar);
     
+    // Normalize attachments if they exist
+    let normalizedAttachments = undefined;
+    if (message.attachments && Array.isArray(message.attachments)) {
+      normalizedAttachments = message.attachments.map((attachment: any) => ({
+        ...attachment,
+        url: normalizeUrl(attachment.url) || attachment.url,
+      }));
+    }
+    
     userWs.send(JSON.stringify({
       type: 'conversation_updated',
       conversation: {
@@ -410,6 +419,7 @@ const updateConversationList = (userId: string, otherUserId: string, message: an
         lastMessage: {
           _id: message._id,
           content: message.content,
+          attachments: normalizedAttachments,
           createdAt: message.createdAt,
           isOwn: message.sender._id.toString() === userId,
         },

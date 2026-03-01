@@ -50,6 +50,9 @@ export const Avatar: React.FC<AvatarProps> = ({
   // Normalize avatar URL to ensure it's always absolute
   // Keep local file URIs (file://) as-is for immediate preview
   const normalizedUri = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:51',message:'Avatar - Input URI',data:{uri,uriLength:uri?.length,isAbsolute:uri?.startsWith('http'),isFile:uri?.startsWith('file://')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     if (!uri) return null;
     // Keep local file URIs as-is (for image picker previews)
     if (uri.startsWith('file://')) {
@@ -57,12 +60,19 @@ export const Avatar: React.FC<AvatarProps> = ({
     }
     // Keep absolute HTTP/HTTPS URLs as-is
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:58',message:'Avatar - URI already absolute',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       return uri;
     }
     // If relative URL, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
-    return `${baseUrl}${relativeUrl}`;
+    const normalized = `${baseUrl}${relativeUrl}`;
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:65',message:'Avatar - Normalized relative URI',data:{originalUri:uri,normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    return normalized;
   }, [uri]);
 
   // Get character to display (prefer avatarCharacter, fallback to user-based character, then initials)

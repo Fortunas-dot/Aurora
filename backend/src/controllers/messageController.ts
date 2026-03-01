@@ -117,6 +117,7 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
           lastMessage: {
             _id: '$lastMessage._id',
             content: '$lastMessage.content',
+            attachments: '$lastMessage.attachments',
             createdAt: '$lastMessage.createdAt',
             isOwn: { $eq: ['$lastMessage.sender', userId] },
           },
@@ -128,9 +129,29 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
       },
     ]);
 
+    // Normalize URLs in conversations
+    const normalizedConversations = conversations.map((conv: any) => {
+      const normalized = { ...conv };
+      
+      // Normalize user avatar
+      if (normalized.user?.avatar) {
+        normalized.user.avatar = normalizeUrl(normalized.user.avatar);
+      }
+      
+      // Normalize attachments in lastMessage
+      if (normalized.lastMessage?.attachments && Array.isArray(normalized.lastMessage.attachments)) {
+        normalized.lastMessage.attachments = normalized.lastMessage.attachments.map((attachment: any) => ({
+          ...attachment,
+          url: normalizeUrl(attachment.url) || attachment.url,
+        }));
+      }
+      
+      return normalized;
+    });
+
     res.json({
       success: true,
-      data: conversations,
+      data: normalizedConversations,
     });
   } catch (error: any) {
     res.status(500).json({

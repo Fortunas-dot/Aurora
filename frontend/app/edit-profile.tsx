@@ -192,6 +192,9 @@ export default function EditProfileScreen() {
           ? normalizeAvatarUrl(response.data.avatar) 
           : undefined;
 
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'edit-profile.tsx:196',message:'handleSubmit - Avatar URL before updateUser',data:{avatarToStore,isAbsolute:avatarToStore?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         // Update local user state in auth store
         await updateUser({
           displayName: response.data.displayName,

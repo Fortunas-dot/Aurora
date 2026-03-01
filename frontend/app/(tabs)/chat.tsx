@@ -310,7 +310,26 @@ export default function ChatScreen() {
                   numberOfLines={1}
                 >
                   {item.lastMessage.isOwn && 'You: '}
-                  {item.lastMessage.content}
+                  {(() => {
+                    // If there are attachments, show appropriate label
+                    if (item.lastMessage.attachments && item.lastMessage.attachments.length > 0) {
+                      const hasImage = item.lastMessage.attachments.some(a => a.type === 'image');
+                      const hasAudio = item.lastMessage.attachments.some(a => a.type === 'audio');
+                      const hasFile = item.lastMessage.attachments.some(a => a.type === 'file');
+                      
+                      if (hasImage && !hasAudio && !hasFile) {
+                        return '📷 Photo';
+                      } else if (hasAudio && !hasImage && !hasFile) {
+                        return '🎤 Audio';
+                      } else if (hasFile && !hasImage && !hasAudio) {
+                        return '📎 File';
+                      } else {
+                        return '📎 Attachment';
+                      }
+                    }
+                    // Otherwise show content (or empty string if no content)
+                    return item.lastMessage.content || '';
+                  })()}
                 </Text>
                 
                 {item.unreadCount > 0 && (

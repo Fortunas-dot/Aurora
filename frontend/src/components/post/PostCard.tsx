@@ -168,6 +168,16 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     return text.substring(0, 100).trim() + (text.length > 100 ? '...' : '');
   };
 
+  // Video indicator overlay component
+  const VideoIndicator = () => (
+    <View style={styles.videoIndicator}>
+      <View style={styles.videoIndicatorBadge}>
+        <Ionicons name="videocam" size={16} color={COLORS.white} />
+        <Text style={styles.videoIndicatorText}>Video</Text>
+      </View>
+    </View>
+  );
+
   return (
     <GlassCard style={styles.container} onPress={onPress} padding={0}>
       {/* Group Badge (Reddit-style) */}
@@ -234,9 +244,15 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         </>
       )}
 
-      {/* Video */}
-      {post.video && (() => {
-        // Normalize video URL to ensure it's always absolute
+      {/* Media Collage (Images + Video) */}
+      {(() => {
+        const hasVideo = post.video && !videoError;
+        const hasImages = post.images && post.images.length > 0;
+        const totalMediaCount = (hasVideo ? 1 : 0) + (hasImages ? post.images!.length : 0);
+        
+        if (totalMediaCount === 0) return null;
+        
+        // Normalize video URL
         const videoUrl = useMemo(() => {
           if (!post.video) return '';
           if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
@@ -247,105 +263,365 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           return `${baseUrl}${relativeUrl}`;
         }, [post.video]);
         
-        if (__DEV__) {
-          console.log('PostCard: Rendering video with URL:', videoUrl);
-        }
+        // Normalize image URLs
+        const normalizedImages = post.images?.map((imageUrl) => {
+          if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+            const baseUrl = 'https://aurora-production.up.railway.app';
+            const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+            return `${baseUrl}${relativeUrl}`;
+          }
+          return imageUrl;
+        }) || [];
         
-        // Don't render video if there's an error or invalid URL
-        if (videoError || !videoUrl) {
+        // Create media items array (video first if exists, then images)
+        const mediaItems: Array<{ type: 'video' | 'image'; url: string; index: number }> = [];
+        if (hasVideo && videoUrl) {
+          mediaItems.push({ type: 'video', url: videoUrl, index: 0 });
+        }
+        normalizedImages.forEach((url, idx) => {
+          mediaItems.push({ type: 'image', url, index: hasVideo ? idx + 1 : idx });
+        });
+        
+        const screenWidth = Dimensions.get('window').width;
+        const containerWidth = screenWidth - SPACING.md * 4;
+        const gap = SPACING.xs;
+        
+        // Render based on media count
+        if (totalMediaCount === 1) {
+          // Single item - full width
+          const item = mediaItems[0];
           return (
-            <View style={styles.videoContainer}>
-              <View style={styles.videoErrorContainer}>
-                <Ionicons name="videocam-off" size={32} color={COLORS.textMuted} />
-                <Text style={styles.videoErrorText}>
-                  {videoError || 'Video unavailable'}
-                </Text>
-                {videoError && videoError.includes('not found') && (
-                  <Text style={[styles.videoErrorText, { fontSize: 12, marginTop: SPACING.xs, opacity: 0.7 }]}>
-                    The video file may have been removed from the server
-                  </Text>
-                )}
+            <View style={styles.mediaCollageContainer}>
+              {item.type === 'video' ? (
+                <Pressable
+                  style={styles.mediaItemSingle}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <Video
+                    source={{ uri: item.url }}
+                    style={styles.mediaVideoSingle}
+                    resizeMode={ResizeMode.COVER}
+                    shouldPlay={false}
+                    useNativeControls={true}
+                    onError={(error) => {
+                      const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Failed to load video';
+                      const errorCode = error?.code || error?.nativeEvent?.code;
+                      let userMessage = 'Video could not be loaded';
+                      if (errorCode === -1100 || errorMessage?.includes('NSURLErrorFileDoesNotExist') || errorMessage?.includes('-1100')) {
+                        userMessage = 'Video file not found on server';
+                      } else if (errorCode === -1009 || errorMessage?.includes('network')) {
+                        userMessage = 'Network error loading video';
+                      }
+                      setVideoError(userMessage);
+                    }}
+                    onLoadStart={() => {
+                      setVideoError(null);
+                    }}
+                  />
+                  <VideoIndicator />
+                </Pressable>
+              ) : (
+                <LazyImage
+                  uri={item.url}
+                  style={styles.mediaImageSingle}
+                  resizeMode="cover"
+                />
+              )}
+            </View>
+          );
+        } else if (totalMediaCount === 2) {
+          // Two items - side by side
+          return (
+            <View style={styles.mediaCollageContainer}>
+              <View style={styles.mediaRow}>
+                {mediaItems.slice(0, 2).map((item, idx) => (
+                  <View key={idx} style={[styles.mediaItemTwo, styles.mediaItemTwoTall, { marginRight: idx === 0 ? gap : 0 }]}>
+                    {item.type === 'video' ? (
+                      <Pressable
+                        style={styles.mediaItemFull}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.mediaVideoTwo}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={true}
+                          onError={(error) => {
+                            const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Failed to load video';
+                            setVideoError(errorMessage || 'Video could not be loaded');
+                          }}
+                          onLoadStart={() => {
+                            setVideoError(null);
+                          }}
+                        />
+                        <VideoIndicator />
+                      </Pressable>
+                    ) : (
+                      <LazyImage
+                        uri={item.url}
+                        style={styles.mediaImageTwo}
+                        resizeMode="cover"
+                      />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        } else if (totalMediaCount === 3) {
+          // Three items - one large left, two small right
+          return (
+            <View style={styles.mediaCollageContainer}>
+              <View style={styles.mediaRow}>
+                <View style={[styles.mediaItemLarge, { marginRight: gap }]}>
+                  {mediaItems[0].type === 'video' ? (
+                    <Pressable
+                      style={styles.mediaItemFull}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onStartShouldSetResponder={() => true}
+                    >
+                      <Video
+                        source={{ uri: mediaItems[0].url }}
+                        style={styles.mediaVideoLarge}
+                        resizeMode={ResizeMode.COVER}
+                        shouldPlay={false}
+                        useNativeControls={true}
+                        onError={(error) => {
+                          setVideoError('Video could not be loaded');
+                        }}
+                        onLoadStart={() => {
+                          setVideoError(null);
+                        }}
+                      />
+                      <VideoIndicator />
+                    </Pressable>
+                  ) : (
+                    <LazyImage
+                      uri={mediaItems[0].url}
+                      style={styles.mediaImageLarge}
+                      resizeMode="cover"
+                    />
+                  )}
+                </View>
+                <View style={styles.mediaColumn}>
+                  {mediaItems.slice(1, 3).map((item, idx) => (
+                    <View key={idx} style={[styles.mediaItemSmall, { marginBottom: idx === 0 ? gap : 0 }]}>
+                      {item.type === 'video' ? (
+                        <Pressable
+                          style={styles.mediaItemFull}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onStartShouldSetResponder={() => true}
+                        >
+                          <Video
+                            source={{ uri: item.url }}
+                            style={styles.mediaVideoSmall}
+                            resizeMode={ResizeMode.COVER}
+                            shouldPlay={false}
+                            useNativeControls={true}
+                            onError={(error) => {
+                              setVideoError('Video could not be loaded');
+                            }}
+                            onLoadStart={() => {
+                              setVideoError(null);
+                            }}
+                          />
+                          <VideoIndicator />
+                        </Pressable>
+                      ) : (
+                        <LazyImage
+                          uri={item.url}
+                          style={styles.mediaImageSmall}
+                          resizeMode="cover"
+                        />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          );
+        } else if (totalMediaCount === 4) {
+          // Four items - 2x2 grid
+          return (
+            <View style={styles.mediaCollageContainer}>
+              <View style={styles.mediaRow}>
+                {mediaItems.slice(0, 2).map((item, idx) => (
+                  <View key={idx} style={[styles.mediaItemTwo, styles.mediaItemTwoGrid, { marginRight: idx === 0 ? gap : 0, marginBottom: gap }]}>
+                    {item.type === 'video' ? (
+                      <Pressable
+                        style={styles.mediaItemFull}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.mediaVideoGrid}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={true}
+                          onError={(error) => {
+                            setVideoError('Video could not be loaded');
+                          }}
+                          onLoadStart={() => {
+                            setVideoError(null);
+                          }}
+                        />
+                        <VideoIndicator />
+                      </Pressable>
+                    ) : (
+                      <LazyImage
+                        uri={item.url}
+                        style={styles.mediaImageGrid}
+                        resizeMode="cover"
+                      />
+                    )}
+                  </View>
+                ))}
+              </View>
+              <View style={styles.mediaRow}>
+                {mediaItems.slice(2, 4).map((item, idx) => (
+                  <View key={idx} style={[styles.mediaItemTwo, styles.mediaItemTwoGrid, { marginRight: idx === 0 ? gap : 0 }]}>
+                    {item.type === 'video' ? (
+                      <Pressable
+                        style={styles.mediaItemFull}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.mediaVideoGrid}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={true}
+                          onError={(error) => {
+                            setVideoError('Video could not be loaded');
+                          }}
+                          onLoadStart={() => {
+                            setVideoError(null);
+                          }}
+                        />
+                        <VideoIndicator />
+                      </Pressable>
+                    ) : (
+                      <LazyImage
+                        uri={item.url}
+                        style={styles.mediaImageGrid}
+                        resizeMode="cover"
+                      />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        } else {
+          // 5+ items - 2x2 grid with overlay showing remaining count
+          const remainingCount = totalMediaCount - 4;
+          return (
+            <View style={styles.mediaCollageContainer}>
+              <View style={styles.mediaRow}>
+                {mediaItems.slice(0, 2).map((item, idx) => (
+                  <View key={idx} style={[styles.mediaItemTwo, styles.mediaItemTwoGrid, { marginRight: idx === 0 ? gap : 0, marginBottom: gap }]}>
+                    {item.type === 'video' ? (
+                      <Pressable
+                        style={styles.mediaItemFull}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.mediaVideoGrid}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={true}
+                          onError={(error) => {
+                            setVideoError('Video could not be loaded');
+                          }}
+                          onLoadStart={() => {
+                            setVideoError(null);
+                          }}
+                        />
+                        <VideoIndicator />
+                      </Pressable>
+                    ) : (
+                      <LazyImage
+                        uri={item.url}
+                        style={styles.mediaImageGrid}
+                        resizeMode="cover"
+                      />
+                    )}
+                  </View>
+                ))}
+              </View>
+              <View style={styles.mediaRow}>
+                {mediaItems.slice(2, 4).map((item, idx) => (
+                  <View key={idx} style={[styles.mediaItemTwo, styles.mediaItemTwoGrid, { marginRight: idx === 0 ? gap : 0 }]}>
+                    {item.type === 'video' ? (
+                      <Pressable
+                        style={styles.mediaItemFull}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.mediaVideoGrid}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          useNativeControls={true}
+                          onError={(error) => {
+                            setVideoError('Video could not be loaded');
+                          }}
+                          onLoadStart={() => {
+                            setVideoError(null);
+                          }}
+                        />
+                        <VideoIndicator />
+                        {idx === 1 && (
+                          <View style={styles.mediaOverlay}>
+                            <Text style={styles.mediaOverlayText}>+{remainingCount}</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    ) : (
+                      <>
+                        <LazyImage
+                          uri={item.url}
+                          style={styles.mediaImageGrid}
+                          resizeMode="cover"
+                        />
+                        {idx === 1 && (
+                          <View style={styles.mediaOverlay}>
+                            <Text style={styles.mediaOverlayText}>+{remainingCount}</Text>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+                ))}
               </View>
             </View>
           );
         }
-        
-        return (
-          <Pressable
-            style={styles.videoContainer}
-            onPress={(e) => {
-              // Stop event propagation to prevent opening the post when clicking on video
-              e.stopPropagation();
-            }}
-            onStartShouldSetResponder={() => true}
-          >
-            <Video
-              source={{ uri: videoUrl }}
-              style={styles.postVideo}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay={false}
-              useNativeControls={true}
-              onError={(error) => {
-                const errorMessage = error?.message || error?.localizedDescription || error?.error || 'Failed to load video';
-                const errorCode = error?.code || error?.nativeEvent?.code;
-                
-                // More specific error message based on error code
-                let userMessage = 'Video could not be loaded';
-                if (errorCode === -1100 || errorMessage?.includes('NSURLErrorFileDoesNotExist') || errorMessage?.includes('-1100')) {
-                  userMessage = 'Video file not found on server';
-                } else if (errorCode === -1009 || errorMessage?.includes('network')) {
-                  userMessage = 'Network error loading video';
-                }
-                
-                // Only log in dev mode to avoid cluttering production logs
-                if (__DEV__) {
-                  console.error('PostCard: Video playback error:', {
-                    message: errorMessage,
-                    code: errorCode,
-                    url: videoUrl,
-                    fullError: error,
-                  });
-                }
-                
-                setVideoError(userMessage);
-              }}
-              onLoadStart={() => {
-                setVideoError(null);
-              }}
-            />
-          </Pressable>
-        );
       })()}
-
-      {/* Images */}
-      {post.images && post.images.length > 0 && (
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.imagesContainer}
-          contentContainerStyle={styles.imagesContent}
-        >
-          {post.images.map((imageUrl, index) => {
-            // Normalize image URL to ensure it's absolute (LazyImage will also normalize, but this ensures consistency)
-            let normalizedImageUrl = imageUrl;
-            if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-              const baseUrl = 'https://aurora-production.up.railway.app';
-              const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-              normalizedImageUrl = `${baseUrl}${relativeUrl}`;
-            }
-            
-            return (
-              <LazyImage
-                key={`${normalizedImageUrl}-${index}`}
-                uri={normalizedImageUrl}
-                style={styles.postImage}
-                resizeMode="cover"
-              />
-            );
-          })}
-        </ScrollView>
-      )}
 
       {/* Tags */}
       {post.tags.length > 0 && (
@@ -553,40 +829,141 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
   },
-  videoContainer: {
+  // Media Collage Styles
+  mediaCollageContainer: {
     marginBottom: SPACING.sm,
     paddingHorizontal: SPACING.md,
   },
-  postVideo: {
-    width: Dimensions.get('window').width - SPACING.md * 4,
+  mediaRow: {
+    flexDirection: 'row',
+  },
+  mediaColumn: {
+    flexDirection: 'column',
+    width: (Dimensions.get('window').width - SPACING.md * 4 - SPACING.xs) / 2,
+    height: 200,
+  },
+  // Single item
+  mediaItemSingle: {
+    width: '100%',
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  mediaImageSingle: {
+    width: '100%',
     height: 300,
     borderRadius: BORDER_RADIUS.md,
   },
-  videoErrorContainer: {
-    width: Dimensions.get('window').width - SPACING.md * 4,
+  mediaVideoSingle: {
+    width: '100%',
     height: 300,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.glass.background,
+  },
+  // Two items (side by side) - also used for 4-item grid
+  mediaItemTwo: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  mediaItemTwoTall: {
+    height: 200,
+  },
+  mediaImageTwo: {
+    width: '100%',
+    height: 200,
+  },
+  mediaVideoTwo: {
+    width: '100%',
+    height: 200,
+  },
+  // Large item (for 3-item layout)
+  mediaItemLarge: {
+    flex: 1,
+    height: 200,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  mediaImageLarge: {
+    width: '100%',
+    height: 200,
+  },
+  mediaVideoLarge: {
+    width: '100%',
+    height: 200,
+  },
+  // Small items (for 3-item layout)
+  mediaItemSmall: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  mediaImageSmall: {
+    width: '100%',
+    height: 95,
+  },
+  mediaVideoSmall: {
+    width: '100%',
+    height: 95,
+  },
+  // Grid items (for 2x2 and 4+ layouts)
+  mediaImageGrid: {
+    width: '100%',
+    height: 150,
+  },
+  mediaVideoGrid: {
+    width: '100%',
+    height: 150,
+  },
+  // For 4-item grid, ensure consistent height
+  mediaItemTwoGrid: {
+    height: 150,
+  },
+  mediaItemFull: {
+    width: '100%',
+    height: '100%',
+  },
+  // Overlay for remaining items count
+  mediaOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  videoErrorText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-  },
-  imagesContainer: {
-    marginBottom: SPACING.sm,
-  },
-  imagesContent: {
-    paddingHorizontal: SPACING.md,
-  },
-  postImage: {
-    width: Dimensions.get('window').width - SPACING.md * 4,
-    height: 300,
     borderRadius: BORDER_RADIUS.md,
-    marginRight: SPACING.sm,
+  },
+  mediaOverlayText: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+  // Video indicator overlay
+  videoIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  videoIndicatorBadge: {
+    position: 'absolute',
+    top: SPACING.xs,
+    left: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs / 2,
+    borderRadius: BORDER_RADIUS.full,
+    gap: SPACING.xs / 2,
+  },
+  videoIndicatorText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 12,
   },
   tagsContainer: {
     flexDirection: 'row',

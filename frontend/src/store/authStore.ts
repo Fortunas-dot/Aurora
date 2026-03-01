@@ -390,11 +390,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const cachedUser = JSON.parse(cachedUserJson);
           console.log('✅ Found cached user:', cachedUser.email || cachedUser.username);
           
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:390',message:'checkAuth - Avatar URL from cache BEFORE normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
           // Normalize avatar URL if present
           if (cachedUser.avatar) {
             const { normalizeAvatarUrl } = get();
             cachedUser.avatar = normalizeAvatarUrl(cachedUser.avatar) || undefined;
           }
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:397',message:'checkAuth - Avatar URL from cache AFTER normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           
           // Set cached user immediately for faster UI
           set({
@@ -474,11 +482,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = response.data;
         console.log('✅ Auth verified successfully for user:', user.email || user.username);
         
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:476',message:'checkAuth - Avatar URL from backend BEFORE normalization',data:{avatar:user.avatar,isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         // Normalize avatar URL if present BEFORE caching
         if (user.avatar) {
           const { normalizeAvatarUrl } = get();
           user.avatar = normalizeAvatarUrl(user.avatar) || undefined;
         }
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:483',message:'checkAuth - Avatar URL from backend AFTER normalization (before caching)',data:{avatar:user.avatar,isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         
         // Cache user data for faster next startup (with normalized avatar URL)
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
@@ -564,6 +580,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updateUser: async (userData: Partial<User>) => {
     const currentUser = get().user;
     if (currentUser) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:583',message:'updateUser - Avatar URL input',data:{avatar:userData.avatar,isAbsolute:userData.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       // Normalize avatar URL before updating
       const normalizedUserData = { ...userData };
       if (userData.avatar !== undefined) {
@@ -571,12 +590,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         normalizedUserData.avatar = normalizeAvatarUrl(userData.avatar) || undefined;
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:591',message:'updateUser - Avatar URL after normalization (before caching)',data:{avatar:normalizedUserData.avatar,isAbsolute:normalizedUserData.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       const updatedUser = { ...currentUser, ...normalizedUserData };
       set({ user: updatedUser });
       
       // Update cached user data
       try {
         await secureStorage.setItemAsync('cached_user', JSON.stringify(updatedUser));
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:599',message:'updateUser - Avatar URL cached',data:{avatar:updatedUser.avatar,isAbsolute:updatedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
       } catch (error) {
         console.error('Error caching user data:', error);
       }

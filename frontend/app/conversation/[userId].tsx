@@ -169,6 +169,44 @@ export default function ConversationScreen() {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper function to normalize URLs to absolute URLs (available throughout component)
+  const normalizeUrl = useCallback((url: string | undefined | null): string | undefined => {
+    if (!url || typeof url !== 'string' || url.trim() === '') return undefined;
+    const trimmedUrl = url.trim();
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      return trimmedUrl;
+    }
+    const baseUrl = 'https://aurora-production.up.railway.app';
+    const relativeUrl = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
+    return `${baseUrl}${relativeUrl}`.replace(/([^:]\/)\/+/g, '$1');
+  }, []);
+
+  // Helper function to normalize message attachments (available throughout component)
+  const normalizeMessageAttachments = useCallback((message: any): any => {
+    if (!message) return message;
+    const normalized = { ...message };
+    if (message.attachments && Array.isArray(message.attachments)) {
+      normalized.attachments = message.attachments.map((attachment: any) => ({
+        ...attachment,
+        url: normalizeUrl(attachment.url) || attachment.url,
+      }));
+    }
+    // Also normalize sender/receiver avatars
+    if (message.sender) {
+      normalized.sender = {
+        ...message.sender,
+        avatar: normalizeUrl(message.sender.avatar),
+      };
+    }
+    if (message.receiver) {
+      normalized.receiver = {
+        ...message.receiver,
+        avatar: normalizeUrl(message.receiver.avatar),
+      };
+    }
+    return normalized;
+  }, [normalizeUrl]);
+
   const loadOtherUser = useCallback(async () => {
     if (!userId || !isAuthenticated) return;
 
@@ -196,11 +234,8 @@ export default function ConversationScreen() {
       const response = await messageService.getConversation(userId, pageNum, 50);
       
       if (response.success && response.data) {
-        // Ensure all messages have attachments array (even if empty)
-        const messagesWithAttachments = response.data.map((msg: Message) => ({
-          ...msg,
-          attachments: msg.attachments || [],
-        }));
+        // Normalize all messages using the helper function
+        const messagesWithAttachments = response.data.map((msg: Message) => normalizeMessageAttachments(msg));
         
         const messagesWithNonEmptyAttachments = messagesWithAttachments.filter(m => m.attachments && m.attachments.length > 0);
         if (append) {
@@ -263,6 +298,11 @@ export default function ConversationScreen() {
     const unsubNewMessage = chatWebSocketService.on('new_message', (message: any) => {
       // Only handle messages from the current conversation
       if (message.sender._id === userId || message.receiver._id === userId) {
+        // #region agent log
+        if (message.attachments && message.attachments.length > 0) {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:279',message:'new_message WebSocket - URLs BEFORE normalization',data:{messageId:message._id,attachments:message.attachments,attachmentUrls:message.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:message.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        }
+        // #endregion
         setMessages((prev) => {
           if (prev.some((m) => m._id === message._id)) return prev;
           // Normalize attachments URLs before adding to state
@@ -270,6 +310,11 @@ export default function ConversationScreen() {
             ...message,
             attachments: message.attachments || [],
           });
+          // #region agent log
+          if (normalizedMessage.attachments && normalizedMessage.attachments.length > 0) {
+            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:289',message:'new_message WebSocket - URLs AFTER normalization (setting in state)',data:{messageId:normalizedMessage._id,attachments:normalizedMessage.attachments,attachmentUrls:normalizedMessage.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:normalizedMessage.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          }
+          // #endregion
           return [...prev, normalizedMessage];
         });
 
@@ -647,15 +692,17 @@ export default function ConversationScreen() {
     try {
       const response = await messageService.reactToMessage(messageId, emoji);
       if (response.success && response.data) {
-        // Update only reactions to preserve sender/receiver data
+        // Update reactions and ensure attachments are normalized
         setMessages((prev) =>
           prev.map((msg) => {
             if (msg._id === messageId) {
-              return {
+              const updated = {
                 ...msg,
                 reactions: response.data!.reactions,
                 updatedAt: response.data!.updatedAt,
               };
+              // Normalize attachments and avatars
+              return normalizeMessageAttachments(updated);
             }
             return msg;
           })
@@ -676,32 +723,7 @@ export default function ConversationScreen() {
     const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: enUS });
     const showDate = false; // Could add date separators if needed
 
-    // Helper function to normalize URLs to absolute URLs
-    const normalizeUrl = (url: string | undefined | null): string | undefined => {
-      if (!url || typeof url !== 'string' || url.trim() === '') return undefined;
-      const trimmedUrl = url.trim();
-      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
-        return trimmedUrl;
-      }
-      const baseUrl = 'https://aurora-production.up.railway.app';
-      const relativeUrl = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
-      return `${baseUrl}${relativeUrl}`.replace(/([^:]\/)\/+/g, '$1');
-    };
-
-    // Helper function to normalize message attachments
-    const normalizeMessageAttachments = (message: any): any => {
-      if (!message) return message;
-      const normalized = { ...message };
-      if (message.attachments && Array.isArray(message.attachments)) {
-        normalized.attachments = message.attachments.map((attachment: any) => ({
-          ...attachment,
-          url: normalizeUrl(attachment.url) || attachment.url,
-        }));
-      }
-      return normalized;
-    };
-
-    // Alias for backward compatibility
+    // Alias for backward compatibility (use component-level normalizeUrl)
     const imageUrl = (url: string) => normalizeUrl(url) || url;
 
     const hasUserReacted = (reaction: { emoji: string; users: any[] }) => {
@@ -737,24 +759,32 @@ export default function ConversationScreen() {
           {/* Attachments */}
           {item.attachments && item.attachments.length > 0 && (
             <View style={styles.attachmentsContainer}>
-              {item.attachments.map((attachment, index) => (
-                <View key={index} style={styles.attachmentWrapper}>
-                  {attachment.type === 'image' && (
-                    <Image
-                      source={{ uri: imageUrl(attachment.url) }}
-                      style={styles.messageImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  {attachment.type === 'audio' && (
-                    <VoiceMessagePlayer
-                      uri={imageUrl(attachment.url)}
-                      duration={attachment.duration}
-                      isOwn={isOwn}
-                    />
-                  )}
-                </View>
-              ))}
+              {item.attachments.map((attachment, index) => {
+                const normalizedUrl = imageUrl(attachment.url);
+                // #region agent log
+                if (attachment.type === 'image' || attachment.type === 'audio') {
+                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:766',message:'renderMessage - Attachment URL',data:{messageId:item._id,attachmentType:attachment.type,originalUrl:attachment.url,normalizedUrl,isAbsolute:normalizedUrl?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                }
+                // #endregion
+                return (
+                  <View key={index} style={styles.attachmentWrapper}>
+                    {attachment.type === 'image' && (
+                      <Image
+                        source={{ uri: normalizedUrl }}
+                        style={styles.messageImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    {attachment.type === 'audio' && (
+                      <VoiceMessagePlayer
+                        uri={normalizedUrl}
+                        duration={attachment.duration}
+                        isOwn={isOwn}
+                      />
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
           
