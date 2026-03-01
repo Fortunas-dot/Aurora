@@ -536,7 +536,7 @@ export default function IdeasScreen() {
                 }
               />
             </ScrollView>
-          </GlassCard>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </LinearGradient>
