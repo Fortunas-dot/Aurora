@@ -59,15 +59,21 @@ connectDB().then(async () => {
   // present, and logs a warning instead of crashing the app.
   try {
     const collection = (Idea as any).collection;
-    if (collection?.indexExists) {
-      const hasBadIndex = await collection.indexExists('upvotes_1_downvotes_1').catch(() => false);
-      if (hasBadIndex) {
-        console.warn('[Idea] Dropping invalid compound index upvotes_1_downvotes_1 to fix "cannot index parallel arrays" error');
-        await collection.dropIndex('upvotes_1_downvotes_1');
+    if (collection?.indexes) {
+      const indexes = await collection.indexes();
+      for (const idx of indexes) {
+        const key = idx.key || {};
+        const fields = Object.keys(key);
+        if (fields.includes('upvotes') && fields.includes('downvotes')) {
+          console.warn(
+            `[Idea] Dropping invalid compound index "${idx.name}" on parallel arrays upvotes/downvotes to fix "cannot index parallel arrays" error`
+          );
+          await collection.dropIndex(idx.name);
+        }
       }
     }
   } catch (err) {
-    console.warn('[Idea] Failed to check/drop invalid upvotes/downvotes index:', err);
+    console.warn('[Idea] Failed to inspect/drop invalid upvotes/downvotes index:', err);
   }
 }).catch((err) => {
   console.error('Failed to connect to MongoDB:', err);
@@ -113,22 +119,61 @@ app.use('/api', apiLimiter);
 // Serve static files (uploads and public assets)
 import path from 'path';
 import fs from 'fs';
+import { getFile } from './services/mongoStorage';
 
-// Serve uploads with proper headers for video streaming
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res, filePath) => {
-    // Set CORS headers for static files
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    
-    // Set proper content type for video files
-    if (filePath.endsWith('.mp4') || filePath.endsWith('.mov') || filePath.endsWith('.m4v')) {
-      res.setHeader('Content-Type', 'video/mp4');
+// Serve uploads: first try MongoDB GridFS, then fall back to local filesystem
+app.use('/uploads', async (req, res, next) => {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+
+  // Extract filename from URL path (remove leading slash)
+  const filename = req.path.startsWith('/') ? req.path.slice(1) : req.path;
+  
+  if (!filename) {
+    return next();
+  }
+
+  try {
+    // Try to serve from MongoDB GridFS first (persistent storage)
+    const file = await getFile(filename);
+    if (file) {
+      res.setHeader('Content-Type', file.contentType);
+      res.setHeader('Content-Length', file.length.toString());
+      
       // Enable range requests for video streaming
+      if (file.contentType.startsWith('video/')) {
+        res.setHeader('Accept-Ranges', 'bytes');
+      }
+
+      // Cache for 1 year (files are immutable - filename includes timestamp)
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      
+      file.stream.pipe(res);
+      return;
+    }
+  } catch (err) {
+    // GridFS not available yet (e.g., during startup) - fall through to local
+    console.warn('GridFS lookup failed, falling back to local filesystem:', err);
+  }
+
+  // Fall back to local filesystem (for backward compatibility during transition)
+  const localPath = path.join(__dirname, '../uploads', filename);
+  if (fs.existsSync(localPath)) {
+    // Set content type for video files
+    if (localPath.endsWith('.mp4') || localPath.endsWith('.mov') || localPath.endsWith('.m4v')) {
+      res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
     }
-  },
-}));
+    return res.sendFile(localPath);
+  }
+
+  // File not found in either location
+  res.status(404).json({
+    success: false,
+    message: 'File not found',
+  });
+});
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check
