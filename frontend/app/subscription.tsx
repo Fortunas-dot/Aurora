@@ -451,7 +451,7 @@ export default function SubscriptionScreen() {
             {
               text: 'OK',
               onPress: () => {
-                router.back();
+                router.push('/health-info');
               },
             },
           ]

@@ -16,6 +16,7 @@ import {
   Easing,
   Keyboard,
   TouchableWithoutFeedback,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -167,6 +168,7 @@ export default function ConversationScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -235,21 +237,8 @@ export default function ConversationScreen() {
       const response = await messageService.getConversation(userId, pageNum, 50);
       
       if (response.success && response.data) {
-        // #region agent log
-        const sampleMessage = response.data.find((m: Message) => m.attachments && m.attachments.length > 0);
-        if (sampleMessage) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:237',message:'loadMessages - URLs from messageService BEFORE normalization',data:{messageId:sampleMessage._id,attachments:sampleMessage.attachments,attachmentUrls:sampleMessage.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:sampleMessage.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        }
-        // #endregion
         // Normalize all messages using the helper function
         const messagesWithAttachments = response.data.map((msg: Message) => normalizeMessageAttachments(msg));
-        
-        // #region agent log
-        const sampleNormalized = messagesWithAttachments.find((m: Message) => m.attachments && m.attachments.length > 0);
-        if (sampleNormalized) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:243',message:'loadMessages - URLs AFTER normalization (setting in state)',data:{messageId:sampleNormalized._id,attachments:sampleNormalized.attachments,attachmentUrls:sampleNormalized.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:sampleNormalized.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        }
-        // #endregion
         
         const messagesWithNonEmptyAttachments = messagesWithAttachments.filter(m => m.attachments && m.attachments.length > 0);
         if (append) {
@@ -312,11 +301,6 @@ export default function ConversationScreen() {
     const unsubNewMessage = chatWebSocketService.on('new_message', (message: any) => {
       // Only handle messages from the current conversation
       if (message.sender._id === userId || message.receiver._id === userId) {
-        // #region agent log
-        if (message.attachments && message.attachments.length > 0) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:279',message:'new_message WebSocket - URLs BEFORE normalization',data:{messageId:message._id,attachments:message.attachments,attachmentUrls:message.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:message.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        }
-        // #endregion
         setMessages((prev) => {
           if (prev.some((m) => m._id === message._id)) return prev;
           // Normalize attachments URLs before adding to state
@@ -324,11 +308,6 @@ export default function ConversationScreen() {
             ...message,
             attachments: message.attachments || [],
           });
-          // #region agent log
-          if (normalizedMessage.attachments && normalizedMessage.attachments.length > 0) {
-            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:289',message:'new_message WebSocket - URLs AFTER normalization (setting in state)',data:{messageId:normalizedMessage._id,attachments:normalizedMessage.attachments,attachmentUrls:normalizedMessage.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:normalizedMessage.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          }
-          // #endregion
           return [...prev, normalizedMessage];
         });
 
@@ -535,6 +514,22 @@ export default function ConversationScreen() {
             setMessages((prev) => [...prev, response.data!]);
           }
         }
+
+        // Optimistically update conversations list so Messages screen reflects this voice message
+        if (otherUser) {
+          const now = new Date().toISOString();
+          chatWebSocketService.emitLocalConversationUpdated({
+            user: otherUser,
+            lastMessage: {
+              _id: `temp-audio-${Date.now()}`,
+              content: '',
+              attachments,
+              createdAt: now,
+              isOwn: true,
+            },
+            unreadCount: 0,
+          });
+        }
       } else {
         console.error('Upload failed:', uploadResult.message);
         Alert.alert('Error', uploadResult.message || 'Could not upload audio');
@@ -609,6 +604,23 @@ export default function ConversationScreen() {
       try {
         // Send via WebSocket - will trigger onMessageSent callback when successful
         chatWebSocketService.sendMessage(userId, messageContent, attachments);
+
+        // Optimistically update the conversations list so Messages screen shows the new message immediately
+        if (otherUser) {
+          const now = new Date().toISOString();
+          chatWebSocketService.emitLocalConversationUpdated({
+            user: otherUser,
+            lastMessage: {
+              _id: `temp-${Date.now()}`,
+              content: messageContent,
+              attachments: attachments.length > 0 ? attachments : undefined,
+              createdAt: now,
+              isOwn: true,
+            },
+            unreadCount: 0,
+          });
+        }
+
         // Reset sending state immediately - WebSocket handles async delivery
         setIsSending(false);
         return; // Exit early if WebSocket send succeeds
@@ -662,6 +674,23 @@ export default function ConversationScreen() {
             return msg;
           })
         );
+
+        // Also update conversations list so Messages screen reflects this text / media message
+        if (otherUser) {
+          chatWebSocketService.emitLocalConversationUpdated({
+            user: otherUser,
+            lastMessage: {
+              _id: response.data._id,
+              content: messageContent,
+              attachments: (response.data.attachments && response.data.attachments.length > 0)
+                ? response.data.attachments
+                : tempMessage.attachments,
+              createdAt: response.data.createdAt,
+              isOwn: true,
+            },
+            unreadCount: 0,
+          });
+        }
       } else {
         // Remove temp message on error and show alert
         setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
@@ -735,6 +764,104 @@ export default function ConversationScreen() {
     setEmojiPickerVisible(true);
   };
 
+  const handleBlockUser = () => {
+    if (!otherUser) return;
+
+    Alert.alert(
+      'Block user',
+      `Are you sure you want to block ${otherUser.displayName || otherUser.username}? You will no longer receive messages from this user.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await userService.blockUser(otherUser._id);
+              if (!response.success) {
+                Alert.alert('Error', response.message || 'Could not block user');
+                return;
+              }
+              Alert.alert('', 'This user has been blocked.');
+              setIsMenuVisible(false);
+              router.back();
+            } catch (error) {
+              console.error('Error blocking user:', error);
+              Alert.alert('Error', 'Could not block user. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReportUser = () => {
+    if (!otherUser) return;
+
+    Alert.alert(
+      'Report user',
+      'Why are you reporting this user?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setIsMenuVisible(false),
+        },
+        {
+          text: 'Spam',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(otherUser._id, 'spam');
+              if (!response.success) {
+                Alert.alert('Error', response.message || 'Could not submit report');
+                return;
+              }
+              setIsMenuVisible(false);
+              Alert.alert('', 'Thank you. Your report has been submitted.');
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Could not submit report. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Inappropriate',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(otherUser._id, 'inappropriate');
+              if (!response.success) {
+                Alert.alert('Error', response.message || 'Could not submit report');
+                return;
+              }
+              setIsMenuVisible(false);
+              Alert.alert('', 'Thank you. Your report has been submitted.');
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Could not submit report. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Other',
+          onPress: async () => {
+            try {
+              const response = await userService.reportUser(otherUser._id, 'other');
+              if (!response.success) {
+                Alert.alert('Error', response.message || 'Could not submit report');
+                return;
+              }
+              setIsMenuVisible(false);
+              Alert.alert('', 'Thank you. Your report has been submitted.');
+            } catch (error) {
+              console.error('Error reporting user:', error);
+              Alert.alert('Error', 'Could not submit report. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.sender._id === currentUser?._id;
     const formattedTime = format(new Date(item.createdAt), 'HH:mm', { locale: enUS });
@@ -778,11 +905,6 @@ export default function ConversationScreen() {
             <View style={styles.attachmentsContainer}>
               {item.attachments.map((attachment, index) => {
                 const normalizedUrl = imageUrl(attachment.url);
-                // #region agent log
-                if (attachment.type === 'image' || attachment.type === 'audio') {
-                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'conversation/[userId].tsx:766',message:'renderMessage - Attachment URL',data:{messageId:item._id,attachmentType:attachment.type,originalUrl:attachment.url,normalizedUrl,isAbsolute:normalizedUrl?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                }
-                // #endregion
                 return (
                   <View key={index} style={styles.attachmentWrapper}>
                     {attachment.type === 'image' && (
@@ -917,7 +1039,14 @@ export default function ConversationScreen() {
               </View>
             </Pressable>
           )}
-          <View style={styles.headerSpacer} />
+          {otherUser && (
+            <Pressable
+              style={styles.moreButton}
+              onPress={() => setIsMenuVisible(true)}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={COLORS.text} />
+            </Pressable>
+          )}
         </View>
 
         {/* Messages */}
@@ -1109,6 +1238,52 @@ export default function ConversationScreen() {
           }}
         />
       </KeyboardAvoidingView>
+
+      {/* Report / Block menu */}
+      <Modal
+        visible={isMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.menuOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>Conversation options</Text>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={handleBlockUser}
+            >
+              <Ionicons name="ban" size={20} color={COLORS.error} />
+              <Text style={[styles.menuItemText, styles.menuItemTextDestructive]}>
+                Block user
+              </Text>
+            </Pressable>
+
+            <View style={styles.menuDivider} />
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={handleReportUser}
+            >
+              <Ionicons name="flag-outline" size={20} color={COLORS.error} />
+              <Text style={[styles.menuItemText, styles.menuItemTextDestructive]}>
+                Report user
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuCancelButton}
+              onPress={() => setIsMenuVisible(false)}
+            >
+              <Text style={styles.menuCancelText}>Close</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -1167,8 +1342,12 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontStyle: 'italic',
   },
-  headerSpacer: {
-    width: 40,
+  moreButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messagesContent: {
     padding: SPACING.md,
@@ -1465,6 +1644,54 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: COLORS.text,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  menuContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
+    borderTopWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  menuTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  menuItemText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+  },
+  menuItemTextDestructive: {
+    color: COLORS.error,
+    fontWeight: '500',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: COLORS.glass.border,
+    marginVertical: SPACING.md,
+  },
+  menuCancelButton: {
+    marginTop: SPACING.sm,
+    alignItems: 'center',
+  },
+  menuCancelText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textMuted,
   },
 });
 

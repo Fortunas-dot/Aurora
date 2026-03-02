@@ -168,7 +168,24 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     }
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
-    return `${baseUrl}${relativeUrl}`;
+    const normalized = `${baseUrl}${relativeUrl}`;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H1',
+        location: 'PostCard.tsx:videoUrl',
+        message: 'PostCard normalized video URL',
+        data: { originalVideo: post.video, normalized },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    return normalized;
   }, [post.video]);
 
   const normalizedImages = useMemo(
@@ -177,7 +194,24 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
           const baseUrl = 'https://aurora-production.up.railway.app';
           const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-          return `${baseUrl}${relativeUrl}`;
+          const normalized = `${baseUrl}${relativeUrl}`;
+
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              runId: 'initial',
+              hypothesisId: 'H2',
+              location: 'PostCard.tsx:normalizedImages',
+              message: 'PostCard normalized image URL',
+              data: { originalImage: imageUrl, normalized },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
+
+          return normalized;
         }
         return imageUrl;
       }) || [],
@@ -249,26 +283,26 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
         </>
       ) : (
         <>
-          <Pressable style={styles.titleContainer} onPress={onPress}>
-            <View style={styles.titleContentContainer}>
+            <Pressable style={styles.titleContainer} onPress={onPress}>
+              <View style={styles.titleContentContainer}>
               <Text style={styles.title}>
                 {post.title && post.title.trim().length > 0
                   ? post.title
                   : getFirstSentence(post.content)}
               </Text>
-              {post.content && (
-                <Text style={styles.contentPreview} numberOfLines={2}>
-                  {getFirstSentence(post.content)}
-                </Text>
-              )}
-            </View>
+                {post.content && (
+                  <Text style={styles.contentPreview} numberOfLines={2}>
+                    {getFirstSentence(post.content)}
+                  </Text>
+                )}
+              </View>
             <Ionicons
               name="chevron-forward"
               size={16}
               color={COLORS.textMuted}
               style={styles.titleArrow}
             />
-          </Pressable>
+            </Pressable>
         </>
       )}
 
@@ -566,11 +600,11 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
                         <VideoIndicator />
                       </Pressable>
                     ) : (
-                      <LazyImage
+            <LazyImage
                         uri={item.url}
                         style={styles.mediaImageGrid}
-                        resizeMode="cover"
-                      />
+              resizeMode="cover"
+            />
                     )}
                   </View>
                 ))}

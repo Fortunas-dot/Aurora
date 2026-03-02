@@ -116,21 +116,9 @@ class MessageService {
     const response = await apiService.get<Message[]>(
       `/messages/conversation/${userId}?page=${page}&limit=${limit}`
     );
-    // #region agent log
-    const sampleMessage = response.data?.find((m: Message) => m.attachments && m.attachments.length > 0);
-    if (sampleMessage) {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'message.service.ts:114',message:'getConversation - URLs from backend BEFORE normalization',data:{messageId:sampleMessage._id,attachments:sampleMessage.attachments,attachmentUrls:sampleMessage.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:sampleMessage.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    }
-    // #endregion
     // Normalize attachment URLs and user avatars
     if (response.success && response.data) {
       response.data = normalizeMessages(response.data);
-      // #region agent log
-      const normalizedSample = response.data.find((m: Message) => m.attachments && m.attachments.length > 0);
-      if (normalizedSample) {
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'message.service.ts:120',message:'getConversation - URLs AFTER normalization',data:{messageId:normalizedSample._id,attachments:normalizedSample.attachments,attachmentUrls:normalizedSample.attachments?.map((a:any)=>a.url),attachmentUrlsAreAbsolute:normalizedSample.attachments?.map((a:any)=>a.url?.startsWith('http'))},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
-      // #endregion
     }
     return response;
   }

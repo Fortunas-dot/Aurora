@@ -12,7 +12,7 @@ import { AuroraCore } from '../../src/components/voice/AuroraCore';
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const { login, authSubmitting, error, clearError, isAuthenticated, isLoading } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -127,7 +127,7 @@ export default function LoginScreen() {
               variant="primary"
               size="lg"
               fullWidth
-              loading={isLoading}
+              loading={authSubmitting}
               style={styles.loginButton}
             />
 
@@ -142,14 +142,14 @@ export default function LoginScreen() {
           {/* Register Link */}
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push('/(auth)/register')}>
+            <Pressable onPress={() => router.push({ pathname: '/(auth)/phone-verification', params: { from: 'pre-register' } })}>
               <Text style={styles.registerLink}>Register</Text>
             </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={isLoading} message="Logging in..." />
+      <LoadingOverlay visible={authSubmitting} message="Logging in..." />
     </LinearGradient>
   );
 }

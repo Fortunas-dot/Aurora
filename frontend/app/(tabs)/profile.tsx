@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -70,13 +70,7 @@ export default function ProfileScreen() {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  useEffect(() => {
-    if (isAuthenticated && user?._id) {
-      loadStats();
-    }
-  }, [isAuthenticated, user?._id]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!user?._id) return;
     
     setIsLoadingStats(true);
@@ -117,7 +111,22 @@ export default function ProfileScreen() {
     } finally {
       setIsLoadingStats(false);
     }
-  };
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?._id) {
+      loadStats();
+    }
+  }, [isAuthenticated, user?._id, loadStats]);
+
+  // Refresh stats whenever the profile screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && user?._id) {
+        loadStats();
+      }
+    }, [isAuthenticated, user?._id, loadStats])
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -372,7 +381,7 @@ export default function ProfileScreen() {
           <GlassCard padding={0}>
             <MenuItem
               icon="log-out-outline"
-              title="Uitloggen"
+              title="Log out"
               onPress={handleLogout}
               showArrow={false}
               danger

@@ -246,7 +246,13 @@ class ApiService {
         // Only log non-404, non-403, and non-401 errors to reduce noise
         // 403 errors are expected when users don't have permission
         // 401 errors are expected when tokens are invalid/expired
-        if (response.status !== 404 && response.status !== 403 && response.status !== 401) {
+        // Also avoid logging expected validation/availability errors for SMS verification endpoints,
+        // since these are shown to the user as normal form errors.
+        const isSmsVerificationEndpoint =
+          endpoint.includes('/auth/send-verification-code') ||
+          endpoint.includes('/auth/verify-phone');
+
+        if (!isSmsVerificationEndpoint && response.status !== 404 && response.status !== 403 && response.status !== 401) {
           console.error('API POST Error:', response.status, errorData);
         }
         

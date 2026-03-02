@@ -119,7 +119,7 @@ export default function TermsOfServiceScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>9. Contact Information</Text>
             <Text style={styles.sectionText}>
-              If you have any questions about these Terms of Service, please contact us at info@aurora.nl
+              If you have any questions about these Terms of Service, please contact us at info@aurora-commune.com
             </Text>
           </View>
         </GlassCard>

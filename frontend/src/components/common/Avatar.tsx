@@ -50,9 +50,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   // Normalize avatar URL to ensure it's always absolute
   // Keep local file URIs (file://) as-is for immediate preview
   const normalizedUri = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:51',message:'Avatar - Input URI',data:{uri,uriLength:uri?.length,isAbsolute:uri?.startsWith('http'),isFile:uri?.startsWith('file://')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     if (!uri) return null;
     // Keep local file URIs as-is (for image picker previews)
     if (uri.startsWith('file://')) {
@@ -60,18 +57,28 @@ export const Avatar: React.FC<AvatarProps> = ({
     }
     // Keep absolute HTTP/HTTPS URLs as-is
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:58',message:'Avatar - URI already absolute',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       return uri;
     }
     // If relative URL, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
+
     // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:65',message:'Avatar - Normalized relative URI',data:{originalUri:uri,normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H4',
+        location: 'Avatar.tsx:normalizedUri',
+        message: 'Avatar normalized URI',
+        data: { originalUri: uri, normalized },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
     // #endregion
+
     return normalized;
   }, [uri]);
 
@@ -131,18 +138,10 @@ export const Avatar: React.FC<AvatarProps> = ({
             },
           ]}
           onError={(e) => {
-            // #region agent log
-            const errMsg = e?.nativeEvent?.error || 'Unknown';
-            if (normalizedUri) {
-              fetch(normalizedUri, { method: 'HEAD' })
-                .then(resp => {
-                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:onError',message:'Avatar image FAILED - HTTP probe',data:{normalizedUri,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),errorMessage:errMsg},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-                })
-                .catch(fetchErr => {
-                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:onError',message:'Avatar image FAILED - HTTP probe ALSO failed',data:{normalizedUri,fetchError:String(fetchErr),errorMessage:errMsg},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-                });
+            if (__DEV__) {
+              const errMsg = e?.nativeEvent?.error || 'Unknown';
+              console.warn('Avatar: failed to load image', { uri: normalizedUri, error: errMsg });
             }
-            // #endregion
           }}
         />
       ) : (

@@ -23,11 +23,24 @@ import { useAuthStore } from '../../src/store/authStore';
 
 export default function PostDetailsScreen() {
   const router = useRouter();
-  const { id: rawId } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId, preview } = useLocalSearchParams<{ id: string; preview?: string }>();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
 
-  const [post, setPost] = useState<Post | null>(null);
+  const [post, setPost] = useState<Post | null>(() => {
+    // If a preview payload was passed from the feed, use it as an immediate,
+    // known-good source of truth for media so the details view matches the feed.
+    if (preview && typeof preview === 'string') {
+      try {
+        const parsed = JSON.parse(preview) as Post;
+        return normalizePost(parsed);
+      } catch {
+        // If parsing fails, fall back to loading from the API.
+        return null;
+      }
+    }
+    return null;
+  });
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -40,6 +53,17 @@ export default function PostDetailsScreen() {
   // Ensure API always gets a clean ObjectId (strip any preview suffix like '-v2', '-v3', etc.)
   const postId = typeof rawId === 'string' ? rawId.replace(/-v[0-9]+$/, '') : '';
 
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('PostDetailsScreen: post state updated', {
+        postId: post?._id,
+        hasPost: !!post,
+        images: post?.images,
+        video: post?.video,
+      });
+    }
+  }, [post]);
+
   const loadPost = useCallback(async () => {
     if (!postId) return;
 
@@ -47,7 +71,47 @@ export default function PostDetailsScreen() {
       const response = await postService.getPost(postId);
       if (response.success && response.data) {
         // Ensure post is normalized (getPost should already normalize, but double-check)
-        setPost(normalizePost(response.data));
+        let normalized = normalizePost(response.data);
+
+        // If we had a preview post with media and the freshly loaded post is missing
+        // media (e.g., due to an older backend response or stale data), preserve the
+        // existing images/video from state so the details view doesn't "lose" media
+        // that was visible in the feed.
+        if (post) {
+          const hasExistingImages = Array.isArray(post.images) && post.images.length > 0;
+          const hasExistingVideo = !!post.video;
+          const hasNewImages = Array.isArray(normalized.images) && normalized.images.length > 0;
+          const hasNewVideo = !!normalized.video;
+
+          normalized = {
+            ...normalized,
+            images: hasNewImages ? normalized.images : hasExistingImages ? post.images : normalized.images,
+            video: hasNewVideo ? normalized.video : hasExistingVideo ? post.video : normalized.video,
+          };
+        }
+
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            runId: 'initial',
+            hypothesisId: 'H1',
+            location: 'post/[id].tsx:loadPost',
+            message: 'Loaded post details',
+            data: {
+              postId: normalized._id,
+              createdAt: normalized.createdAt,
+              images: normalized.images,
+              video: normalized.video,
+              authorAvatar: normalized.author?.avatar,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        setPost(normalized);
       } else {
         console.error('Error loading post:', response.message);
       }
@@ -234,8 +298,8 @@ export default function PostDetailsScreen() {
           <GlassButton
             title="Back"
             onPress={() => router.back()}
-            variant="text"
-            size="small"
+            variant="ghost"
+            size="sm"
             style={styles.backButton}
           />
           <Text style={styles.headerTitle}>Post</Text>

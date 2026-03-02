@@ -72,38 +72,6 @@ const normalizePostData = (post: any): any => {
   return normalized;
 };
 
-// Debug logging - only in development
-const DEBUG_LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
-const logDebug = (data: any) => {
-  // Only log in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-  
-  try {
-    const logDir = path.dirname(DEBUG_LOG_PATH);
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    // Remove sensitive data from logs
-    const sanitizedData = { ...data };
-    if (sanitizedData.data) {
-      // Remove password fields
-      delete sanitizedData.data.password;
-      delete sanitizedData.data.passwordValue;
-      delete sanitizedData.data.hasPassword;
-    }
-    const logData = { ...sanitizedData, timestamp: Date.now() };
-    const logLine = JSON.stringify(logData) + '\n';
-    fs.appendFileSync(DEBUG_LOG_PATH, logLine, 'utf8');
-  } catch (e) {
-    // Silently fail in production
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Debug log error:', e);
-    }
-  }
-};
-
 // @desc    Get all posts (feed)
 // @route   GET /api/posts
 // @access  Public
@@ -415,38 +383,6 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
 
     // Normalize URLs before sending
     const normalizedPost = normalizePostData(postWithSavedStatus);
-
-    // #region agent log
-    try {
-      const logDir = path.dirname(DEBUG_LOG_PATH);
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-      const logPayload = {
-        id: `post_${post._id.toString()}`,
-        location: 'postController.ts:getPost',
-        message: 'getPost - normalizedPost media URLs',
-        data: {
-          postId: post._id.toString(),
-          images: normalizedPost.images,
-          video: normalizedPost.video,
-          imagesAreAbsolute: Array.isArray(normalizedPost.images)
-            ? normalizedPost.images.map((u: string) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
-            : undefined,
-          videoIsAbsolute:
-            typeof normalizedPost.video === 'string' &&
-            (normalizedPost.video.startsWith('http://') || normalizedPost.video.startsWith('https://')),
-        },
-        runId: 'run_images_1',
-        hypothesisId: 'IMG1',
-        timestamp: Date.now(),
-      };
-      const logLine = JSON.stringify(logPayload) + '\n';
-      fs.appendFileSync(DEBUG_LOG_PATH, logLine, 'utf8');
-    } catch {
-      // Ignore logging errors completely
-    }
-    // #endregion
 
     res.json({
       success: true,
@@ -1378,39 +1314,6 @@ export const testQuery = async (req: AuthRequest, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       message: error.message || 'Error testing query',
-    });
-  }
-};
-
-// @desc    Get debug logs
-// @route   GET /api/posts/debug/logs
-// @access  Public (for debugging)
-export const getDebugLogs = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (fs.existsSync(DEBUG_LOG_PATH)) {
-      const logs = fs.readFileSync(DEBUG_LOG_PATH, 'utf8');
-      const logLines = logs.trim().split('\n').filter(line => line.trim()).map(line => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
-      res.json({
-        success: true,
-        data: logLines,
-      });
-    } else {
-      res.json({
-        success: true,
-        data: [],
-        message: 'No logs found',
-      });
-    }
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error reading logs',
     });
   }
 };

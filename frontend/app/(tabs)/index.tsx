@@ -431,12 +431,6 @@ export default function FeedScreen() {
       
       
       if (response.success && response.data) {
-        // #region agent log
-        const samplePost = response.data.find((p: Post) => (p.images && p.images.length > 0) || p.video);
-        if (samplePost) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:433',message:'loadPosts - URLs from backend BEFORE normalization',data:{postId:samplePost._id,images:samplePost.images,video:samplePost.video,authorAvatar:samplePost.author?.avatar,imagesAreAbsolute:samplePost.images?.map((img:string)=>img?.startsWith('http')),videoIsAbsolute:samplePost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        }
-        // #endregion
         // Filter out posts with invalid IDs
         const validPosts = response.data.filter((post: Post) => {
           if (!post || !post._id) return false;
@@ -445,12 +439,7 @@ export default function FeedScreen() {
           return /^[0-9a-fA-F]{24}$/.test(postId);
         });
         
-        // #region agent log
-        const sampleValidPost = validPosts.find((p: Post) => (p.images && p.images.length > 0) || p.video);
-        if (sampleValidPost) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:441',message:'loadPosts - URLs AFTER normalization (from postService)',data:{postId:sampleValidPost._id,images:sampleValidPost.images,video:sampleValidPost.video,authorAvatar:sampleValidPost.author?.avatar,imagesAreAbsolute:sampleValidPost.images?.map((img:string)=>img?.startsWith('http')),videoIsAbsolute:sampleValidPost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        }
-        // #endregion
+
         
         // Update therapist count banner:
         // 1) Prefer explicit value from backend when available
@@ -469,12 +458,7 @@ export default function FeedScreen() {
           setTherapistCount(derivedCount);
         }
         
-        // #region agent log
-        if (validPosts.length > 0) {
-          const samplePost = validPosts[0];
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.tsx:459',message:'loadPosts - Setting posts in state',data:{postId:samplePost._id,images:samplePost.images,video:samplePost.video,imagesSample:samplePost.images?.[0],imagesAreAbsolute:samplePost.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:samplePost.video?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        }
-        // #endregion
+
         if (append) {
           setPosts((prev) => [...prev, ...validPosts]);
         } else {
@@ -737,21 +721,52 @@ export default function FeedScreen() {
     setPosts((prev) => prev.filter((p) => p._id !== postId));
   }, []);
 
-  const renderPost = useCallback(({ item }: { item: Post }) => (
-    <PostCard
-      post={item}
-      onPress={() => router.push(`/post/${item._id}`)}
-      onLike={() => handleLike(item._id)}
-      onComment={() => router.push(`/post/${item._id}`)}
-      onShare={() => handleShare(item)}
-      onSave={() => handleSavePost(item._id)}
-      onAuthorPress={() => router.push(`/user/${item.author._id}`)}
-      onGroupPress={() => item.groupId && router.push(`/group/${item.groupId}`)}
-      onDelete={() => handleDeletePost(item._id)}
-      currentUserId={user?._id}
-      isSaved={item.isSaved}
-    />
-  ), [user?._id, router, handleLike, handleShare, handleSavePost, handleDeletePost]);
+  const renderPost = useCallback(({ item }: { item: Post }) => {
+    // Pass a lightweight preview of the post to the details screen so it can
+    // show media immediately and fall back to the same data the feed used,
+    // even if the follow-up /posts/:id request returns stale or missing media.
+    const preview = JSON.stringify({
+      _id: item._id,
+      title: item.title,
+      content: item.content,
+      images: item.images,
+      video: item.video,
+      tags: item.tags,
+      likes: item.likes,
+      commentsCount: item.commentsCount,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      author: item.author,
+      group: item.group,
+      isSaved: item.isSaved,
+      postType: item.postType,
+    });
+
+    const goToPost = () =>
+      router.push({
+        pathname: '/post/[id]',
+        params: {
+          id: item._id,
+          preview,
+        },
+      });
+
+    return (
+      <PostCard
+        post={item}
+        onPress={goToPost}
+        onLike={() => handleLike(item._id)}
+        onComment={goToPost}
+        onShare={() => handleShare(item)}
+        onSave={() => handleSavePost(item._id)}
+        onAuthorPress={() => router.push(`/user/${item.author._id}`)}
+        onGroupPress={() => item.groupId && router.push(`/group/${item.groupId}`)}
+        onDelete={() => handleDeletePost(item._id)}
+        currentUserId={user?._id}
+        isSaved={item.isSaved}
+      />
+    );
+  }, [user?._id, router, handleLike, handleShare, handleSavePost, handleDeletePost]);
 
   const getEmptyStateText = () => {
     if (isSearching && searchQuery) {

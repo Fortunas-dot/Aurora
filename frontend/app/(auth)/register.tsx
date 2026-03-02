@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,13 +12,14 @@ import { apiService } from '../../src/services/api.service';
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { register, isLoading, error, clearError } = useAuthStore();
+  const { register, authSubmitting, registerError, clearError } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [usernameStatus, setUsernameStatus] = useState('');
@@ -83,13 +84,14 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     setValidationError('');
+    setEmailError('');
     setUsernameError('');
     setUsernameStatus('');
     clearError();
 
     // Validation
     if (!email.trim()) {
-      setValidationError('Email is required');
+      setEmailError('Email is required');
       return;
     }
     const usernameValidation = validateUsernameLocally(username);
@@ -129,15 +131,19 @@ export default function RegisterScreen() {
     );
     
     if (success) {
-      // After successful registration, go to phone verification flow
-      router.replace({
-        pathname: '/(auth)/phone-verification',
-        params: { from: 'register' },
-      });
+      // After successful registration, user can go straight into the app
+      router.replace('/(tabs)');
     }
   };
 
-  const displayError = validationError || error;
+  // Clear any leftover global auth errors when this screen mounts
+  useEffect(() => {
+    clearError();
+    setValidationError('');
+    setEmailError('');
+  }, [clearError]);
+
+  const displayError = validationError || registerError;
 
   return (
     <LinearGradient
@@ -183,7 +189,12 @@ export default function RegisterScreen() {
           <GlassCard style={styles.formCard} padding="lg" gradient>
             <GlassInput
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) {
+                  setEmailError('');
+                }
+              }}
               placeholder="Email"
               label="Email"
               keyboardType="email-address"
@@ -192,6 +203,7 @@ export default function RegisterScreen() {
               icon="mail-outline"
               textContentType="emailAddress"
               autoComplete="email"
+              error={emailError}
             />
 
             <GlassInput
@@ -264,7 +276,7 @@ export default function RegisterScreen() {
               onPress={() => setAcceptedTerms(!acceptedTerms)}
             >
               <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
-                {acceptedTerms && <Ionicons name="checkmark" size={16} color={COLORS.primary} />}
+                {acceptedTerms && <Ionicons name="checkmark" size={16} color={COLORS.text} />}
               </View>
               <View style={styles.termsTextContainer}>
                 <Text style={styles.termsText}>
@@ -297,7 +309,7 @@ export default function RegisterScreen() {
               variant="primary"
               size="lg"
               fullWidth
-              loading={isLoading}
+              loading={authSubmitting}
               style={styles.registerButton}
             />
           </GlassCard>
@@ -312,7 +324,7 @@ export default function RegisterScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={isLoading} message="Creating account..." />
+      <LoadingOverlay visible={authSubmitting} message="Creating account..." />
     </LinearGradient>
   );
 }

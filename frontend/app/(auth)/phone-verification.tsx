@@ -100,8 +100,17 @@ export default function PhoneVerificationScreen() {
       });
 
       if ((response as any).success) {
-        const goTo = params.from === 'register' ? '/(tabs)' : '/(tabs)/profile';
-        router.replace(goTo);
+        // Decide next screen based on where the user came from
+        if (params.from === 'pre-register') {
+          // New flow: SMS verification first, then account creation
+          router.replace('/(auth)/register');
+        } else if (params.from === 'register') {
+          // Legacy flow: came from register screen, go straight into the app
+          router.replace('/(tabs)');
+        } else {
+          // Default: came from profile / settings, go back to profile tab
+          router.replace('/(tabs)/profile');
+        }
       } else {
         setError((response as any).message || 'Verification failed');
       }

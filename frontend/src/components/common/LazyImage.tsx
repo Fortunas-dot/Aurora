@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../constants/theme';
 
@@ -20,6 +20,21 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
   const handleLoad = () => {
     setIsLoading(false);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H2',
+        location: 'LazyImage.tsx:handleLoad',
+        message: 'LazyImage loaded successfully',
+        data: { uri, imageUrl },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   };
 
   const handleError = (error: any) => {
@@ -28,26 +43,27 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     setHasError(true);
 
     // #region agent log
-    // CRITICAL: When image fails, do a HEAD request to see what HTTP status the URL returns
-    if (imageUrl) {
-      fetch(imageUrl, { method: 'HEAD' })
-        .then(resp => {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - HTTP probe result',data:{imageUrl,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),contentLength:resp.headers.get('content-length'),errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-        })
-        .catch(fetchErr => {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - HTTP probe ALSO failed',data:{imageUrl,fetchError:String(fetchErr),errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-        });
-    } else {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - no imageUrl',data:{uri,imageUrl,errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H3'})}).catch(()=>{});
-    }
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H3',
+        location: 'LazyImage.tsx:handleError',
+        message: 'LazyImage failed to load image',
+        data: { uri, imageUrl, errorMessage },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
     // #endregion
+
+    if (__DEV__) {
+      console.warn('LazyImage: failed to load image', { uri, imageUrl, errorMessage });
+    }
   };
 
   // Normalize URL to always be absolute
   const imageUrl = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:37',message:'LazyImage - Input URI',data:{uri,uriLength:uri?.length,isAbsolute:uri?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     if (!uri || uri.trim() === '') {
       if (__DEV__) {
         console.warn('LazyImage: Empty or invalid URI provided');
@@ -55,23 +71,49 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       return null;
     }
     if (uri.startsWith('http://') || uri.startsWith('https://')) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:45',message:'LazyImage - URI already absolute',data:{uri},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       return uri;
     }
     // If relative URL, make it absolute
     const baseUrl = 'https://aurora-production.up.railway.app';
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
+
     // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:52',message:'LazyImage - Normalized relative URI',data:{originalUri:uri,normalized},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H2',
+        location: 'LazyImage.tsx:imageUrl',
+        message: 'LazyImage normalized URL',
+        data: { originalUri: uri, normalized },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
     // #endregion
+
     if (__DEV__) {
       console.log('LazyImage: Normalized URL:', normalized);
     }
     return normalized;
   }, [uri]);
+
+  // When the image URL changes, start a new loading cycle.
+  useEffect(() => {
+    if (!imageUrl) return;
+    setIsLoading(true);
+    setHasError(false);
+    if (__DEV__) {
+      console.log('LazyImage: start loading for URL change', { uri, imageUrl });
+    }
+  }, [imageUrl, uri]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('LazyImage: render', { uri, imageUrl });
+    }
+  }, [uri, imageUrl]);
 
   // Don't render if no valid URL
   if (!imageUrl) {
@@ -96,11 +138,26 @@ export const LazyImage: React.FC<LazyImageProps> = ({
           source={{ uri: imageUrl }}
           style={[styles.image, style, isLoading && { opacity: 0 }]}
           resizeMode={resizeMode}
-          onLoad={handleLoad}
-          onError={handleError}
+          onLoad={() => {
+            if (__DEV__) {
+              console.log('LazyImage: onLoad', { uri, imageUrl });
+            }
+            handleLoad();
+          }}
+          onError={(error) => {
+            if (__DEV__) {
+              console.log('LazyImage: onError', {
+                uri,
+                imageUrl,
+                error: error?.nativeEvent?.error || error?.message || 'Unknown',
+              });
+            }
+            handleError(error);
+          }}
           onLoadStart={() => {
-            setIsLoading(true);
-            setHasError(false);
+            if (__DEV__) {
+              console.log('LazyImage: onLoadStart', { uri, imageUrl });
+            }
           }}
         />
       )}

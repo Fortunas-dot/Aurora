@@ -5,11 +5,65 @@ import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/
 import { facebookAnalytics } from '../services/facebookAnalytics.service';
 import { revenueCatService } from '../services/revenuecat.service';
 
+type AuthErrorContext = 'login' | 'register';
+
+const formatAuthError = (message: string | null | undefined, context: AuthErrorContext): string => {
+  if (!message || typeof message !== 'string') {
+    return context === 'register'
+      ? 'We could not create your account. Please check your details and try again.'
+      : 'We could not log you in. Please check your details and try again.';
+  }
+
+  const normalized = message.toLowerCase();
+
+  // Common validation errors coming from backend like:
+  // "User validation failed: email: Please enter a valid email."
+  if (normalized.includes('validation failed') && normalized.includes('email')) {
+    return 'Please enter a valid email address.';
+  }
+
+  // Duplicate email or username
+  if (normalized.includes('already exists') || normalized.includes('duplicate key')) {
+    if (normalized.includes('email')) {
+      return 'An account with this email already exists. Try logging in instead.';
+    }
+    if (normalized.includes('username')) {
+      return 'This username is already in use. Please choose another one.';
+    }
+    return 'An account with these details already exists.';
+  }
+
+  // Generic email format hints
+  if (normalized.includes('email') && (normalized.includes('invalid') || normalized.includes('not valid'))) {
+    return 'Please enter a valid email address.';
+  }
+
+  // Password specific messages
+  if (normalized.includes('password') && normalized.includes('too short')) {
+    return 'Your password is too short. Please choose a longer password.';
+  }
+
+  // Fallback to original message if it already looks user‑friendly
+  if (!normalized.includes('validation') && !normalized.includes('failed')) {
+    return message;
+  }
+
+  // Last fallback
+  return context === 'register'
+    ? 'We could not create your account. Please check your details and try again.'
+    : 'We could not log you in. Please check your details and try again.';
+};
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Loading state for explicit auth actions (login/register), separate from app bootstrap
+  authSubmitting: boolean;
+  // Global auth error (used primarily for login and generic auth flows)
   error: string | null;
+  // Error specific to registration so we don't leak signup errors to login UI
+  registerError: string | null;
   
   // Actions
   login: (email: string, password: string) => Promise<boolean>;
@@ -26,10 +80,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  authSubmitting: false,
   error: null,
+  registerError: null,
 
   login: async (email: string, password: string) => {
-    set({ isLoading: true, error: null });
+    set({ authSubmitting: true, error: null, registerError: null });
     
     try {
       const response = await authService.login(email, password);
@@ -62,8 +118,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           user: user,
           isAuthenticated: true,
-          isLoading: false,
+          authSubmitting: false,
           error: null,
+          registerError: null,
         });
         return true;
       } else {
@@ -75,8 +132,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         set({
-          isLoading: false,
-          error: response.message || 'Login failed',
+          authSubmitting: false,
+          error: formatAuthError(response.message || 'Login failed', 'login'),
+          registerError: null,
         });
         return false;
       }
@@ -90,15 +148,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       set({
-        isLoading: false,
-        error: error.message || 'Login failed',
+        authSubmitting: false,
+        error: formatAuthError(error.message || 'Login failed', 'login'),
+        registerError: null,
       });
       return false;
     }
   },
 
   register: async (email: string, password: string, username: string, displayName?: string) => {
-    set({ isLoading: true, error: null });
+    set({ authSubmitting: true, error: null, registerError: null });
     
     try {
       const response = await authService.register(email, password, username, displayName);
@@ -131,8 +190,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           user: user,
           isAuthenticated: true,
-          isLoading: false,
+          authSubmitting: false,
           error: null,
+          registerError: null,
         });
         return true;
       } else {
@@ -144,8 +204,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         set({
-          isLoading: false,
-          error: response.message || 'Registration failed',
+          authSubmitting: false,
+          // Keep generic error clear on failed signup, use registerError instead
+          error: null,
+          registerError: formatAuthError(response.message || 'Registration failed', 'register'),
         });
         return false;
       }
@@ -159,8 +221,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       set({
-        isLoading: false,
-        error: error.message || 'Registration failed',
+        authSubmitting: false,
+        error: null,
+        registerError: formatAuthError(error.message || 'Registration failed', 'register'),
       });
       return false;
     }
@@ -390,29 +453,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const cachedUser = JSON.parse(cachedUserJson);
           console.log('✅ Found cached user:', cachedUser.email || cachedUser.username);
           
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:390',message:'checkAuth - Avatar URL from cache BEFORE normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
-          
           // Normalize avatar URL if present
           if (cachedUser.avatar) {
             const { normalizeAvatarUrl } = get();
             cachedUser.avatar = normalizeAvatarUrl(cachedUser.avatar) || undefined;
           }
           
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:397',message:'checkAuth - Avatar URL from cache AFTER normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run2',hypothesisId:'H3'})}).catch(()=>{});
-          // Probe the avatar URL to see if the file exists on the server
-          if (cachedUser.avatar && cachedUser.avatar.startsWith('http')) {
-            fetch(cachedUser.avatar, { method: 'HEAD' })
-              .then(resp => {
-                fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:avatarProbe',message:'Avatar HTTP probe result',data:{avatarUrl:cachedUser.avatar,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type')},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-              })
-              .catch(err => {
-                fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:avatarProbe',message:'Avatar HTTP probe FAILED',data:{avatarUrl:cachedUser.avatar,error:String(err)},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-              });
-          }
-          // #endregion
           
           // Set cached user immediately for faster UI
           set({
@@ -455,12 +501,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let response;
       try {
         response = await Promise.race([authPromise, timeoutPromise]) as any;
-        
-        // #region agent log
-        if (response?.success && response?.data?.avatar) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:448',message:'checkAuth - Avatar URL from backend BEFORE normalization',data:{avatar:response.data.avatar,isAbsolute:response.data.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        }
-        // #endregion
       } catch (timeoutError) {
         // Network timeout or error - if we have cached user and token, assume still authenticated
         console.warn('Auth check timeout or network error, using cached user if available');
@@ -498,19 +538,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = response.data;
         console.log('✅ Auth verified successfully for user:', user.email || user.username);
         
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:476',message:'checkAuth - Avatar URL from backend BEFORE normalization',data:{avatar:user.avatar,isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
         // Normalize avatar URL if present BEFORE caching
         if (user.avatar) {
           const { normalizeAvatarUrl } = get();
           user.avatar = normalizeAvatarUrl(user.avatar) || undefined;
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:483',message:'checkAuth - Avatar URL from backend AFTER normalization (before caching)',data:{avatar:user.avatar,isAbsolute:user.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         
         // Cache user data for faster next startup (with normalized avatar URL)
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
@@ -591,14 +623,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  clearError: () => set({ error: null }),
+  clearError: () => set({ error: null, registerError: null }),
 
   updateUser: async (userData: Partial<User>) => {
     const currentUser = get().user;
     if (currentUser) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:583',message:'updateUser - Avatar URL input',data:{avatar:userData.avatar,isAbsolute:userData.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       // Normalize avatar URL before updating
       const normalizedUserData = { ...userData };
       if (userData.avatar !== undefined) {
@@ -606,19 +635,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         normalizedUserData.avatar = normalizeAvatarUrl(userData.avatar) || undefined;
       }
       
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:591',message:'updateUser - Avatar URL after normalization (before caching)',data:{avatar:normalizedUserData.avatar,isAbsolute:normalizedUserData.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       const updatedUser = { ...currentUser, ...normalizedUserData };
       set({ user: updatedUser });
       
       // Update cached user data
       try {
         await secureStorage.setItemAsync('cached_user', JSON.stringify(updatedUser));
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:599',message:'updateUser - Avatar URL cached',data:{avatar:updatedUser.avatar,isAbsolute:updatedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
       } catch (error) {
         console.error('Error caching user data:', error);
       }

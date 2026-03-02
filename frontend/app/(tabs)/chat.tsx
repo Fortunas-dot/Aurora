@@ -8,13 +8,14 @@ import {
   RefreshControl,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { GlassCard, Avatar, GlassInput, LoadingSpinner } from '../../src/components/common';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -237,41 +238,37 @@ export default function ChatScreen() {
 
   const handleDeleteConversation = useCallback((userId: string, displayName?: string) => {
     const name = displayName || 'this conversation';
-    // Confirm with the user before deleting
-    // Use native alert instead of custom modal to keep UX simple
-    // eslint-disable-next-line no-alert
-    import('react-native').then(({ Alert }) => {
-      Alert.alert(
-        'Delete conversation',
-        `Are you sure you want to delete your conversation with ${name}? This will remove all messages for you.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const response = await messageService.deleteConversation(userId);
-                if (!response.success) {
-                  console.error('Error deleting conversation:', response.message);
-                  return;
-                }
-                // Optimistically remove from local state
-                setConversations(prev => prev.filter(c => c.user._id !== userId));
-              } catch (error) {
-                console.error('Error deleting conversation:', error);
+    // Confirm with the user before deleting using native alert
+    Alert.alert(
+      'Delete conversation',
+      `Are you sure you want to delete your conversation with ${name}? This will remove all messages for you.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await messageService.deleteConversation(userId);
+              if (!response.success) {
+                console.error('Error deleting conversation:', response.message);
+                return;
               }
-            },
+              // Optimistically remove from local state
+              setConversations(prev => prev.filter(c => c.user._id !== userId));
+            } catch (error) {
+              console.error('Error deleting conversation:', error);
+            }
           },
-        ]
-      );
-    });
+        },
+      ]
+    );
   }, []);
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const formattedDate = formatDistanceToNow(new Date(item.lastMessage.createdAt), {
       addSuffix: false,
-      locale: nl,
+      locale: enUS,
     });
 
     return (

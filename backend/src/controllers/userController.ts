@@ -537,15 +537,28 @@ export const getFollowers = async (req: AuthRequest, res: Response): Promise<voi
     const skip = (page - 1) * limit;
 
     const followers = await User.find({ following: req.params.id })
-      .select('username displayName avatar bio')
+      .select('username displayName avatar bio avatarCharacter avatarBackgroundColor nameColor createdAt')
       .skip(skip)
       .limit(limit);
 
     const total = await User.countDocuments({ following: req.params.id });
 
+    // Normalize avatar URLs and ensure a consistent public profile shape
+    const normalizedFollowers = followers.map((user: any) => ({
+      _id: user._id,
+      username: user.username,
+      displayName: user.displayName,
+      avatar: normalizeUrl(user.avatar),
+      avatarCharacter: user.avatarCharacter,
+      avatarBackgroundColor: user.avatarBackgroundColor,
+      bio: user.bio,
+      createdAt: user.createdAt || new Date(),
+      // These list endpoints don't currently include counts / stats for performance reasons
+    }));
+
     res.json({
       success: true,
-      data: followers,
+      data: normalizedFollowers,
       pagination: {
         page,
         limit,
@@ -566,7 +579,10 @@ export const getFollowers = async (req: AuthRequest, res: Response): Promise<voi
 // @access  Public
 export const getFollowing = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.params.id).populate('following', 'username displayName avatar bio');
+    const user = await User.findById(req.params.id).populate(
+      'following',
+      'username displayName avatar bio avatarCharacter avatarBackgroundColor nameColor createdAt'
+    );
 
     if (!user) {
       res.status(404).json({
@@ -582,9 +598,21 @@ export const getFollowing = async (req: AuthRequest, res: Response): Promise<voi
 
     const following = user.following.slice(skip, skip + limit) as any[];
 
+    // Normalize avatar URLs and ensure consistent public profile shape
+    const normalizedFollowing = following.map((f: any) => ({
+      _id: f._id,
+      username: f.username,
+      displayName: f.displayName,
+      avatar: normalizeUrl(f.avatar),
+      avatarCharacter: f.avatarCharacter,
+      avatarBackgroundColor: f.avatarBackgroundColor,
+      bio: f.bio,
+      createdAt: f.createdAt || new Date(),
+    }));
+
     res.json({
       success: true,
-      data: following,
+      data: normalizedFollowing,
       pagination: {
         page,
         limit,

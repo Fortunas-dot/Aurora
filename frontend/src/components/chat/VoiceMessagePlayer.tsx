@@ -186,18 +186,13 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({
       setPosition(0);
       setSound(null);
       
-      // #region agent log
-      // Probe the audio URL to see what HTTP status we get
-      if (normalizedUri) {
-        fetch(normalizedUri, { method: 'HEAD' })
-          .then(resp => {
-            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:catch',message:'Audio FAILED - HTTP probe result',data:{normalizedUri,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),errorCode,errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-          })
-          .catch(fetchErr => {
-            fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceMessagePlayer.tsx:catch',message:'Audio FAILED - HTTP probe ALSO failed',data:{normalizedUri,fetchError:String(fetchErr),errorCode,errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
-          });
+      if (__DEV__) {
+        console.warn('VoiceMessagePlayer: playback error', {
+          uri: normalizedUri,
+          errorCode,
+          errorMessage,
+        });
       }
-      // #endregion
     }
   };
 

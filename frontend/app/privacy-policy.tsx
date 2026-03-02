@@ -136,7 +136,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>8. Contact Us</Text>
             <Text style={styles.sectionText}>
-              If you have any questions about this Privacy Policy, please contact us at info@aurora.nl
+              If you have any questions about this Privacy Policy, please contact us at info@aurora-commune.com
             </Text>
           </View>
         </GlassCard>

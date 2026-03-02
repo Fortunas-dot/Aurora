@@ -57,6 +57,15 @@ class ChatWebSocketService {
   }
 
   /**
+   * Manually emit a local conversation update event.
+   * This is useful when we know a conversation changed (e.g. after sending a message)
+   * but the backend hasn't pushed a WebSocket event yet.
+   */
+  emitLocalConversationUpdated(conversation: any): void {
+    this.emit('conversation_updated', conversation);
+  }
+
+  /**
    * Remove a specific event listener
    */
   off(event: ChatWebSocketEventType, handler: EventHandler): void {

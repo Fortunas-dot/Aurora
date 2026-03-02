@@ -29,7 +29,7 @@ export default function HelpSupportScreen() {
       return;
     }
 
-    const email = 'info@aurora.nl';
+    const email = 'info@aurora-commune.com';
     const subjectEncoded = encodeURIComponent(subject);
     const bodyEncoded = encodeURIComponent(message);
     const mailtoUrl = `mailto:${email}?subject=${subjectEncoded}&body=${bodyEncoded}`;
@@ -41,20 +41,20 @@ export default function HelpSupportScreen() {
       } else {
         Alert.alert(
           'Email not available',
-          'No email app is installed. You can reach us at: info@aurora.nl'
+          'No email app is installed. You can reach us at: info@aurora-commune.com'
         );
       }
     } catch (error) {
       console.error('Error opening email:', error);
       Alert.alert(
         'Error',
-        'Could not open email app. You can reach us at: info@aurora.nl'
+        'Could not open email app. You can reach us at: info@aurora-commune.com'
       );
     }
   };
 
   const handleCopyEmail = async () => {
-    await Clipboard.setStringAsync('info@aurora.nl');
+    await Clipboard.setStringAsync('info@aurora-commune.com');
     Alert.alert('Copied', 'Email address copied to clipboard');
   };
 
@@ -109,7 +109,7 @@ export default function HelpSupportScreen() {
             <View style={styles.emailContainer}>
               <View style={styles.emailRow}>
                 <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.emailText}>info@aurora.nl</Text>
+                <Text style={styles.emailText}>info@aurora-commune.com</Text>
               </View>
               <Pressable
                 style={styles.copyButton}
@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
   emailText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text,
+    fontSize: 14,
   },
   copyButton: {
     flexDirection: 'row',

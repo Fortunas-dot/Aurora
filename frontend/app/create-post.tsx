@@ -125,9 +125,6 @@ export default function CreatePostScreen() {
     if (!hasPermission) return;
 
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create-post.tsx:handlePickImage',message:'Opening image picker',data:{},timestamp:Date.now(),runId:'run_media_1',hypothesisId:'IMG_PICK'},)}).catch(()=>{});
-      // #endregion
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,

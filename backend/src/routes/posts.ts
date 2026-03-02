@@ -14,7 +14,6 @@ import {
   getSavedPosts,
   savePost,
   searchPosts,
-  getDebugLogs,
   testQuery,
 } from '../controllers/postController';
 import { protect, optionalAuth } from '../middleware/auth';
@@ -45,7 +44,6 @@ router.get('/saved', protect, getSavedPosts);
 router.get('/search', optionalAuth, searchPosts);
 // Debug endpoints - only available in development
 if (process.env.NODE_ENV === 'development') {
-  router.get('/debug/logs', getDebugLogs);
   router.get('/debug/test-query', testQuery);
 }
 
