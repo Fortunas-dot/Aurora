@@ -65,6 +65,9 @@ export const useStreamingResponse = () => {
       setStreaming(true);
       setIsLoading(true);
       setError(null);
+      
+      // Store user message ID for potential crisis resources
+      const currentUserMessageId = userMsg.id;
 
       // Format complete context (health info + journal entries + chat context) for AI
       const completeContext = formatCompleteContextForAI(user, journalContext, chatContext);
@@ -257,8 +260,9 @@ export const useStreamingResponse = () => {
           // Options with crisis resources callback
           {
             onCrisisResources: (resources) => {
-              console.log('🚨 Setting crisis resources in store:', resources);
-              setCrisisResources(resources);
+              console.log('🚨 Setting crisis resources in store:', resources, 'for message:', currentUserMessageId);
+              // Link crisis resources to the specific user message that triggered them
+              setCrisisResources(resources, currentUserMessageId);
             },
           }
         );

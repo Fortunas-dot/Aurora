@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useEffect } from 'react';
+import React, { useState, useCallback, memo, useEffect, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,15 +15,22 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/them
 
 interface ChatInputProps {
   onSend: (message: string) => void;
-  isDisabled?: boolean;
+  isDisabled?: boolean; // Only disables the send button, not the input field
+  allowTypingWhileDisabled?: boolean; // Allow typing even when disabled
+  isStreaming?: boolean; // Whether AI is currently streaming
+  onStop?: () => void; // Callback to stop streaming
 }
 
 const ChatInputComponent: React.FC<ChatInputProps> = ({
   onSend,
-  isDisabled = false
+  isDisabled = false,
+  allowTypingWhileDisabled = true,
+  isStreaming = false,
+  onStop
 }) => {
   const [text, setText] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -45,8 +53,26 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     if (text.trim() && !isDisabled) {
       onSend(text.trim());
       setText('');
+      // Dismiss keyboard after sending
+      Keyboard.dismiss();
     }
   }, [text, isDisabled, onSend]);
+
+  const handleStop = useCallback(() => {
+    if (onStop && isStreaming) {
+      onStop();
+      // Dismiss keyboard when stopping
+      Keyboard.dismiss();
+    }
+  }, [onStop, isStreaming]);
+
+  const handleContainerPress = useCallback(() => {
+    // Allow dismissing keyboard by tapping outside input
+    if (isKeyboardVisible) {
+      Keyboard.dismiss();
+      inputRef.current?.blur();
+    }
+  }, [isKeyboardVisible]);
 
   // When keyboard is visible, use minimal padding (KeyboardAvoidingView handles spacing).
   // When hidden, use safe area bottom for devices with home indicator.
@@ -55,42 +81,59 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     : (Platform.OS === 'ios' ? Math.max(insets.bottom, SPACING.sm) : SPACING.md);
 
   return (
-    <View style={[styles.container, { paddingBottom }]}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder="Type your message..."
-          placeholderTextColor={COLORS.textMuted}
-          multiline
-          maxLength={2000}
-          editable={!isDisabled}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={handleSend}
-        />
+    <TouchableWithoutFeedback onPress={handleContainerPress}>
+      <View style={[styles.container, { paddingBottom }]}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            value={text}
+            onChangeText={setText}
+            placeholder="Type your message..."
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            maxLength={2000}
+            editable={allowTypingWhileDisabled || !isDisabled}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={handleSend}
+            onBlur={() => {
+              // Allow keyboard to dismiss on blur
+              setIsKeyboardVisible(false);
+            }}
+            onFocus={() => {
+              // Update keyboard state when focused
+              setIsKeyboardVisible(true);
+            }}
+          />
 
-        <Pressable
-          style={[
-            styles.sendButton,
-            (!text.trim() || isDisabled) && styles.sendButtonDisabled
-          ]}
-          onPress={handleSend}
-          disabled={!text.trim() || isDisabled}
-        >
-          {isDisabled ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
-          ) : (
-            <Ionicons
-              name="send"
-              size={20}
-              color={COLORS.white}
-            />
-          )}
-        </Pressable>
+          <Pressable
+            style={[
+              styles.sendButton,
+              (!isStreaming && (!text.trim() || isDisabled)) && styles.sendButtonDisabled
+            ]}
+            onPress={isStreaming ? handleStop : handleSend}
+            disabled={!isStreaming && (!text.trim() || isDisabled)}
+          >
+            {isStreaming ? (
+              <Ionicons
+                name="stop-circle"
+                size={20}
+                color={COLORS.white}
+              />
+            ) : isDisabled ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Ionicons
+                name="send"
+                size={20}
+                color={COLORS.white}
+              />
+            )}
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 };
 

@@ -14,7 +14,7 @@ import { useChatStore } from '../../store/chatStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants/theme';
 
 export const MessageList: React.FC = () => {
-  const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext, crisisResources } = useChatStore();
+  const { messages, isStreaming, currentStreamingMessage, setStreaming, availableContext, crisisResources, crisisResourcesMessageId } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
   const streamingStartTime = useRef<number | null>(null);
   const isUserScrolling = useRef(false);
@@ -70,20 +70,14 @@ export const MessageList: React.FC = () => {
     }
   }, [messages.length, currentStreamingMessage]);
 
-  // Memoize index van laatste user-bericht (voor crisiskaart)
-  const lastUserIndex = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') {
-        return i;
-      }
-    }
-    return -1;
-  }, [messages]);
-
   const renderMessage = useCallback(
-    ({ item, index }: { item: typeof messages[0]; index: number }) => {
+    ({ item }: { item: typeof messages[0] }) => {
+      // Show crisis resources only for the specific message that triggered them
       const showCrisisBelow =
-        !!crisisResources && index === lastUserIndex;
+        !!crisisResources && 
+        !!crisisResourcesMessageId && 
+        item.id === crisisResourcesMessageId &&
+        item.role === 'user';
 
       return (
         <View>
@@ -92,7 +86,7 @@ export const MessageList: React.FC = () => {
         </View>
       );
     },
-    [crisisResources, lastUserIndex]
+    [crisisResources, crisisResourcesMessageId]
   );
 
   const renderEmptyState = useCallback(() => {

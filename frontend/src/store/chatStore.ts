@@ -25,7 +25,8 @@ interface ChatState {
   currentStreamingMessage: string;
   error: string | null;
   availableContext: ContextInfo | null;
-  crisisResources: CrisisResources | null; // Crisis resources for the last message
+  crisisResources: CrisisResources | null; // Crisis resources for a specific message
+  crisisResourcesMessageId: string | null; // ID of the user message that triggered crisis resources
 
   // Actions
   addMessage: (message: Message) => void;
@@ -33,7 +34,7 @@ interface ChatState {
   setStreaming: (isStreaming: boolean) => void;
   setError: (error: string | null) => void;
   setAvailableContext: (context: ContextInfo | null) => void;
-  setCrisisResources: (resources: CrisisResources | null) => void;
+  setCrisisResources: (resources: CrisisResources | null, messageId?: string | null) => void;
   clearMessages: () => void;
   loadMessages: (messages: Message[]) => void;
 }
@@ -45,6 +46,7 @@ export const useChatStore = create<ChatState>((set) => ({
   error: null,
   availableContext: null,
   crisisResources: null,
+  crisisResourcesMessageId: null,
 
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -61,11 +63,14 @@ export const useChatStore = create<ChatState>((set) => ({
   setAvailableContext: (context) =>
     set({ availableContext: context }),
 
-  setCrisisResources: (resources) =>
-    set({ crisisResources: resources }),
+  setCrisisResources: (resources, messageId) =>
+    set({ 
+      crisisResources: resources,
+      crisisResourcesMessageId: messageId || null
+    }),
 
   clearMessages: () =>
-    set({ messages: [], currentStreamingMessage: '', error: null, availableContext: null, crisisResources: null }),
+    set({ messages: [], currentStreamingMessage: '', error: null, availableContext: null, crisisResources: null, crisisResourcesMessageId: null }),
 
   loadMessages: (messages) =>
     set({ messages }),

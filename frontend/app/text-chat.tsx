@@ -370,7 +370,7 @@ export default function TextChatScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const { sendMessage, isLoading } = useStreamingResponse();
+  const { sendMessage, isLoading, cancelStreaming } = useStreamingResponse();
   const { clearHistory, isLoading: isLoadingHistory } = useChatHistory();
   const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
   const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
@@ -1090,7 +1090,12 @@ export default function TextChatScreen() {
             </Pressable>
           </View>
         )}
-        <ChatInput onSend={handleSend} isDisabled={isStreaming || isLoading} />
+        <ChatInput 
+          onSend={handleSend} 
+          isDisabled={isStreaming || isLoading}
+          isStreaming={isStreaming}
+          onStop={cancelStreaming}
+        />
       </KeyboardAvoidingView>
 
       {/* Menu Modal */}
