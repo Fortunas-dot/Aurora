@@ -119,7 +119,7 @@ app.use('/api', apiLimiter);
 // Serve static files (uploads and public assets)
 import path from 'path';
 import fs from 'fs';
-import { getFile } from './services/mongoStorage';
+import { getFile, getFileInfo } from './services/mongoStorage';
 
 // Serve uploads: first try MongoDB GridFS, then fall back to local filesystem
 app.use('/uploads', async (req, res, next) => {
@@ -136,19 +136,47 @@ app.use('/uploads', async (req, res, next) => {
 
   try {
     // Try to serve from MongoDB GridFS first (persistent storage)
-    const file = await getFile(filename);
-    if (file) {
-      res.setHeader('Content-Type', file.contentType);
-      res.setHeader('Content-Length', file.length.toString());
+    const fileInfo = await getFileInfo(filename);
+    if (fileInfo) {
+      const totalLength = fileInfo.length;
       
-      // Enable range requests for video streaming
-      if (file.contentType.startsWith('video/')) {
-        res.setHeader('Accept-Ranges', 'bytes');
-      }
-
+      // Always advertise Range request support
+      res.setHeader('Accept-Ranges', 'bytes');
       // Cache for 1 year (files are immutable - filename includes timestamp)
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      
+
+      // Handle Range requests (required for video/audio streaming on iOS/Android)
+      const rangeHeader = req.headers.range;
+      if (rangeHeader) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : totalLength - 1;
+        const chunkSize = end - start + 1;
+
+        const file = await getFile(filename, start, end);
+        if (!file) {
+          res.status(404).json({ success: false, message: 'File not found' });
+          return;
+        }
+
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${totalLength}`,
+          'Content-Length': chunkSize,
+          'Content-Type': fileInfo.contentType,
+        });
+        file.stream.pipe(res);
+        return;
+      }
+
+      // No Range header - serve the full file
+      const file = await getFile(filename);
+      if (!file) {
+        res.status(404).json({ success: false, message: 'File not found' });
+        return;
+      }
+
+      res.setHeader('Content-Type', fileInfo.contentType);
+      res.setHeader('Content-Length', totalLength.toString());
       file.stream.pipe(res);
       return;
     }
@@ -160,11 +188,6 @@ app.use('/uploads', async (req, res, next) => {
   // Fall back to local filesystem (for backward compatibility during transition)
   const localPath = path.join(__dirname, '../uploads', filename);
   if (fs.existsSync(localPath)) {
-    // Set content type for video files
-    if (localPath.endsWith('.mp4') || localPath.endsWith('.mov') || localPath.endsWith('.m4v')) {
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Accept-Ranges', 'bytes');
-    }
     return res.sendFile(localPath);
   }
 

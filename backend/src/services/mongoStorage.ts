@@ -88,11 +88,32 @@ export async function storeBuffer(buffer: Buffer, filename: string, contentType:
 }
 
 /**
+ * Get file metadata from MongoDB GridFS (without opening a stream)
+ * @param filename The filename to look up
+ * @returns File info or null if not found
+ */
+export async function getFileInfo(filename: string): Promise<{
+  contentType: string;
+  length: number;
+} | null> {
+  const gridBucket = getBucket();
+  const files = await gridBucket.find({ filename }).toArray();
+  if (files.length === 0) return null;
+  const file = files[files.length - 1];
+  return {
+    contentType: file.contentType || 'application/octet-stream',
+    length: file.length,
+  };
+}
+
+/**
  * Get a file from MongoDB GridFS
  * @param filename The filename to retrieve
+ * @param start Optional byte offset to start reading from (for Range requests)
+ * @param end Optional byte offset to stop reading at (for Range requests)
  * @returns Object with download stream and file info, or null if not found
  */
-export async function getFile(filename: string): Promise<{
+export async function getFile(filename: string, start?: number, end?: number): Promise<{
   stream: mongoose.mongo.GridFSBucketReadStream;
   contentType: string;
   length: number;
@@ -106,7 +127,17 @@ export async function getFile(filename: string): Promise<{
   }
   
   const file = files[files.length - 1]; // Get the latest version
-  const stream = gridBucket.openDownloadStreamByName(filename);
+  
+  // Support byte-range streaming (required for video playback on iOS/Android)
+  const streamOptions: any = {};
+  if (start !== undefined) {
+    streamOptions.start = start;
+  }
+  if (end !== undefined) {
+    streamOptions.end = end + 1; // GridFS end is exclusive
+  }
+  
+  const stream = gridBucket.openDownloadStreamByName(filename, streamOptions);
   
   return {
     stream,
