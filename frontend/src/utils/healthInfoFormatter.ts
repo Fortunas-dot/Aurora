@@ -17,7 +17,10 @@ export const formatHealthInfoForAI = (user: User | null): string => {
     return '';
   }
 
-  const { mentalHealth, physicalHealth, medications, therapies } = user.healthInfo;
+  const { mentalHealth, physicalHealth, medications, therapies, lifeContext } = user.healthInfo as any;
+  const dateOfBirth = (user.healthInfo as any).dateOfBirth;
+  const gender = (user.healthInfo as any).gender;
+  const lifestyle = (user.healthInfo as any).lifestyle;
   const parts: string[] = [];
 
   // Mental health conditions
@@ -54,11 +57,54 @@ export const formatHealthInfoForAI = (user: User | null): string => {
     parts.push(`Therapies: ${therapies.join(', ')}`);
   }
 
+  // Basic demographic info
+  if (dateOfBirth || gender) {
+    const demoParts: string[] = [];
+    if (dateOfBirth) {
+      demoParts.push(`Date of birth: ${dateOfBirth} (format DD-MM-YYYY)`);
+    }
+    if (gender) {
+      demoParts.push(`Gender: ${gender}`);
+    }
+    parts.push(`Basic Health Profile:\n- ${demoParts.join('\n- ')}`);
+  }
+
+  // Lifestyle information
+  if (lifestyle) {
+    const lifestyleLines: string[] = [];
+    if (lifestyle.smoking) {
+      lifestyleLines.push(`- Smoking: ${lifestyle.smoking}`);
+    }
+    if (lifestyle.alcohol) {
+      lifestyleLines.push(`- Alcohol: ${lifestyle.alcohol}`);
+    }
+    if (lifestyle.drugs) {
+      lifestyleLines.push(`- Drugs: ${lifestyle.drugs}`);
+    }
+    if (lifestyle.physicalActivity) {
+      lifestyleLines.push(`- Physical activity: ${lifestyle.physicalActivity}`);
+    }
+    if (lifestyle.diet) {
+      lifestyleLines.push(`- Diet: ${lifestyle.diet}`);
+    }
+    if (lifestyle.sleep) {
+      lifestyleLines.push(`- Sleep: ${lifestyle.sleep}`);
+    }
+    if (lifestyleLines.length > 0) {
+      parts.push(`Lifestyle Information:\n${lifestyleLines.join('\n')}`);
+    }
+  }
+
+  // Life context (long free-text field)
+  if (lifeContext) {
+    parts.push(`Life Context (user's own description of their current life situation, stressors, and important background):\n"${lifeContext}"`);
+  }
+
   if (parts.length === 0) {
     return '';
   }
 
-  return `\n\nUser Health Information:\n${parts.join('\n\n')}\n\nUse this information to provide context to your conversations. Be empathetic and understanding about these conditions. Only refer to them if relevant to the conversation.`;
+  return `\n\nUser Health Information (always up-to-date from their profile):\n${parts.join('\n\n')}\n\nUse this information to provide context to your conversations. Be empathetic and understanding about these conditions and life circumstances. Only refer to them when it is genuinely helpful and relevant to the conversation. Do not give medical advice or medication instructions.`;
 };
 
 /**

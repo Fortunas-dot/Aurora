@@ -96,8 +96,22 @@ export const apiLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === '/health';
+    // Disable rate limiting in non-production to avoid issues during local development
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
+    }
+
+    // In production, skip rate limiting for health checks
+    if (req.path === '/health') {
+      return true;
+    }
+
+    // In production, do NOT rate limit profile updates so users can always save their info
+    if (req.path === '/users/profile') {
+      return true;
+    }
+
+    return false;
   },
 });
 

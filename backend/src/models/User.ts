@@ -55,6 +55,16 @@ export interface IUser extends Document {
     medications?: string[];
     therapies?: string[];
     lifeContext?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    lifestyle?: {
+      smoking?: string;
+      alcohol?: string;
+      drugs?: string;
+      physicalActivity?: string;
+      diet?: string;
+      sleep?: string;
+    };
   };
   createdAt: Date;
   updatedAt: Date;
@@ -204,6 +214,14 @@ const UserSchema = new Schema<IUser>(
       default: null,
     },
     healthInfo: {
+      dateOfBirth: {
+        type: String,
+        trim: true,
+      },
+      gender: {
+        type: String,
+        trim: true,
+      },
       mentalHealth: [{
         condition: {
           type: String,
@@ -258,6 +276,32 @@ const UserSchema = new Schema<IUser>(
         type: String,
         trim: true,
         maxlength: [5000, 'Life context cannot exceed 5000 characters'],
+      },
+      lifestyle: {
+        smoking: {
+          type: String,
+          trim: true,
+        },
+        alcohol: {
+          type: String,
+          trim: true,
+        },
+        drugs: {
+          type: String,
+          trim: true,
+        },
+        physicalActivity: {
+          type: String,
+          trim: true,
+        },
+        diet: {
+          type: String,
+          trim: true,
+        },
+        sleep: {
+          type: String,
+          trim: true,
+        },
       },
     },
     isTherapist: {

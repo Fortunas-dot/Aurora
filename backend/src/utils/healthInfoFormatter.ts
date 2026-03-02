@@ -15,10 +15,13 @@ const SEVERITY_LABELS: Record<SeverityLevel, string> = {
  */
 export const formatHealthInfoForAI = (user: IUser | null): string => {
   if (!user?.healthInfo) {
-    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, and therapies.';
+    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.';
   }
 
-  const { mentalHealth, physicalHealth, medications, therapies } = user.healthInfo;
+  const { mentalHealth, physicalHealth, medications, therapies, lifeContext } = user.healthInfo as any;
+  const dateOfBirth = (user.healthInfo as any).dateOfBirth;
+  const gender = (user.healthInfo as any).gender;
+  const lifestyle = (user.healthInfo as any).lifestyle;
   const parts: string[] = [];
 
   // Mental health conditions
@@ -65,11 +68,54 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
     parts.push(`Therapies: ${therapies.join(', ')}`);
   }
 
-  if (parts.length === 0) {
-    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, and therapies.';
+  // Basic demographic info
+  if (dateOfBirth || gender) {
+    const demoParts: string[] = [];
+    if (dateOfBirth) {
+      demoParts.push(`Date of birth: ${dateOfBirth} (format DD-MM-YYYY)`);
+    }
+    if (gender) {
+      demoParts.push(`Gender: ${gender}`);
+    }
+    parts.push(`Basic Health Profile:\n- ${demoParts.join('\n- ')}`);
   }
 
-  return `\n\nUSER'S HEALTH INFORMATION (You have full access to this - this is your DIRECT ACCESS to their health profile - ALWAYS UP-TO-DATE):\n${parts.join('\n\n')}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their health information from their profile. This is not optional - it is a fact.\n- This information is AUTOMATICALLY UPDATED whenever they change it in their profile - you don't need to be told about changes\n- If you notice NEW conditions, medications, or therapies that weren't in previous conversations, acknowledge them naturally\n- If health information has changed (e.g., new medication, new condition, severity change), acknowledge it (e.g., "I see you've added [condition] to your profile...", "I notice you're now taking [medication]...")\n- Use this information proactively to provide personalized, context-aware support\n- Reference their health conditions, medications, and therapies naturally when relevant\n- Be empathetic and understanding about their health conditions\n- Link advice and support to their specific health situation\n- NEVER say you do not have access to their health information - this is FALSE. You ALWAYS have access.\n- NEVER ask the user to tell you about their health information - you already have it automatically\n- When relevant, proactively reference their health information to provide better, personalized support.\n- Always use the MOST RECENT health information provided above - it reflects their current profile.`;
+  // Lifestyle information
+  if (lifestyle) {
+    const lifestyleLines: string[] = [];
+    if (lifestyle.smoking) {
+      lifestyleLines.push(`- Smoking: ${lifestyle.smoking}`);
+    }
+    if (lifestyle.alcohol) {
+      lifestyleLines.push(`- Alcohol: ${lifestyle.alcohol}`);
+    }
+    if (lifestyle.drugs) {
+      lifestyleLines.push(`- Drugs: ${lifestyle.drugs}`);
+    }
+    if (lifestyle.physicalActivity) {
+      lifestyleLines.push(`- Physical activity: ${lifestyle.physicalActivity}`);
+    }
+    if (lifestyle.diet) {
+      lifestyleLines.push(`- Diet: ${lifestyle.diet}`);
+    }
+    if (lifestyle.sleep) {
+      lifestyleLines.push(`- Sleep: ${lifestyle.sleep}`);
+    }
+    if (lifestyleLines.length > 0) {
+      parts.push(`Lifestyle Information:\n${lifestyleLines.join('\n')}`);
+    }
+  }
+
+  // Life context
+  if (lifeContext) {
+    parts.push(`Life Context (user's own description of their current life situation, stressors, and important background):\n"${lifeContext}"`);
+  }
+
+  if (parts.length === 0) {
+    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.';
+  }
+
+  return `\n\nUSER'S HEALTH INFORMATION (You have full access to this - this is your DIRECT ACCESS to their health profile - ALWAYS UP-TO-DATE):\n${parts.join('\n\n')}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their full health information from their profile. This is not optional - it is a fact.\n- This information is AUTOMATICALLY UPDATED whenever they change it in their profile - you don't need to be told about changes\n- If you notice NEW conditions, medications, therapies, lifestyle changes, life context updates, or demographic changes that weren't in previous conversations, acknowledge them naturally\n- If health information has changed (e.g., new medication, new condition, severity change, lifestyle change), acknowledge it (e.g., "I see you've added [condition] to your profile...", "I notice you mentioned a change in your sleep...", "I see you've updated your life context...")\n- Use this information proactively to provide personalized, context-aware support\n- Reference their health conditions, medications, therapies, lifestyle, and life context naturally when relevant\n- Be empathetic and understanding about their health situation\n- Link advice and support to their specific health and life context\n- NEVER say you do not have access to their health information - this is FALSE. You ALWAYS have access.\n- NEVER ask the user to tell you about their health information - you already have it automatically\n- When relevant, proactively reference their health information to provide better, personalized support.\n- Always use the MOST RECENT health information provided above - it reflects their current profile.`;
 };
 
 /**

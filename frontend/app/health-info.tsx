@@ -933,6 +933,27 @@ export default function HealthInfoScreen() {
     };
   }, [isLifeContextFocused]);
 
+  // #region agent log
+  // Debug: track when showDatePicker changes and on which platform
+  useEffect(() => {
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'health-info.tsx:showDatePickerEffect',
+        message: 'showDatePicker changed',
+        data: {
+          showDatePicker,
+          platform: Platform.OS,
+        },
+        timestamp: Date.now(),
+        runId: 'date-picker-debug',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+  }, [showDatePicker]);
+  // #endregion
+
   const handleAddCondition = (category: 'mentalHealth' | 'physicalHealth', condition: string, type?: string) => {
     setHealthInfo((prev) => {
       const current = prev[category] || [];
@@ -1174,16 +1195,45 @@ export default function HealthInfoScreen() {
           <View style={styles.basicInfoRow}>
             <View style={styles.basicInfoField}>
               <Text style={styles.basicInfoLabel}>Date of birth</Text>
-              <GlassInput
-                value={healthInfo.dateOfBirth || ''}
-                onChangeText={() => {}}
-                editable={false}
-                placeholder="Select date"
-                rightIcon="calendar-outline"
-                onRightIconPress={() => setShowDatePicker(true)}
-                showCharCount={false}
-                inputStyle={styles.compactInputText}
-              />
+              <Pressable
+                style={styles.dateField}
+                onPress={() => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      location: 'health-info.tsx:dateOfBirthPressable',
+                      message: 'Date of birth field pressed',
+                      data: {
+                        platform: Platform.OS,
+                        currentValue: healthInfo.dateOfBirth || null,
+                      },
+                      timestamp: Date.now(),
+                      runId: 'date-picker-debug',
+                      hypothesisId: 'B',
+                    }),
+                  }).catch(() => {});
+                  // #endregion
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text
+                  style={
+                    healthInfo.dateOfBirth
+                      ? styles.dateFieldText
+                      : styles.dateFieldPlaceholder
+                  }
+                >
+                  {healthInfo.dateOfBirth || 'Select date'}
+                </Text>
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={COLORS.textSecondary}
+                  style={styles.dateFieldIcon}
+                />
+              </Pressable>
             </View>
 
             <View style={styles.basicInfoField}>
@@ -1345,6 +1395,57 @@ export default function HealthInfoScreen() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Inline date picker under Basic Information when opened */}
+        {showDatePicker && (
+          <View style={styles.datePickerContainer}>
+            <DateTimePicker
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+              value={
+                healthInfo.dateOfBirth
+                  ? (() => {
+                      const [dd, mm, yyyy] = healthInfo.dateOfBirth
+                        .split('-')
+                        .map((p) => parseInt(p, 10));
+                      if (!dd || !mm || !yyyy) return new Date(1995, 0, 1);
+                      return new Date(yyyy, mm - 1, dd);
+                    })()
+                  : new Date(1995, 0, 1)
+              }
+              maximumDate={new Date()}
+              onChange={(event, date) => {
+                if (Platform.OS === 'android') {
+                  setShowDatePicker(false);
+                }
+                if (event.type === 'dismissed') {
+                  if (Platform.OS === 'ios') {
+                    setShowDatePicker(false);
+                  }
+                  return;
+                }
+                if (date) {
+                  const dd = String(date.getDate()).padStart(2, '0');
+                  const mm = String(date.getMonth() + 1).padStart(2, '0');
+                  const yyyy = String(date.getFullYear());
+                  const formatted = `${dd}-${mm}-${yyyy}`;
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    dateOfBirth: formatted,
+                  }));
+                }
+              }}
+            />
+            {Platform.OS === 'ios' && (
+              <GlassButton
+                title="Done"
+                onPress={() => setShowDatePicker(false)}
+                variant="primary"
+                style={styles.datePickerDoneButton}
+              />
+            )}
+          </View>
+        )}
 
         <CategorySection
           title="Mental Health"
@@ -1555,39 +1656,6 @@ export default function HealthInfoScreen() {
           </Text>
         </View>
       </ScrollView>
-
-      {/* Native date picker for Date of birth */}
-      {showDatePicker && (
-        <DateTimePicker
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          value={
-            healthInfo.dateOfBirth
-              ? (() => {
-                  const [dd, mm, yyyy] = healthInfo.dateOfBirth.split('-').map((p) => parseInt(p, 10));
-                  if (!dd || !mm || !yyyy) return new Date(1995, 0, 1);
-                  return new Date(yyyy, mm - 1, dd);
-                })()
-              : new Date(1995, 0, 1)
-          }
-          maximumDate={new Date()}
-          onChange={(event, date) => {
-            if (Platform.OS === 'android') {
-              setShowDatePicker(false);
-            }
-            if (date) {
-              const dd = String(date.getDate()).padStart(2, '0');
-              const mm = String(date.getMonth() + 1).padStart(2, '0');
-              const yyyy = String(date.getFullYear());
-              const formatted = `${dd}-${mm}-${yyyy}`;
-              setHealthInfo((prev) => ({
-                ...prev,
-                dateOfBirth: formatted,
-              }));
-            }
-          }}
-        />
-      )}
     </LinearGradient>
   );
 }
@@ -1941,9 +2009,42 @@ const styles = StyleSheet.create({
   compactMultilineInputText: {
     fontSize: 14,
   },
-  dateInputPressable: {
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    minHeight: 48,
+  },
+  dateFieldText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  dateFieldPlaceholder: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.textMuted,
+  },
+  dateFieldIcon: {
+    marginLeft: SPACING.sm,
+  },
+  datePickerContainer: {
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    paddingVertical: Platform.OS === 'ios' ? SPACING.md : 0,
+    paddingHorizontal: Platform.OS === 'ios' ? SPACING.md : 0,
+  },
+  datePickerDoneButton: {
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-end',
   },
   otherInputContainer: {
     marginTop: SPACING.md,
