@@ -401,8 +401,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       };
       console.log('🚨 Sending crisis resources immediately:', JSON.stringify(crisisData, null, 2));
       res.write(`data: ${JSON.stringify(crisisData)}\n\n`);
-      // Flush to ensure it's sent immediately
-      res.flush?.();
+      // Note: res.write() automatically flushes in Express for SSE streams
       console.log('✅ Crisis resources sent');
     } else {
       console.log('⚠️ Not sending crisis resources - requiresCrisisResponse:', riskAssessment.requiresCrisisResponse, 'crisisResponse:', !!crisisResponse);
