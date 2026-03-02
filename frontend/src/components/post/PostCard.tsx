@@ -157,6 +157,33 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     locale: enUS,
   });
 
+  // Media flags and normalized URLs (must be defined at top level, not inside render branches)
+  const hasVideo = !!post.video && !videoError;
+  const hasImages = !!post.images && post.images.length > 0;
+
+  const videoUrl = useMemo(() => {
+    if (!post.video) return '';
+    if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
+      return post.video;
+    }
+    const baseUrl = 'https://aurora-production.up.railway.app';
+    const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
+    return `${baseUrl}${relativeUrl}`;
+  }, [post.video]);
+
+  const normalizedImages = useMemo(
+    () =>
+      post.images?.map((imageUrl) => {
+        if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+          const baseUrl = 'https://aurora-production.up.railway.app';
+          const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+          return `${baseUrl}${relativeUrl}`;
+        }
+        return imageUrl;
+      }) || [],
+    [post.images]
+  );
+
   // Get first sentence from content
   const getFirstSentence = (text: string): string => {
     if (!text) return '';
@@ -247,32 +274,9 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
 
       {/* Media Collage (Images + Video) */}
       {(() => {
-        const hasVideo = post.video && !videoError;
-        const hasImages = post.images && post.images.length > 0;
-        const totalMediaCount = (hasVideo ? 1 : 0) + (hasImages ? post.images!.length : 0);
+        const totalMediaCount = (hasVideo ? 1 : 0) + (hasImages ? normalizedImages.length : 0);
         
         if (totalMediaCount === 0) return null;
-        
-        // Normalize video URL
-        const videoUrl = useMemo(() => {
-          if (!post.video) return '';
-          if (post.video.startsWith('http://') || post.video.startsWith('https://')) {
-            return post.video;
-          }
-          const baseUrl = 'https://aurora-production.up.railway.app';
-          const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
-          return `${baseUrl}${relativeUrl}`;
-        }, [post.video]);
-        
-        // Normalize image URLs
-        const normalizedImages = post.images?.map((imageUrl) => {
-          if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-            const baseUrl = 'https://aurora-production.up.railway.app';
-            const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-            return `${baseUrl}${relativeUrl}`;
-          }
-          return imageUrl;
-        }) || [];
         
         // Create media items array (video first if exists, then images)
         const mediaItems: Array<{ type: 'video' | 'image'; url: string; index: number }> = [];

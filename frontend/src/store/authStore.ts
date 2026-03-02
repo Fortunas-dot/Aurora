@@ -401,7 +401,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
           
           // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:397',message:'checkAuth - Avatar URL from cache AFTER normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:397',message:'checkAuth - Avatar URL from cache AFTER normalization',data:{avatar:cachedUser.avatar,isAbsolute:cachedUser.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run2',hypothesisId:'H3'})}).catch(()=>{});
+          // Probe the avatar URL to see if the file exists on the server
+          if (cachedUser.avatar && cachedUser.avatar.startsWith('http')) {
+            fetch(cachedUser.avatar, { method: 'HEAD' })
+              .then(resp => {
+                fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:avatarProbe',message:'Avatar HTTP probe result',data:{avatarUrl:cachedUser.avatar,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type')},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+              })
+              .catch(err => {
+                fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authStore.ts:avatarProbe',message:'Avatar HTTP probe FAILED',data:{avatarUrl:cachedUser.avatar,error:String(err)},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+              });
+          }
           // #endregion
           
           // Set cached user immediately for faster UI

@@ -89,7 +89,124 @@ class UploadService {
         }
       }
 
-      // Create form data
+      // Upload to server
+      const baseUrl = apiService.getBaseUrl();
+      const uploadUrl = `${baseUrl}/upload`;
+      
+      // For large video uploads on native devices, use FileSystem.uploadAsync
+      // This is more reliable than fetch + FormData for big files on iOS/Android
+      if (type === 'video' && Platform.OS !== 'web') {
+        try {
+          const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+            httpMethod: 'POST',
+            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            fieldName: 'file',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            const errorText = uploadResult.body || '';
+            let errorMessage = `Upload failed: HTTP ${uploadResult.status}`;
+
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorMessage;
+            } catch {
+              if (errorText.includes('<!DOCTYPE') || errorText.includes('<html>')) {
+                const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
+                const h1Match = errorText.match(/<h1>(.*?)<\/h1>/i);
+                const pMatch = errorText.match(/<p>(.*?)<\/p>/i);
+
+                if (uploadResult.status === 503) {
+                  errorMessage =
+                    'Server is temporarily unavailable. The video may be too large or the server is experiencing issues. Please try again later or use a smaller video.';
+                } else if (titleMatch) {
+                  errorMessage = titleMatch[1];
+                } else if (h1Match) {
+                  errorMessage = h1Match[1];
+                } else if (pMatch) {
+                  errorMessage = pMatch[1];
+                } else {
+                  errorMessage = errorText.substring(0, 200);
+                }
+              } else if (errorText) {
+                errorMessage = errorText;
+              }
+            }
+
+            if (uploadResult.status === 503) {
+              errorMessage =
+                'Server is temporarily unavailable. The video may be too large or the server is experiencing issues. Please try again later or use a smaller video.';
+            } else if (uploadResult.status === 413) {
+              errorMessage = 'File is too large. Maximum size is 50MB.';
+            } else if (uploadResult.status === 500) {
+              errorMessage = 'Server error occurred while uploading. Please try again.';
+            }
+
+            return {
+              success: false,
+              message: errorMessage,
+            };
+          }
+
+          let result: any;
+          try {
+            result = JSON.parse(uploadResult.body);
+          } catch {
+            return {
+              success: false,
+              message: 'Upload failed: Invalid server response',
+            };
+          }
+
+          if (result.success && result.data?.url) {
+            // Always convert relative URL to absolute URL
+            let absoluteUrl = result.data.url;
+            if (!absoluteUrl.startsWith('http://') && !absoluteUrl.startsWith('https://')) {
+              // Remove /api from baseUrl if present, then append the relative URL
+              const baseUrlWithoutApi = baseUrl.replace('/api', '');
+              // Ensure the relative URL starts with /
+              const relativeUrl = absoluteUrl.startsWith('/') ? absoluteUrl : `/${absoluteUrl}`;
+              absoluteUrl = `${baseUrlWithoutApi}${relativeUrl}`;
+            }
+
+            console.log(`📤 Upload successful: ${absoluteUrl}`);
+
+            return {
+              success: true,
+              data: {
+                ...result.data,
+                url: absoluteUrl,
+              },
+            };
+          }
+
+          return {
+            success: false,
+            message: result.message || 'Upload failed - no URL returned',
+          };
+        } catch (nativeError: any) {
+          console.error('📤 Error uploading video with FileSystem.uploadAsync:', nativeError);
+          let errorMessage = 'Upload failed';
+          if (nativeError.message?.includes('Network request failed')) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+          } else if (nativeError.message?.includes('timeout')) {
+            errorMessage =
+              'Video upload timed out. The video may be too large or your connection is too slow. Please try a smaller video or check your internet connection.';
+          } else if (nativeError.message) {
+            errorMessage = nativeError.message;
+          }
+
+          return {
+            success: false,
+            message: errorMessage,
+          };
+        }
+      }
+
+      // Create form data (used for images, audio, and web uploads)
       const formData = new FormData();
       
       // Handle iOS file URI format - React Native FormData needs the full file:// URI on iOS
@@ -102,11 +219,6 @@ class UploadService {
         name: `${type}-${Date.now()}.${fileExtension}`,
       } as any);
 
-
-      // Upload to server
-      const baseUrl = apiService.getBaseUrl();
-      const uploadUrl = `${baseUrl}/upload`;
-      
       // Create an AbortController for timeout handling (especially important for large video files)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {

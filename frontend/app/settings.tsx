@@ -707,6 +707,8 @@ export default function SettingsScreen() {
             )}
           </GlassCard>
         </View>
+
+        {/* Design Preview (removed v2/v3 variants on request) */}
       </ScrollView>
     </LinearGradient>
   );

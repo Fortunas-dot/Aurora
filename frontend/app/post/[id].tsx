@@ -47,7 +47,7 @@ import { useAuthStore } from '../../src/store/authStore';
 
 export default function PostDetailsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
 
@@ -61,11 +61,14 @@ export default function PostDetailsScreen() {
   const [hasMoreComments, setHasMoreComments] = useState(true);
   const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
 
+  // Ensure API always gets a clean ObjectId (strip any preview suffix like '-v2', '-v3', etc.)
+  const postId = typeof rawId === 'string' ? rawId.replace(/-v[0-9]+$/, '') : '';
+
   const loadPost = useCallback(async () => {
-    if (!id) return;
+    if (!postId) return;
 
     try {
-      const response = await postService.getPost(id);
+      const response = await postService.getPost(postId);
       if (response.success && response.data) {
         // Ensure post is normalized (getPost should already normalize, but double-check)
         setPost(normalizePost(response.data));
@@ -75,13 +78,13 @@ export default function PostDetailsScreen() {
     } catch (error) {
       console.error('Error loading post:', error);
     }
-  }, [id]);
+  }, [postId]);
 
   const loadComments = useCallback(async (pageNum: number = 1, append: boolean = false) => {
-    if (!id) return;
+    if (!postId) return;
 
     try {
-      const response = await commentService.getCommentsForPost(id, pageNum, 20);
+      const response = await commentService.getCommentsForPost(postId, pageNum, 20);
       
       if (response.success && response.data) {
         if (append) {
@@ -97,7 +100,7 @@ export default function PostDetailsScreen() {
     } catch (error) {
       console.error('Error loading comments:', error);
     }
-  }, [id]);
+  }, [postId]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);

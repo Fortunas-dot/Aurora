@@ -385,7 +385,11 @@ export default function RootLayout() {
       console.log('❌ Notification WebSocket disconnected');
     },
     onError: (error: Error) => {
-      console.error('Notification WebSocket error:', error);
+      // Only log WebSocket errors in development mode
+      // These are expected during network issues and shouldn't spam production logs
+      if (__DEV__) {
+        console.warn('Notification WebSocket error:', error.message);
+      }
     },
   });
 

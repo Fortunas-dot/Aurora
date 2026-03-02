@@ -3,14 +3,15 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { AuthRequest } from '../middleware/auth';
+import { storeFile } from '../services/mongoStorage';
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (used as temp storage before MongoDB)
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer
+// Configure multer (saves to local disk temporarily, then we move to MongoDB)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
@@ -58,11 +59,27 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    console.log('Upload successful:', {
+    console.log('Upload received:', {
       filename: req.file.filename,
       mimetype: req.file.mimetype,
       size: req.file.size,
     });
+
+    // Store file in MongoDB GridFS for persistence across deploys
+    try {
+      await storeFile(req.file.path, req.file.filename, req.file.mimetype);
+      console.log('✅ File stored in MongoDB GridFS:', req.file.filename);
+      
+      // Delete local temp file after storing in MongoDB
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkErr) {
+        console.warn('Could not delete temp file:', unlinkErr);
+      }
+    } catch (gridfsErr) {
+      console.error('❌ GridFS storage failed, file still available locally:', gridfsErr);
+      // File is still on local filesystem as fallback
+    }
 
     // Return file URL - use absolute URL for production
     const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
@@ -86,10 +103,3 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
     });
   }
 };
-
-
-
-
-
-
-

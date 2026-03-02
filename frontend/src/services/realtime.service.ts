@@ -108,12 +108,15 @@ export class RealtimeService {
           this.handleMessage(event);
         };
 
-        this.ws.onerror = (error) => {
-          console.error('Realtime API connection error:', error);
+        this.ws.onerror = (event) => {
+          // WebSocket onerror receives an Event object, not an Error
           this.isConnected = false;
           const errorMessage = __DEV__ 
             ? 'Kon niet verbinden. Start de proxy server: node proxy-server.js (in root directory)'
             : 'WebSocket connection error';
+          if (__DEV__) {
+            console.warn('Realtime API connection error:', errorMessage);
+          }
           if (this.callbacks.onError) {
             this.callbacks.onError(new Error(errorMessage));
           }

@@ -389,7 +389,10 @@ export default function ConversationScreen() {
 
     // Handle WebSocket errors (e.g., validation failures)
     const unsubError = chatWebSocketService.on('error', (error: Error) => {
-      console.error('Chat WebSocket error:', error);
+      // Only log in development mode - these errors are expected during network issues
+      if (__DEV__) {
+        console.warn('Chat WebSocket error:', error.message);
+      }
       Alert.alert('Error', error.message || 'Could not send message');
       setIsSending(false);
       setIsUploading(false);

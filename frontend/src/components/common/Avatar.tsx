@@ -130,6 +130,20 @@ export const Avatar: React.FC<AvatarProps> = ({
               borderRadius: (sizeValue - (showBorder ? 4 : 0)) / 2,
             },
           ]}
+          onError={(e) => {
+            // #region agent log
+            const errMsg = e?.nativeEvent?.error || 'Unknown';
+            if (normalizedUri) {
+              fetch(normalizedUri, { method: 'HEAD' })
+                .then(resp => {
+                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:onError',message:'Avatar image FAILED - HTTP probe',data:{normalizedUri,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),errorMessage:errMsg},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+                })
+                .catch(fetchErr => {
+                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Avatar.tsx:onError',message:'Avatar image FAILED - HTTP probe ALSO failed',data:{normalizedUri,fetchError:String(fetchErr),errorMessage:errMsg},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+                });
+            }
+            // #endregion
+          }}
         />
       ) : (
         <LinearGradient

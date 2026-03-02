@@ -435,6 +435,18 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
   try {
     const { title, content, tags, groupId, images, video, postType } = req.body;
 
+    // Enforce media limits: max 2 photos and 1 video per post
+    if (images && Array.isArray(images) && images.length > 2) {
+      res.status(400).json({
+        success: false,
+        message: 'You can attach a maximum of 2 photos per post.',
+      });
+      return;
+    }
+    // The schema only supports a single video URL field, so more than 1 video
+    // cannot be stored for a post. We keep this comment as explicit documentation
+    // of the intended constraint (max 1 video).
+
     // Check for objectionable content
     const contentToCheck = `${title || ''} ${content || ''}`.trim();
     if (containsObjectionableContent(contentToCheck)) {

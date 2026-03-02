@@ -41,6 +41,9 @@ const SUGGESTED_TAGS = [
   'recovery',
 ];
 
+const MAX_IMAGES_PER_POST = 2;
+const MAX_VIDEOS_PER_POST = 1;
+
 export default function CreatePostScreen() {
   const router = useRouter();
   const { groupId: initialGroupId } = useLocalSearchParams<{ groupId?: string }>();
@@ -130,11 +133,28 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets) {
-        const newMedia = result.assets.map((asset) => ({
+        const pickedImages = result.assets.map((asset) => ({
           uri: asset.uri,
           type: 'image' as const,
         }));
-        setMedia([...media, ...newMedia].slice(0, 5)); // Max 5 media items
+
+        setMedia((prevMedia) => {
+          const currentImageCount = prevMedia.filter((item) => item.type === 'image').length;
+          const remainingSlots = MAX_IMAGES_PER_POST - currentImageCount;
+
+          if (remainingSlots <= 0) {
+            Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES_PER_POST} photos per post.`);
+            return prevMedia;
+          }
+
+          const imagesToAdd = pickedImages.slice(0, remainingSlots);
+
+          if (imagesToAdd.length < pickedImages.length) {
+            Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES_PER_POST} photos per post.`);
+          }
+
+          return [...prevMedia, ...imagesToAdd];
+        });
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -154,24 +174,36 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newMedia = {
+        const newVideo = {
           uri: result.assets[0].uri,
           type: 'video' as const,
         };
+
         // Replace existing video if any, otherwise add to existing media (which can include photos)
         setMedia((prevMedia) => {
-          const existingVideoIndex = prevMedia.findIndex(item => item.type === 'video');
-          if (existingVideoIndex !== -1) {
-            // Replace existing video
-            const newMediaArray = [...prevMedia];
-            newMediaArray[existingVideoIndex] = newMedia;
-            return newMediaArray;
-          } else {
-            // Add new video to existing media (preserving photos)
-            return [...prevMedia, newMedia].slice(0, 5); // Max 5 media items
+          const existingVideoIndex = prevMedia.findIndex((item) => item.type === 'video');
+
+          // Even though the schema only allows a single video URL, we keep a clear max here
+          const hasVideo = existingVideoIndex !== -1;
+          if (hasVideo && MAX_VIDEOS_PER_POST <= 0) {
+            Alert.alert('Limit reached', 'You can only add 1 video per post.');
+            return prevMedia;
           }
+
+          if (existingVideoIndex !== -1) {
+            const newMediaArray = [...prevMedia];
+            newMediaArray[existingVideoIndex] = newVideo;
+            return newMediaArray;
+          }
+
+          if (MAX_VIDEOS_PER_POST <= 0) {
+            Alert.alert('Limit reached', 'You can only add 1 video per post.');
+            return prevMedia;
+          }
+
+          return [...prevMedia, newVideo];
         });
-        console.log('Video selected:', newMedia.uri);
+        console.log('Video selected:', newVideo.uri);
       } else {
         console.log('Video selection canceled or no assets');
       }

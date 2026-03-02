@@ -118,17 +118,25 @@ class PostService {
     const response = await apiService.get<Post[]>(endpoint);
     if (response.success && response.data) {
       // #region agent log
-      const samplePost = response.data[0];
-      if (samplePost) {
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:111',message:'getPosts - URLs from backend BEFORE normalization',data:{postId:samplePost._id,images:samplePost.images,video:samplePost.video,imagesSample:samplePost.images?.[0],imagesAreAbsolute:samplePost.images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:samplePost.video?.startsWith('http'),authorAvatar:samplePost.author?.avatar,authorAvatarIsAbsolute:samplePost.author?.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
+      // Log ALL posts with media to see exact URLs from backend
+      const mediaPosts = response.data.filter((p: Post) => (p.images && p.images.length > 0) || p.video);
+      mediaPosts.forEach((p: Post) => {
+        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:getPosts',message:'getPosts - Post with media from API',data:{postId:p._id,images:p.images,video:p.video,authorAvatar:p.author?.avatar},timestamp:Date.now(),runId:'run2',hypothesisId:'H3'})}).catch(()=>{});
+        // Also do HTTP probe on each media URL to check if files actually exist
+        const urlsToProbe = [...(p.images || []), p.video].filter(Boolean) as string[];
+        urlsToProbe.forEach(url => {
+          const absoluteUrl = url.startsWith('http') ? url : `https://aurora-production.up.railway.app${url.startsWith('/') ? url : '/' + url}`;
+          fetch(absoluteUrl, { method: 'HEAD' })
+            .then(resp => {
+              fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:probe',message:'HTTP probe on media URL',data:{url:absoluteUrl,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),contentLength:resp.headers.get('content-length')},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+            })
+            .catch(err => {
+              fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:probe',message:'HTTP probe FAILED on media URL',data:{url:absoluteUrl,error:String(err)},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+            });
+        });
+      });
       // #endregion
       const normalized = normalizePosts(response.data);
-      // #region agent log
-      if (normalized[0]) {
-        fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'post.service.ts:116',message:'getPosts - URLs AFTER normalization',data:{postId:normalized[0]._id,images:normalized[0].images,video:normalized[0].video,imagesSample:normalized[0].images?.[0],imagesAreAbsolute:normalized[0].images?.map((u:string)=>u?.startsWith('http')),videoIsAbsolute:normalized[0].video?.startsWith('http'),authorAvatar:normalized[0].author?.avatar,authorAvatarIsAbsolute:normalized[0].author?.avatar?.startsWith('http')},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
-      // #endregion
       return {
         ...response,
         data: normalized,

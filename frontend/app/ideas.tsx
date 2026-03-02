@@ -286,7 +286,7 @@ export default function IdeasScreen() {
             disabled={!isAuthenticated}
           >
             <Ionicons
-              name="chevron-up"
+              name={item.hasUpvoted ? 'thumbs-up' : 'thumbs-up-outline'}
               size={20}
               color={item.hasUpvoted ? COLORS.primary : COLORS.textMuted}
             />
@@ -307,7 +307,7 @@ export default function IdeasScreen() {
             disabled={!isAuthenticated}
           >
             <Ionicons
-              name="chevron-down"
+              name={item.hasDownvoted ? 'thumbs-down' : 'thumbs-down-outline'}
               size={20}
               color={item.hasDownvoted ? COLORS.error : COLORS.textMuted}
             />

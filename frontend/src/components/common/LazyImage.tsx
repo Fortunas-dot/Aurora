@@ -23,14 +23,24 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   const handleError = (error: any) => {
-    // React Native Image onError may receive a native event, not always an error object
-    // Only log in development to avoid console noise
-    if (__DEV__) {
-      const errorMessage = error?.message || error?.nativeEvent?.error || 'Unknown error';
-      console.warn('LazyImage: Failed to load image:', imageUrl, errorMessage);
-    }
+    const errorMessage = error?.message || error?.nativeEvent?.error || 'Unknown error';
     setIsLoading(false);
     setHasError(true);
+
+    // #region agent log
+    // CRITICAL: When image fails, do a HEAD request to see what HTTP status the URL returns
+    if (imageUrl) {
+      fetch(imageUrl, { method: 'HEAD' })
+        .then(resp => {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - HTTP probe result',data:{imageUrl,httpStatus:resp.status,httpStatusText:resp.statusText,contentType:resp.headers.get('content-type'),contentLength:resp.headers.get('content-length'),errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+        })
+        .catch(fetchErr => {
+          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - HTTP probe ALSO failed',data:{imageUrl,fetchError:String(fetchErr),errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H1'})}).catch(()=>{});
+        });
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LazyImage.tsx:handleError',message:'LazyImage FAILED - no imageUrl',data:{uri,imageUrl,errorMessage},timestamp:Date.now(),runId:'run2',hypothesisId:'H3'})}).catch(()=>{});
+    }
+    // #endregion
   };
 
   // Normalize URL to always be absolute

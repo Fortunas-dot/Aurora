@@ -103,10 +103,15 @@ class NotificationWebSocketService {
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('Notification WebSocket error:', error);
+      this.ws.onerror = (event) => {
+        // WebSocket onerror receives an Event object, not an Error
+        // Extract meaningful error information
+        const errorMessage = 'WebSocket connection error';
+        if (__DEV__) {
+          console.warn('Notification WebSocket error:', errorMessage);
+        }
         this.isConnecting = false;
-        this.callbacks.onError?.(new Error('WebSocket connection error'));
+        this.callbacks.onError?.(new Error(errorMessage));
       };
 
       this.ws.onclose = (event) => {

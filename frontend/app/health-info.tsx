@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import { userService } from '../src/services/user.service';
 import { useAuthStore } from '../src/store/authStore';
 import { authService } from '../src/services/auth.service';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
@@ -33,6 +36,17 @@ interface HealthInfo {
   physicalHealth?: HealthCondition[];
   medications?: string[];
   therapies?: string[];
+  // Basic profile-style info that helps interpret health context
+  dateOfBirth?: string;
+  gender?: string;
+  lifestyle?: {
+    smoking?: string;
+    alcohol?: string;
+    drugs?: string;
+    physicalActivity?: string;
+    diet?: string;
+    sleep?: string;
+  };
   lifeContext?: string; // General context about user's life for AI
 }
 
@@ -806,12 +820,26 @@ export default function HealthInfoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, updateUser } = useAuthStore();
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const [isLifeContextFocused, setIsLifeContextFocused] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [healthInfo, setHealthInfo] = useState<HealthInfo>({
     mentalHealth: [],
     physicalHealth: [],
     medications: [],
     therapies: [],
+    dateOfBirth: '',
+    gender: '',
+    lifestyle: {
+      smoking: '',
+      alcohol: '',
+      drugs: '',
+      physicalActivity: '',
+      diet: '',
+      sleep: '',
+    },
     lifeContext: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -849,6 +877,16 @@ export default function HealthInfoScreen() {
         physicalHealth: convertToNewFormat(user.healthInfo.physicalHealth || []),
         medications: user.healthInfo.medications || [],
         therapies: user.healthInfo.therapies || [],
+        dateOfBirth: (user.healthInfo as any).dateOfBirth || '',
+        gender: (user.healthInfo as any).gender || '',
+        lifestyle: {
+          smoking: (user.healthInfo as any)?.lifestyle?.smoking || '',
+          alcohol: (user.healthInfo as any)?.lifestyle?.alcohol || '',
+          drugs: (user.healthInfo as any)?.lifestyle?.drugs || '',
+          physicalActivity: (user.healthInfo as any)?.lifestyle?.physicalActivity || '',
+          diet: (user.healthInfo as any)?.lifestyle?.diet || '',
+          sleep: (user.healthInfo as any)?.lifestyle?.sleep || '',
+        },
         lifeContext: (user.healthInfo as any).lifeContext || '',
       });
     } else {
@@ -858,11 +896,42 @@ export default function HealthInfoScreen() {
         physicalHealth: [],
         medications: [],
         therapies: [],
+        dateOfBirth: '',
+        gender: '',
+        lifestyle: {
+          smoking: '',
+          alcohol: '',
+          drugs: '',
+          physicalActivity: '',
+          diet: '',
+          sleep: '',
+        },
         lifeContext: '',
       });
     }
     setIsLoading(false);
   }, [isAuthenticated, user, router]);
+
+  // Zorg dat Life Context automatisch boven het toetsenbord zichtbaar wordt
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+      if (isLifeContextFocused) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 50);
+      }
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [isLifeContextFocused]);
 
   const handleAddCondition = (category: 'mentalHealth' | 'physicalHealth', condition: string, type?: string) => {
     setHealthInfo((prev) => {
@@ -1059,9 +1128,16 @@ export default function HealthInfoScreen() {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => {
+          if (isLifeContextFocused) {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
       >
         {/* AI Information Banner */}
         <View style={styles.aiInfoBanner}>
@@ -1079,6 +1155,196 @@ export default function HealthInfoScreen() {
         <Text style={styles.description}>
           Share information about your mental and physical health. Select a condition and choose the severity with the buttons below.
         </Text>
+
+        {/* Basic Information */}
+        <GlassCard style={styles.categoryCard} padding="lg">
+          <View style={styles.categoryHeader}>
+            <View style={[styles.categoryIconContainer, { backgroundColor: `${COLORS.primary}20` }]}>
+              <Ionicons name="person-outline" size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.categoryHeaderText}>
+              <Text style={styles.categoryTitle}>Basic Information</Text>
+              <Text style={styles.categorySubtitle}>
+                Compact basic details that help put your health in context.
+              </Text>
+            </View>
+          </View>
+
+          {/* Date of birth + Gender in one compact row */}
+          <View style={styles.basicInfoRow}>
+            <View style={styles.basicInfoField}>
+              <Text style={styles.basicInfoLabel}>Date of birth</Text>
+              <GlassInput
+                value={healthInfo.dateOfBirth || ''}
+                onChangeText={() => {}}
+                editable={false}
+                placeholder="Select date"
+                rightIcon="calendar-outline"
+                onRightIconPress={() => setShowDatePicker(true)}
+                showCharCount={false}
+                inputStyle={styles.compactInputText}
+              />
+            </View>
+
+            <View style={styles.basicInfoField}>
+              <Text style={styles.basicInfoLabel}>Gender</Text>
+              <View style={styles.genderChipsRow}>
+                {['Woman', 'Man', 'Non-binary', 'Prefer not to say'].map((option) => {
+                  const isSelected = healthInfo.gender === option;
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        setHealthInfo((prev) => ({
+                          ...prev,
+                          gender: option,
+                        }))
+                      }
+                      style={[
+                        styles.genderChip,
+                        isSelected && styles.genderChipSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.genderChipText,
+                          isSelected && styles.genderChipTextSelected,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
+          {/* Lifestyle – compact stacked fields */}
+          <View style={styles.lifestyleSection}>
+            <Text style={styles.lifestyleTitle}>Lifestyle</Text>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>Do you smoke? If yes, how much and since when?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.smoking || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      smoking: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. 5 cigarettes per day since 2018"
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>Do you drink alcohol? If yes, how much per week?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.alcohol || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      alcohol: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. 3–4 glasses per week"
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>Do you use drugs? If yes, which and how often?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.drugs || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      drugs: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. occasionally cannabis on weekends"
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>How often do you exercise per week?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.physicalActivity || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      physicalActivity: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. 3x per week gym, daily walks"
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>How would you describe your diet?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.diet || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      diet: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. varied, a lot of fast food, vegetarian, etc."
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+
+            <View style={styles.lifestyleField}>
+              <Text style={styles.lifestyleLabel}>How do you usually sleep (hours per night, quality)?</Text>
+              <GlassInput
+                value={healthInfo.lifestyle?.sleep || ''}
+                onChangeText={(text) =>
+                  setHealthInfo((prev) => ({
+                    ...prev,
+                    lifestyle: {
+                      ...(prev.lifestyle || {}),
+                      sleep: text,
+                    },
+                  }))
+                }
+                placeholder="e.g. 7 hours, often restless / good deep sleep"
+                multiline
+                showCharCount={false}
+                inputStyle={styles.compactMultilineInputText}
+              />
+            </View>
+          </View>
+        </GlassCard>
 
         <CategorySection
           title="Mental Health"
@@ -1267,6 +1533,8 @@ export default function HealthInfoScreen() {
             style={styles.lifeContextInput}
             value={healthInfo.lifeContext || ''}
             onChangeText={(text) => setHealthInfo((prev) => ({ ...prev, lifeContext: text }))}
+            onFocus={() => setIsLifeContextFocused(true)}
+            onBlur={() => setIsLifeContextFocused(false)}
             placeholder="Tell us about your life, current circumstances, relationships, work, hobbies, or anything else that might be relevant for the AI to better understand and support you..."
             placeholderTextColor={COLORS.textMuted}
             multiline
@@ -1275,6 +1543,11 @@ export default function HealthInfoScreen() {
           />
         </GlassCard>
 
+      {/* Extra ruimte wanneer toetsenbord open is zodat Life Context echt boven het toetsenbord kan komen */}
+      {isLifeContextFocused && isKeyboardVisible && (
+        <View style={{ height: 260 }} />
+      )}
+
         <View style={styles.privacyNote}>
           <Ionicons name="lock-closed" size={16} color={COLORS.textMuted} />
           <Text style={styles.privacyNoteText}>
@@ -1282,6 +1555,39 @@ export default function HealthInfoScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Native date picker for Date of birth */}
+      {showDatePicker && (
+        <DateTimePicker
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          value={
+            healthInfo.dateOfBirth
+              ? (() => {
+                  const [dd, mm, yyyy] = healthInfo.dateOfBirth.split('-').map((p) => parseInt(p, 10));
+                  if (!dd || !mm || !yyyy) return new Date(1995, 0, 1);
+                  return new Date(yyyy, mm - 1, dd);
+                })()
+              : new Date(1995, 0, 1)
+          }
+          maximumDate={new Date()}
+          onChange={(event, date) => {
+            if (Platform.OS === 'android') {
+              setShowDatePicker(false);
+            }
+            if (date) {
+              const dd = String(date.getDate()).padStart(2, '0');
+              const mm = String(date.getMonth() + 1).padStart(2, '0');
+              const yyyy = String(date.getFullYear());
+              const formatted = `${dd}-${mm}-${yyyy}`;
+              setHealthInfo((prev) => ({
+                ...prev,
+                dateOfBirth: formatted,
+              }));
+            }
+          }}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -1326,7 +1632,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.md,
-    paddingBottom: SPACING.xxl,
+    paddingBottom: SPACING.xxl * 2,
   },
   aiInfoBanner: {
     flexDirection: 'row',
@@ -1575,6 +1881,69 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     lineHeight: 18,
+  },
+  basicInfoRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  basicInfoField: {
+    flex: 1,
+  },
+  basicInfoLabel: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  genderChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  genderChip: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  genderChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  genderChipText: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textSecondary,
+  },
+  genderChipTextSelected: {
+    color: COLORS.white,
+  },
+  lifestyleSection: {
+    marginTop: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  lifestyleTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  lifestyleField: {
+    gap: SPACING.xs / 2,
+  },
+  lifestyleLabel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+  },
+  compactInputText: {
+    fontSize: 14,
+  },
+  compactMultilineInputText: {
+    fontSize: 14,
+  },
+  dateInputPressable: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
   },
   otherInputContainer: {
     marginTop: SPACING.md,

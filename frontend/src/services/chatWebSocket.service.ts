@@ -158,10 +158,15 @@ class ChatWebSocketService {
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('Chat WebSocket error:', error);
+      this.ws.onerror = (event) => {
+        // WebSocket onerror receives an Event object, not an Error
+        // Extract meaningful error information
+        const errorMessage = 'WebSocket connection error';
+        if (__DEV__) {
+          console.warn('Chat WebSocket error:', errorMessage);
+        }
         this.isConnecting = false;
-        this.emit('error', new Error('WebSocket connection error'));
+        this.emit('error', new Error(errorMessage));
       };
 
       this.ws.onclose = (event) => {
