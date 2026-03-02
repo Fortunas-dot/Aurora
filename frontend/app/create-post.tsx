@@ -443,7 +443,7 @@ export default function CreatePostScreen() {
           </GlassCard>
 
           {/* Content Input */}
-          <GlassCard style={styles.contentCard} padding="lg">
+          <GlassCard style={styles.contentCard} padding="md">
             <Text style={styles.label}>Content *</Text>
             <GlassInput
               value={content}

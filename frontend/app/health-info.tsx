@@ -272,6 +272,15 @@ const THERAPY_OPTIONS = [
   'Other',
 ];
 
+// Custom date picker options
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const MONTHS = [
+  '01', '02', '03', '04', '05', '06',
+  '07', '08', '09', '10', '11', '12',
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 100 }, (_, i) => CURRENT_YEAR - i);
+
 interface SeverityBadgeProps {
   severity: SeverityLevel;
   size?: 'sm' | 'md';
@@ -824,6 +833,9 @@ export default function HealthInfoScreen() {
   const [isLifeContextFocused, setIsLifeContextFocused] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   const [healthInfo, setHealthInfo] = useState<HealthInfo>({
     mentalHealth: [],
@@ -932,27 +944,6 @@ export default function HealthInfoScreen() {
       hideSub.remove();
     };
   }, [isLifeContextFocused]);
-
-  // #region agent log
-  // Debug: track when showDatePicker changes and on which platform
-  useEffect(() => {
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'health-info.tsx:showDatePickerEffect',
-        message: 'showDatePicker changed',
-        data: {
-          showDatePicker,
-          platform: Platform.OS,
-        },
-        timestamp: Date.now(),
-        runId: 'date-picker-debug',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-  }, [showDatePicker]);
-  // #endregion
 
   const handleAddCondition = (category: 'mentalHealth' | 'physicalHealth', condition: string, type?: string) => {
     setHealthInfo((prev) => {
@@ -1198,23 +1189,20 @@ export default function HealthInfoScreen() {
               <Pressable
                 style={styles.dateField}
                 onPress={() => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      location: 'health-info.tsx:dateOfBirthPressable',
-                      message: 'Date of birth field pressed',
-                      data: {
-                        platform: Platform.OS,
-                        currentValue: healthInfo.dateOfBirth || null,
-                      },
-                      timestamp: Date.now(),
-                      runId: 'date-picker-debug',
-                      hypothesisId: 'B',
-                    }),
-                  }).catch(() => {});
-                  // #endregion
+                  // Initialize temporary selection from existing value or today
+                  let baseDate = new Date();
+                  if (healthInfo.dateOfBirth) {
+                    const [dd, mm, yyyy] = healthInfo.dateOfBirth
+                      .split('-')
+                      .map((p) => parseInt(p, 10));
+                    if (dd && mm && yyyy) {
+                      baseDate = new Date(yyyy, mm - 1, dd);
+                    }
+                  }
+                  setSelectedDay(baseDate.getDate());
+                  const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+                  setSelectedMonth(monthStr);
+                  setSelectedYear(baseDate.getFullYear());
                   setShowDatePicker(true);
                 }}
               >
@@ -1396,12 +1384,141 @@ export default function HealthInfoScreen() {
           </View>
         </GlassCard>
 
-        {/* Inline date picker under Basic Information when opened */}
-        {showDatePicker && (
+        {/* Date picker UI when opened */}
+        {showDatePicker && Platform.OS === 'ios' && (
+          <Modal
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <View style={styles.customDateModalOverlay}>
+              <View style={styles.customDateModalContent}>
+                <Text style={styles.customDateTitle}>Select date of birth</Text>
+                <View style={styles.customDateRow}>
+                  {/* Day column */}
+                  <View style={styles.customDateColumn}>
+                    <Text style={styles.customDateColumnLabel}>Day</Text>
+                    <ScrollView
+                      style={styles.customDateScroll}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {DAYS.map((d) => (
+                        <Pressable
+                          key={d}
+                          style={[
+                            styles.customDateItem,
+                            selectedDay === d && styles.customDateItemSelected,
+                          ]}
+                          onPress={() => setSelectedDay(d)}
+                        >
+                          <Text
+                            style={[
+                              styles.customDateItemText,
+                              selectedDay === d && styles.customDateItemTextSelected,
+                            ]}
+                          >
+                            {String(d).padStart(2, '0')}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* Month column */}
+                  <View style={styles.customDateColumn}>
+                    <Text style={styles.customDateColumnLabel}>Month</Text>
+                    <ScrollView
+                      style={styles.customDateScroll}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {MONTHS.map((m) => (
+                        <Pressable
+                          key={m}
+                          style={[
+                            styles.customDateItem,
+                            selectedMonth === m && styles.customDateItemSelected,
+                          ]}
+                          onPress={() => setSelectedMonth(m)}
+                        >
+                          <Text
+                            style={[
+                              styles.customDateItemText,
+                              selectedMonth === m && styles.customDateItemTextSelected,
+                            ]}
+                          >
+                            {m}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* Year column */}
+                  <View style={styles.customDateColumn}>
+                    <Text style={styles.customDateColumnLabel}>Year</Text>
+                    <ScrollView
+                      style={styles.customDateScroll}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {YEARS.map((y) => (
+                        <Pressable
+                          key={y}
+                          style={[
+                            styles.customDateItem,
+                            selectedYear === y && styles.customDateItemSelected,
+                          ]}
+                          onPress={() => setSelectedYear(y)}
+                        >
+                          <Text
+                            style={[
+                              styles.customDateItemText,
+                              selectedYear === y && styles.customDateItemTextSelected,
+                            ]}
+                          >
+                            {y}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+
+                <View style={styles.customDateActions}>
+                  <GlassButton
+                    title="Cancel"
+                    variant="outline"
+                    onPress={() => setShowDatePicker(false)}
+                    style={styles.customDateButton}
+                  />
+                  <GlassButton
+                    title="Save"
+                    variant="primary"
+                    onPress={() => {
+                      if (selectedDay && selectedMonth && selectedYear) {
+                        const dd = String(selectedDay).padStart(2, '0');
+                        const mm = selectedMonth;
+                        const yyyy = String(selectedYear);
+                        const formatted = `${dd}-${mm}-${yyyy}`;
+                        setHealthInfo((prev) => ({
+                          ...prev,
+                          dateOfBirth: formatted,
+                        }));
+                        setShowDatePicker(false);
+                      }
+                    }}
+                    style={styles.customDateButton}
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+
+        {showDatePicker && Platform.OS !== 'ios' && (
           <View style={styles.datePickerContainer}>
             <DateTimePicker
               mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+              display="calendar"
               value={
                 healthInfo.dateOfBirth
                   ? (() => {
@@ -1414,16 +1531,7 @@ export default function HealthInfoScreen() {
                   : new Date(1995, 0, 1)
               }
               maximumDate={new Date()}
-              onChange={(event, date) => {
-                if (Platform.OS === 'android') {
-                  setShowDatePicker(false);
-                }
-                if (event.type === 'dismissed') {
-                  if (Platform.OS === 'ios') {
-                    setShowDatePicker(false);
-                  }
-                  return;
-                }
+              onChange={(_event, date) => {
                 if (date) {
                   const dd = String(date.getDate()).padStart(2, '0');
                   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -1433,17 +1541,10 @@ export default function HealthInfoScreen() {
                     ...prev,
                     dateOfBirth: formatted,
                   }));
+                  setShowDatePicker(false);
                 }
               }}
             />
-            {Platform.OS === 'ios' && (
-              <GlassButton
-                title="Done"
-                onPress={() => setShowDatePicker(false)}
-                variant="primary"
-                style={styles.datePickerDoneButton}
-              />
-            )}
           </View>
         )}
 
@@ -2031,6 +2132,73 @@ const styles = StyleSheet.create({
   },
   dateFieldIcon: {
     marginLeft: SPACING.sm,
+  },
+  customDateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  customDateModalContent: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.lg,
+  },
+  customDateTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  customDateColumn: {
+    flex: 1,
+    marginHorizontal: SPACING.xs,
+  },
+  customDateColumnLabel: {
+    ...TYPOGRAPHY.captionMedium,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    textAlign: 'center',
+  },
+  customDateScroll: {
+    maxHeight: 200,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    backgroundColor: COLORS.glass.backgroundDark,
+  },
+  customDateItem: {
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  customDateItemSelected: {
+    backgroundColor: COLORS.primary + '22',
+  },
+  customDateItemText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  customDateItemTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  customDateActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.sm,
+  },
+  customDateButton: {
+    minWidth: 100,
   },
   datePickerContainer: {
     marginTop: -SPACING.sm,

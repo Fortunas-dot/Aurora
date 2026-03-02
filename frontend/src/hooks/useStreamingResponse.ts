@@ -129,8 +129,9 @@ export const useStreamingResponse = () => {
       let streamCompleted = false;
 
       // Typing speed configuration (characters per second)
-      const TYPING_CHARS_PER_SECOND = 28; // ~30 chars/sec feels human but not too slow
-      const TYPING_INTERVAL_MS = 50; // interval between updates
+      // Make typing effect almost instant, but still sequential for UX
+      const TYPING_CHARS_PER_SECOND = 150; // was 70
+      const TYPING_INTERVAL_MS = 15; // was 25
 
       const clearTypingInterval = () => {
         if (typingInterval) {
@@ -165,34 +166,12 @@ export const useStreamingResponse = () => {
         cleanupRef.current = null;
       };
 
+      // For performance/UX we now show chunks immediately as they arrive,
+      // so the "typing" effect is effectively instant. This helper is kept
+      // for compatibility but no longer used to gradually reveal text.
       const startTyping = () => {
-        if (typingInterval) {
-          return;
-        }
-
-        typingInterval = setInterval(() => {
-          // Nothing new to type yet
-          if (displayedResponse.length >= fullResponse.length) {
-            // If the stream has finished and we've typed everything, we can finalize
-            if (streamCompleted) {
-              clearTypingInterval();
-              finalizeMessage();
-            }
-            return;
-          }
-
-          const charsPerTick = Math.max(
-            1,
-            Math.round((TYPING_CHARS_PER_SECOND * TYPING_INTERVAL_MS) / 1000)
-          );
-          const targetLength = Math.min(
-            fullResponse.length,
-            displayedResponse.length + charsPerTick
-          );
-
-          displayedResponse = fullResponse.slice(0, targetLength);
-          updateStreamingMessage(displayedResponse);
-        }, TYPING_INTERVAL_MS);
+        // No-op: we update the displayed response directly on each chunk.
+        return;
       };
 
       // Set a timeout to reset streaming state if no data is received within 30 seconds
@@ -221,9 +200,10 @@ export const useStreamingResponse = () => {
               clearTimeout(timeoutId);
               timeoutId = null;
             }
+            // Append new content and immediately show it so the AI feels instant
             fullResponse += chunk;
-             // Start or continue typing effect
-             startTyping();
+            displayedResponse = fullResponse;
+            updateStreamingMessage(displayedResponse);
           },
           // On complete
           () => {
