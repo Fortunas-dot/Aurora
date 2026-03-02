@@ -328,37 +328,68 @@ export default function ConversationScreen() {
 
     const unsubMessageSent = chatWebSocketService.on('message_sent', (message: any) => {
       setMessages((prev) => {
-        if (prev.some((m) => m._id === message._id)) {
-          // Update existing message and normalize attachments
-          return prev.map((m) => {
-            if (m._id === message._id) {
-              const updatedMessage = { ...m, ...message, attachments: message.attachments || m.attachments || [] };
-              return normalizeMessageAttachments(updatedMessage);
-            }
-            return m;
-          });
+        // Only handle messages that belong to this conversation
+        if (message.sender._id !== userId && message.receiver._id !== userId) {
+          return prev;
         }
 
-        // Check for duplicate by content within 2 seconds
+        let replacedTemp = false;
+
+        // First try to replace an optimistic temp message for this outgoing message
+        const updated = prev.map((m) => {
+          const isTemp =
+            typeof m._id === 'string' &&
+            m._id.startsWith('temp-') &&
+            m.sender._id === message.sender._id &&
+            m.content === message.content;
+
+          if (isTemp) {
+            replacedTemp = true;
+            const merged = {
+              ...m,
+              ...message,
+              attachments: message.attachments || m.attachments || [],
+            };
+            return normalizeMessageAttachments(merged);
+          }
+
+          if (m._id === message._id) {
+            const updatedMessage = { ...m, ...message, attachments: message.attachments || m.attachments || [] };
+            return normalizeMessageAttachments(updatedMessage);
+          }
+
+          return m;
+        });
+
+        if (replacedTemp) {
+          return updated;
+        }
+
+        if (updated.some((m) => m._id === message._id)) {
+          return updated;
+        }
+
+        // Check for duplicate by content within a short window
         const now = new Date().getTime();
         const messageTime = new Date(message.createdAt).getTime();
-        const isDuplicate = prev.some((m) => {
+        const isDuplicate = updated.some((m) => {
           const mTime = new Date(m.createdAt).getTime();
           return (
             m.sender._id === message.sender._id &&
             m.content === message.content &&
-            Math.abs(now - mTime) < 2000 &&
-            Math.abs(messageTime - mTime) < 2000
+            Math.abs(now - mTime) < 5000 &&
+            Math.abs(messageTime - mTime) < 5000
           );
         });
 
-        if (isDuplicate) return prev;
+        if (isDuplicate) return updated;
+
         // Normalize attachments URLs before adding to state
         const normalizedMessage = normalizeMessageAttachments({
           ...message,
           attachments: message.attachments || [],
         });
-        return [...prev, normalizedMessage];
+        return [...updated, normalizedMessage];
       });
 
       setTimeout(() => {
@@ -599,6 +630,26 @@ export default function ConversationScreen() {
     setSelectedImages([]);
     setIsUploading(false);
     
+    // Create an optimistic temp message so it appears immediately in the UI
+    const nowIso = new Date().toISOString();
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: Message = {
+      _id: tempId,
+      sender: currentUser!,
+      receiver: otherUser!,
+      content: messageContent,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
+
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
     // Send via WebSocket (preferred) or fallback to REST API
     if (chatWebSocketService.isConnected()) {
       try {
@@ -631,23 +682,6 @@ export default function ConversationScreen() {
     }
     
     // Fallback to REST API if WebSocket not connected or if WebSocket send failed
-    const tempMessage: Message = {
-      _id: `temp-${Date.now()}`,
-      sender: currentUser!,
-      receiver: otherUser!,
-      content: messageContent,
-      attachments: attachments.length > 0 ? attachments : undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    setMessages((prev) => [...prev, tempMessage]);
-    
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-    
     try {
       // Ensure attachments is always an array (even if empty)
       const attachmentsToSend = Array.isArray(attachments) && attachments.length > 0 ? attachments : undefined;
