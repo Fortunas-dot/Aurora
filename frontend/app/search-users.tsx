@@ -41,71 +41,115 @@ export default function SearchUsersScreen() {
   const { user: currentUser } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<UserProfile[]>([]); // search results
+  const [following, setFollowing] = useState<UserProfile[]>([]); // people you already follow
+  const [isLoading, setIsLoading] = useState(false); // search loading
+  const [isLoadingFollowing, setIsLoadingFollowing] = useState(false);
   const debouncedQuery = useDebounce(searchQuery, 500);
 
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query || query.length < 2) {
-      setUsers([]);
-      return;
-    }
+  // Load people the current user already follows so we can suggest them by default
+  React.useEffect(() => {
+    const loadFollowing = async () => {
+      if (!currentUser?._id) return;
 
-    setIsLoading(true);
-    try {
-      const response = await userService.searchUsers(query);
-      if (response.success && response.data) {
-        // Filter out current user
-        setUsers(response.data.filter((u) => u._id !== currentUser?._id));
-      } else {
-        setUsers([]);
+      setIsLoadingFollowing(true);
+      try {
+        const response = await userService.getFollowing(currentUser._id, 1, 100);
+        if (response.success && response.data) {
+          // Filter out the current user defensively
+          setFollowing(response.data.filter((u) => u._id !== currentUser._id));
+        } else {
+          setFollowing([]);
+        }
+      } catch (error) {
+        console.error('Error loading following users for search:', error);
+        setFollowing([]);
+      } finally {
+        setIsLoadingFollowing(false);
       }
-    } catch (error) {
-      console.error('Error searching users:', error);
-      setUsers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser]);
+    };
+
+    loadFollowing();
+  }, [currentUser?._id]);
+
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (!query || query.length < 2) {
+        setUsers([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await userService.searchUsers(query);
+        if (response.success && response.data) {
+          // Filter out current user
+          setUsers(response.data.filter((u) => u._id !== currentUser?._id));
+        } else {
+          setUsers([]);
+        }
+      } catch (error) {
+        console.error('Error searching users:', error);
+        setUsers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentUser]
+  );
 
   React.useEffect(() => {
     searchUsers(debouncedQuery);
   }, [debouncedQuery, searchUsers]);
 
   const handleUserPress = (userId: string) => {
-    router.push(`/user/${userId}`);
+    // From the Messages screen, this screen is used to start a new chat,
+    // so tapping a user should open the conversation with them.
+    router.push(`/conversation/${userId}`);
   };
 
-  const renderUser = ({ item }: { item: UserProfile }) => (
-    <GlassCard
-      style={styles.userCard}
-      padding="md"
-      onPress={() => handleUserPress(item._id)}
-    >
-      <View style={styles.userContent}>
-        <Avatar
-          uri={item.avatar}
-          name={item.displayName || item.username}
-          userId={item._id}
-          avatarCharacter={item.avatarCharacter}
-          avatarBackgroundColor={item.avatarBackgroundColor}
-          size="md"
-        />
-        <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: getUsernameColor(item._id, item) }]}>
-            {item.displayName || item.username}
-          </Text>
-          <Text style={styles.userUsername}>@{item.username}</Text>
-          {item.bio && (
-            <Text style={styles.userBio} numberOfLines={2}>
-              {item.bio}
+  const renderUser = ({ item }: { item: UserProfile }) => {
+    // Determine if this user is followed either by explicit flag or by being in the following list
+    const isFollowed =
+      item.isFollowing === true ||
+      following.some((u) => u._id === item._id);
+
+    return (
+      <GlassCard
+        style={styles.userCard}
+        padding="md"
+        onPress={() => handleUserPress(item._id)}
+      >
+        <View style={styles.userContent}>
+          <Avatar
+            uri={item.avatar}
+            name={item.displayName || item.username}
+            userId={item._id}
+            avatarCharacter={item.avatarCharacter}
+            avatarBackgroundColor={item.avatarBackgroundColor}
+            size="md"
+          />
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: getUsernameColor(item._id, item) }]}>
+              {item.displayName || item.username}
             </Text>
-          )}
+            <Text style={styles.userUsername}>@{item.username}</Text>
+            {item.bio && (
+              <Text style={styles.userBio} numberOfLines={2}>
+                {item.bio}
+              </Text>
+            )}
+          </View>
+          {/* Show chat icon for users you follow, arrow for others */}
+          <Ionicons
+            name={isFollowed ? 'chatbubble-ellipses-outline' : 'chevron-forward'}
+            size={20}
+            color={isFollowed ? COLORS.primary : COLORS.textMuted}
+          />
         </View>
-        <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-      </View>
-    </GlassCard>
-  );
+      </GlassCard>
+    );
+  };
 
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
@@ -139,13 +183,28 @@ export default function SearchUsersScreen() {
 
         {/* Results */}
         {searchQuery.length < 2 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Start typing to search</Text>
-            <Text style={styles.emptySubtext}>
-              Search at least 2 characters
-            </Text>
-          </View>
+          // No (or very short) search query: show people you already follow
+          isLoadingFollowing ? (
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner size="lg" />
+            </View>
+          ) : following.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyText}>No followed users yet</Text>
+              <Text style={styles.emptySubtext}>
+                Follow people first to quickly start a conversation with them here.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={following}
+              renderItem={renderUser}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )
         ) : isLoading ? (
           <View style={styles.loadingContainer}>
             <LoadingSpinner size="lg" />

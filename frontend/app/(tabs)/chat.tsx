@@ -405,7 +405,8 @@ export default function ChatScreen() {
       <FlatList
         data={filteredConversations}
         renderItem={renderConversation}
-        keyExtractor={(item) => item._id}
+        // Use user ID as key to guarantee uniqueness per conversation
+        keyExtractor={(item) => item.user._id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={false}

@@ -84,14 +84,32 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     
     try {
       setIsReady(false); // Hide ready state, show loading
-      
-      // Request permissions
-      const permissionResponse = await Audio.requestPermissionsAsync();
-      if (!permissionResponse.granted) {
-        console.error('Audio recording permission denied');
-        setIsReady(true); // Return to ready state
+
+      // First check existing permission state
+      const currentPermission = await Audio.getPermissionsAsync();
+      if (!currentPermission.granted) {
+        // Request permissions once; if the user just granted it, we stop here
+        // and ask them to tap again, to avoid starting the audio session while
+        // the permission dialog is still dismissing (which causes the
+        // "experience is in the background" error on iOS).
+        const permissionResponse = await Audio.requestPermissionsAsync();
+        if (!permissionResponse.granted) {
+          console.error('Audio recording permission denied');
+          setIsReady(true); // Return to ready state
+          isStartingRef.current = false;
+          onCancel();
+          return;
+        }
+
+        // Permission has just been granted; wait for the app to fully return
+        // to the foreground and let the user tap again to actually start
+        // recording. This prevents the first-tap background audio session error.
+        setIsReady(true);
         isStartingRef.current = false;
-        onCancel();
+        Alert.alert(
+          'Recording ready',
+          'Microphone access granted. Tap the mic again to start recording.'
+        );
         return;
       }
 

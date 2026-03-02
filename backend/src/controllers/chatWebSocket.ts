@@ -3,7 +3,11 @@ import { WebSocket } from 'ws';
 import Message from '../models/Message';
 import Notification from '../models/Notification';
 import User from '../models/User';
-import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import {
+  sendNotificationToUser,
+  sendUnreadCountUpdate,
+  isUserOnline as isNotificationUserOnline,
+} from './notificationWebSocket';
 
 // Helper function to normalize URLs to absolute URLs
 const normalizeUrl = (url: string | undefined | null): string | undefined => {
@@ -358,8 +362,14 @@ const handleMarkRead = async (userId: string, messageId: string): Promise<void> 
 const handleCheckOnline = (ws: AuthenticatedWebSocket, targetUserId: string): void => {
   if (!targetUserId) return;
   
-  const targetWs = activeChatConnections.get(targetUserId);
-  const isOnline = targetWs !== undefined && targetWs.readyState === 1;
+  // "Online" in chat should reflect whether the user is online in the app,
+  // not just whether they currently have the chat WebSocket open.
+  // Prefer the global notification WebSocket presence and fall back to
+  // the chat WebSocket connection as a safety net.
+  const chatWs = activeChatConnections.get(targetUserId);
+  const isOnline =
+    isNotificationUserOnline(targetUserId) ||
+    (chatWs !== undefined && chatWs.readyState === 1);
   
   if (ws.readyState === 1) {
     ws.send(JSON.stringify({
