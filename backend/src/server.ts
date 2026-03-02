@@ -21,6 +21,9 @@ import therapistRoutes from './routes/therapists';
 import seedRoutes from './routes/seed';
 import calendarRoutes from './routes/calendar';
 
+// Models
+import Idea from './models/Idea';
+
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
 import {
@@ -43,7 +46,32 @@ const app: Application = express() as any;
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(async () => {
+  // One-time maintenance: ensure no invalid compound index exists on parallel
+  // array fields upvotes/downvotes in the ideas collection.
+  //
+  // MongoDB does not allow a compound index where multiple indexed fields are
+  // arrays. If such an index was ever created (e.g. { upvotes: 1, downvotes: 1 }),
+  // any write can fail with:
+  //   "cannot index parallel arrays [downvotes] [upvotes]"
+  //
+  // This block is safe to keep: it only drops the specific invalid index if
+  // present, and logs a warning instead of crashing the app.
+  try {
+    const collection = (Idea as any).collection;
+    if (collection?.indexExists) {
+      const hasBadIndex = await collection.indexExists('upvotes_1_downvotes_1').catch(() => false);
+      if (hasBadIndex) {
+        console.warn('[Idea] Dropping invalid compound index upvotes_1_downvotes_1 to fix "cannot index parallel arrays" error');
+        await collection.dropIndex('upvotes_1_downvotes_1');
+      }
+    }
+  } catch (err) {
+    console.warn('[Idea] Failed to check/drop invalid upvotes/downvotes index:', err);
+  }
+}).catch((err) => {
+  console.error('Failed to connect to MongoDB:', err);
+});
 
 // Trust proxy (required for Railway and other platforms that use reverse proxies)
 // This allows express-rate-limit to correctly identify users behind proxies
@@ -84,6 +112,8 @@ app.use('/api', apiLimiter);
 
 // Serve static files (uploads and public assets)
 import path from 'path';
+import fs from 'fs';
+
 // Serve uploads with proper headers for video streaming
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   setHeaders: (res, filePath) => {
