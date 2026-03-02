@@ -398,6 +398,9 @@ export default function ChatScreen() {
           placeholder="Search conversations..."
           icon="search"
           style={styles.searchInput}
+          // Prevent iOS password/email AutoFill styling from leaking into this field
+          textContentType="none"
+          autoComplete="off"
         />
       </View>
 

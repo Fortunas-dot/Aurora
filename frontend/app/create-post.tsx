@@ -438,6 +438,9 @@ export default function CreatePostScreen() {
               }
               style={styles.titleInput}
               maxLength={200}
+              // Prevent iOS password/email AutoFill styling from affecting this field
+              textContentType="none"
+              autoComplete="off"
             />
           </GlassCard>
 
@@ -459,6 +462,9 @@ export default function CreatePostScreen() {
               style={styles.contentInput}
               inputStyle={styles.contentInputText}
               maxLength={2000}
+              // Prevent any AutoFill association; this is plain content
+              textContentType="none"
+              autoComplete="off"
             />
             
             {/* Media Preview */}
