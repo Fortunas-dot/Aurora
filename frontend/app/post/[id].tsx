@@ -16,31 +16,7 @@ import { GlassCard, GlassInput, GlassButton, LoadingSpinner } from '../../src/co
 import { PostCard } from '../../src/components/post/PostCard';
 import { CommentCard } from '../../src/components/post/CommentCard';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../src/constants/theme';
-import { postService, Post } from '../../src/services/post.service';
-
-// Helper function to normalize URLs (same as in post.service.ts)
-const normalizeUrl = (url: string | undefined): string | undefined => {
-  if (!url) return undefined;
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  const baseUrl = 'https://aurora-production.up.railway.app';
-  const relativeUrl = url.startsWith('/') ? url : `/${url}`;
-  return `${baseUrl}${relativeUrl}`;
-};
-
-// Helper function to normalize post data
-const normalizePost = (post: Post): Post => {
-  return {
-    ...post,
-    images: post.images?.map(img => normalizeUrl(img) || img).filter((img): img is string => !!img),
-    video: normalizeUrl(post.video),
-    author: {
-      ...post.author,
-      avatar: normalizeUrl(post.author.avatar),
-    },
-  };
-};
+import { postService, Post, normalizePost } from '../../src/services/post.service';
 import { commentService, Comment } from '../../src/services/comment.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';

@@ -129,9 +129,9 @@ export const useStreamingResponse = () => {
       let streamCompleted = false;
 
       // Typing speed configuration (characters per second)
-      // Make typing effect almost instant, but still sequential for UX
-      const TYPING_CHARS_PER_SECOND = 150; // was 70
-      const TYPING_INTERVAL_MS = 15; // was 25
+      // Fast, but with a small visible typing effect (not fully instant)
+      const TYPING_CHARS_PER_SECOND = 95; // slightly faster
+      const TYPING_INTERVAL_MS = 22; // slightly shorter interval
 
       const clearTypingInterval = () => {
         if (typingInterval) {
@@ -166,12 +166,34 @@ export const useStreamingResponse = () => {
         cleanupRef.current = null;
       };
 
-      // For performance/UX we now show chunks immediately as they arrive,
-      // so the "typing" effect is effectively instant. This helper is kept
-      // for compatibility but no longer used to gradually reveal text.
       const startTyping = () => {
-        // No-op: we update the displayed response directly on each chunk.
-        return;
+        if (typingInterval) {
+          return;
+        }
+
+        typingInterval = setInterval(() => {
+          // Nothing new to type yet
+          if (displayedResponse.length >= fullResponse.length) {
+            // If the stream has finished and we've typed everything, we can finalize
+            if (streamCompleted) {
+              clearTypingInterval();
+              finalizeMessage();
+            }
+            return;
+          }
+
+          const charsPerTick = Math.max(
+            1,
+            Math.round((TYPING_CHARS_PER_SECOND * TYPING_INTERVAL_MS) / 1000)
+          );
+          const targetLength = Math.min(
+            fullResponse.length,
+            displayedResponse.length + charsPerTick
+          );
+
+          displayedResponse = fullResponse.slice(0, targetLength);
+          updateStreamingMessage(displayedResponse);
+        }, TYPING_INTERVAL_MS);
       };
 
       // Set a timeout to reset streaming state if no data is received within 30 seconds
@@ -200,10 +222,9 @@ export const useStreamingResponse = () => {
               clearTimeout(timeoutId);
               timeoutId = null;
             }
-            // Append new content and immediately show it so the AI feels instant
+            // Append new content and let the typing loop reveal it quickly
             fullResponse += chunk;
-            displayedResponse = fullResponse;
-            updateStreamingMessage(displayedResponse);
+            startTyping();
           },
           // On complete
           () => {
