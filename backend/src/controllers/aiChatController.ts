@@ -269,19 +269,6 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Detect risk in the most recent user message
-    const lastUserMessage = messages
-      .filter((m: { role: string }) => m.role === 'user')
-      .pop()?.content || '';
-    
-    const riskAssessment = detectRisk(lastUserMessage);
-    
-    // If high risk, prepare crisis response
-    let crisisResponse: { message: string; resources: Array<{ name: string; number: string; available: string }> } | null = null;
-    if (riskAssessment.requiresCrisisResponse) {
-      crisisResponse = getCrisisResources(riskAssessment.level);
-    }
-
     let openai: OpenAI;
     try {
       openai = getOpenAI();
@@ -295,6 +282,28 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // Get user data for context - cast to IUser | null for type compatibility
     const user = await User.findById(req.userId).select('healthInfo displayName') as IUser | null;
+
+    // Detect risk in the most recent user message
+    const lastUserMessage = messages
+      .filter((m: { role: string }) => m.role === 'user')
+      .pop()?.content || '';
+    
+    console.log('🔍 Detecting risk in message:', lastUserMessage);
+    const riskAssessment = detectRisk(lastUserMessage);
+    console.log('🔍 Risk assessment result:', JSON.stringify(riskAssessment, null, 2));
+    
+    // Resolve user country (ISO code like 'NL', 'US', etc.) from health info if available
+    const userCountry = (user?.healthInfo as any)?.country as string | undefined;
+    
+    // If high risk, prepare crisis response (taking user country into account)
+    let crisisResponse: { message: string; resources: Array<{ name: string; number: string; available: string }> } | null = null;
+    if (riskAssessment.requiresCrisisResponse) {
+      console.log('🚨 High risk detected! Preparing crisis response for country:', userCountry || 'default');
+      crisisResponse = getCrisisResources(riskAssessment.level, userCountry);
+      console.log('🚨 Crisis response prepared:', JSON.stringify(crisisResponse, null, 2));
+    } else {
+      console.log('✅ No crisis response needed');
+    }
     
     // Get chat context from previous sessions
     const chatContextData = await ChatContext.find({ user: req.userId })
@@ -381,6 +390,24 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
     res.flushHeaders();
 
+    // If high risk, send crisis resources IMMEDIATELY before starting the AI response
+    // This ensures users see help resources right away, not after waiting for the full response
+    if (riskAssessment.requiresCrisisResponse && crisisResponse) {
+      const crisisData = {
+        type: 'crisis_resources',
+        riskLevel: riskAssessment.level,
+        message: crisisResponse.message,
+        resources: crisisResponse.resources 
+      };
+      console.log('🚨 Sending crisis resources immediately:', JSON.stringify(crisisData, null, 2));
+      res.write(`data: ${JSON.stringify(crisisData)}\n\n`);
+      // Flush to ensure it's sent immediately
+      res.flush?.();
+      console.log('✅ Crisis resources sent');
+    } else {
+      console.log('⚠️ Not sending crisis resources - requiresCrisisResponse:', riskAssessment.requiresCrisisResponse, 'crisisResponse:', !!crisisResponse);
+    }
+
     // Create streaming completion with selected model
     // Use higher temperature for warmer, more human responses in therapeutic conversations
     const stream = await openai.chat.completions.create({
@@ -399,15 +426,8 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
-    // If high risk, send crisis resources after the response
-    if (riskAssessment.requiresCrisisResponse && crisisResponse) {
-      res.write(`data: ${JSON.stringify({ 
-        type: 'crisis_resources',
-        riskLevel: riskAssessment.level,
-        message: crisisResponse.message,
-        resources: crisisResponse.resources 
-      })}\n\n`);
-    }
+    // Note: Crisis resources are now sent immediately when detected (before streaming starts)
+    // This ensures users see help resources right away
 
     // Send completion signal
     res.write('data: [DONE]\n\n');
@@ -445,24 +465,6 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // Detect risk in the most recent user message
-    const lastUserMessage = messages
-      .filter((m: { role: string }) => m.role === 'user')
-      .pop()?.content || '';
-    
-    // Run content moderation (non-blocking, logs only)
-    moderateContent(lastUserMessage).catch(err => {
-      console.error('Content moderation error:', err);
-    });
-    
-    const riskAssessment = detectRisk(lastUserMessage);
-    
-    // If high risk, prepare crisis response
-    let crisisResponse: { message: string; resources: Array<{ name: string; number: string; available: string }> } | null = null;
-    if (riskAssessment.requiresCrisisResponse) {
-      crisisResponse = getCrisisResources(riskAssessment.level);
-    }
-
     let openai: OpenAI;
     try {
       openai = getOpenAI();
@@ -476,6 +478,27 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
 
     // Get user data and context
     const user = await User.findById(req.userId).select('healthInfo displayName') as IUser | null;
+
+    // Detect risk in the most recent user message
+    const lastUserMessage = messages
+      .filter((m: { role: string }) => m.role === 'user')
+      .pop()?.content || '';
+    
+    // Run content moderation (non-blocking, logs only)
+    moderateContent(lastUserMessage).catch(err => {
+      console.error('Content moderation error:', err);
+    });
+    
+    const riskAssessment = detectRisk(lastUserMessage);
+    
+    // Resolve user country from health info if available
+    const userCountry = (user?.healthInfo as any)?.country as string | undefined;
+    
+    // If high risk, prepare crisis response using user country when available
+    let crisisResponse: { message: string; resources: Array<{ name: string; number: string; available: string }> } | null = null;
+    if (riskAssessment.requiresCrisisResponse) {
+      crisisResponse = getCrisisResources(riskAssessment.level, userCountry);
+    }
     
     // Get chat context from previous sessions
     const chatContextData = await ChatContext.find({ user: req.userId })

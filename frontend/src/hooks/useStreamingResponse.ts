@@ -257,6 +257,7 @@ export const useStreamingResponse = () => {
           // Options with crisis resources callback
           {
             onCrisisResources: (resources) => {
+              console.log('🚨 Setting crisis resources in store:', resources);
               setCrisisResources(resources);
             },
           }

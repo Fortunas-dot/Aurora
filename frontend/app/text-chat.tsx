@@ -373,7 +373,7 @@ export default function TextChatScreen() {
   const { sendMessage, isLoading } = useStreamingResponse();
   const { clearHistory, isLoading: isLoadingHistory } = useChatHistory();
   const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
-  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
+  const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
   const [isFinishingSession, setIsFinishingSession] = useState(false);
   
   // Animation for Aurora logo transition
@@ -438,6 +438,7 @@ export default function TextChatScreen() {
   
   // Load consent + context information on mount to show on initial screen
   useEffect(() => {
+    // Consent is already loaded in RootLayout, but this is a safe fallback
     loadConsent().catch(console.error);
 
     const loadContext = async () => {
@@ -1057,7 +1058,7 @@ export default function TextChatScreen() {
         keyboardVerticalOffset={0}
       >
         {/* AI Consent banner above chat when not granted */}
-        {aiConsentStatus !== 'granted' && (
+        {!isConsentLoading && aiConsentStatus !== 'granted' && (
           <View style={{ paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm }}>
             <AiConsentCard
               onAccept={grantAiConsent}

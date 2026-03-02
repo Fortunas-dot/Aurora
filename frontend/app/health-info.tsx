@@ -21,6 +21,7 @@ import { userService } from '../src/services/user.service';
 import { useAuthStore } from '../src/store/authStore';
 import { authService } from '../src/services/auth.service';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { COUNTRIES } from '../src/constants/countries';
 
 type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
@@ -39,6 +40,7 @@ interface HealthInfo {
   // Basic profile-style info that helps interpret health context
   dateOfBirth?: string;
   gender?: string;
+  country?: string;
   lifestyle?: {
     smoking?: string;
     alcohol?: string;
@@ -844,6 +846,7 @@ export default function HealthInfoScreen() {
     therapies: [],
     dateOfBirth: '',
     gender: '',
+    country: '',
     lifestyle: {
       smoking: '',
       alcohol: '',
@@ -891,6 +894,7 @@ export default function HealthInfoScreen() {
         therapies: user.healthInfo.therapies || [],
         dateOfBirth: (user.healthInfo as any).dateOfBirth || '',
         gender: (user.healthInfo as any).gender || '',
+        country: (user.healthInfo as any).country || '',
         lifestyle: {
           smoking: (user.healthInfo as any)?.lifestyle?.smoking || '',
           alcohol: (user.healthInfo as any)?.lifestyle?.alcohol || '',
@@ -910,6 +914,7 @@ export default function HealthInfoScreen() {
         therapies: [],
         dateOfBirth: '',
         gender: '',
+        country: '',
         lifestyle: {
           smoking: '',
           alcohol: '',
@@ -1019,6 +1024,21 @@ export default function HealthInfoScreen() {
   const [medicationOtherText, setMedicationOtherText] = useState('');
   const [showTherapyOtherInput, setShowTherapyOtherInput] = useState(false);
   const [therapyOtherText, setTherapyOtherText] = useState('');
+  const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+
+  const selectedCountry = healthInfo.country
+    ? COUNTRIES.find((c) => c.code === healthInfo.country) || null
+    : null;
+
+  const filteredCountries = COUNTRIES.filter((country) => {
+    if (!countrySearch.trim()) return true;
+    const term = countrySearch.toLowerCase();
+    return (
+      country.name.toLowerCase().includes(term) ||
+      country.code.toLowerCase().includes(term)
+    );
+  });
 
   const handleAddSimple = (category: 'medications' | 'therapies', item: string) => {
     if (item === 'Other') {
@@ -1258,6 +1278,29 @@ export default function HealthInfoScreen() {
             </View>
           </View>
 
+          {/* Country */}
+          <View style={styles.countrySection}>
+            <Text style={styles.basicInfoLabel}>Country</Text>
+            <Pressable
+              style={styles.countryField}
+              onPress={() => setIsCountryPickerOpen(true)}
+            >
+              {selectedCountry ? (
+                <View style={styles.countryFieldContent}>
+                  <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
+                  <Text style={styles.countryName}>{selectedCountry.name}</Text>
+                </View>
+              ) : (
+                <Text style={styles.countryPlaceholder}>Select country</Text>
+              )}
+              <Ionicons
+                name={isCountryPickerOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={COLORS.textSecondary}
+              />
+            </Pressable>
+          </View>
+
           {/* Lifestyle – compact stacked fields */}
           <View style={styles.lifestyleSection}>
             <Text style={styles.lifestyleTitle}>Lifestyle</Text>
@@ -1383,6 +1426,62 @@ export default function HealthInfoScreen() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Country picker modal */}
+        <Modal
+          visible={isCountryPickerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsCountryPickerOpen(false)}
+        >
+          <Pressable
+            style={styles.countryModalOverlay}
+            onPress={() => setIsCountryPickerOpen(false)}
+          >
+            <Pressable
+              style={styles.countryModalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select your country</Text>
+                <Pressable onPress={() => setIsCountryPickerOpen(false)}>
+                  <Ionicons name="close" size={24} color={COLORS.text} />
+                </Pressable>
+              </View>
+
+              <View style={styles.countrySearchContainer}>
+                <GlassInput
+                  value={countrySearch}
+                  onChangeText={setCountrySearch}
+                  placeholder="Search country"
+                  icon="search-outline"
+                />
+              </View>
+
+              <ScrollView style={styles.countryScroll}>
+                {filteredCountries.map((country) => (
+                  <Pressable
+                    key={country.code}
+                    style={[
+                      styles.countryItem,
+                      country.code === healthInfo.country && styles.countryItemActive,
+                    ]}
+                    onPress={() => {
+                      setHealthInfo((prev) => ({
+                        ...prev,
+                        country: country.code,
+                      }));
+                      setIsCountryPickerOpen(false);
+                    }}
+                  >
+                    <Text style={styles.countryItemFlag}>{country.flag}</Text>
+                    <Text style={styles.countryItemName}>{country.name}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Date picker UI when opened */}
         {showDatePicker && Platform.OS === 'ios' && (
@@ -2064,6 +2163,38 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
+  countrySection: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  countryField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.glass.backgroundDark,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    minHeight: 48,
+  },
+  countryFieldContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  countryFlag: {
+    fontSize: 18,
+    marginRight: SPACING.xs,
+  },
+  countryName: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  countryPlaceholder: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.textMuted,
+  },
   genderChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2147,6 +2278,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     padding: SPACING.lg,
   },
+  countryModalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  countryModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    maxHeight: '80%',
+  },
   customDateTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
@@ -2175,6 +2322,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glass.border,
     backgroundColor: COLORS.glass.backgroundDark,
   },
+  countrySearchContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+  },
   customDateItem: {
     paddingVertical: SPACING.sm,
     alignItems: 'center',
@@ -2192,6 +2343,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
+  countryScroll: {
+    maxHeight: 400,
+  },
   customDateActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -2199,6 +2353,25 @@ const styles = StyleSheet.create({
   },
   customDateButton: {
     minWidth: 100,
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  countryItemActive: {
+    backgroundColor: COLORS.glass.background,
+  },
+  countryItemFlag: {
+    fontSize: 18,
+    marginRight: SPACING.sm,
+  },
+  countryItemName: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
   },
   datePickerContainer: {
     marginTop: -SPACING.sm,

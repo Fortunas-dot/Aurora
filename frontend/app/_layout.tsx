@@ -125,7 +125,7 @@ export default function RootLayout() {
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
   const { colors, isDark } = useTheme();
-  const { aiConsentStatus, loadConsent } = useConsentStore();
+  const { aiConsentStatus, loadConsent, resetConsent } = useConsentStore();
   const { checkPremiumStatus } = usePremiumStore();
 
   // Load Unbounded Regular font for headers
@@ -352,10 +352,16 @@ export default function RootLayout() {
       revenueCatService.resetUser().catch((error) => {
         console.warn('RevenueCat reset user failed:', error);
       });
+      
+      // Reset AI consent state on logout (each user must provide their own consent)
+      resetConsent().catch((error) => {
+        console.warn('Failed to reset AI consent:', error);
+      });
+      
       // Don't reset PostHog here - let logout handle it
       // posthogService.reset();
     }
-  }, [isAuthenticated, user, checkPremiumStatus]);
+  }, [isAuthenticated, user, checkPremiumStatus, resetConsent]);
 
   // Track screen views in Facebook (PostHog screen tracking is handled by PostHogScreenTracker)
   useEffect(() => {

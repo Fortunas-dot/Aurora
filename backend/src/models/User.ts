@@ -57,6 +57,7 @@ export interface IUser extends Document {
     lifeContext?: string;
     dateOfBirth?: string;
     gender?: string;
+    country?: string;
     lifestyle?: {
       smoking?: string;
       alcohol?: string;
@@ -219,6 +220,10 @@ const UserSchema = new Schema<IUser>(
         trim: true,
       },
       gender: {
+        type: String,
+        trim: true,
+      },
+      country: {
         type: String,
         trim: true,
       },

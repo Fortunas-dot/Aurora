@@ -18,9 +18,9 @@ export default function VoiceTherapyScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
   const { t } = useTranslation();
-  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
+  const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
 
-  // Load consent status once
+  // Load consent status once (RootLayout also loads it, this is a safe fallback)
   useEffect(() => {
     loadConsent().catch(console.error);
   }, [loadConsent]);
@@ -100,7 +100,7 @@ export default function VoiceTherapyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* AI Consent */}
-        {aiConsentStatus !== 'granted' && (
+        {!isConsentLoading && aiConsentStatus !== 'granted' && (
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}

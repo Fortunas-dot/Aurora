@@ -396,6 +396,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Clear cached user data
       await secureStorage.deleteItemAsync('cached_user');
       
+      // Clear AI consent (per-user privacy)
+      await secureStorage.deleteItemAsync('ai_data_consent');
+      
       // Reset user identification (BELANGRIJK: doe dit na tracking)
       posthogService.reset();
       

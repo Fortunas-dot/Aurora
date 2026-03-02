@@ -368,7 +368,7 @@ const StatsCard: React.FC<{ insights: JournalInsights | null }> = ({ insights })
 export default function JournalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
+  const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
   const [journals, setJournals] = useState<Journal[]>([]);
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -694,7 +694,7 @@ export default function JournalScreen() {
         }
       >
         {/* AI Consent (for prompts & insights) */}
-        {aiConsentStatus !== 'granted' && (
+        {!isConsentLoading && aiConsentStatus !== 'granted' && (
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}

@@ -19,10 +19,22 @@ export interface UserProfile {
   isBlocked?: boolean;
   createdAt: string;
   healthInfo?: {
-    mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
-    physicalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
+    mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe'; notes?: string }>;
+    physicalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe'; notes?: string }>;
     medications?: string[];
     therapies?: string[];
+    lifeContext?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    country?: string;
+    lifestyle?: {
+      smoking?: string;
+      alcohol?: string;
+      drugs?: string;
+      physicalActivity?: string;
+      diet?: string;
+      sleep?: string;
+    };
   };
 }
 
@@ -53,12 +65,7 @@ class UserService {
     showEmail?: boolean;
     email?: string;
     phoneNumber?: string;
-    healthInfo?: {
-      mentalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
-      physicalHealth?: Array<{ condition: string; type?: string; severity: 'mild' | 'moderate' | 'severe' }>;
-      medications?: string[];
-      therapies?: string[];
-    };
+    healthInfo?: UserProfile['healthInfo'];
   }): Promise<ApiResponse<UserProfile>> {
     return apiService.put<UserProfile>('/users/profile', data);
   }

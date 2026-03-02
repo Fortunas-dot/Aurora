@@ -34,12 +34,19 @@ export const detectRisk = (message: string): RiskAssessment => {
   const lowerMessage = message.toLowerCase();
   const words = lowerMessage.split(/\s+/);
 
-  // High-risk suicide indicators
+  // High-risk suicide indicators (English + Dutch)
   const suicideKeywords = [
+    // English
     'kill myself', 'end my life', 'suicide', 'kill myself', 'end it all',
     'not want to live', 'better off dead', 'no reason to live', 'want to die',
     'planning suicide', 'suicide plan', 'going to kill myself', 'ending my life',
     'suicidal', 'take my life', 'end myself', 'die by suicide',
+    // Dutch
+    'zelfmoord', 'zelfmoord plegen', 'zelfmoord wil plegen', 'zelfmoord plegen',
+    'mijn leven beëindigen', 'mijn leven eindigen', 'niet meer willen leven',
+    'geen reden om te leven', 'wil dood', 'wil sterven', 'wil overlijden',
+    'suïcidaal', 'zelfdoding', 'einde maken', 'einde aan mijn leven',
+    'zelfmoord plannen', 'zelfmoordplan', 'ga mezelf doden', 'ga zelfmoord plegen',
   ];
 
   // High-risk self-harm indicators
@@ -88,6 +95,7 @@ export const detectRisk = (message: string): RiskAssessment => {
     lowerMessage.includes(keyword)
   );
   if (suicideMatches.length > 0) {
+    console.log('🚨 Suicide keywords matched:', suicideMatches, 'in message:', message);
     return {
       level: RiskLevel.HIGH_RISK_SUICIDE,
       category: 'suicide',
@@ -96,6 +104,7 @@ export const detectRisk = (message: string): RiskAssessment => {
       requiresCrisisResponse: true,
     };
   }
+  console.log('✅ No suicide keywords matched in message:', message);
 
   // Check for high-risk self-harm
   const selfHarmMatches = selfHarmKeywords.filter(keyword => 
@@ -192,59 +201,107 @@ export const detectRisk = (message: string): RiskAssessment => {
 };
 
 /**
- * Get crisis response resources based on risk level
+ * Get crisis response resources based on risk level and (optionally) user country.
+ *
+ * - If a country is provided, we prioritize resources for that country + an international link.
+ * - If no country is provided, we fall back to the previous global set (US, UK, NL + international).
  */
-export const getCrisisResources = (riskLevel: RiskLevel): {
+export const getCrisisResources = (
+  riskLevel: RiskLevel,
+  countryCode?: string | null
+): {
   message: string;
   resources: Array<{ name: string; number: string; available: string }>;
 } => {
   const resources: Array<{ name: string; number: string; available: string }> = [];
 
-  // International crisis resources
-  resources.push(
-    {
-      name: 'International Suicide Prevention',
-      number: 'https://www.iasp.info/resources/Crisis_Centres/',
-      available: '24/7',
-    }
-  );
+  const normalizedCountry = countryCode?.toString().toUpperCase() || null;
 
-  // US resources
-  resources.push(
-    {
-      name: '988 Suicide & Crisis Lifeline (US)',
-      number: '988',
-      available: '24/7',
-    },
-    {
-      name: 'Crisis Text Line (US)',
-      number: 'Text HOME to 741741',
-      available: '24/7',
-    }
-  );
+  const internationalResource = {
+    name: 'International Suicide Prevention',
+    number: 'https://www.iasp.info/resources/Crisis_Centres/',
+    available: '24/7',
+  };
 
-  // UK resources
-  resources.push(
-    {
-      name: 'Samaritans (UK)',
-      number: '116 123',
-      available: '24/7',
-    }
-  );
+  const countryResources: Record<string, Array<{ name: string; number: string; available: string }>> = {
+    US: [
+      {
+        name: '988 Suicide & Crisis Lifeline (US)',
+        number: '988',
+        available: '24/7',
+      },
+      {
+        name: 'Crisis Text Line (US)',
+        number: 'Text HOME to 741741',
+        available: '24/7',
+      },
+    ],
+    // UK / Great Britain
+    GB: [
+      {
+        name: 'Samaritans (UK)',
+        number: '116 123',
+        available: '24/7',
+      },
+    ],
+    UK: [
+      {
+        name: 'Samaritans (UK)',
+        number: '116 123',
+        available: '24/7',
+      },
+    ],
+    NL: [
+      {
+        name: '113 Zelfmoordpreventie (NL)',
+        number: '113',
+        available: '24/7',
+      },
+      {
+        name: 'De Luisterlijn (NL)',
+        number: '0900-0767',
+        available: '24/7',
+      },
+    ],
+  };
 
-  // Netherlands resources
-  resources.push(
-    {
-      name: '113 Zelfmoordpreventie (NL)',
-      number: '113',
-      available: '24/7',
-    },
-    {
-      name: 'De Luisterlijn (NL)',
-      number: '0900-0767',
-      available: '24/7',
-    }
-  );
+  if (normalizedCountry && countryResources[normalizedCountry]) {
+    // Country-specific: international link + resources for that country only
+    resources.push(internationalResource, ...countryResources[normalizedCountry]);
+  } else {
+    // Fallback: previous global set (international + US + UK + NL)
+    resources.push(
+      internationalResource,
+      // US
+      {
+        name: '988 Suicide & Crisis Lifeline (US)',
+        number: '988',
+        available: '24/7',
+      },
+      {
+        name: 'Crisis Text Line (US)',
+        number: 'Text HOME to 741741',
+        available: '24/7',
+      },
+      // UK
+      {
+        name: 'Samaritans (UK)',
+        number: '116 123',
+        available: '24/7',
+      },
+      // Netherlands
+      {
+        name: '113 Zelfmoordpreventie (NL)',
+        number: '113',
+        available: '24/7',
+      },
+      {
+        name: 'De Luisterlijn (NL)',
+        number: '0900-0767',
+        available: '24/7',
+      }
+    );
+  }
 
   let message = '';
   if (riskLevel === RiskLevel.HIGH_RISK_SUICIDE) {

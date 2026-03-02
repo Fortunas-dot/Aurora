@@ -86,14 +86,18 @@ export class OpenAIService {
 
         // Check for crisis resources
         if (parsed.type === 'crisis_resources') {
+          console.log('🚨 Crisis resources received:', parsed);
           // Store crisis resources in a callback or return them
           // For now, we'll handle this in the hook
           if (options.onCrisisResources) {
+            console.log('🚨 Calling onCrisisResources callback');
             options.onCrisisResources({
               riskLevel: parsed.riskLevel,
               message: parsed.message,
               resources: parsed.resources,
             });
+          } else {
+            console.warn('⚠️ No onCrisisResources callback provided');
           }
           return;
         }

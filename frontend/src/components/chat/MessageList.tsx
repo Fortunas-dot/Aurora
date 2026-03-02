@@ -70,10 +70,30 @@ export const MessageList: React.FC = () => {
     }
   }, [messages.length, currentStreamingMessage]);
 
-  // Memoize render functions for performance
-  const renderMessage = useCallback(({ item }: { item: typeof messages[0] }) => (
-    <ChatMessage message={item} />
-  ), []);
+  // Memoize index van laatste user-bericht (voor crisiskaart)
+  const lastUserIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages]);
+
+  const renderMessage = useCallback(
+    ({ item, index }: { item: typeof messages[0]; index: number }) => {
+      const showCrisisBelow =
+        !!crisisResources && index === lastUserIndex;
+
+      return (
+        <View>
+          <ChatMessage message={item} />
+          {showCrisisBelow && <CrisisResources resources={crisisResources} />}
+        </View>
+      );
+    },
+    [crisisResources, lastUserIndex]
+  );
 
   const renderEmptyState = useCallback(() => {
     // Empty state is now handled by the parent component (text-chat.tsx)
@@ -107,17 +127,11 @@ export const MessageList: React.FC = () => {
           ) : (
             <TypingIndicator />
           )}
-          {/* Show crisis resources if available during streaming */}
-          {crisisResources && <CrisisResources resources={crisisResources} />}
         </View>
       );
     }
-    // Show crisis resources after streaming completes
-    if (crisisResources && !isStreaming) {
-      return <CrisisResources resources={crisisResources} />;
-    }
     return null;
-  }, [isStreaming, messages.length, availableContext, currentStreamingMessage, crisisResources]);
+  }, [isStreaming, messages.length, availableContext, currentStreamingMessage]);
 
   // Memoize onContentSizeChange to prevent unnecessary re-renders
   const handleContentSizeChange = useCallback(() => {
