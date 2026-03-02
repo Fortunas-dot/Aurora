@@ -521,3 +521,51 @@ export const reportGroup = async (req: AuthRequest, res: Response): Promise<void
     });
   }
 };
+
+// @desc    Delete group (admin only)
+// @route   DELETE /api/groups/:id
+// @access  Private (Admin only)
+export const deleteGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const groupId = req.params.id;
+
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if user is admin
+    const isAdmin = group.admins.some((a) => a.toString() === req.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Only admins can delete this group',
+      });
+      return;
+    }
+
+    // Delete all posts in this group
+    await Post.deleteMany({ groupId });
+
+    // Optionally, delete notifications related to this group
+    await Notification.deleteMany({ relatedGroup: groupId });
+
+    // Delete the group itself
+    await Group.findByIdAndDelete(groupId);
+
+    res.json({
+      success: true,
+      message: 'Group deleted successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error deleting group',
+    });
+  }
+};

@@ -103,6 +103,10 @@ class GroupService {
   async reportGroup(id: string, reason: string): Promise<ApiResponse<void>> {
     return apiService.post<void>(`/groups/${id}/report`, { reason });
   }
+
+  async deleteGroup(id: string): Promise<ApiResponse<void>> {
+    return apiService.delete<void>(`/groups/${id}`);
+  }
 }
 
 export const groupService = new GroupService();
