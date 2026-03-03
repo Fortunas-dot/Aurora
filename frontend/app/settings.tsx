@@ -259,6 +259,7 @@ export default function SettingsScreen() {
         <View style={styles.menuSection}>
           <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.appSettings}</Text>
           <GlassCard padding={0}>
+            {/*
             <MenuItem
               icon="sparkles-outline"
               title="Aurora Style"
@@ -270,6 +271,7 @@ export default function SettingsScreen() {
               onPress={() => router.push('/aurora-style')}
             />
             <View style={styles.menuDivider} />
+            */}
             <MenuItem
               icon="school-outline"
               title="View Onboarding"

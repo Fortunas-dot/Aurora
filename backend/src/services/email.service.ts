@@ -239,7 +239,7 @@ function getWelcomeEmailTemplate(options: {
   verificationLink: string;
   includeVerificationCta: boolean;
 }): string {
-  const { username, verificationLink, includeVerificationCta } = options;
+  const { username } = options;
 
   const body = `
     <p style="margin:0 0 12px 0;">Hi ${username || 'there'},</p>
@@ -249,20 +249,15 @@ function getWelcomeEmailTemplate(options: {
     <p style="margin:0 0 12px 0;">
       We’re here to help you slow down, make sense of what you feel, and gently move towards a lighter mind.
     </p>
-    ${
-      includeVerificationCta
-        ? `<p style="margin:0 0 12px 0;">
-             To keep your account secure and make sure we can reach you, please verify your email address.
-           </p>`
-        : ''
-    }
   `;
 
   return baseEmailLayout({
     title: 'Welcome to Aurora 🌌',
     body,
-    ctaLabel: includeVerificationCta ? 'Verify email' : undefined,
-    ctaUrl: includeVerificationCta ? verificationLink : undefined,
+    // Do not include a verification button in the welcome email;
+    // a dedicated verification email is sent separately.
+    ctaLabel: undefined,
+    ctaUrl: undefined,
   });
 }
 

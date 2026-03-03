@@ -269,7 +269,7 @@ export default function PhoneVerificationScreen() {
                   title="Send verification code"
                   onPress={handleSendCode}
                   variant="primary"
-                  size="lg"
+                  size="md"
                   fullWidth
                   loading={isLoading}
                   style={styles.primaryButton}
