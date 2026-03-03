@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { GlassCard, Avatar } from '../common';
+import { useRequirePremium } from '../../hooks/usePremium';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
 import { Notification, NotificationType } from '../../services/notification.service';
 import { formatDistanceToNow } from 'date-fns';
@@ -65,6 +66,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   onMarkAsRead,
 }) => {
   const router = useRouter();
+  const { requirePremium } = useRequirePremium();
   const isUnread = !notification.read;
   const icon = getNotificationIcon(notification.type);
   const iconColor = getNotificationColor(notification.type);
@@ -89,7 +91,9 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
       case 'like':
       case 'comment':
         if (notification.relatedPost) {
-          router.push(`/post/${notification.relatedPost._id}`);
+          if (requirePremium()) {
+            router.push(`/post/${notification.relatedPost._id}`);
+          }
         }
         break;
       case 'follow':
@@ -99,13 +103,17 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         break;
       case 'message':
         if (notification.relatedUser) {
-          router.push(`/conversation/${notification.relatedUser._id}`);
+          if (requirePremium()) {
+            router.push(`/conversation/${notification.relatedUser._id}`);
+          }
         }
         break;
       case 'group_invite':
       case 'group_join':
         if (notification.relatedGroup) {
-          router.push(`/group/${notification.relatedGroup._id}`);
+          if (requirePremium()) {
+            router.push(`/group/${notification.relatedGroup._id}`);
+          }
         }
         break;
       case 'journal_entry':
@@ -122,7 +130,9 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
       default:
         // Default navigation
         if (notification.relatedPost) {
-          router.push(`/post/${notification.relatedPost._id}`);
+          if (requirePremium()) {
+            router.push(`/post/${notification.relatedPost._id}`);
+          }
         } else if (notification.relatedUser) {
           router.push(`/user/${notification.relatedUser._id}`);
         }

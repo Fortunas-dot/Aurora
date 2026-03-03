@@ -21,6 +21,7 @@ import { groupService, Group } from '../../src/services/group.service';
 import { postService, Post } from '../../src/services/post.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 import { getCountryName } from '../../src/constants/countries';
 
 
@@ -29,6 +30,7 @@ export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuthStore();
+  const { requirePremium } = useRequirePremium();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -568,9 +570,23 @@ export default function GroupDetailScreen() {
           <View style={{ paddingHorizontal: SPACING.md }}>
             <PostCard
               post={item}
-              onPress={() => router.push(`/post/${item._id}`)}
+              onPress={() => {
+                if (!isAuthenticated) {
+                  router.push('/(auth)/login');
+                  return;
+                }
+                if (!requirePremium()) return;
+                router.push(`/post/${item._id}`);
+              }}
               onLike={() => handleLikePost(item._id)}
-              onComment={() => router.push(`/post/${item._id}`)}
+              onComment={() => {
+                if (!isAuthenticated) {
+                  router.push('/(auth)/login');
+                  return;
+                }
+                if (!requirePremium()) return;
+                router.push(`/post/${item._id}`);
+              }}
               onShare={() => handleSharePost(item)}
               currentUserId={user?._id}
             />

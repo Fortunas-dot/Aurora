@@ -288,19 +288,26 @@ export default function AccountSettingsScreen() {
 
     setIsSubmitting(true);
 
+    const trimmedEmail = email.trim();
+    const emailChanged =
+      user?.email && trimmedEmail
+        ? trimmedEmail.toLowerCase() !== user.email.toLowerCase()
+        : trimmedEmail !== (user?.email || '');
+
     try {
       const response = await userService.updateProfile({
-        email: email.trim(),
+        email: trimmedEmail,
         phoneNumber: phoneLocal.trim() ? fullPhone : undefined,
       });
 
       if (response.success && response.data) {
         updateUser({
-          email: email.trim(),
+          email: trimmedEmail,
           phoneNumber: phoneLocal.trim() ? fullPhone : undefined,
+          // If the email was changed, mark it as unverified locally
+          ...(emailChanged ? { emailVerified: false } : {}),
         });
         Alert.alert('Success', 'Account settings updated successfully');
-        router.back();
       } else {
         const errorMsg = response.message || 'Could not update account settings';
         if (errorMsg.includes('Email already registered')) {

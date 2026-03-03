@@ -7,12 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { apiService } from '../../src/services/api.service';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { register, authSubmitting, registerError, clearError } = useAuthStore();
+  const { startOnboarding } = useOnboardingStore();
   
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -131,8 +133,9 @@ export default function RegisterScreen() {
     );
     
     if (success) {
-      // After successful registration, user can go straight into the app
-      router.replace('/(tabs)');
+      // After successful registration, start onboarding and show the onboarding experience
+      startOnboarding();
+      router.replace('/onboarding');
     }
   };
 

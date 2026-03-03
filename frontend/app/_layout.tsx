@@ -16,6 +16,7 @@ import { useConsentStore } from '../src/store/consentStore';
 import { ResponsiveWrapper } from '../src/components/common/ResponsiveWrapper';
 import { revenueCatService } from '../src/services/revenuecat.service';
 import { usePremiumStore } from '../src/store/premiumStore';
+import { useRequirePremium } from '../src/hooks/usePremium';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
 import { initializeFacebookSDK, facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import Constants from 'expo-constants';
@@ -127,6 +128,7 @@ export default function RootLayout() {
   const { colors, isDark } = useTheme();
   const { aiConsentStatus, loadConsent, resetConsent } = useConsentStore();
   const { checkPremiumStatus } = usePremiumStore();
+  const { requirePremium } = useRequirePremium();
 
   // Load Unbounded Regular font for headers
   // Note: Make sure Unbounded-Regular.ttf is in frontend/assets/fonts/
@@ -283,7 +285,11 @@ export default function RootLayout() {
                 break;
               case 'message':
                 if (data.relatedUserId) {
-                  router.push(`/conversation/${data.relatedUserId}`);
+                  if (!isAuthenticated) {
+                    router.push('/(auth)/login');
+                  } else if (requirePremium()) {
+                    router.push(`/conversation/${data.relatedUserId}`);
+                  }
                 }
                 break;
               case 'group_invite':
@@ -338,8 +344,13 @@ export default function RootLayout() {
         timestamp: new Date().toISOString(),
       });
 
-      // Identify user in RevenueCat
-      revenueCatService.identifyUser(user._id).catch((error) => {
+      // Identify user in RevenueCat and send basic subscriber attributes
+      revenueCatService.identifyUser(user._id, {
+        email: user.email,
+        phoneNumber: (user as any).phoneNumber,
+        username: user.username,
+        displayName: user.displayName,
+      }).catch((error) => {
         console.warn('RevenueCat identify user failed:', error);
       });
 

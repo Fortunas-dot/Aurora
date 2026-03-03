@@ -12,6 +12,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 
 const { width, height } = Dimensions.get('window');
 
@@ -163,6 +164,7 @@ export default function AuroraScreen() {
   const [insights, setInsights] = useState<JournalInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { requirePremium } = useRequirePremium();
   
   // Aurora background animation
   const auroraAnim1 = useRef(new Animated.Value(0)).current;
@@ -409,7 +411,10 @@ export default function AuroraScreen() {
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
-                onPress={() => router.push('/journal/create')}
+                onPress={() => {
+                  if (!requirePremium()) return;
+                  router.push('/journal/create');
+                }}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
@@ -421,7 +426,10 @@ export default function AuroraScreen() {
               
               <Pressable
                 style={styles.quickActionButton}
-                onPress={() => router.push('/journal/insights')}
+                onPress={() => {
+                  if (!requirePremium()) return;
+                  router.push('/journal/insights');
+                }}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
@@ -433,7 +441,10 @@ export default function AuroraScreen() {
               
               <Pressable
                 style={styles.quickActionButton}
-                onPress={() => router.push('/ideas')}
+                onPress={() => {
+                  if (!requirePremium()) return;
+                  router.push('/ideas');
+                }}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">
                   <View style={styles.quickActionContent}>
@@ -452,7 +463,14 @@ export default function AuroraScreen() {
           
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/text-chat')}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+                return;
+              }
+              if (!requirePremium()) return;
+              router.push('/text-chat');
+            }}
             padding="lg"
           >
             <View style={styles.optionContent}>
@@ -476,7 +494,45 @@ export default function AuroraScreen() {
 
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/journal')}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+                return;
+              }
+              if (!requirePremium()) return;
+              router.push('/health-info');
+            }}
+            padding="lg"
+          >
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <LinearGradient
+                  colors={['rgba(239, 68, 68, 0.3)', 'rgba(248, 113, 113, 0.3)']}
+                  style={styles.optionIconGradient}
+                >
+                  <Ionicons name="heart" size={28} color={colors.error} />
+                </LinearGradient>
+              </View>
+              <View style={styles.optionText}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Health Check</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+                  Manage your health information
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
+            </View>
+          </GlassCard>
+
+          <GlassCard
+            style={styles.optionCard}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+                return;
+              }
+              if (!requirePremium()) return;
+              router.push('/journal');
+            }}
             padding="lg"
           >
             <View style={styles.optionContent}>
@@ -500,7 +556,14 @@ export default function AuroraScreen() {
 
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/journal/browse')}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+                return;
+              }
+              if (!requirePremium()) return;
+              router.push('/journal/browse');
+            }}
             padding="lg"
           >
             <View style={styles.optionContent}>
@@ -524,7 +587,14 @@ export default function AuroraScreen() {
 
           <GlassCard
             style={styles.optionCard}
-            onPress={() => router.push('/journal/insights')}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/(auth)/login');
+                return;
+              }
+              if (!requirePremium()) return;
+              router.push('/journal/insights');
+            }}
             padding="lg"
           >
             <View style={styles.optionContent}>
@@ -540,30 +610,6 @@ export default function AuroraScreen() {
                 <Text style={[styles.optionTitle, { color: colors.text }]}>Insights</Text>
                 <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
                   View patterns and insights from your journal
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
-            </View>
-          </GlassCard>
-
-          <GlassCard
-            style={styles.optionCard}
-            onPress={() => router.push('/health-info')}
-            padding="lg"
-          >
-            <View style={styles.optionContent}>
-              <View style={styles.optionIconContainer}>
-                <LinearGradient
-                  colors={['rgba(239, 68, 68, 0.3)', 'rgba(248, 113, 113, 0.3)']}
-                  style={styles.optionIconGradient}
-                >
-                  <Ionicons name="heart" size={28} color={colors.error} />
-                </LinearGradient>
-              </View>
-              <View style={styles.optionText}>
-                <Text style={[styles.optionTitle, { color: colors.text }]}>Health Check</Text>
-                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
-                  Manage your health information
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />

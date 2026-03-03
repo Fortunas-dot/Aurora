@@ -22,6 +22,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 import { messageService, Conversation } from '../../src/services/message.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
@@ -134,6 +135,7 @@ export default function ChatScreen() {
   const { colors } = useTheme();
   const { isAuthenticated } = useAuthStore();
   const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
+  const { requirePremium } = useRequirePremium();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,7 +275,14 @@ export default function ChatScreen() {
 
     return (
       <Pressable
-        onPress={() => router.push(`/conversation/${item.user._id}`)}
+        onPress={() => {
+          if (!isAuthenticated) {
+            router.push('/(auth)/login');
+            return;
+          }
+          if (!requirePremium()) return;
+          router.push(`/conversation/${item.user._id}`);
+        }}
         onLongPress={() => handleDeleteConversation(item.user._id, item.user.displayName || item.user.username)}
       >
         <GlassCard

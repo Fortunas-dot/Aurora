@@ -27,6 +27,7 @@ import { userService, UserProfile } from '../../src/services/user.service';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 import { COUNTRIES, getCountryName } from '../../src/constants/countries';
 
 // Health conditions list (same as in create-group.tsx)
@@ -294,6 +295,7 @@ export default function GroupsScreen() {
   const { colors } = useTheme();
   const { isAuthenticated, user: currentUser } = useAuthStore();
   const { isActive: isOnboardingActive, currentStep, nextStep } = useOnboardingStore();
+  const { requirePremium } = useRequirePremium();
   
   const [activeTab, setActiveTab] = useState<TabType>('groups');
   
@@ -464,6 +466,8 @@ export default function GroupsScreen() {
       return;
     }
 
+    if (!requirePremium()) return;
+
     try {
       const group = groups.find((g) => g._id === groupId);
       if (!group) return;
@@ -532,7 +536,9 @@ export default function GroupsScreen() {
         if (newFollowingState) {
           loadBuddies();
           // Navigate to conversation after following
-          router.push(`/conversation/${userId}`);
+          if (isAuthenticated && requirePremium()) {
+            router.push(`/conversation/${userId}`);
+          }
         }
       } else {
         console.error('Follow failed:', response.message);
@@ -543,8 +549,13 @@ export default function GroupsScreen() {
   }, [isAuthenticated, searchResults, loadBuddies, router]);
 
   const handleMessageUser = useCallback((userId: string) => {
+    if (!isAuthenticated) {
+      router.push('/(auth)/login');
+      return;
+    }
+    if (!requirePremium()) return;
     router.push(`/conversation/${userId}`);
-  }, [router]);
+  }, [isAuthenticated, requirePremium, router]);
 
   // Random falling star effect
   useEffect(() => {
@@ -890,6 +901,7 @@ export default function GroupsScreen() {
               if (!isAuthenticated) {
                 router.push('/(auth)/login');
               } else {
+                if (!requirePremium()) return;
                 router.push('/create-group');
               }
             }}
@@ -1228,7 +1240,10 @@ export default function GroupsScreen() {
                   {isAuthenticated && (
                     <Pressable
                       style={styles.createGroupButton}
-                      onPress={() => router.push('/create-group')}
+                      onPress={() => {
+                        if (!requirePremium()) return;
+                        router.push('/create-group');
+                      }}
                     >
                       <Text style={styles.createGroupButtonText}>Create a group</Text>
                     </Pressable>

@@ -11,18 +11,18 @@ import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../src/servi
 export default function EmailVerifiedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((state) => state.user);
+  const userId = useAuthStore((state) => state.user?._id);
   const updateUser = useAuthStore((state) => state.updateUser);
 
   useEffect(() => {
-    if (user?._id) {
+    if (userId) {
       updateUser({ emailVerified: true });
       posthogService.trackEvent(POSTHOG_EVENTS.USER_EMAIL_VERIFIED, {
-        [POSTHOG_PROPERTIES.USER_ID]: user._id,
+        [POSTHOG_PROPERTIES.USER_ID]: userId,
         [POSTHOG_PROPERTIES.TIMESTAMP]: new Date().toISOString(),
       });
     }
-  }, [user, updateUser]);
+  }, [userId, updateUser]);
 
   return (
     <LinearGradient

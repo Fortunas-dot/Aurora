@@ -20,6 +20,7 @@ import { userService, UserProfile } from '../../src/services/user.service';
 import { postService, Post } from '../../src/services/post.service';
 import { shareService } from '../../src/services/share.service';
 import { useAuthStore } from '../../src/store/authStore';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { getUsernameColor } from '../../src/utils/usernameColors';
 
@@ -28,6 +29,7 @@ export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user: currentUser, isAuthenticated } = useAuthStore();
+  const { requirePremium } = useRequirePremium();
   const { language } = useSettingsStore();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -478,7 +480,14 @@ export default function UserProfileScreen() {
               renderItem={({ item }) => (
                 <PostCard
                   post={item}
-                  onPress={() => router.push(`/post/${item._id}`)}
+                  onPress={() => {
+                    if (!isAuthenticated) {
+                      router.push('/(auth)/login');
+                      return;
+                    }
+                    if (!requirePremium()) return;
+                    router.push(`/post/${item._id}`);
+                  }}
                   onShare={async () => {
                     try {
                       const authorName = item.author?.displayName || item.author?.username || 'Someone';

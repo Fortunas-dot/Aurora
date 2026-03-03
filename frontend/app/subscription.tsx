@@ -97,6 +97,7 @@ export default function SubscriptionScreen() {
     restorePurchases,
     refreshCustomerInfo,
     clearError,
+    enforcePaywall,
   } = usePremiumStore();
 
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -492,6 +493,9 @@ export default function SubscriptionScreen() {
   };
 
   const handleBack = () => {
+    // User dismissed the subscription screen – from now on, enforce paywall for non‑premium users
+    enforcePaywall();
+
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -619,11 +623,6 @@ export default function SubscriptionScreen() {
                 </View>
               )}
             </View>
-            {isPremium && (
-              <View style={[styles.selectedIndicator, { backgroundColor: '#27AE60', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 }]}>
-                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-              </View>
-            )}
           </Animated.View>
 
           {/* Free Trial Notice */}

@@ -16,6 +16,7 @@ import { GlassCard, GlassInput, Avatar, LoadingSpinner } from '../src/components
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { userService, UserProfile } from '../src/services/user.service';
 import { useAuthStore } from '../src/store/authStore';
+import { useRequirePremium } from '../src/hooks/usePremium';
 import { getUsernameColor } from '../src/utils/usernameColors';
 
 // Simple debounce hook
@@ -39,6 +40,7 @@ export default function SearchUsersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user: currentUser } = useAuthStore();
+  const { requirePremium } = useRequirePremium();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]); // search results
@@ -105,6 +107,11 @@ export default function SearchUsersScreen() {
   const handleUserPress = (userId: string) => {
     // From the Messages screen, this screen is used to start a new chat,
     // so tapping a user should open the conversation with them.
+    if (!currentUser?._id) {
+      router.push('/(auth)/login');
+      return;
+    }
+    if (!requirePremium()) return;
     router.push(`/conversation/${userId}`);
   };
 

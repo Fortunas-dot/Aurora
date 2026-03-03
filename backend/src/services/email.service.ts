@@ -167,7 +167,19 @@ function baseEmailLayout(content: { title: string; body: string; ctaLabel?: stri
       ? `<tr>
            <td align="center" style="padding: 24px 0 8px 0;">
              <a href="${ctaUrl}" 
-                style="display: inline-block; padding: 12px 28px; border-radius: 999px; background: linear-gradient(135deg,#6366f1,#a855f7); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">
+                style="
+                  display:inline-block;
+                  padding: 12px 28px;
+                  border-radius: 999px;
+                  background-color:#60A5FA;
+                  background-image:none;
+                  color:#020617;
+                  text-decoration:none;
+                  font-weight:600;
+                  font-size:16px;
+                  border:1px solid #93C5FD;
+                  box-shadow:0 0 0 1px rgba(15,23,42,0.8), 0 12px 30px rgba(15,23,42,0.8);
+                ">
                ${ctaLabel}
              </a>
            </td>

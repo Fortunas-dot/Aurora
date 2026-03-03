@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton } from '../src/components/common';
 import { PaginationDots } from '../src/components/onboarding/PaginationDots';
-import { OnboardingOverlay } from '../src/components/onboarding/OnboardingOverlay';
 import { AuroraCore } from '../src/components/voice/AuroraCore';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
@@ -501,11 +500,6 @@ export default function OnboardingScreen() {
     finishOnboarding();
     router.push('/subscription');
   };
-  
-  const handleSkip = () => {
-    finishOnboarding();
-    router.back();
-  };
 
   const renderSlide = React.useCallback(({ item, index }: { item: OnboardingSlide; index: number }) => {
     // Early return optimization - don't render if not visible
@@ -676,12 +670,8 @@ export default function OnboardingScreen() {
       colors={colors.backgroundGradient as readonly [string, string, string]}
       style={styles.container}
     >
-      {/* Header with Skip button */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Pressable onPress={handleSkip} style={styles.skipButton}>
-          <Text style={[styles.skipText, { color: colors.textMuted }]}>Skip</Text>
-        </Pressable>
-      </View>
+      {/* Simple header spacing (no Skip button) */}
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]} />
 
       {/* Slides FlatList */}
       <FlatList

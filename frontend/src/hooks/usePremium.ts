@@ -48,16 +48,24 @@ export function usePremium() {
  * ```
  */
 export function useRequirePremium() {
-  const { isPremium } = usePremiumStore();
+  const { isPremium, isPaywallEnforced } = usePremiumStore();
   const router = useRouter();
 
   const requirePremium = (): boolean => {
-    if (!isPremium) {
-      // Navigate to subscription page
-      router.push('/subscription');
-      return false;
+    // If user is premium, always allow
+    if (isPremium) {
+      return true;
     }
-    return true;
+
+    // Before the paywall is enforced (e.g. before user has seen/dismissed it),
+    // allow access so they can experience the app.
+    if (!isPaywallEnforced) {
+      return true;
+    }
+
+    // Once the paywall is enforced and user is not premium, redirect to subscription
+    router.push('/subscription');
+    return false;
   };
 
   return {

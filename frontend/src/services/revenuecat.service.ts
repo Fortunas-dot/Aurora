@@ -22,6 +22,13 @@ export const PRODUCT_IDS = {
 
 export type ProductId = typeof PRODUCT_IDS[keyof typeof PRODUCT_IDS];
 
+interface RevenueCatUserAttributes {
+  email?: string;
+  phoneNumber?: string;
+  username?: string;
+  displayName?: string;
+}
+
 interface RevenueCatService {
   initialized: boolean;
   initialize: (userId?: string) => Promise<void>;
@@ -31,7 +38,7 @@ interface RevenueCatService {
   restorePurchases: () => Promise<CustomerInfo | null>;
   isPremiumActive: () => Promise<boolean>;
   checkPremiumStatus: () => Promise<boolean>;
-  identifyUser: (userId: string) => Promise<void>;
+  identifyUser: (userId: string, attributes?: RevenueCatUserAttributes) => Promise<void>;
   resetUser: () => Promise<void>;
   logLevel: LOG_LEVEL;
 }
@@ -147,7 +154,7 @@ class RevenueCatServiceImpl implements RevenueCatService {
    * Identify user with RevenueCat
    * Call this after user logs in
    */
-  async identifyUser(userId: string): Promise<void> {
+  async identifyUser(userId: string, attributes?: RevenueCatUserAttributes): Promise<void> {
     if (!this.initialized) {
       await this.initialize(userId);
       return;
@@ -159,6 +166,47 @@ class RevenueCatServiceImpl implements RevenueCatService {
 
     try {
       await Purchases.logIn(userId);
+
+      // Set subscriber attributes (email, phone number, etc.) if provided
+      if (attributes) {
+        if (attributes.email) {
+          try {
+            // Use dedicated helper so it shows up in the built‑in "E-mail" field
+            // and for integrations (e.g. charts, webhooks)
+            // @ts-ignore - type defs may not include this helper yet
+            await Purchases.setEmail(attributes.email);
+          } catch (attrError) {
+            console.warn('⚠️ RevenueCat setEmail failed:', attrError);
+          }
+        }
+        if (attributes.phoneNumber) {
+          try {
+            // @ts-ignore - type defs may not include this helper yet
+            await Purchases.setPhoneNumber(attributes.phoneNumber);
+          } catch (attrError) {
+            console.warn('⚠️ RevenueCat setPhoneNumber failed:', attrError);
+          }
+        }
+        if (attributes.username) {
+          try {
+            // Prefer explicit displayName if available; otherwise username
+            // @ts-ignore - type defs may not include this helper yet
+            await Purchases.setDisplayName(attributes.username);
+          } catch (attrError) {
+            console.warn('⚠️ RevenueCat setDisplayName (username) failed:', attrError);
+          }
+        }
+        if (attributes.displayName) {
+          try {
+            // Override with more user‑friendly display name if present
+            // @ts-ignore - type defs may not include this helper yet
+            await Purchases.setDisplayName(attributes.displayName);
+          } catch (attrError) {
+            console.warn('⚠️ RevenueCat setDisplayName (displayName) failed:', attrError);
+          }
+        }
+      }
+
       console.log('✅ RevenueCat user identified:', userId);
 
       // Sync customer info after identifying (non-blocking)

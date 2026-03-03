@@ -14,15 +14,15 @@ export default function VerifyEmailScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ token?: string }>();
   const updateUser = useAuthStore((state) => state.updateUser);
-  const user = useAuthStore((state) => state.user);
+  const userId = useAuthStore((state) => state.user?._id);
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'missing'>('loading');
   const [message, setMessage] = useState<string>('');
 
-  useEffect(() => {
-    const token = params?.token;
+  const token = typeof params?.token === 'string' ? params.token : undefined;
 
-    if (!token || typeof token !== 'string') {
+  useEffect(() => {
+    if (!token) {
       setStatus('missing');
       setMessage('No verification token found. Please open the link again from your email or request a new one.');
       return;
@@ -36,10 +36,10 @@ export default function VerifyEmailScreen() {
           setStatus('success');
           setMessage('Your email has been verified. Thank you for confirming your account.');
 
-          if (user?._id) {
+          if (userId) {
             updateUser({ emailVerified: true });
             posthogService.trackEvent(POSTHOG_EVENTS.USER_EMAIL_VERIFIED, {
-              [POSTHOG_PROPERTIES.USER_ID]: user._id,
+              [POSTHOG_PROPERTIES.USER_ID]: userId,
               [POSTHOG_PROPERTIES.TIMESTAMP]: new Date().toISOString(),
             });
           }
@@ -54,7 +54,7 @@ export default function VerifyEmailScreen() {
     };
 
     verify();
-  }, [params, updateUser, user]);
+  }, [token, userId, updateUser]);
 
   const title =
     status === 'success'

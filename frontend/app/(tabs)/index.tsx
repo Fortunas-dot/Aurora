@@ -31,6 +31,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
+import { useRequirePremium } from '../../src/hooks/usePremium';
 
 // Animated star component
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -268,6 +269,7 @@ export default function FeedScreen() {
   const { unreadCount, updateUnreadCount } = useNotificationStore();
   const { colors } = useTheme();
   const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
+  const { requirePremium } = useRequirePremium();
   
   // Debug: Log onboarding state when component mounts or state changes
   useEffect(() => {
@@ -684,6 +686,7 @@ export default function FeedScreen() {
       router.push('/(auth)/login');
       return;
     }
+    if (!requirePremium()) return;
     router.push('/create-post');
   };
 
@@ -742,7 +745,13 @@ export default function FeedScreen() {
       postType: item.postType,
     });
 
-    const goToPost = () =>
+    const goToPost = () => {
+      if (!isAuthenticated) {
+        router.push('/(auth)/login');
+        return;
+      }
+      if (!requirePremium()) return;
+
       router.push({
         pathname: '/post/[id]',
         params: {
@@ -750,6 +759,7 @@ export default function FeedScreen() {
           preview,
         },
       });
+    };
 
     return (
       <PostCard
