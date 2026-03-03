@@ -842,13 +842,17 @@ const styles = StyleSheet.create({
   title: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
-    fontWeight: '600',
+    // Use Manjari Bold for post titles
+    fontFamily: 'Manjari-Bold',
+    fontWeight: '400',
     marginBottom: SPACING.xs / 2,
   },
   titleFull: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    fontWeight: '600',
+    // Use Manjari Bold for full post titles
+    fontFamily: 'Manjari-Bold',
+    fontWeight: '400',
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.xs,
     paddingBottom: SPACING.sm,
@@ -858,12 +862,16 @@ const styles = StyleSheet.create({
   },
   contentPreview: {
     ...TYPOGRAPHY.body,
+    // Use Manjari for post description preview
+    fontFamily: 'Manjari-Regular',
     color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   content: {
     ...TYPOGRAPHY.body,
+    // Use Manjari for full post content
+    fontFamily: 'Manjari-Regular',
     color: COLORS.text,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,

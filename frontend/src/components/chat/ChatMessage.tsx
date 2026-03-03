@@ -94,6 +94,8 @@ const styles = StyleSheet.create({
   messageText: {
     ...TYPOGRAPHY.body,
     lineHeight: 22,
+    // Use Manjari for all chat messages (user + Aurora)
+    fontFamily: 'Manjari-Regular',
   },
   userText: {
     color: COLORS.text,

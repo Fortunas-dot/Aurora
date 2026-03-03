@@ -130,10 +130,13 @@ export default function RootLayout() {
   const { checkPremiumStatus } = usePremiumStore();
   const { requirePremium } = useRequirePremium();
 
-  // Load Unbounded Regular font for headers
-  // Note: Make sure Unbounded-Regular.ttf is in frontend/assets/fonts/
+  // Load Unbounded for headers and Manjari (regular + bold) for chat / content
+  // Note: Make sure these files are in frontend/assets/fonts/
   const [fontsLoaded, fontError] = useFonts({
     'Unbounded-Regular': require('../assets/fonts/Unbounded-Regular.ttf'),
+    // Manjari family for chat and titles
+    'Manjari-Regular': require('../assets/fonts/Manjari-Regular.ttf'),
+    'Manjari-Bold': require('../assets/fonts/Manjari-Bold.ttf'),
   });
 
   // Log font loading status
@@ -364,15 +367,23 @@ export default function RootLayout() {
         console.warn('RevenueCat reset user failed:', error);
       });
       
-      // Reset AI consent state on logout (each user must provide their own consent)
-      resetConsent().catch((error) => {
-        console.warn('Failed to reset AI consent:', error);
-      });
+      /**
+       * Reset AI consent only after we definitively know the user is logged out.
+       * The actual secure storage key is already cleared in `authStore.logout`.
+       * Here we ONLY clear the in-memory Zustand state, and we avoid running this
+       * during initial app bootstrap while auth is still loading, otherwise we'd
+       * force users to re-consent on every cold start.
+       */
+      if (!isLoading) {
+        resetConsent().catch((error) => {
+          console.warn('Failed to reset AI consent:', error);
+        });
+      }
       
       // Don't reset PostHog here - let logout handle it
       // posthogService.reset();
     }
-  }, [isAuthenticated, user, checkPremiumStatus, resetConsent]);
+  }, [isAuthenticated, isLoading, user, checkPremiumStatus, resetConsent]);
 
   // Track screen views in Facebook (PostHog screen tracking is handled by PostHogScreenTracker)
   useEffect(() => {

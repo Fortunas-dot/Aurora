@@ -1419,6 +1419,8 @@ const styles = StyleSheet.create({
   },
   messageText: {
     ...TYPOGRAPHY.body,
+    // Use Manjari for 1-on-1 chat messages
+    fontFamily: 'Manjari-Regular',
     color: COLORS.text,
     marginBottom: SPACING.xs,
   },

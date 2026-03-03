@@ -1261,6 +1261,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
+    // Use Manjari Bold for the Aurora chat header title only
+    fontFamily: 'Manjari-Bold',
+    fontWeight: '400',
   },
   headerSubtitle: {
     ...TYPOGRAPHY.caption,
