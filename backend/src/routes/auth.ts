@@ -44,7 +44,8 @@ router.post('/facebook', facebookAuth);
 
 // Email verification
 router.post('/verify-email', verifyEmail);
-router.post('/send-verification-email', sendVerificationEmailEndpoint);
+// Private endpoint: resend verification email for the authenticated user
+router.post('/send-verification-email', protect, sendVerificationEmailEndpoint);
 router.get('/verify-email-redirect', verifyEmailRedirect);
 
 // Password reset

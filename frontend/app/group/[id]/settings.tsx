@@ -130,14 +130,6 @@ export default function GroupSettingsScreen() {
           }
         }
         setHealthCondition(groupData.healthCondition || null);
-
-        // Check admin status
-        console.log('Group data:', { isAdmin: groupData.isAdmin, userId: groupData._id });
-        if (groupData.isAdmin !== true) {
-          Alert.alert('Access Denied', 'Only admins can edit group settings');
-          router.back();
-          return;
-        }
       }
     } catch (error) {
       console.error('Error loading group:', error);

@@ -494,28 +494,26 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// @desc    Resend verification email
+// @desc    Resend verification email for the currently authenticated user
 // @route   POST /api/auth/send-verification-email
-// @access  Public
-export const sendVerificationEmailEndpoint = async (req: Request, res: Response): Promise<void> => {
+// @access  Private
+export const sendVerificationEmailEndpoint = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { email } = req.body as { email?: string };
-
-    if (!email) {
-      res.status(400).json({
-        success: false,
-        message: 'Email is required',
-      });
-      return;
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    // Always use the authenticated user – do NOT trust arbitrary email input
+    const user = await User.findById(req.userId);
 
     if (!user) {
       res.status(404).json({
         success: false,
         message: 'User not found',
+      });
+      return;
+    }
+
+    if (!user.email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required',
       });
       return;
     }
@@ -528,6 +526,7 @@ export const sendVerificationEmailEndpoint = async (req: Request, res: Response)
       return;
     }
 
+    // Generate a fresh verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
     user.emailVerificationToken = verificationToken;
     await user.save();

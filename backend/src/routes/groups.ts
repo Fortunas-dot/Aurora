@@ -9,6 +9,7 @@ import {
   getGroupPosts,
   updateGroup,
   reportGroup,
+  removeGroupMember,
   deleteGroup,
 } from '../controllers/groupController';
 import { protect, optionalAuth } from '../middleware/auth';
@@ -33,6 +34,7 @@ router.post('/:id/leave', protect, leaveGroup);
 router.put('/:id', protect, groupValidation, updateGroup);
 router.get('/:id/posts', optionalAuth, getGroupPosts);
 router.post('/:id/report', protect, reportGroup);
+router.delete('/:id/members/:memberId', protect, removeGroupMember);
 router.delete('/:id', protect, deleteGroup);
 
 export default router;

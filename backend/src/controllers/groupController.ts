@@ -522,6 +522,71 @@ export const reportGroup = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
+// @desc    Remove a member from a group (admin only)
+// @route   DELETE /api/groups/:id/members/:memberId
+// @access  Private (Admin only)
+export const removeGroupMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const groupId = req.params.id;
+    const { memberId } = req.params;
+
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      res.status(404).json({
+        success: false,
+        message: 'Group not found',
+      });
+      return;
+    }
+
+    // Check if user is admin
+    const isAdmin = group.admins.some((a) => a.toString() === req.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Only admins can remove members from this group',
+      });
+      return;
+    }
+
+    // Prevent removing admins via this endpoint
+    const isTargetAdmin = group.admins.some((a) => a.toString() === memberId);
+    if (isTargetAdmin) {
+      res.status(400).json({
+        success: false,
+        message: 'You cannot remove another admin from the group',
+      });
+      return;
+    }
+
+    const memberIndex = group.members.findIndex((m) => m.toString() === memberId);
+    if (memberIndex === -1) {
+      res.status(404).json({
+        success: false,
+        message: 'Member not found in this group',
+      });
+      return;
+    }
+
+    group.members.splice(memberIndex, 1);
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Member removed from group successfully',
+      data: {
+        memberCount: group.members.length,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error removing member from group',
+    });
+  }
+};
+
 // @desc    Delete group (admin only)
 // @route   DELETE /api/groups/:id
 // @access  Private (Admin only)

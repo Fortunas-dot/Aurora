@@ -104,6 +104,13 @@ class GroupService {
     return apiService.post<void>(`/groups/${id}/report`, { reason });
   }
 
+  async removeMember(
+    groupId: string,
+    memberId: string
+  ): Promise<ApiResponse<{ memberCount: number }>> {
+    return apiService.delete<{ memberCount: number }>(`/groups/${groupId}/members/${memberId}`);
+  }
+
   async deleteGroup(id: string): Promise<ApiResponse<void>> {
     return apiService.delete<void>(`/groups/${id}`);
   }

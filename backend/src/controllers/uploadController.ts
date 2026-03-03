@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { AuthRequest } from '../middleware/auth';
 import { storeFile } from '../services/mongoStorage';
+import { uploadVideoToCloudflare } from '../services/videoTranscode.service';
 
 // Ensure uploads directory exists (used as temp storage before MongoDB)
 const uploadsDir = path.join(__dirname, '../../uploads');
@@ -40,7 +41,9 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB (supports images, videos, and audio files)
+    // Lower the hard limit to reduce risk of huge uploads overwhelming storage.
+    // For videos, we rely on the streaming provider to compress/transcode.
+    fileSize: 25 * 1024 * 1024, // 25MB
   },
   fileFilter,
 });
@@ -59,40 +62,63 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    const { filename, mimetype, size, path: localPath } = req.file;
+
     console.log('Upload received:', {
-      filename: req.file.filename,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
+      filename,
+      mimetype,
+      size,
     });
 
-    // Store file in MongoDB GridFS for persistence across deploys
-    try {
-      await storeFile(req.file.path, req.file.filename, req.file.mimetype);
-      console.log('✅ File stored in MongoDB GridFS:', req.file.filename);
-      
-      // Delete local temp file after storing in MongoDB
+    let finalUrl: string | null = null;
+
+    // If this is a video, prefer sending it to the external streaming provider
+    // which will handle transcoding/compression and deliver an optimized stream.
+    if (mimetype.startsWith('video/')) {
       try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkErr) {
-        console.warn('Could not delete temp file:', unlinkErr);
+        const transcoded = await uploadVideoToCloudflare(localPath, filename);
+
+        if (transcoded?.playbackUrl) {
+          finalUrl = transcoded.playbackUrl;
+        }
+      } catch (err) {
+        console.error('❌ Error uploading video to streaming provider:', err);
       }
-    } catch (gridfsErr) {
-      console.error('❌ GridFS storage failed, file still available locally:', gridfsErr);
-      // File is still on local filesystem as fallback
     }
 
-    // Return file URL - use absolute URL for production
-    const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
-    const relativeUrl = `/uploads/${req.file.filename}`;
-    const fileUrl = `${baseUrl}${relativeUrl}`;
+    // For images/audio (or if external upload failed), fall back to existing GridFS storage
+    if (!finalUrl) {
+      try {
+        await storeFile(localPath, filename, mimetype);
+        console.log('✅ File stored in MongoDB GridFS:', filename);
+
+        // Return file URL - use absolute URL for production
+        const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+        const relativeUrl = `/uploads/${filename}`;
+        finalUrl = `${baseUrl}${relativeUrl}`;
+      } catch (gridfsErr) {
+        console.error('❌ GridFS storage failed, file still available locally:', gridfsErr);
+        // As a last resort, expose the local URL so the file is still usable
+        const baseUrl = process.env.BASE_URL || 'https://aurora-production.up.railway.app';
+        const relativeUrl = `/uploads/${filename}`;
+        finalUrl = `${baseUrl}${relativeUrl}`;
+      }
+    }
+
+    // Always try to delete the local temp file at this point
+    try {
+      fs.unlinkSync(localPath);
+    } catch (unlinkErr) {
+      console.warn('Could not delete temp file:', unlinkErr);
+    }
 
     res.json({
       success: true,
       data: {
-        url: fileUrl,
-        filename: req.file.filename,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
+        url: finalUrl,
+        filename,
+        mimetype,
+        size,
       },
     });
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import User from '../models/User';
 import Post from '../models/Post';
@@ -178,9 +179,11 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     
     // Handle email update
     if (email !== undefined && email !== currentUser.email) {
+      const normalizedEmail = email.toLowerCase().trim();
+
       // Check if new email is already taken
       const existingEmailUser = await User.findOne({
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         _id: { $ne: req.userId },
       });
 
@@ -191,7 +194,11 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
         });
         return;
       }
-      updateData.email = email.toLowerCase().trim();
+
+      // Update email and reset verification state
+      updateData.email = normalizedEmail;
+      updateData.emailVerified = false;
+      updateData.emailVerificationToken = crypto.randomBytes(32).toString('hex');
     }
     
     // Handle phone number update

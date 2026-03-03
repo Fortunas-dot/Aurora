@@ -134,6 +134,15 @@ export default function AccountSettingsScreen() {
       return;
     }
 
+    // Prevent verifying an email that hasn't been saved yet
+    if (email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      Alert.alert(
+        'Save email first',
+        'Please save your new email address before requesting a verification email.'
+      );
+      return;
+    }
+
     setIsSendingEmailVerification(true);
     try {
       const response = await authService.sendVerificationEmail(user.email);

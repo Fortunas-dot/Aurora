@@ -291,7 +291,7 @@ export default function GroupDetailScreen() {
     if (!group) return;
 
     const options: Array<{ text: string; style?: 'default' | 'destructive' | 'cancel'; onPress: () => void }> = [];
-    
+
     if (group.isMember) {
       options.push({
         text: 'Leave Group',
@@ -491,12 +491,22 @@ export default function GroupDetailScreen() {
           </Pressable>
           <View style={styles.headerSpacer} />
           {group.isMember && (
-            <Pressable
-              style={styles.headerSettingsButton}
-              onPress={handleGroupSettings}
-            >
-              <Ionicons name="settings" size={22} color={COLORS.white} />
-            </Pressable>
+            <View style={styles.headerRightActions}>
+              {/* Members icon (always visible for members) */}
+              <Pressable
+                style={styles.headerSettingsButton}
+                onPress={() => router.push(`/group/${group._id}/members`)}
+              >
+                <Ionicons name="people-outline" size={22} color={COLORS.white} />
+              </Pressable>
+              {/* Settings icon (visible for all members; options differ for admins vs non-admins) */}
+              <Pressable
+                style={styles.headerSettingsButton}
+                onPress={handleGroupSettings}
+              >
+                <Ionicons name="settings" size={22} color={COLORS.white} />
+              </Pressable>
+            </View>
           )}
         </View>
       </View>
@@ -698,6 +708,11 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   listContent: {
     paddingBottom: 100,
