@@ -19,7 +19,9 @@ const getConfigString = (value: any): string | null => {
 export const getApiUrl = (): string => {
   // Always use Railway backend
   const railwayUrl = 'https://aurora-production.up.railway.app/api';
-  console.log('[API] Using Railway backend:', railwayUrl);
+  if (__DEV__) {
+    console.log('[API] Using Railway backend:', railwayUrl);
+  }
   return railwayUrl;
 };
 

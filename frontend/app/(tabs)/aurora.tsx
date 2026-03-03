@@ -272,7 +272,7 @@ export default function AuroraScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Aurora layers - optimized for performance */}
+      {/* Aurora layers - optimized for performance (kept subtle, just tuned durations in effect above) */}
       <Animated.View
         style={[
           styles.auroraLayer,
@@ -327,9 +327,9 @@ export default function AuroraScreen() {
         />
       </Animated.View>
       
-      {/* Star field effect - Reduced for better performance */}
+      {/* Star field effect - slightly fewer stars for smoother performance, same aesthetic */}
       <View style={styles.starField} pointerEvents="none" collapsable={false}>
-        {Array.from({ length: 20 }).map((_, i) => (
+        {Array.from({ length: 14 }).map((_, i) => (
           <AnimatedStar key={`star-${i}`} index={i} />
         ))}
       </View>

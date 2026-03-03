@@ -560,21 +560,21 @@ export default function FeedScreen() {
     }
   }, [isAuthenticated]); // Removed updateUnreadCount from dependencies
 
-  // Random falling star effect
+  // Random falling star effect – similar visuals, slightly less frequent for smoother scrolling
   useEffect(() => {
     const createFallingStar = () => {
       const id = fallingStarIdRef.current++;
       setFallingStars((prev) => [...prev, { id, key: Date.now() + id }]);
     };
     
-    // Create first falling star after a random delay (2-5 seconds)
-    const initialDelay = 2000 + Math.random() * 3000;
+    // Create first falling star after a random delay (2.5–6 seconds)
+    const initialDelay = 2500 + Math.random() * 3500;
     const initialTimeout = setTimeout(createFallingStar, initialDelay);
     
-    // Then create falling stars at random intervals (3-8 seconds) - more frequent
+    // Then create falling stars at gentle random intervals (4–9 seconds)
     let currentTimeout: NodeJS.Timeout;
     const scheduleNext = () => {
-      const delay = 3000 + Math.random() * 5000; // 3-8 seconds
+      const delay = 4000 + Math.random() * 5000; // 4–9 seconds
       currentTimeout = setTimeout(() => {
         createFallingStar();
         scheduleNext();
@@ -889,9 +889,9 @@ export default function FeedScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Star field effect */}
+      {/* Star field effect – slightly fewer stars for smoother performance, same style */}
       <View style={feedStyles.starField}>
-        {Array.from({ length: 18 }).map((_, i) => (
+        {Array.from({ length: 14 }).map((_, i) => (
           <AnimatedStar key={i} index={i} />
         ))}
       </View>
@@ -971,12 +971,12 @@ export default function FeedScreen() {
         ListHeaderComponent={!isSearching ? listHeader : null}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        initialNumToRender={10}
-        updateCellsBatchingPeriod={50}
+        maxToRenderPerBatch={8}
+        windowSize={8}
+        initialNumToRender={8}
+        updateCellsBatchingPeriod={60}
         getItemLayout={undefined}
-        scrollEventThrottle={16}
+        scrollEventThrottle={32}
         decelerationRate="normal"
         scrollEnabled={!isOnboardingActive || (currentStep !== 3 && currentStep < 3)}
         refreshControl={

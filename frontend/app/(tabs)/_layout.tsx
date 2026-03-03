@@ -175,10 +175,7 @@ export default function TabsLayout() {
           title: 'Connect',
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
-            <Ionicons name="people" size={size} color={color} />
-              {unreadByType.groups > 0 && (
-                <Badge count={unreadByType.groups} size="sm" />
-              )}
+              <Ionicons name="people" size={size} color={color} />
             </View>
           ),
         }}

@@ -45,7 +45,8 @@ interface RevenueCatService {
 
 class RevenueCatServiceImpl implements RevenueCatService {
   public initialized = false;
-  public logLevel: LOG_LEVEL = __DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO;
+  // Use a moderate log level by default to avoid noisy native SDK logs
+  public logLevel: LOG_LEVEL = LOG_LEVEL.INFO;
   private isAvailable = false;
 
   /**
@@ -82,13 +83,17 @@ class RevenueCatServiceImpl implements RevenueCatService {
    */
   async initialize(userId?: string): Promise<void> {
     if (this.initialized) {
-      console.log('RevenueCat already initialized');
+      if (__DEV__) {
+        console.log('RevenueCat already initialized');
+      }
       return;
     }
 
     // Skip initialization if not on iOS or Android
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-      console.warn('RevenueCat is not supported on this platform');
+      if (__DEV__) {
+        console.warn('RevenueCat is not supported on this platform');
+      }
       return;
     }
 
@@ -113,18 +118,11 @@ class RevenueCatServiceImpl implements RevenueCatService {
         }
       }
 
-      // Enable debug logs in development
-      if (__DEV__) {
-        try {
-          Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-        } catch (logError) {
-          // Ignore log level errors
-        }
-      }
-
       this.initialized = true;
       this.isAvailable = true;
-      console.log('✅ RevenueCat initialized successfully');
+      if (__DEV__) {
+        console.log('✅ RevenueCat initialized successfully');
+      }
 
       // Sync customer info on initialization (non-blocking)
       this.getCustomerInfo().catch(() => {

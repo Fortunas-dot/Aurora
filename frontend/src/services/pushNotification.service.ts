@@ -112,7 +112,9 @@ class PushNotificationService {
       });
 
       this.token = tokenData.data;
-      console.log('Push notification token:', this.token);
+      if (__DEV__) {
+        console.log('Push notification token:', this.token);
+      }
 
       // Register token with backend
       await this.registerTokenWithBackend(this.token, this.deviceId);
