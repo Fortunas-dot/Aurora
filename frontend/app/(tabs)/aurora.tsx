@@ -264,6 +264,14 @@ export default function AuroraScreen() {
     outputRange: ['10%', '-10%'],
   }), [auroraAnim3]);
 
+  // Check if the user has any health information filled in
+  const hasHealthInfo = !!(user?.healthInfo && (
+    (user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) ||
+    (user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) ||
+    (user.healthInfo.medications && user.healthInfo.medications.length > 0) ||
+    (user.healthInfo.therapies && user.healthInfo.therapies.length > 0)
+  ));
+
   return (
     <View style={styles.container}>
       {/* Base gradient */}
@@ -408,6 +416,42 @@ export default function AuroraScreen() {
         {isAuthenticated && (
           <View style={styles.quickActionsSection}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+
+            {/* Health information todo - only when nothing is filled in */}
+            {!hasHealthInfo && (
+              <GlassCard style={styles.healthInfoTodoCard} padding="md">
+                <View style={styles.healthInfoTodoContent}>
+                  <View style={styles.healthInfoTodoIconContainer}>
+                    <LinearGradient
+                      colors={['rgba(239, 68, 68, 0.35)', 'rgba(248, 113, 113, 0.25)']}
+                      style={styles.healthInfoTodoIconGradient}
+                    >
+                      <Ionicons name="heart-outline" size={22} color={colors.error} />
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.healthInfoTodoTextContainer}>
+                    <Text style={[styles.healthInfoTodoTitle, { color: colors.text }]}>
+                      Complete your health information
+                    </Text>
+                    <Text style={[styles.healthInfoTodoDescription, { color: colors.textMuted }]}>
+                      Sharing a bit about your health helps Aurora understand you better and personalize the support you receive.
+                    </Text>
+                    <Pressable
+                      style={styles.healthInfoTodoButton}
+                      onPress={() => {
+                        if (!requirePremium()) return;
+                        router.push('/health-info');
+                      }}
+                    >
+                      <Text style={[styles.healthInfoTodoButtonText, { color: colors.primary }]}>
+                        Go to health information
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </GlassCard>
+            )}
+
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
@@ -931,6 +975,48 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     textAlign: 'center',
     width: '100%',
+  },
+  healthInfoTodoCard: {
+    marginBottom: SPACING.md,
+  },
+  healthInfoTodoContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+  },
+  healthInfoTodoIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  healthInfoTodoIconGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthInfoTodoTextContainer: {
+    flex: 1,
+  },
+  healthInfoTodoTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    marginBottom: 4,
+  },
+  healthInfoTodoDescription: {
+    ...TYPOGRAPHY.small,
+    marginBottom: SPACING.sm,
+  },
+  healthInfoTodoButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  healthInfoTodoButtonText: {
+    ...TYPOGRAPHY.small,
+    fontWeight: '600',
   },
 });
 

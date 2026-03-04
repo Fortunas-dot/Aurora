@@ -592,6 +592,10 @@ export default function SubscriptionScreen() {
             ]}
           >
             <View style={styles.planCardInner}>
+              {/* Dynamic promo text at the very top of the card */}
+              <Text style={[styles.planNote, styles.introBadge, { color: '#9B59B6' }]}>
+                Price valid for the first 500 members
+              </Text>
               <View style={styles.planHeader}>
                 <Text style={[styles.planLabel, { color: '#1A1F2E' }]}>premium</Text>
                 {isPremium ? (
@@ -613,28 +617,21 @@ export default function SubscriptionScreen() {
                   ✓ You are already subscribed!
                 </Text>
               ) : (
-                <View>
-                  <Text style={[styles.planNote, { color: '#9B59B6' }]}>
-                    💜 3-day free trial, then €4.99/month
-                  </Text>
-                  <Text style={[styles.planNote, styles.planCoffeeNote]}>
-                    ☕ Just 2 coffees per month
-                  </Text>
-                </View>
+                <Text style={[styles.planNote, styles.planCoffeeNote]}>
+                  ☕ Just 2 coffees per month
+                </Text>
               )}
             </View>
           </Animated.View>
 
-          {/* Free Trial Notice */}
-          {!isPremium && (
-            <View style={styles.freeTrialNotice}>
-              <Ionicons name="gift-outline" size={20} color="#9B59B6" />
-              <Text style={styles.freeTrialText}>
-                <Text style={styles.freeTrialBold}>3-day free trial</Text>
-                {' '}included - Cancel anytime
-              </Text>
-            </View>
-          )}
+          {/* Free Trial Notice - outside card, between price card and feature list */}
+          <View style={styles.freeTrialNotice}>
+            <Ionicons name="gift-outline" size={20} color="#9B59B6" />
+            <Text style={styles.freeTrialText}>
+              <Text style={styles.freeTrialBold}>3-day free trial</Text>
+              {' '}included - Cancel anytime
+            </Text>
+          </View>
 
           {/* Features Section */}
           <View style={[styles.featuresSection, { backgroundColor: '#FFFFFF', borderColor: '#E8E8E8' }]}>
@@ -691,7 +688,7 @@ export default function SubscriptionScreen() {
 
           {/* Auto-renew note */}
           <Text style={[styles.autoRenewNote, { color: '#6C757D' }]}>
-            Auto-renews for €4.99/month until canceled
+            Auto-renews for €4.99/month until canceled. Introductory price valid for the first 500 subscribers.
           </Text>
 
           {/* Restore Purchases */}
@@ -897,6 +894,27 @@ const styles = StyleSheet.create({
   priceBig: {
     fontSize: 32,
     fontWeight: '900',
+  },
+  originalPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    textDecorationLine: 'line-through',
+    textDecorationStyle: 'solid',
+    marginLeft: 8,
+    marginRight: 4,
+    opacity: 1,
+  },
+  introBadge: {
+    alignSelf: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(155, 89, 182, 0.12)',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
   priceDetail: {
     fontSize: 13,

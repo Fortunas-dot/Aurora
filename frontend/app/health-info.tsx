@@ -85,6 +85,9 @@ interface ConditionWithTypes {
 
 const MENTAL_HEALTH_CONDITIONS: ConditionWithTypes[] = [
   {
+    name: 'No diagnosis',
+  },
+  {
     name: 'Depression',
     types: [
       'Unipolar depression',
@@ -186,6 +189,9 @@ const MENTAL_HEALTH_CONDITIONS: ConditionWithTypes[] = [
 
 const PHYSICAL_HEALTH_CONDITIONS: ConditionWithTypes[] = [
   {
+    name: 'Generally healthy',
+  },
+  {
     name: 'Chronic Pain',
     types: [
       'Neuropathic pain',
@@ -253,6 +259,7 @@ const PHYSICAL_HEALTH_CONDITIONS: ConditionWithTypes[] = [
 ];
 
 const MEDICATION_OPTIONS = [
+  'None',
   'Antidepressants',
   'Anxiety medication',
   'Sleep medication',
@@ -263,6 +270,7 @@ const MEDICATION_OPTIONS = [
 ];
 
 const THERAPY_OPTIONS = [
+  'None',
   'Cognitive Behavioral Therapy',
   'EMDR',
   'Group therapy',
