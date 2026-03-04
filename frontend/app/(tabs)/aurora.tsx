@@ -417,41 +417,6 @@ export default function AuroraScreen() {
           <View style={styles.quickActionsSection}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
 
-            {/* Health information todo - only when nothing is filled in */}
-            {!hasHealthInfo && (
-              <GlassCard style={styles.healthInfoTodoCard} padding="md">
-                <View style={styles.healthInfoTodoContent}>
-                  <View style={styles.healthInfoTodoIconContainer}>
-                    <LinearGradient
-                      colors={['rgba(239, 68, 68, 0.35)', 'rgba(248, 113, 113, 0.25)']}
-                      style={styles.healthInfoTodoIconGradient}
-                    >
-                      <Ionicons name="heart-outline" size={22} color={colors.error} />
-                    </LinearGradient>
-                  </View>
-                  <View style={styles.healthInfoTodoTextContainer}>
-                    <Text style={[styles.healthInfoTodoTitle, { color: colors.text }]}>
-                      Complete your health information
-                    </Text>
-                    <Text style={[styles.healthInfoTodoDescription, { color: colors.textMuted }]}>
-                      Sharing a bit about your health helps Aurora understand you better and personalize the support you receive.
-                    </Text>
-                    <Pressable
-                      style={styles.healthInfoTodoButton}
-                      onPress={() => {
-                        if (!requirePremium()) return;
-                        router.push('/health-info');
-                      }}
-                    >
-                      <Text style={[styles.healthInfoTodoButtonText, { color: colors.primary }]}>
-                        Go to health information
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </GlassCard>
-            )}
-
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
@@ -498,6 +463,52 @@ export default function AuroraScreen() {
                 </GlassCard>
               </Pressable>
             </View>
+
+            {/* Health information todo - only when nothing is filled in */}
+            {!hasHealthInfo && (
+              <GlassCard style={styles.healthInfoTodoCard} padding={0}>
+                <LinearGradient
+                  colors={[
+                    'rgba(37, 99, 235, 0.75)',
+                    'rgba(147, 51, 234, 0.8)',
+                    'rgba(6, 182, 212, 0.7)',
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.healthInfoTodoGradient}
+                >
+                  <View style={styles.healthInfoTodoContent}>
+                    <View style={styles.healthInfoTodoIconContainer}>
+                      <LinearGradient
+                        colors={['rgba(15, 23, 42, 0.6)', 'rgba(248, 113, 133, 0.85)']}
+                        style={styles.healthInfoTodoIconGradient}
+                      >
+                        <Ionicons name="heart-outline" size={22} color="#FFFFFF" />
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.healthInfoTodoTextContainer}>
+                      <Text style={[styles.healthInfoTodoTitle, { color: colors.text }]}>
+                        Complete your health information
+                      </Text>
+                      <Text style={[styles.healthInfoTodoDescription, { color: colors.textMuted }]}>
+                        Sharing a bit about your health helps Aurora understand you better and personalize the support you receive.
+                      </Text>
+                      <Pressable
+                        style={styles.healthInfoTodoButton}
+                        onPress={() => {
+                          if (!requirePremium()) return;
+                          router.push('/health-info');
+                        }}
+                      >
+                        <Text style={[styles.healthInfoTodoButtonText, { color: '#FFFFFF' }]}>
+                          Go to health information
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </GlassCard>
+            )}
           </View>
         )}
 
@@ -810,7 +821,7 @@ const styles = StyleSheet.create({
   // },
   optionsContainer: {
     paddingHorizontal: SPACING.md,
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
   },
   optionsTitle: {
     fontFamily: 'Unbounded-Regular',
@@ -949,7 +960,7 @@ const styles = StyleSheet.create({
   },
   quickActionsSection: {
     paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -977,7 +988,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   healthInfoTodoCard: {
-    marginBottom: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  healthInfoTodoGradient: {
+    padding: SPACING.md,
   },
   healthInfoTodoContent: {
     flexDirection: 'row',
@@ -1005,6 +1022,7 @@ const styles = StyleSheet.create({
   healthInfoTodoDescription: {
     ...TYPOGRAPHY.small,
     marginBottom: SPACING.sm,
+    fontWeight: '500',
   },
   healthInfoTodoButton: {
     alignSelf: 'flex-start',
@@ -1012,7 +1030,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: 'rgba(248, 113, 133, 0.85)',
+    backgroundColor: 'rgba(248, 113, 133, 0.85)',
   },
   healthInfoTodoButtonText: {
     ...TYPOGRAPHY.small,

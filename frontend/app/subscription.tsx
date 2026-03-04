@@ -594,7 +594,7 @@ export default function SubscriptionScreen() {
             <View style={styles.planCardInner}>
               {/* Dynamic promo text at the very top of the card */}
               <Text style={[styles.planNote, styles.introBadge, { color: '#9B59B6' }]}>
-                Price valid for the first 500 members
+                Price valid for the first 500 members!
               </Text>
               <View style={styles.planHeader}>
                 <Text style={[styles.planLabel, { color: '#1A1F2E' }]}>premium</Text>

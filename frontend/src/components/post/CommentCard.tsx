@@ -392,6 +392,8 @@ const styles = StyleSheet.create({
   },
   content: {
     ...TYPOGRAPHY.body,
+    // Match post description font (PostCard.styles.content / contentPreview)
+    fontFamily: 'Manjari-Regular',
     color: COLORS.text,
     marginBottom: SPACING.sm,
   },

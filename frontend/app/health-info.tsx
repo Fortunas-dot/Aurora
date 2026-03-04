@@ -345,6 +345,8 @@ const ConditionChip: React.FC<ConditionChipProps> = ({
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notesText, setNotesText] = useState(condition.notes || '');
+  const isNeutralCondition =
+    condition.condition === 'No diagnosis' || condition.condition === 'Generally healthy';
 
   return (
     <View style={styles.conditionChipContainer}>
@@ -413,104 +415,108 @@ const ConditionChip: React.FC<ConditionChipProps> = ({
         </View>
       )}
       
-      {/* Inline Severity Selector */}
-      <View style={styles.severitySelectorContainer}>
-        <Text style={styles.severityLabel}>Severity:</Text>
-        <View style={styles.severitySelector}>
-          {SEVERITY_OPTIONS.map((option) => {
-            const isSelected = condition.severity === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                style={[
-                  styles.severityButton,
-                  isSelected && {
-                    backgroundColor: `${option.color}30`,
-                    borderColor: option.color,
-                    borderWidth: 2,
-                  },
-                  !isSelected && {
-                    backgroundColor: COLORS.glass.backgroundDark,
-                    borderColor: COLORS.glass.border,
-                  },
-                ]}
-                onPress={() => onSeverityChange(option.value)}
-              >
-                <Ionicons 
-                  name={option.icon as any} 
-                  size={16} 
-                  color={isSelected ? option.color : COLORS.textMuted} 
-                />
-                <Text
+      {/* Inline Severity Selector (hidden for neutral conditions) */}
+      {!isNeutralCondition && (
+        <View style={styles.severitySelectorContainer}>
+          <Text style={styles.severityLabel}>Severity:</Text>
+          <View style={styles.severitySelector}>
+            {SEVERITY_OPTIONS.map((option) => {
+              const isSelected = condition.severity === option.value;
+              return (
+                <Pressable
+                  key={option.value}
                   style={[
-                    styles.severityButtonText,
-                    isSelected && { color: option.color, fontWeight: '600' },
-                    !isSelected && { color: COLORS.textMuted },
+                    styles.severityButton,
+                    isSelected && {
+                      backgroundColor: `${option.color}30`,
+                      borderColor: option.color,
+                      borderWidth: 2,
+                    },
+                    !isSelected && {
+                      backgroundColor: COLORS.glass.backgroundDark,
+                      borderColor: COLORS.glass.border,
+                    },
                   ]}
+                  onPress={() => onSeverityChange(option.value)}
                 >
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Notes Input */}
-      <View style={styles.notesContainer}>
-        <Pressable
-          style={styles.notesToggleButton}
-          onPress={() => setShowNotesInput(!showNotesInput)}
-        >
-          <Ionicons 
-            name={showNotesInput ? 'chevron-up' : 'chevron-down'} 
-            size={16} 
-            color={color} 
-          />
-          <Text style={[styles.notesToggleText, { color }]}>
-            {condition.notes ? 'Edit context/explanation' : 'Add context/explanation (optional)'}
-          </Text>
-        </Pressable>
-        {showNotesInput && (
-          <View style={styles.notesInputContainer}>
-            <TextInput
-              style={styles.notesInput}
-              value={notesText}
-              onChangeText={setNotesText}
-              placeholder="Provide additional context or explanation about this condition..."
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-            <View style={styles.notesInputActions}>
-              <Pressable
-                style={[styles.notesInputButton, styles.notesInputButtonCancel]}
-                onPress={() => {
-                  setNotesText(condition.notes || '');
-                  setShowNotesInput(false);
-                }}
-              >
-                <Text style={styles.notesInputButtonTextCancel}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.notesInputButton, styles.notesInputButtonSave]}
-                onPress={() => {
-                  onNotesChange(notesText.trim());
-                  setShowNotesInput(false);
-                }}
-              >
-                <Text style={styles.notesInputButtonTextSave}>Save</Text>
-              </Pressable>
-            </View>
-            {condition.notes && (
-              <Text style={styles.notesPreview}>
-                Current: {condition.notes}
-              </Text>
-            )}
+                  <Ionicons 
+                    name={option.icon as any} 
+                    size={16} 
+                    color={isSelected ? option.color : COLORS.textMuted} 
+                  />
+                  <Text
+                    style={[
+                      styles.severityButtonText,
+                      isSelected && { color: option.color, fontWeight: '600' },
+                      !isSelected && { color: COLORS.textMuted },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-        )}
-      </View>
+        </View>
+      )}
+
+      {/* Notes Input (hidden for neutral conditions) */}
+      {!isNeutralCondition && (
+        <View style={styles.notesContainer}>
+          <Pressable
+            style={styles.notesToggleButton}
+            onPress={() => setShowNotesInput(!showNotesInput)}
+          >
+            <Ionicons 
+              name={showNotesInput ? 'chevron-up' : 'chevron-down'} 
+              size={16} 
+              color={color} 
+            />
+            <Text style={[styles.notesToggleText, { color }]}>
+              {condition.notes ? 'Edit context/explanation' : 'Add context/explanation (optional)'}
+            </Text>
+          </Pressable>
+          {showNotesInput && (
+            <View style={styles.notesInputContainer}>
+              <TextInput
+                style={styles.notesInput}
+                value={notesText}
+                onChangeText={setNotesText}
+                placeholder="Provide additional context or explanation about this condition..."
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <View style={styles.notesInputActions}>
+                <Pressable
+                  style={[styles.notesInputButton, styles.notesInputButtonCancel]}
+                  onPress={() => {
+                    setNotesText(condition.notes || '');
+                    setShowNotesInput(false);
+                  }}
+                >
+                  <Text style={styles.notesInputButtonTextCancel}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.notesInputButton, styles.notesInputButtonSave]}
+                  onPress={() => {
+                    onNotesChange(notesText.trim());
+                    setShowNotesInput(false);
+                  }}
+                >
+                  <Text style={styles.notesInputButtonTextSave}>Save</Text>
+                </Pressable>
+              </View>
+              {condition.notes && (
+                <Text style={styles.notesPreview}>
+                  Current: {condition.notes}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 };
@@ -1062,9 +1068,19 @@ export default function HealthInfoScreen() {
 
     setHealthInfo((prev) => {
       const current = prev[category] || [];
-      const updated = current.includes(item)
-        ? current.filter((i) => i !== item)
-        : [...current, item];
+      // "None" is exclusive: selecting it clears other options, selecting others clears "None"
+      if (item === 'None') {
+        const alreadySelected = current.includes('None');
+        return {
+          ...prev,
+          [category]: alreadySelected ? [] : ['None'],
+        };
+      }
+
+      const withoutNone = current.filter((i) => i !== 'None');
+      const updated = withoutNone.includes(item)
+        ? withoutNone.filter((i) => i !== item)
+        : [...withoutNone, item];
       return {
         ...prev,
         [category]: updated,
