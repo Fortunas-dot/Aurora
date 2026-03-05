@@ -923,9 +923,7 @@ export default function ConversationScreen() {
     };
 
     return (
-      <Pressable
-        onPress={() => Keyboard.dismiss()}
-        onLongPress={!isOwn ? () => handleLongPressMessage(item._id) : undefined}
+      <View
         style={[
           styles.messageContainer,
           isOwn ? styles.messageContainerOwn : styles.messageContainerOther,
@@ -942,7 +940,9 @@ export default function ConversationScreen() {
             style={styles.messageAvatar}
           />
         )}
-        <View
+        <Pressable
+          onPress={() => Keyboard.dismiss()}
+          onLongPress={!isOwn ? () => handleLongPressMessage(item._id) : undefined}
           style={[
             styles.messageBubble,
             isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
@@ -954,7 +954,12 @@ export default function ConversationScreen() {
               {item.attachments.map((attachment, index) => {
                 const normalizedUrl = imageUrl(attachment.url);
                 return (
-                  <View key={index} style={styles.attachmentWrapper}>
+                  <View 
+                    key={index} 
+                    style={styles.attachmentWrapper}
+                    onStartShouldSetResponder={() => attachment.type === 'image'}
+                    onResponderTerminationRequest={() => false}
+                  >
                     {attachment.type === 'image' && (
                       <TouchableOpacity
                         activeOpacity={0.9}
@@ -964,6 +969,7 @@ export default function ConversationScreen() {
                           setIsImageViewerVisible(true);
                         }}
                         style={styles.messageImage}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
                         <Image
                           source={{ uri: normalizedUrl }}
@@ -1016,8 +1022,8 @@ export default function ConversationScreen() {
           <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
             {formattedTime}
           </Text>
-        </View>
-      </Pressable>
+        </Pressable>
+      </View>
     );
   };
 
