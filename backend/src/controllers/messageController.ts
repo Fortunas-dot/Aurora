@@ -426,7 +426,6 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
     await broadcastMessageReaction(messageObj);
 
     // Normalize URLs in message (attachments and user avatars)
-    const messageObj = message.toObject ? message.toObject() : message;
     const normalizedMessage = normalizeMessageData(messageObj);
 
     res.json({
