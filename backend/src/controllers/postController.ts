@@ -466,6 +466,15 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
   try {
     const { title, content, tags } = req.body;
 
+    // Validate that content is a string, not an object
+    if (content !== undefined && typeof content !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Content must be a string',
+      });
+      return;
+    }
+
     let post = await Post.findById(req.params.id);
 
     if (!post) {
@@ -485,7 +494,14 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const updateData: any = { content, tags };
+    // Build update data, ensuring content is a string
+    const updateData: any = {};
+    if (content !== undefined) {
+      updateData.content = typeof content === 'string' ? content.trim() : String(content);
+    }
+    if (tags !== undefined) {
+      updateData.tags = tags;
+    }
     if (title !== undefined) {
       updateData.title = title?.trim() || undefined;
     }

@@ -1055,8 +1055,7 @@ export default function TextChatScreen() {
       <KeyboardAvoidingView
         style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        enabled={Platform.OS === 'ios'}
+        keyboardVerticalOffset={0}
       >
         {/* AI Consent banner above chat when not granted */}
         {!isConsentLoading && aiConsentStatus !== 'granted' && (

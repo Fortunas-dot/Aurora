@@ -253,14 +253,16 @@ class PostService {
 
   async updatePost(
     id: string,
-    content: string,
-    tags?: string[],
-    title?: string
+    data: {
+      title?: string;
+      content: string;
+      tags?: string[];
+    }
   ): Promise<ApiResponse<Post>> {
     return apiService.put<Post>(`/posts/${id}`, {
-      title,
-      content,
-      tags,
+      title: data.title,
+      content: data.content,
+      tags: data.tags,
     });
   }
 

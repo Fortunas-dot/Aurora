@@ -464,33 +464,41 @@ export const isUserOnline = (userId: string): boolean => {
  */
 export const broadcastMessageReaction = async (message: any): Promise<void> => {
   try {
-    // Get sender and receiver IDs
-    const senderId = message.sender._id?.toString() || message.sender.toString();
-    const receiverId = message.receiver._id?.toString() || message.receiver.toString();
+    // Get sender and receiver IDs - handle both populated objects and ObjectIds
+    let senderId: string;
+    let receiverId: string;
 
-    // Convert message to plain object to ensure proper serialization
-    // This is important because Mongoose documents need to be converted to plain objects
-    const messageObj = message.toObject ? message.toObject() : message;
-    
-    // Ensure reactions are properly serialized (convert Mongoose documents to plain objects)
-    let serializedReactions = messageObj.reactions;
-    if (serializedReactions && Array.isArray(serializedReactions)) {
-      serializedReactions = serializedReactions.map((reaction: any) => {
-        const reactionObj = reaction.toObject ? reaction.toObject() : reaction;
-        // Ensure users array is properly serialized
-        if (reactionObj.users && Array.isArray(reactionObj.users)) {
-          reactionObj.users = reactionObj.users.map((user: any) => 
-            user.toObject ? user.toObject() : user
-          );
-        }
-        return reactionObj;
-      });
+    if (message.sender) {
+      if (typeof message.sender === 'object' && message.sender._id) {
+        senderId = message.sender._id.toString();
+      } else if (typeof message.sender === 'object' && message.sender.toString) {
+        senderId = message.sender.toString();
+      } else {
+        senderId = String(message.sender);
+      }
+    } else {
+      console.error('Message sender is missing in broadcastMessageReaction');
+      return;
     }
 
+    if (message.receiver) {
+      if (typeof message.receiver === 'object' && message.receiver._id) {
+        receiverId = message.receiver._id.toString();
+      } else if (typeof message.receiver === 'object' && message.receiver.toString) {
+        receiverId = message.receiver.toString();
+      } else {
+        receiverId = String(message.receiver);
+      }
+    } else {
+      console.error('Message receiver is missing in broadcastMessageReaction');
+      return;
+    }
+
+    // Prepare the reaction update message
     const reactionUpdate = {
-      _id: messageObj._id,
-      reactions: serializedReactions,
-      updatedAt: messageObj.updatedAt,
+      _id: message._id?.toString() || String(message._id),
+      reactions: message.reactions || [],
+      updatedAt: message.updatedAt || new Date().toISOString(),
     };
 
     // Send to sender if online
@@ -500,6 +508,8 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
         type: 'message_reaction',
         message: reactionUpdate,
       }));
+    } else {
+      console.log(`Sender ${senderId} is not connected via WebSocket`);
     }
 
     // Send to receiver if online
@@ -509,6 +519,8 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
         type: 'message_reaction',
         message: reactionUpdate,
       }));
+    } else {
+      console.log(`Receiver ${receiverId} is not connected via WebSocket`);
     }
   } catch (error) {
     console.error('Error broadcasting message reaction:', error);

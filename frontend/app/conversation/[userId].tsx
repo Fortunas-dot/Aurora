@@ -16,10 +16,10 @@ import {
   Easing,
   Keyboard,
   TouchableWithoutFeedback,
-  TouchableOpacity,
   Modal,
+  AppState,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -285,20 +285,45 @@ export default function ConversationScreen() {
     loadMessages(1, false);
   }, [loadMessages]);
 
+  // Reconnect WebSocket when screen comes into focus (user navigates back to this screen)
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated || !userId) return;
+
+      // Ensure WebSocket is connected when screen gains focus
+      const connectAndCheckOnline = async () => {
+        await chatWebSocketService.ensureConnected();
+        chatWebSocketService.checkOnline(userId);
+      };
+      connectAndCheckOnline();
+    }, [isAuthenticated, userId])
+  );
+
   // Setup WebSocket event listeners for real-time chat
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
     // Ensure WebSocket is connected, then check online status
-    chatWebSocketService.ensureConnected().then(() => {
-      // Request the current online status of the other user
+    const connectAndCheckOnline = async () => {
+      await chatWebSocketService.ensureConnected();
       chatWebSocketService.checkOnline(userId);
-    });
+    };
+    connectAndCheckOnline();
 
     // Also check online status when the WebSocket reconnects
     const unsubConnected = chatWebSocketService.on('connected', () => {
       chatWebSocketService.checkOnline(userId);
     });
+
+    // Reconnect when app comes back to foreground
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        // App came to foreground - ensure WebSocket is connected
+        connectAndCheckOnline();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     // Subscribe to events using the new listener API
     const unsubNewMessage = chatWebSocketService.on('new_message', (message: any) => {
@@ -401,14 +426,29 @@ export default function ConversationScreen() {
     });
 
     // Handle WebSocket errors (e.g., validation failures)
+    // Note: Connection errors are handled silently - reconnect will happen automatically
     const unsubError = chatWebSocketService.on('error', (error: Error) => {
-      // Only log in development mode - these errors are expected during network issues
-      if (__DEV__) {
-        console.warn('Chat WebSocket error:', error.message);
+      // Only show alerts for actual message sending errors, not connection errors
+      // Connection errors are handled by automatic reconnection
+      const isConnectionError = error.message.includes('WebSocket connection') || 
+                                error.message.includes('connection error');
+      
+      if (!isConnectionError) {
+        // Only log in development mode - these errors are expected during network issues
+        if (__DEV__) {
+          console.warn('Chat WebSocket error:', error.message);
+        }
+        // Only show alert for non-connection errors (e.g., validation failures)
+        Alert.alert('Error', error.message || 'Could not send message');
+        setIsSending(false);
+        setIsUploading(false);
+      } else {
+        // For connection errors, just try to reconnect silently
+        if (__DEV__) {
+          console.log('WebSocket connection error - will attempt to reconnect');
+        }
+        chatWebSocketService.ensureConnected();
       }
-      Alert.alert('Error', error.message || 'Could not send message');
-      setIsSending(false);
-      setIsUploading(false);
     });
 
     const unsubTypingStart = chatWebSocketService.on('typing_start', (typingUserId: string) => {
@@ -438,19 +478,16 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageReaction = chatWebSocketService.on('message_reaction', (message: any) => {
-      // Only handle reactions for messages in the current conversation
+      // Only update if this message belongs to the current conversation
       setMessages((prev) =>
         prev.map((msg) => {
-          // Compare message IDs as strings to handle ObjectId vs string comparison
-          const msgId = msg._id?.toString();
-          const reactionMsgId = message._id?.toString();
-          if (msgId === reactionMsgId) {
-            // Update reactions and preserve all other message fields, normalize attachments
+          if (msg._id === message._id) {
             const updated = {
               ...msg,
               reactions: message.reactions || [],
               updatedAt: message.updatedAt || msg.updatedAt,
             };
+            // Normalize attachments and avatars
             return normalizeMessageAttachments(updated);
           }
           return msg;
@@ -460,6 +497,7 @@ export default function ConversationScreen() {
 
     // Cleanup: only remove listeners, do NOT disconnect the WebSocket
     return () => {
+      subscription.remove();
       unsubConnected();
       unsubNewMessage();
       unsubMessageSent();
@@ -923,7 +961,9 @@ export default function ConversationScreen() {
     };
 
     return (
-      <View
+      <Pressable
+        onPress={() => Keyboard.dismiss()}
+        onLongPress={!isOwn ? () => handleLongPressMessage(item._id) : undefined}
         style={[
           styles.messageContainer,
           isOwn ? styles.messageContainerOwn : styles.messageContainerOther,
@@ -940,9 +980,7 @@ export default function ConversationScreen() {
             style={styles.messageAvatar}
           />
         )}
-        <Pressable
-          onPress={() => Keyboard.dismiss()}
-          onLongPress={!isOwn ? () => handleLongPressMessage(item._id) : undefined}
+        <View
           style={[
             styles.messageBubble,
             isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
@@ -954,29 +992,22 @@ export default function ConversationScreen() {
               {item.attachments.map((attachment, index) => {
                 const normalizedUrl = imageUrl(attachment.url);
                 return (
-                  <View 
-                    key={index} 
-                    style={styles.attachmentWrapper}
-                    onStartShouldSetResponder={() => attachment.type === 'image'}
-                    onResponderTerminationRequest={() => false}
-                  >
+                  <View key={index} style={styles.attachmentWrapper}>
                     {attachment.type === 'image' && (
-                      <TouchableOpacity
-                        activeOpacity={0.9}
+                      <Pressable
                         onPress={() => {
                           if (!normalizedUrl) return;
                           setSelectedImage(normalizedUrl);
                           setIsImageViewerVisible(true);
                         }}
                         style={styles.messageImage}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
                         <Image
                           source={{ uri: normalizedUrl }}
                           style={styles.messageImage}
                           resizeMode="cover"
                         />
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                     {attachment.type === 'audio' && (
                       <VoiceMessagePlayer
@@ -998,8 +1029,8 @@ export default function ConversationScreen() {
             </Text>
           )}
           
-          {/* Reactions - show for all messages that have reactions */}
-          {item.reactions && item.reactions.length > 0 && (
+          {/* Reactions - only show for messages from other users */}
+          {!isOwn && item.reactions && item.reactions.length > 0 && (
             <View style={styles.reactionsContainer}>
               {item.reactions.map((reaction, index) => (
                 <Pressable
@@ -1011,7 +1042,7 @@ export default function ConversationScreen() {
                   onPress={() => handleReactToMessage(item._id, reaction.emoji)}
                 >
                   <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-                  {reaction.users && reaction.users.length > 0 && (
+                  {reaction.users.length > 0 && (
                     <Text style={styles.reactionCount}>{reaction.users.length}</Text>
                   )}
                 </Pressable>
@@ -1022,8 +1053,8 @@ export default function ConversationScreen() {
           <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
             {formattedTime}
           </Text>
-        </Pressable>
-      </View>
+        </View>
+      </Pressable>
     );
   };
 

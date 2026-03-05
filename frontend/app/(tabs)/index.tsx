@@ -33,39 +33,38 @@ import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { useRequirePremium } from '../../src/hooks/usePremium';
 
-// Animated star component - optimized to prevent jumping during scroll
-const AnimatedStar = React.memo(({ index }: { index: number }) => {
+// Animated star component - optimized for smooth scrolling
+const AnimatedStar = ({ index }: { index: number }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   
-  // Store all random values in useMemo to prevent regeneration on re-render
+  // Store all random values in useMemo to prevent recalculation on re-renders
+  // This ensures smooth animations during scrolling
   const starConfig = useMemo(() => {
     const baseOpacity = 0.3 + Math.random() * 0.4;
-    const minOpacity = 0.1;
-    const maxOpacity = baseOpacity;
     const initialX = Math.random() * 100;
     const initialY = Math.random() * 100;
     const direction = Math.random() * Math.PI * 2;
     const distance = 30 + Math.random() * 50;
     const duration = 3000 + Math.random() * 4000;
+    const maxOpacity = 0.3 + Math.random() * 0.4; // Fixed max opacity value
     
     return {
       initialOpacity: baseOpacity,
-      minOpacity,
-      maxOpacity,
       initialX,
       initialY,
       direction,
       distance,
       duration,
+      maxOpacity,
     };
   }, []); // Empty deps - only calculate once per component instance
 
   const opacity = useRef(new Animated.Value(starConfig.initialOpacity)).current;
-  const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Create a looping animation with stable values
+    // Create a looping animation with fixed values
     const animate = () => {
       Animated.loop(
         Animated.parallel([
@@ -99,13 +98,13 @@ const AnimatedStar = React.memo(({ index }: { index: number }) => {
           ]),
           Animated.sequence([
             Animated.timing(opacity, {
-              toValue: starConfig.minOpacity,
+              toValue: 0.1,
               duration: starConfig.duration * 0.8,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(opacity, {
-              toValue: starConfig.maxOpacity,
+              toValue: starConfig.maxOpacity, // Use fixed max opacity instead of Math.random()
               duration: starConfig.duration * 0.8,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
@@ -130,7 +129,7 @@ const AnimatedStar = React.memo(({ index }: { index: number }) => {
     };
 
     animate();
-  }, [starConfig, translateX, translateY, opacity, scale]);
+  }, [starConfig]); // Only re-run if starConfig changes (which it won't)
 
   return (
     <Animated.View
@@ -147,10 +146,11 @@ const AnimatedStar = React.memo(({ index }: { index: number }) => {
           ],
         },
       ]}
-      pointerEvents="none"
+      collapsable={false}
+      removeClippedSubviews={false}
     />
   );
-});
+};
 
 // Falling star component that appears randomly
 const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
@@ -906,10 +906,10 @@ export default function FeedScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Star field effect – slightly fewer stars for smoother performance, same style */}
-      <View style={feedStyles.starField}>
+      {/* Star field effect – optimized for smooth scrolling */}
+      <View style={feedStyles.starField} collapsable={false} removeClippedSubviews={false}>
         {Array.from({ length: 14 }).map((_, i) => (
-          <AnimatedStar key={i} index={i} />
+          <AnimatedStar key={`star-${i}`} index={i} />
         ))}
       </View>
       
@@ -1258,19 +1258,10 @@ const feedStyles = StyleSheet.create({
     height: '100%',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
     zIndex: 0,
     pointerEvents: 'none',
-    ...(Platform.OS === 'ios' && { 
-      shouldRasterizeIOS: true,
-      // Prevent layout recalculations during scroll
-      overflow: 'hidden',
-    }),
-    ...(Platform.OS === 'android' && { 
-      renderToHardwareTextureAndroid: true,
-      overflow: 'hidden',
-    }),
+    ...(Platform.OS === 'ios' && { shouldRasterizeIOS: true }),
+    ...(Platform.OS === 'android' && { renderToHardwareTextureAndroid: true }),
   },
   star: {
     position: 'absolute',
