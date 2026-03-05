@@ -33,64 +33,80 @@ import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { useRequirePremium } from '../../src/hooks/usePremium';
 
-// Animated star component
-const AnimatedStar = ({ index }: { index: number }) => {
+// Animated star component - optimized to prevent jumping during scroll
+const AnimatedStar = React.memo(({ index }: { index: number }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0.3 + Math.random() * 0.4)).current;
+  
+  // Store all random values in useMemo to prevent regeneration on re-render
+  const starConfig = useMemo(() => {
+    const baseOpacity = 0.3 + Math.random() * 0.4;
+    const minOpacity = 0.1;
+    const maxOpacity = baseOpacity;
+    const initialX = Math.random() * 100;
+    const initialY = Math.random() * 100;
+    const direction = Math.random() * Math.PI * 2;
+    const distance = 30 + Math.random() * 50;
+    const duration = 3000 + Math.random() * 4000;
+    
+    return {
+      initialOpacity: baseOpacity,
+      minOpacity,
+      maxOpacity,
+      initialX,
+      initialY,
+      direction,
+      distance,
+      duration,
+    };
+  }, []); // Empty deps - only calculate once per component instance
+
+  const opacity = useRef(new Animated.Value(starConfig.initialOpacity)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  const initialX = Math.random() * 100;
-  const initialY = Math.random() * 100;
-  const speed = 20 + Math.random() * 30; // Different speeds for each star
-  const direction = Math.random() * Math.PI * 2; // Random direction
-  const distance = 30 + Math.random() * 50; // How far the star moves
-
   useEffect(() => {
-    const duration = 3000 + Math.random() * 4000; // 3-7 seconds
-
-    // Create a looping animation
+    // Create a looping animation with stable values
     const animate = () => {
       Animated.loop(
         Animated.parallel([
           Animated.sequence([
             Animated.timing(translateX, {
-              toValue: Math.cos(direction) * distance,
-              duration: duration,
+              toValue: Math.cos(starConfig.direction) * starConfig.distance,
+              duration: starConfig.duration,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(translateX, {
               toValue: 0,
-              duration: duration,
+              duration: starConfig.duration,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
           ]),
           Animated.sequence([
             Animated.timing(translateY, {
-              toValue: Math.sin(direction) * distance,
-              duration: duration * 1.1,
+              toValue: Math.sin(starConfig.direction) * starConfig.distance,
+              duration: starConfig.duration * 1.1,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(translateY, {
               toValue: 0,
-              duration: duration * 1.1,
+              duration: starConfig.duration * 1.1,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
           ]),
           Animated.sequence([
             Animated.timing(opacity, {
-              toValue: 0.1,
-              duration: duration * 0.8,
+              toValue: starConfig.minOpacity,
+              duration: starConfig.duration * 0.8,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(opacity, {
-              toValue: 0.3 + Math.random() * 0.4,
-              duration: duration * 0.8,
+              toValue: starConfig.maxOpacity,
+              duration: starConfig.duration * 0.8,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -98,13 +114,13 @@ const AnimatedStar = ({ index }: { index: number }) => {
           Animated.sequence([
             Animated.timing(scale, {
               toValue: 0.5,
-              duration: duration * 0.6,
+              duration: starConfig.duration * 0.6,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(scale, {
               toValue: 1,
-              duration: duration * 0.6,
+              duration: starConfig.duration * 0.6,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -114,15 +130,15 @@ const AnimatedStar = ({ index }: { index: number }) => {
     };
 
     animate();
-  }, []);
+  }, [starConfig, translateX, translateY, opacity, scale]);
 
   return (
     <Animated.View
       style={[
         feedStyles.star,
         {
-          left: `${initialX}%`,
-          top: `${initialY}%`,
+          left: `${starConfig.initialX}%`,
+          top: `${starConfig.initialY}%`,
           opacity,
           transform: [
             { translateX },
@@ -131,9 +147,10 @@ const AnimatedStar = ({ index }: { index: number }) => {
           ],
         },
       ]}
+      pointerEvents="none"
     />
   );
-};
+});
 
 // Falling star component that appears randomly
 const FallingStar = ({ onComplete }: { onComplete: () => void }) => {
@@ -1241,10 +1258,19 @@ const feedStyles = StyleSheet.create({
     height: '100%',
     top: 0,
     left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 0,
     pointerEvents: 'none',
-    ...(Platform.OS === 'ios' && { shouldRasterizeIOS: true }),
-    ...(Platform.OS === 'android' && { renderToHardwareTextureAndroid: true }),
+    ...(Platform.OS === 'ios' && { 
+      shouldRasterizeIOS: true,
+      // Prevent layout recalculations during scroll
+      overflow: 'hidden',
+    }),
+    ...(Platform.OS === 'android' && { 
+      renderToHardwareTextureAndroid: true,
+      overflow: 'hidden',
+    }),
   },
   star: {
     position: 'absolute',
