@@ -85,7 +85,7 @@ export default function PrivacyPolicyScreen() {
             <Text style={styles.sectionTitle}>4. AI Features and Third-Party Services</Text>
             <Text style={styles.sectionText}>
               Aurora offers AI-powered features such as AI chat, voice support, and AI-generated journal insights. 
-              When you use these features, we may send the following information to our servers and to our AI technology provider (currently OpenAI):
+              When you use these features, we may send the following information to our servers and to our LLM (large language model):
             </Text>
             <Text style={styles.bulletPoint}>• The text you type in chats and journal entries</Text>
             <Text style={styles.bulletPoint}>• Voice recordings and transcripts when you use voice support</Text>
@@ -95,11 +95,11 @@ export default function PrivacyPolicyScreen() {
               It is not used for advertising, and we do not sell your data to data brokers.
             </Text>
             <Text style={styles.sectionText}>
-              <Text style={{ fontWeight: '600' }}>Third-Party Data Sharing:</Text> We share the data listed above with OpenAI, our AI technology provider, 
-              solely for the purpose of generating AI-powered responses and insights. OpenAI is contractually obligated to protect your data 
-              and provides the same or equal protection of personal data as we do. OpenAI does not use your data to train their models 
+              <Text style={{ fontWeight: '600' }}>Third-Party Data Sharing:</Text> We share the data listed above with our LLM provider, 
+              solely for the purpose of generating AI-powered responses and insights. Our LLM provider is contractually obligated to protect your data 
+              and provides the same or equal protection of personal data as we do. Our LLM provider does not use your data to train its models 
               (when using their API with appropriate settings) and is bound by their privacy policy and our data processing agreement. 
-              You can review OpenAI's privacy policy at https://openai.com/privacy.
+              You can review our AI provider's privacy policy at https://openai.com/privacy.
             </Text>
             <Text style={styles.sectionText}>
               We ask for your explicit permission in the app before enabling these AI features. 

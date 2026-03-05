@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
@@ -395,9 +396,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       // Clear cached user data
       await secureStorage.deleteItemAsync('cached_user');
-      
-      // Clear AI consent (per-user privacy)
-      await secureStorage.deleteItemAsync('ai_data_consent');
+      // Clear AI consent (per-user privacy) from both secure storage and AsyncStorage fallback
+      await Promise.allSettled([
+        secureStorage.deleteItemAsync('ai_data_consent'),
+        AsyncStorage.removeItem('@aurora:ai_data_consent'),
+      ]);
       
       // Reset user identification (BELANGRIJK: doe dit na tracking)
       posthogService.reset();

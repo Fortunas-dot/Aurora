@@ -16,7 +16,7 @@ interface AiConsentCardProps {
 /**
  * Card that explains AI data usage and asks for consent before sending
  * personal data (journal entries, chat messages, voice transcripts) to
- * Aurora's backend and OpenAI.
+ * Aurora's backend and our LLM provider.
  * 
  * Required by Apple App Store Guidelines 5.1.1(i) and 5.1.2(i):
  * - Disclose what data will be sent
@@ -65,7 +65,7 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
           nestedScrollEnabled={true}
         >
           <Text style={styles.importantText}>
-            To use AI features, your data will be shared with OpenAI:
+            To use AI features, your data will be shared with our LLM (large language model):
           </Text>
 
           <View style={styles.dataList}>
@@ -76,13 +76,13 @@ export const AiConsentCard: React.FC<AiConsentCardProps> = ({
 
           <View style={styles.recipientBox}>
             <View style={styles.recipientHeader}>
-              <Text style={styles.recipientName}>Sent to: OpenAI</Text>
+              <Text style={styles.recipientName}>Sent to: our LLM</Text>
             </View>
             <Text style={styles.recipientDesc}>
-              OpenAI generates AI responses. They do not use your data to train AI models.
+              Our LLM generates AI responses. It does not use your data to train AI models.
             </Text>
             <Pressable onPress={openOpenAIPrivacy}>
-              <Text style={styles.linkText}>OpenAI Privacy Policy →</Text>
+              <Text style={styles.linkText}>AI provider Privacy Policy →</Text>
             </Pressable>
           </View>
 

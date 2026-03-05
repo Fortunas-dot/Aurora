@@ -14,12 +14,12 @@ const TEXT_TO_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';
 
 class OpenAISpeechService {
   /**
-   * Convert audio file to text using OpenAI Whisper
+   * Convert audio file to text using our LLM provider's Whisper model
    */
   async transcribeAudio(audioUri: string): Promise<string> {
     try {
       if (!OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not configured');
+        throw new Error('AI provider API key not configured');
       }
 
       // Create form data with file URI (React Native way)
@@ -55,7 +55,7 @@ class OpenAISpeechService {
   }
 
   /**
-   * Convert text to speech using OpenAI TTS
+   * Convert text to speech using our LLM provider's TTS
    */
   async synthesizeSpeech(
     text: string,
@@ -63,7 +63,7 @@ class OpenAISpeechService {
   ): Promise<{ sound: Audio.Sound; uri: string }> {
     try {
       if (!OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not configured');
+        throw new Error('AI provider API key not configured');
       }
 
       const response = await fetch(TEXT_TO_SPEECH_URL, {

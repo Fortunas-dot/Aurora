@@ -294,7 +294,7 @@ export default function SettingsScreen() {
                   <Text style={[styles.menuTitle, { color: colors.text }]}>AI Features</Text>
                   <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>
                     {aiConsentStatus === 'granted' 
-                      ? 'Data shared with OpenAI' 
+                      ? 'Data shared with our LLM' 
                       : 'AI features disabled'}
                   </Text>
                 </View>
@@ -332,7 +332,7 @@ export default function SettingsScreen() {
                     if (aiConsentStatus === 'granted') {
                       Alert.alert(
                         'Disable AI Features?',
-                        'This will stop sharing your data with OpenAI. AI chat, voice therapy, and journal insights will be disabled.',
+                        'This will stop sharing your data with our LLM. AI chat, voice therapy, and journal insights will be disabled.',
                         [
                           { text: 'Cancel', style: 'cancel' },
                           { 
@@ -423,19 +423,19 @@ export default function SettingsScreen() {
                     <Text style={[styles.infoSectionTitle, { color: colors.text }]}>Who receives this data?</Text>
                   </View>
                   <GlassCard style={styles.recipientCard} padding="md">
-                    <Text style={[styles.recipientName, { color: colors.text }]}>OpenAI</Text>
+                    <Text style={[styles.recipientName, { color: colors.text }]}>Our LLM</Text>
                     <Text style={[styles.recipientDesc, { color: colors.textSecondary }]}>
-                      Our AI technology provider. OpenAI processes your data to generate supportive responses and insights.
+                      Our LLM (large language model) processes your data to generate supportive responses and insights.
                     </Text>
                     <Text style={[styles.recipientHighlight, { color: colors.success }]}>
-                      ✓ OpenAI does NOT use your data to train their AI models
+                      ✓ Our LLM provider does NOT use your data to train its models
                     </Text>
                     <Pressable 
                       style={styles.externalLink}
                       onPress={() => Linking.openURL('https://openai.com/privacy')}
                     >
                       <Text style={[styles.externalLinkText, { color: colors.primary }]}>
-                        View OpenAI's Privacy Policy
+                        View our AI provider's Privacy Policy
                       </Text>
                       <Ionicons name="open-outline" size={16} color={colors.primary} />
                     </Pressable>
@@ -458,7 +458,7 @@ export default function SettingsScreen() {
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        OpenAI is contractually obligated to protect your data
+                        Our AI provider is contractually obligated to protect your data
                       </Text>
                     </View>
                     <View style={styles.protectionItem}>

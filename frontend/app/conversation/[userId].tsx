@@ -163,6 +163,8 @@ export default function ConversationScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -942,11 +944,20 @@ export default function ConversationScreen() {
                 return (
                   <View key={index} style={styles.attachmentWrapper}>
                     {attachment.type === 'image' && (
-                      <Image
-                        source={{ uri: normalizedUrl }}
+                      <Pressable
+                        onPress={() => {
+                          if (!normalizedUrl) return;
+                          setSelectedImage(normalizedUrl);
+                          setIsImageViewerVisible(true);
+                        }}
                         style={styles.messageImage}
-                        resizeMode="cover"
-                      />
+                      >
+                        <Image
+                          source={{ uri: normalizedUrl }}
+                          style={styles.messageImage}
+                          resizeMode="cover"
+                        />
+                      </Pressable>
                     )}
                     {attachment.type === 'audio' && (
                       <VoiceMessagePlayer
@@ -1271,6 +1282,44 @@ export default function ConversationScreen() {
             }
           }}
         />
+
+        {/* Fullscreen image viewer */}
+        {selectedImage && (
+          <Modal
+            visible={isImageViewerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              setIsImageViewerVisible(false);
+              setSelectedImage(null);
+            }}
+          >
+            <Pressable
+              style={styles.imageViewerOverlay}
+              onPress={() => {
+                setIsImageViewerVisible(false);
+                setSelectedImage(null);
+              }}
+            >
+              <View style={styles.imageViewerContent}>
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={styles.imageViewerImage}
+                  resizeMode="contain"
+                />
+                <Pressable
+                  style={styles.imageViewerCloseButton}
+                  onPress={() => {
+                    setIsImageViewerVisible(false);
+                    setSelectedImage(null);
+                  }}
+                >
+                  <Ionicons name="close" size={28} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </Pressable>
+          </Modal>
+        )}
       </KeyboardAvoidingView>
 
       {/* Report / Block menu */}
@@ -1728,6 +1777,35 @@ const styles = StyleSheet.create({
   menuCancelText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
+  },
+  imageViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageViewerCloseButton: {
+    position: 'absolute',
+    top: SPACING.xl * 2,
+    right: SPACING.xl,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.6)',
   },
 });
 

@@ -74,11 +74,16 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     }
   }, [isKeyboardVisible]);
 
-  // When keyboard is visible, use minimal padding (KeyboardAvoidingView handles spacing).
-  // When hidden, use safe area bottom for devices with home indicator.
-  const paddingBottom = isKeyboardVisible 
-    ? (Platform.OS === 'ios' ? SPACING.xs : SPACING.sm)
-    : (Platform.OS === 'ios' ? Math.max(insets.bottom, SPACING.sm) : SPACING.md);
+  // When keyboard is visible, still leave a comfortable gap between the input
+  // and the top of the keyboard so the chat box doesn't feel cramped.
+  // When hidden, use safe area bottom for devices with a home indicator.
+  const paddingBottom = isKeyboardVisible
+    ? (Platform.OS === 'ios'
+        ? Math.max(SPACING.xs, insets.bottom * 0.5) // nog iets lager, maar met minimale veilige marge
+        : SPACING.xs)
+    : (Platform.OS === 'ios'
+        ? Math.max(insets.bottom, SPACING.sm)
+        : SPACING.md);
 
   return (
     <TouchableWithoutFeedback onPress={handleContainerPress}>

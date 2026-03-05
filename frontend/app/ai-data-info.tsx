@@ -87,20 +87,20 @@ export default function AiDataInfoScreen() {
             </Text>
           </View>
           <GlassCard style={styles.recipientCard} padding="md">
-            <Text style={[styles.recipientName, { color: colors.text }]}>OpenAI</Text>
+            <Text style={[styles.recipientName, { color: colors.text }]}>Our LLM</Text>
             <Text style={[styles.recipientDesc, { color: colors.textSecondary }]}>
-              Our AI technology provider. OpenAI processes your data to generate supportive 
+              Our LLM (large language model) processes your data to generate supportive 
               responses and insights for your mental health journey.
             </Text>
             <Text style={[styles.recipientHighlight, { color: colors.success }]}>
-              ✓ OpenAI does NOT use your data to train their AI models
+              ✓ Our LLM provider does NOT use your data to train its models
             </Text>
             <Pressable
               style={styles.externalLink}
               onPress={() => Linking.openURL('https://openai.com/privacy')}
             >
               <Text style={[styles.externalLinkText, { color: colors.primary }]}>
-                View OpenAI's Privacy Policy
+                View our AI provider's Privacy Policy
               </Text>
               <Ionicons name="open-outline" size={16} color={colors.primary} />
             </Pressable>
@@ -125,7 +125,7 @@ export default function AiDataInfoScreen() {
             <View style={styles.protectionItem}>
               <Ionicons name="checkmark-circle" size={22} color={colors.success} />
               <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                OpenAI is contractually obligated to protect your data
+                Our AI provider is contractually obligated to protect your data
               </Text>
             </View>
             <View style={styles.protectionItem}>
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.h4,
+    ...TYPOGRAPHY.bodyMedium,
     flex: 1,
   },
   list: {
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   recipientName: {
-    ...TYPOGRAPHY.h4,
+    ...TYPOGRAPHY.bodyMedium,
     marginBottom: SPACING.xs,
   },
   recipientDesc: {
