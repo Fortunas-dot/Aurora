@@ -1,5 +1,6 @@
 import { getApiUrl } from '../utils/apiUrl';
 import { secureStorage } from '../utils/secureStorage';
+import { AppState, AppStateStatus } from 'react-native';
 
 export type ChatWebSocketEventType = 
   | 'new_message' 
@@ -37,6 +38,8 @@ class ChatWebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private isConnecting = false;
   private typingTimeout: NodeJS.Timeout | null = null;
+  private appStateSubscription: any = null;
+  private appState: AppStateStatus = 'active';
 
   // Event listener system - supports multiple listeners per event
   private listeners: Map<ChatWebSocketEventType, Set<EventHandler>> = new Map();
@@ -94,6 +97,12 @@ class ChatWebSocketService {
     // Register legacy callbacks as listeners if provided
     if (callbacks) {
       this.registerLegacyCallbacks(callbacks);
+    }
+
+    // Setup AppState listener if not already set up
+    if (!this.appStateSubscription) {
+      this.appState = AppState.currentState;
+      this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange.bind(this));
     }
 
     // If already connected, nothing to do
@@ -183,20 +192,28 @@ class ChatWebSocketService {
         this.isConnecting = false;
         this.emit('disconnected');
 
+        // Don't reconnect if app is in background (will reconnect when app comes to foreground)
+        if (this.appState !== 'active') {
+          console.log('App is in background, will reconnect when app comes to foreground');
+          return;
+        }
+
         const shouldReconnect =
-          event.code !== 1000 &&
-          event.code !== 1005 &&
-          event.code !== 1002 &&
-          event.code !== 1003 &&
-          event.code !== 1007 &&
-          event.code !== 1008 &&
-          event.code !== 1009 &&
-          event.code !== 1010 &&
-          event.code !== 1015 &&
+          event.code !== 1000 && // Not manual close
+          event.code !== 1005 && // Not no status
+          event.code !== 1002 && // Not protocol error
+          event.code !== 1003 && // Not unsupported data
+          event.code !== 1007 && // Not invalid data
+          event.code !== 1008 && // Not policy violation
+          event.code !== 1009 && // Not message too big
+          event.code !== 1010 && // Not extension error
+          event.code !== 1015 && // Not TLS handshake failure
           this.reconnectAttempts < this.maxReconnectAttempts;
 
         if (shouldReconnect) {
           this.attemptReconnect();
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.log('Max reconnection attempts reached, will retry when app comes to foreground');
         }
       };
     } catch (error) {
@@ -213,7 +230,21 @@ class ChatWebSocketService {
    * Ensure the WebSocket is connected (connects if needed)
    */
   async ensureConnected(): Promise<void> {
-    if (this.ws?.readyState !== WebSocket.OPEN && !this.isConnecting) {
+    // Check if connection is actually open (not just in CONNECTING state)
+    const isOpen = this.ws?.readyState === WebSocket.OPEN;
+    const isConnecting = this.ws?.readyState === WebSocket.CONNECTING || this.isConnecting;
+    
+    // If not open and not already connecting, connect
+    if (!isOpen && !isConnecting) {
+      // Clean up stale connection first
+      if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
+        try {
+          this.ws.close();
+        } catch (error) {
+          // Ignore close errors
+        }
+        this.ws = null;
+      }
       await this.connect();
     }
   }
@@ -424,9 +455,44 @@ class ChatWebSocketService {
   }
 
   /**
+   * Handle AppState changes - reconnect when app comes to foreground
+   */
+  private handleAppStateChange(nextAppState: AppStateStatus): void {
+    if (this.appState.match(/inactive|background/) && nextAppState === 'active') {
+      // App has come to the foreground
+      console.log('App came to foreground, checking WebSocket connection...');
+      
+      // Check if WebSocket is connected, reconnect if needed
+      const isOpen = this.ws?.readyState === WebSocket.OPEN;
+      const isConnecting = this.ws?.readyState === WebSocket.CONNECTING || this.isConnecting;
+      
+      if (!isOpen && !isConnecting) {
+        console.log('WebSocket not connected, reconnecting...');
+        // Reset reconnect attempts when app comes back to foreground
+        this.reconnectAttempts = 0;
+        this.ensureConnected();
+      } else if (!isOpen && this.ws?.readyState === WebSocket.CLOSED) {
+        // Connection is closed, clean up and reconnect
+        console.log('WebSocket was closed, cleaning up and reconnecting...');
+        this.ws = null;
+        this.reconnectAttempts = 0;
+        this.ensureConnected();
+      }
+    }
+    
+    this.appState = nextAppState;
+  }
+
+  /**
    * Disconnect from WebSocket (only call on logout or app background)
    */
   disconnect(): void {
+    // Remove AppState listener
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
+    }
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
