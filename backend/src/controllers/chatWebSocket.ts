@@ -539,16 +539,6 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
       updatedAt: message.updatedAt ? (message.updatedAt instanceof Date ? message.updatedAt.toISOString() : message.updatedAt) : new Date().toISOString(),
     };
 
-    console.log(`📢 Broadcasting reaction update for message ${messageId} to sender ${senderId} and receiver ${receiverId}`, {
-      reactionsCount: serializedReactions.length,
-      reactions: serializedReactions,
-      reactionUpdate: {
-        _id: reactionUpdate._id,
-        reactionsCount: reactionUpdate.reactions.length,
-        updatedAt: reactionUpdate.updatedAt,
-      },
-    });
-
     // Send to sender if online
     const senderWs = activeChatConnections.get(senderId);
     if (senderWs && senderWs.readyState === 1) {
@@ -558,16 +548,9 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
           message: reactionUpdate,
         });
         senderWs.send(payload);
-        console.log(`✅ Sent reaction update to sender ${senderId}`, { 
-          payloadSize: payload.length,
-          messageId: reactionUpdate._id,
-          reactionsCount: reactionUpdate.reactions.length,
-        });
       } catch (error) {
-        console.error(`❌ Error sending reaction update to sender ${senderId}:`, error);
+        console.error(`Error sending reaction update to sender ${senderId}:`, error);
       }
-    } else {
-      console.log(`⚠️ Sender ${senderId} is not connected via WebSocket (readyState: ${senderWs?.readyState}, isConnected: ${!!senderWs})`);
     }
 
     // Send to receiver if online
@@ -579,16 +562,9 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
           message: reactionUpdate,
         });
         receiverWs.send(payload);
-        console.log(`✅ Sent reaction update to receiver ${receiverId}`, { 
-          payloadSize: payload.length,
-          messageId: reactionUpdate._id,
-          reactionsCount: reactionUpdate.reactions.length,
-        });
       } catch (error) {
-        console.error(`❌ Error sending reaction update to receiver ${receiverId}:`, error);
+        console.error(`Error sending reaction update to receiver ${receiverId}:`, error);
       }
-    } else {
-      console.log(`⚠️ Receiver ${receiverId} is not connected via WebSocket (readyState: ${receiverWs?.readyState}, isConnected: ${!!receiverWs})`);
     }
   } catch (error) {
     console.error('Error broadcasting message reaction:', error);

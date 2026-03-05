@@ -478,38 +478,23 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageReaction = chatWebSocketService.on('message_reaction', (reactionData: any) => {
-      // The backend sends: { type: 'message_reaction', message: reactionUpdate }
-      // The service extracts data.message and passes it here
-      // So reactionData should be the reactionUpdate object with _id, reactions, updatedAt
-      
-      if (__DEV__) {
-        console.log('🔔 Received message_reaction WebSocket event:', { 
-          reactionData,
-          hasId: !!reactionData?._id,
-          reactionsCount: reactionData?.reactions?.length || 0,
-        });
-      }
-
       // Normalize message ID for comparison (handle both string and ObjectId)
       const incomingMessageId = reactionData?._id 
         ? String(reactionData._id) 
         : (reactionData?.messageId ? String(reactionData.messageId) : null);
 
       if (!incomingMessageId) {
-        console.warn('⚠️ Received message_reaction event without message ID:', reactionData);
         return;
       }
 
       // Update messages - search for matching message ID
       setMessages((prev) => {
-        let found = false;
         const normalizedIncomingId = String(incomingMessageId);
         const updated = prev.map((msg) => {
           // Normalize both IDs to strings for comparison
           const currentMessageId = String(msg._id || '');
           
           if (currentMessageId === normalizedIncomingId) {
-            found = true;
             const newReactions = Array.isArray(reactionData.reactions) 
               ? reactionData.reactions 
               : (msg.reactions || []);
@@ -520,33 +505,10 @@ export default function ConversationScreen() {
               updatedAt: reactionData.updatedAt || msg.updatedAt,
             };
             
-            if (__DEV__) {
-              console.log('✅ Updating message reactions:', { 
-                messageId: currentMessageId,
-                oldReactions: msg.reactions || [],
-                newReactions: newReactions,
-                reactionCount: newReactions.length,
-              });
-            }
-            
             return normalizeMessageAttachments(updatedMessage);
           }
           return msg;
         });
-        
-        if (__DEV__) {
-          if (!found) {
-            console.warn('⚠️ Message reaction event received but message not found in current conversation:', {
-              incomingMessageId: normalizedIncomingId,
-              currentMessageIds: prev.map(m => String(m._id)).slice(0, 5), // Show first 5 for debugging
-              totalMessages: prev.length,
-              currentUserId: currentUser?._id,
-              conversationUserId: userId,
-            });
-          } else {
-            console.log('✅ Successfully updated message reactions in conversation');
-          }
-        }
         
         return updated;
       });
@@ -879,21 +841,9 @@ export default function ConversationScreen() {
 
   const handleReactToMessage = async (messageId: string, emoji: string) => {
     try {
-      if (__DEV__) {
-        console.log('handleReactToMessage called:', { messageId, emoji });
-      }
-      
       // Make the API call - WebSocket will broadcast to other user
       const response = await messageService.reactToMessage(messageId, emoji);
       if (response.success && response.data) {
-        if (__DEV__) {
-          console.log('Reaction API response:', { 
-            messageId, 
-            reactions: response.data.reactions,
-            reactionCount: response.data.reactions?.length || 0,
-          });
-        }
-        
         // Update with server response - this ensures both users see the same state
         // The WebSocket event will also update the state for the other user
         setMessages((prev) =>
@@ -906,28 +856,14 @@ export default function ConversationScreen() {
                 reactions: Array.isArray(response.data!.reactions) ? response.data!.reactions : [],
                 updatedAt: response.data!.updatedAt || msg.updatedAt,
               };
-              // Normalize attachments and avatars
-              if (__DEV__) {
-                console.log('Updated message with reactions:', { 
-                  messageId: msgIdStr, 
-                  reactions: updated.reactions,
-                });
-              }
               return normalizeMessageAttachments(updated);
             }
             return msg;
           })
         );
-      } else {
-        if (__DEV__) {
-          console.warn('Reaction API call failed:', response.message);
-        }
       }
     } catch (error) {
       console.error('Error reacting to message:', error);
-      if (__DEV__) {
-        console.error('Full error details:', error);
-      }
     }
   };
 
