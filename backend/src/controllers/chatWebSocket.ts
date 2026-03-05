@@ -468,16 +468,37 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
     const senderId = message.sender._id?.toString() || message.sender.toString();
     const receiverId = message.receiver._id?.toString() || message.receiver.toString();
 
+    // Convert message to plain object to ensure proper serialization
+    // This is important because Mongoose documents need to be converted to plain objects
+    const messageObj = message.toObject ? message.toObject() : message;
+    
+    // Ensure reactions are properly serialized (convert Mongoose documents to plain objects)
+    let serializedReactions = messageObj.reactions;
+    if (serializedReactions && Array.isArray(serializedReactions)) {
+      serializedReactions = serializedReactions.map((reaction: any) => {
+        const reactionObj = reaction.toObject ? reaction.toObject() : reaction;
+        // Ensure users array is properly serialized
+        if (reactionObj.users && Array.isArray(reactionObj.users)) {
+          reactionObj.users = reactionObj.users.map((user: any) => 
+            user.toObject ? user.toObject() : user
+          );
+        }
+        return reactionObj;
+      });
+    }
+
+    const reactionUpdate = {
+      _id: messageObj._id,
+      reactions: serializedReactions,
+      updatedAt: messageObj.updatedAt,
+    };
+
     // Send to sender if online
     const senderWs = activeChatConnections.get(senderId);
     if (senderWs && senderWs.readyState === 1) {
       senderWs.send(JSON.stringify({
         type: 'message_reaction',
-        message: {
-          _id: message._id,
-          reactions: message.reactions,
-          updatedAt: message.updatedAt,
-        },
+        message: reactionUpdate,
       }));
     }
 
@@ -486,11 +507,7 @@ export const broadcastMessageReaction = async (message: any): Promise<void> => {
     if (receiverWs && receiverWs.readyState === 1) {
       receiverWs.send(JSON.stringify({
         type: 'message_reaction',
-        message: {
-          _id: message._id,
-          reactions: message.reactions,
-          updatedAt: message.updatedAt,
-        },
+        message: reactionUpdate,
       }));
     }
   } catch (error) {

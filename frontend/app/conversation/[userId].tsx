@@ -16,6 +16,7 @@ import {
   Easing,
   Keyboard,
   TouchableWithoutFeedback,
+  TouchableOpacity,
   Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -437,12 +438,23 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageReaction = chatWebSocketService.on('message_reaction', (message: any) => {
+      // Only handle reactions for messages in the current conversation
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === message._id
-            ? { ...msg, reactions: message.reactions, updatedAt: message.updatedAt }
-            : msg
-        )
+        prev.map((msg) => {
+          // Compare message IDs as strings to handle ObjectId vs string comparison
+          const msgId = msg._id?.toString();
+          const reactionMsgId = message._id?.toString();
+          if (msgId === reactionMsgId) {
+            // Update reactions and preserve all other message fields, normalize attachments
+            const updated = {
+              ...msg,
+              reactions: message.reactions || [],
+              updatedAt: message.updatedAt || msg.updatedAt,
+            };
+            return normalizeMessageAttachments(updated);
+          }
+          return msg;
+        })
       );
     });
 
@@ -944,7 +956,8 @@ export default function ConversationScreen() {
                 return (
                   <View key={index} style={styles.attachmentWrapper}>
                     {attachment.type === 'image' && (
-                      <Pressable
+                      <TouchableOpacity
+                        activeOpacity={0.9}
                         onPress={() => {
                           if (!normalizedUrl) return;
                           setSelectedImage(normalizedUrl);
@@ -957,7 +970,7 @@ export default function ConversationScreen() {
                           style={styles.messageImage}
                           resizeMode="cover"
                         />
-                      </Pressable>
+                      </TouchableOpacity>
                     )}
                     {attachment.type === 'audio' && (
                       <VoiceMessagePlayer
@@ -979,8 +992,8 @@ export default function ConversationScreen() {
             </Text>
           )}
           
-          {/* Reactions - only show for messages from other users */}
-          {!isOwn && item.reactions && item.reactions.length > 0 && (
+          {/* Reactions - show for all messages that have reactions */}
+          {item.reactions && item.reactions.length > 0 && (
             <View style={styles.reactionsContainer}>
               {item.reactions.map((reaction, index) => (
                 <Pressable
@@ -992,7 +1005,7 @@ export default function ConversationScreen() {
                   onPress={() => handleReactToMessage(item._id, reaction.emoji)}
                 >
                   <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-                  {reaction.users.length > 0 && (
+                  {reaction.users && reaction.users.length > 0 && (
                     <Text style={styles.reactionCount}>{reaction.users.length}</Text>
                   )}
                 </Pressable>
