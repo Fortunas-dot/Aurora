@@ -477,53 +477,75 @@ export default function ConversationScreen() {
       );
     });
 
-    const unsubMessageReaction = chatWebSocketService.on('message_reaction', (message: any) => {
-      // Normalize message ID for comparison (handle both string and ObjectId)
-      const incomingMessageId = String(message._id || message.messageId || message._id?.toString() || '');
+    const unsubMessageReaction = chatWebSocketService.on('message_reaction', (reactionData: any) => {
+      // The backend sends: { type: 'message_reaction', message: reactionUpdate }
+      // The service extracts data.message and passes it here
+      // So reactionData should be the reactionUpdate object with _id, reactions, updatedAt
       
       if (__DEV__) {
-        console.log('Received message_reaction event:', { 
-          messageId: incomingMessageId, 
-          reactions: message.reactions,
-          fullMessage: message,
+        console.log('🔔 Received message_reaction WebSocket event:', { 
+          reactionData,
+          hasId: !!reactionData?._id,
+          reactionsCount: reactionData?.reactions?.length || 0,
         });
       }
 
+      // Normalize message ID for comparison (handle both string and ObjectId)
+      const incomingMessageId = reactionData?._id 
+        ? String(reactionData._id) 
+        : (reactionData?.messageId ? String(reactionData.messageId) : null);
+
       if (!incomingMessageId) {
-        console.warn('Received message_reaction event without message ID:', message);
+        console.warn('⚠️ Received message_reaction event without message ID:', reactionData);
         return;
       }
 
-      // Only update if this message belongs to the current conversation
+      // Update messages - search for matching message ID
       setMessages((prev) => {
         let found = false;
+        const normalizedIncomingId = String(incomingMessageId);
         const updated = prev.map((msg) => {
-          const currentMessageId = String(msg._id);
-          if (currentMessageId === incomingMessageId) {
+          // Normalize both IDs to strings for comparison
+          const currentMessageId = String(msg._id || '');
+          
+          if (currentMessageId === normalizedIncomingId) {
             found = true;
-            const updated = {
+            const newReactions = Array.isArray(reactionData.reactions) 
+              ? reactionData.reactions 
+              : (msg.reactions || []);
+            
+            const updatedMessage = {
               ...msg,
-              reactions: Array.isArray(message.reactions) ? message.reactions : (msg.reactions || []),
-              updatedAt: message.updatedAt || msg.updatedAt,
+              reactions: newReactions,
+              updatedAt: reactionData.updatedAt || msg.updatedAt,
             };
-            // Normalize attachments and avatars
+            
             if (__DEV__) {
-              console.log('Updating message reactions:', { 
-                messageId: currentMessageId, 
-                oldReactions: msg.reactions,
-                newReactions: updated.reactions,
+              console.log('✅ Updating message reactions:', { 
+                messageId: currentMessageId,
+                oldReactions: msg.reactions || [],
+                newReactions: newReactions,
+                reactionCount: newReactions.length,
               });
             }
-            return normalizeMessageAttachments(updated);
+            
+            return normalizeMessageAttachments(updatedMessage);
           }
           return msg;
         });
         
-        if (__DEV__ && !found) {
-          console.warn('Message reaction event received but message not found in current conversation:', {
-            incomingMessageId,
-            currentMessageIds: prev.map(m => String(m._id)),
-          });
+        if (__DEV__) {
+          if (!found) {
+            console.warn('⚠️ Message reaction event received but message not found in current conversation:', {
+              incomingMessageId: normalizedIncomingId,
+              currentMessageIds: prev.map(m => String(m._id)).slice(0, 5), // Show first 5 for debugging
+              totalMessages: prev.length,
+              currentUserId: currentUser?._id,
+              conversationUserId: userId,
+            });
+          } else {
+            console.log('✅ Successfully updated message reactions in conversation');
+          }
         }
         
         return updated;
@@ -1093,8 +1115,8 @@ export default function ConversationScreen() {
             </Text>
           )}
           
-          {/* Reactions - only show for messages from other users */}
-          {!isOwn && item.reactions && item.reactions.length > 0 && (
+          {/* Reactions - show for all messages that have reactions */}
+          {item.reactions && item.reactions.length > 0 && (
             <View style={styles.reactionsContainer}>
               {item.reactions.map((reaction, index) => (
                 <Pressable
