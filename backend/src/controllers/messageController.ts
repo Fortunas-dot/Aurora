@@ -307,7 +307,7 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       message: 'sent you a message',
     });
 
-    await notification.populate('relatedUser', 'username displayName avatar');
+    await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
 
     // Send notification via WebSocket
     await sendNotificationToUser(receiverId, notification);
@@ -418,8 +418,12 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
     await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
     await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
 
+    // Convert to plain object to ensure proper serialization
+    const messageObj = message.toObject ? message.toObject() : message;
+    
     // Broadcast reaction update via WebSocket to both users
-    await broadcastMessageReaction(message);
+    // Pass the full message object with all populated fields
+    await broadcastMessageReaction(messageObj);
 
     // Normalize URLs in message (attachments and user avatars)
     const messageObj = message.toObject ? message.toObject() : message;

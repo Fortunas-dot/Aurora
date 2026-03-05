@@ -123,22 +123,53 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
     post.commentsCount += 1;
     await post.save();
 
-    // Create notification if not own post
-    if (post.author.toString() !== req.userId) {
-      const notification = await Notification.create({
-        user: post.author,
-        type: 'comment',
-        relatedUser: req.userId,
-        relatedPost: postId,
-        message: 'commented on your post',
-      });
+    // Handle notifications
+    if (parentCommentId) {
+      // This is a reply to a comment - notify the parent comment author
+      const parentComment = await Comment.findById(parentCommentId);
+      if (parentComment && parentComment.author.toString() !== req.userId) {
+        // Don't notify if replying to own comment
+        // Also don't notify post author if they're the parent comment author (they'll get the post comment notification)
+        const parentCommentAuthorId = parentComment.author.toString();
+        const postAuthorId = post.author.toString();
+        
+        // Only notify if parent comment author is different from post author
+        // (post author already gets notified about new comments on their post)
+        if (parentCommentAuthorId !== postAuthorId) {
+          const replyNotification = await Notification.create({
+            user: parentCommentAuthorId,
+            type: 'comment',
+            relatedUser: req.userId,
+            relatedPost: postId,
+            message: 'replied to your comment',
+          });
 
-      await notification.populate('relatedUser', 'username displayName avatar');
-      await notification.populate('relatedPost', 'content');
+          await replyNotification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+          await replyNotification.populate('relatedPost', 'content title');
 
-      // Send notification via WebSocket
-      await sendNotificationToUser(post.author.toString(), notification);
-      await sendUnreadCountUpdate(post.author.toString());
+          // Send notification via WebSocket
+          await sendNotificationToUser(parentCommentAuthorId, replyNotification);
+          await sendUnreadCountUpdate(parentCommentAuthorId);
+        }
+      }
+    } else {
+      // This is a top-level comment - notify post author
+      if (post.author.toString() !== req.userId) {
+        const notification = await Notification.create({
+          user: post.author,
+          type: 'comment',
+          relatedUser: req.userId,
+          relatedPost: postId,
+          message: 'commented on your post',
+        });
+
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+        await notification.populate('relatedPost', 'content title');
+
+        // Send notification via WebSocket
+        await sendNotificationToUser(post.author.toString(), notification);
+        await sendUnreadCountUpdate(post.author.toString());
+      }
     }
 
     await comment.populate('author', 'username displayName avatar isTherapist');

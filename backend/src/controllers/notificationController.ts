@@ -13,12 +13,24 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
     const skip = (page - 1) * limit;
 
     const notifications = await Notification.find({ user: req.userId })
-      .populate('relatedUser', 'username displayName avatar')
-      .populate('relatedPost', 'content')
+      .populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
+      .populate('relatedPost', 'content title')
       .populate('relatedGroup', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Filter out notifications where relatedUser is required but missing
+    // This handles cases where the user was deleted or populate failed
+    const notificationsWithUsers = notifications.filter((notification: any) => {
+      const requiresUser = ['like', 'comment', 'message', 'follow', 'group_join', 'group_invite', 'journal_entry'].includes(notification.type);
+      if (requiresUser && !notification.relatedUser) {
+        // Log for debugging but don't show to user
+        console.warn(`Notification ${notification._id} missing relatedUser for type ${notification.type}`);
+        return false;
+      }
+      return true;
+    });
 
     const total = await Notification.countDocuments({ user: req.userId });
     const unreadCount = await Notification.countDocuments({
@@ -28,7 +40,7 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
 
     res.json({
       success: true,
-      data: notifications,
+      data: notificationsWithUsers,
       unreadCount,
       pagination: {
         page,

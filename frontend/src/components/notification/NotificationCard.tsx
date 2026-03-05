@@ -71,14 +71,22 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   const icon = getNotificationIcon(notification.type);
   const iconColor = getNotificationColor(notification.type);
 
+  // Get sender name - handle both populated object and potential missing data
   const senderName =
-    notification.relatedUser?.displayName || notification.relatedUser?.username;
+    notification.relatedUser?.displayName || 
+    notification.relatedUser?.username;
 
-  const prependNameTypes: NotificationType[] = ['like', 'comment', 'message', 'follow'];
+  const prependNameTypes: NotificationType[] = ['like', 'comment', 'message', 'follow', 'group_join', 'group_invite', 'journal_entry'];
 
+  // Always show name for these notification types if relatedUser exists
+  // If relatedUser exists but name is missing, show "Someone"
   const displayMessage =
-    senderName && prependNameTypes.includes(notification.type)
-      ? `${senderName} ${notification.message}`
+    prependNameTypes.includes(notification.type)
+      ? notification.relatedUser
+        ? senderName
+          ? `${senderName} ${notification.message}`
+          : `Someone ${notification.message}`
+        : notification.message // Fallback if relatedUser is missing
       : notification.message;
 
   const handlePress = () => {

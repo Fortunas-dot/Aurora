@@ -478,21 +478,56 @@ export default function ConversationScreen() {
     });
 
     const unsubMessageReaction = chatWebSocketService.on('message_reaction', (message: any) => {
+      // Normalize message ID for comparison (handle both string and ObjectId)
+      const incomingMessageId = String(message._id || message.messageId || message._id?.toString() || '');
+      
+      if (__DEV__) {
+        console.log('Received message_reaction event:', { 
+          messageId: incomingMessageId, 
+          reactions: message.reactions,
+          fullMessage: message,
+        });
+      }
+
+      if (!incomingMessageId) {
+        console.warn('Received message_reaction event without message ID:', message);
+        return;
+      }
+
       // Only update if this message belongs to the current conversation
-      setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg._id === message._id) {
+      setMessages((prev) => {
+        let found = false;
+        const updated = prev.map((msg) => {
+          const currentMessageId = String(msg._id);
+          if (currentMessageId === incomingMessageId) {
+            found = true;
             const updated = {
               ...msg,
-              reactions: message.reactions || [],
+              reactions: Array.isArray(message.reactions) ? message.reactions : (msg.reactions || []),
               updatedAt: message.updatedAt || msg.updatedAt,
             };
             // Normalize attachments and avatars
+            if (__DEV__) {
+              console.log('Updating message reactions:', { 
+                messageId: currentMessageId, 
+                oldReactions: msg.reactions,
+                newReactions: updated.reactions,
+              });
+            }
             return normalizeMessageAttachments(updated);
           }
           return msg;
-        })
-      );
+        });
+        
+        if (__DEV__ && !found) {
+          console.warn('Message reaction event received but message not found in current conversation:', {
+            incomingMessageId,
+            currentMessageIds: prev.map(m => String(m._id)),
+          });
+        }
+        
+        return updated;
+      });
     });
 
     // Cleanup: only remove listeners, do NOT disconnect the WebSocket
@@ -822,26 +857,55 @@ export default function ConversationScreen() {
 
   const handleReactToMessage = async (messageId: string, emoji: string) => {
     try {
+      if (__DEV__) {
+        console.log('handleReactToMessage called:', { messageId, emoji });
+      }
+      
+      // Make the API call - WebSocket will broadcast to other user
       const response = await messageService.reactToMessage(messageId, emoji);
       if (response.success && response.data) {
-        // Update reactions and ensure attachments are normalized
+        if (__DEV__) {
+          console.log('Reaction API response:', { 
+            messageId, 
+            reactions: response.data.reactions,
+            reactionCount: response.data.reactions?.length || 0,
+          });
+        }
+        
+        // Update with server response - this ensures both users see the same state
+        // The WebSocket event will also update the state for the other user
         setMessages((prev) =>
           prev.map((msg) => {
-            if (msg._id === messageId) {
+            const msgIdStr = String(msg._id);
+            const messageIdStr = String(messageId);
+            if (msgIdStr === messageIdStr) {
               const updated = {
                 ...msg,
-                reactions: response.data!.reactions,
-                updatedAt: response.data!.updatedAt,
+                reactions: Array.isArray(response.data!.reactions) ? response.data!.reactions : [],
+                updatedAt: response.data!.updatedAt || msg.updatedAt,
               };
               // Normalize attachments and avatars
+              if (__DEV__) {
+                console.log('Updated message with reactions:', { 
+                  messageId: msgIdStr, 
+                  reactions: updated.reactions,
+                });
+              }
               return normalizeMessageAttachments(updated);
             }
             return msg;
           })
         );
+      } else {
+        if (__DEV__) {
+          console.warn('Reaction API call failed:', response.message);
+        }
       }
     } catch (error) {
       console.error('Error reacting to message:', error);
+      if (__DEV__) {
+        console.error('Full error details:', error);
+      }
     }
   };
 

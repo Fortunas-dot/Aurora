@@ -226,7 +226,7 @@ export const joinGroup = async (req: AuthRequest, res: Response): Promise<void> 
           message: 'joined your group',
         });
 
-        await notification.populate('relatedUser', 'username displayName avatar');
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
         await notification.populate('relatedGroup', 'name');
 
         // Send notification via WebSocket

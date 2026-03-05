@@ -596,8 +596,8 @@ export const likePost = async (req: AuthRequest, res: Response): Promise<void> =
           message: 'liked your post',
         });
 
-        await notification.populate('relatedUser', 'username displayName avatar');
-        await notification.populate('relatedPost', 'content');
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+        await notification.populate('relatedPost', 'content title');
 
         // Send notification via WebSocket
         await sendNotificationToUser(post.author.toString(), notification);

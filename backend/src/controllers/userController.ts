@@ -514,7 +514,7 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
         message: 'started following you',
       });
 
-      await notification.populate('relatedUser', 'username displayName avatar');
+      await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
 
       // Send notification via WebSocket
       await sendNotificationToUser(targetUserId, notification);

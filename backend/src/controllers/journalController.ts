@@ -844,7 +844,7 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
           });
 
           // Populate minimal fields for WebSocket/push usage
-          await notification.populate('relatedUser', 'username displayName avatar');
+          await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
           await notification.populate('relatedJournal', 'name');
           await notification.populate('relatedEntry', '_id');
 
