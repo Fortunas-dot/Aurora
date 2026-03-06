@@ -9,6 +9,7 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sanitizeUser, escapeRegex } from '../utils/helpers';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // Helper function to normalize URLs to absolute URLs
 const normalizeUrl = (url: string | undefined | null): string | undefined => {
@@ -287,9 +288,9 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
 export const searchUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const query = req.query.q as string;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     if (!query || query.length < 2) {
       res.status(400).json({
@@ -334,9 +335,9 @@ export const searchUsers = async (req: AuthRequest, res: Response): Promise<void
 // @access  Public (but respects block relationships)
 export const getUserPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     const targetUserId = req.params.id;
 
@@ -539,9 +540,9 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Public
 export const getFollowers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     const followers = await User.find({ following: req.params.id })
       .select('username displayName avatar bio avatarCharacter avatarBackgroundColor nameColor createdAt')
@@ -599,9 +600,9 @@ export const getFollowing = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     const following = user.following.slice(skip, skip + limit) as any[];
 

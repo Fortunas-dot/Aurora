@@ -7,6 +7,7 @@ import { broadcastMessageReaction } from './chatWebSocket';
 import mongoose from 'mongoose';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { escapeRegex } from '../utils/helpers';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // Helper function to normalize URLs to absolute URLs
 const normalizeUrl = (url: string | undefined | null): string | undefined => {
@@ -166,9 +167,9 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
 // @access  Private
 export const getConversation = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string, 50, 100); // Default 50, max 100 for messages
+    const skip = calculateSkip(page, limit);
 
     const otherUserId = req.params.userId;
 

@@ -2,15 +2,16 @@ import { Response } from 'express';
 import Idea from '../models/Idea';
 import Comment from '../models/Comment';
 import { AuthRequest } from '../middleware/auth';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // @desc    Get all ideas
 // @route   GET /api/ideas
 // @access  Public
 export const getIdeas = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const sortBy = req.query.sortBy as string || 'recent'; // recent, popular, trending
     const category = req.query.category as string;
     const status = req.query.status as string;

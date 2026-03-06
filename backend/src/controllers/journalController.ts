@@ -10,6 +10,7 @@ import { AuthRequest } from '../middleware/auth';
 import OpenAI from 'openai';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { escapeRegex } from '../utils/helpers';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -58,9 +59,9 @@ export const createJournal = async (req: AuthRequest, res: Response): Promise<vo
 // @access  Private
 export const getUserJournals = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     const query: any = { owner: req.userId };
 
@@ -95,9 +96,9 @@ export const getUserJournals = async (req: AuthRequest, res: Response): Promise<
 // @access  Public
 export const getPublicJournals = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const search = req.query.search as string;
     const topic = req.query.topic as string;
     const sort = req.query.sort as string || 'popular'; // popular, newest, most-entries
@@ -120,9 +121,11 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
       query.topics = topicLower;
     }
 
-    console.log('🔍 Public journals query:', JSON.stringify(query, null, 2));
-    if (topic) {
-      console.log('📌 Filtering by topic:', topic.toLowerCase().trim());
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Public journals query:', JSON.stringify(query, null, 2));
+      if (topic) {
+        console.log('📌 Filtering by topic:', topic.toLowerCase().trim());
+      }
     }
 
     // Determine sort order based on sort parameter
@@ -487,9 +490,9 @@ export const unfollowJournal = async (req: AuthRequest, res: Response): Promise<
 // @access  Private
 export const getFollowingJournals = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     if (!req.userId) {
       res.status(401).json({
@@ -538,9 +541,9 @@ export const getFollowingJournals = async (req: AuthRequest, res: Response): Pro
 // @access  Private
 export const getEntries = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
     const mood = req.query.mood as string;
@@ -592,13 +595,15 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
         query.isPrivate = { $ne: true };
       }
 
-      console.log(`[getEntries] Public journal query:`, JSON.stringify({
-        author: query.author.toString(),
-        journal: query.journal.toString(),
-        isPrivate: query.isPrivate,
-        isOwner,
-        journalIsPublic: journal.isPublic
-      }));
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[getEntries] Public journal query:`, JSON.stringify({
+          author: query.author.toString(),
+          journal: query.journal.toString(),
+          isPrivate: query.isPrivate,
+          isOwner,
+          journalIsPublic: journal.isPublic
+        }));
+      }
     } else {
       // No journalId provided, default to current user's entries
       if (!req.userId) {
@@ -644,7 +649,9 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
 
     const total = await JournalEntry.countDocuments(query);
 
-    console.log(`[getEntries] Found ${entries.length} entries (total: ${total}) for query:`, JSON.stringify(query));
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[getEntries] Found ${entries.length} entries (total: ${total}) for query:`, JSON.stringify(query));
+    }
 
     res.json({
       success: true,
@@ -1022,9 +1029,9 @@ export const deleteEntry = async (req: AuthRequest, res: Response): Promise<void
 // @access  Private
 export const getFollowingEntries = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     if (!req.userId) {
       res.status(401).json({
@@ -1093,7 +1100,7 @@ export const getFollowingEntries = async (req: AuthRequest, res: Response): Prom
 // @access  Private
 export const getInsights = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const days = parseInt(req.query.days as string) || 30;
+    const days = Math.min(Math.max(Number.parseInt(req.query.days as string, 10) || 30, 1), 365); // Between 1 and 365 days
     const journalId = req.query.journalId as string;
     
     // Calculate start date more reliably
@@ -1513,7 +1520,7 @@ Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
 // @access  Private
 export const getAuroraContext = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const limit = parseInt(req.query.limit as string) || 5;
+    const limit = parseLimit(req.query.limit as string, 5, 20); // Default 5, max 20 for suggestions
     const journalId = req.query.journalId as string;
 
     const query: any = { author: req.userId };

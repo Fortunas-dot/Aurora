@@ -3,6 +3,9 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 
+// ⚠️ SECURITY WARNING: OpenAI API key in frontend is a security risk!
+// If OPENAI_API_KEY is set in app.config.js, it will be exposed in the compiled app.
+// Consider routing transcription through your backend instead.
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
 
 export type RecordingState = 'idle' | 'recording' | 'processing' | 'done' | 'error';

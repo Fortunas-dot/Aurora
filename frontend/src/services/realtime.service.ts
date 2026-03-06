@@ -4,6 +4,9 @@ import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
+// ⚠️ SECURITY WARNING: OpenAI API key in frontend is a security risk!
+// If OPENAI_API_KEY is set in app.config.js, it will be exposed in the compiled app.
+// This service uses PROXY_URL which routes through backend - that's safer.
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
 
 // Proxy server URL - set PROXY_URL in app.config.js for production
@@ -223,8 +226,10 @@ export class RealtimeService {
 
         case 'session.updated':
           console.log('✅ Session updated');
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'realtime.service.ts:session.updated',message:'Session updated confirmed',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          // #region agent log (development only)
+          if (__DEV__) {
+            fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'realtime.service.ts:session.updated',message:'Session updated confirmed',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          }
           // #endregion
           this.sessionReady = true;
           break;

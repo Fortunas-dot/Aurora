@@ -303,9 +303,14 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       .filter((m: { role: string }) => m.role === 'user')
       .pop()?.content || '';
     
-    console.log('🔍 Detecting risk in message:', lastUserMessage);
+    // Security: Only log risk detection in development, never log actual user messages
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Detecting risk in user message (message content not logged for privacy)');
+    }
     const riskAssessment = detectRisk(lastUserMessage);
-    console.log('🔍 Risk assessment result:', JSON.stringify(riskAssessment, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Risk assessment result:', JSON.stringify(riskAssessment, null, 2));
+    }
     
     // Resolve user country (ISO code like 'NL', 'US', etc.) from health info if available
     const userCountry = (user?.healthInfo as any)?.country as string | undefined;
@@ -313,10 +318,15 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // If high risk, prepare crisis response (taking user country into account)
     let crisisResponse: { message: string; resources: Array<{ name: string; number: string; available: string }> } | null = null;
     if (riskAssessment.requiresCrisisResponse) {
-      console.log('🚨 High risk detected! Preparing crisis response for country:', userCountry || 'default');
+      // Security: Only log that crisis response was triggered, not the actual response content
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚨 High risk detected! Preparing crisis response for country:', userCountry || 'default');
+      }
       crisisResponse = getCrisisResources(riskAssessment.level, userCountry);
-      console.log('🚨 Crisis response prepared:', JSON.stringify(crisisResponse, null, 2));
-    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚨 Crisis response prepared (details not logged for privacy)');
+      }
+    } else if (process.env.NODE_ENV === 'development') {
       console.log('✅ No crisis response needed');
     }
     
@@ -414,11 +424,16 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
         message: crisisResponse.message,
         resources: crisisResponse.resources 
       };
-      console.log('🚨 Sending crisis resources immediately:', JSON.stringify(crisisData, null, 2));
+      // Security: Only log that crisis resources were sent, not the actual content
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚨 Sending crisis resources immediately (details not logged for privacy)');
+      }
       res.write(`data: ${JSON.stringify(crisisData)}\n\n`);
       // Note: res.write() automatically flushes in Express for SSE streams
-      console.log('✅ Crisis resources sent');
-    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Crisis resources sent');
+      }
+    } else if (process.env.NODE_ENV === 'development') {
       console.log('⚠️ Not sending crisis resources - requiresCrisisResponse:', riskAssessment.requiresCrisisResponse, 'crisisResponse:', !!crisisResponse);
     }
 

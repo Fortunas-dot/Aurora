@@ -49,9 +49,10 @@ export const corsOptions = {
       // Add production URLs here
       process.env.FRONTEND_URL,
       process.env.API_URL?.replace('/api', ''),
-      // Railway production URLs
+      // Railway production URLs - specify exact subdomain instead of wildcard
       'https://aurora-production.up.railway.app',
-      'https://*.up.railway.app', // Allow all Railway subdomains
+      // Only allow specific Railway subdomains if needed
+      // Remove wildcard pattern for better security
     ].filter(Boolean) as string[];
 
     // Check if origin matches any allowed origin (including wildcard patterns)
@@ -88,7 +89,7 @@ export const corsOptions = {
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // Increased production limit
+  max: process.env.NODE_ENV === 'production' ? 200 : 1000, // Reduced production limit for better security
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',

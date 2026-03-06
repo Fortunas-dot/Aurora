@@ -37,6 +37,7 @@ export interface IUser extends Document {
   // Email verification & password reset
   emailVerified?: boolean;
   emailVerificationToken?: string | null;
+  emailVerificationExpires?: Date | null;
   passwordResetToken?: string | null;
   passwordResetExpires?: Date | null;
   healthInfo?: {
@@ -204,6 +205,10 @@ const UserSchema = new Schema<IUser>(
     },
     emailVerificationToken: {
       type: String,
+      default: null,
+    },
+    emailVerificationExpires: {
+      type: Date,
       default: null,
     },
     passwordResetToken: {

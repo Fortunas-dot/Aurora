@@ -8,6 +8,9 @@ const getCacheDirectory = () => {
   return FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
 };
 
+// ⚠️ SECURITY WARNING: OpenAI API key in frontend is a security risk!
+// If OPENAI_API_KEY is set in app.config.js, it will be exposed in the compiled app.
+// Consider routing all OpenAI API calls through your backend instead.
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
 const SPEECH_TO_TEXT_URL = 'https://api.openai.com/v1/audio/transcriptions';
 const TEXT_TO_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';

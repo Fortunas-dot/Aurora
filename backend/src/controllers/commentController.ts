@@ -4,15 +4,16 @@ import Post from '../models/Post';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // @desc    Get comments for a post
 // @route   GET /api/comments/post/:postId
 // @access  Public
 export const getComments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     // Only paginate top-level comments; replies are nested under them
     const topLevelQuery: any = {

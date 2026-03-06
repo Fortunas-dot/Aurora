@@ -8,6 +8,7 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { containsObjectionableContent } from '../utils/contentFilter';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 import { escapeRegex } from '../utils/helpers';
 
 // Helper function to normalize URLs to absolute URLs
@@ -77,10 +78,12 @@ const normalizePostData = (post: any): any => {
 // @access  Public
 export const getPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    console.log('[DEBUG] getPosts called');
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DEBUG] getPosts called');
+    }
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const tag = req.query.tag as string;
     const groupId = req.query.groupId as string;
     const postType = req.query.postType as string;
@@ -680,9 +683,9 @@ export const reportPost = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Public
 export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const tag = req.query.tag as string;
     const groupId = req.query.groupId as string;
     const postType = req.query.postType as string;
@@ -803,9 +806,9 @@ export const getTrendingPosts = async (req: AuthRequest, res: Response): Promise
 // @access  Private
 export const getFollowingPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const tag = req.query.tag as string;
     const postType = req.query.postType as string;
 
@@ -897,9 +900,9 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
 // @access  Private
 export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const tag = req.query.tag as string;
     const groupId = req.query.groupId as string;
     const sortBy = req.query.sortBy as string || 'newest';
@@ -1154,9 +1157,9 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
 // @access  Private
 export const getSavedPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     // Get the current user's saved posts
     const user = await User.findById(req.userId);
@@ -1283,7 +1286,7 @@ export const savePost = async (req: AuthRequest, res: Response): Promise<void> =
 
 // @desc    Test endpoint to see what query is executed
 // @route   GET /api/posts/debug/test-query
-// @access  Public (for debugging)
+// @access  Development only (disabled in production)
 export const testQuery = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -1339,9 +1342,9 @@ export const testQuery = async (req: AuthRequest, res: Response): Promise<void> 
 // @access  Public
 export const searchPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const searchQuery = req.query.q as string;
     const postType = req.query.postType as string;
 

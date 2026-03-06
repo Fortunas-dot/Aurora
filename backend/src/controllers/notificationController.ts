@@ -2,15 +2,16 @@ import { Response } from 'express';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
 export const getNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
 
     const notifications = await Notification.find({ user: req.userId })
       .populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')

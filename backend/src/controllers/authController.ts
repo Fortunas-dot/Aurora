@@ -48,8 +48,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generate email verification token
+    // Generate email verification token with expiry (48 hours)
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const emailVerificationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
     // Create user with random avatar character and random name color
     const user = await User.create({
@@ -61,6 +62,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       nameColor: getRandomNameColor(),
       emailVerified: false,
       emailVerificationToken,
+      emailVerificationExpires,
     });
 
     // Generate token
@@ -466,12 +468,15 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const user = await User.findOne({ emailVerificationToken: token });
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    });
 
     if (!user) {
       res.status(400).json({
         success: false,
-        message: 'Invalid verification token',
+        message: 'Invalid or expired verification token',
       });
       return;
     }
@@ -480,6 +485,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       user.emailVerified = true;
     }
     user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
     await user.save();
 
     res.json({
@@ -526,9 +532,10 @@ export const sendVerificationEmailEndpoint = async (req: AuthRequest, res: Respo
       return;
     }
 
-    // Generate a fresh verification token
+    // Generate a fresh verification token with expiry (48 hours)
     const verificationToken = crypto.randomBytes(32).toString('hex');
     user.emailVerificationToken = verificationToken;
+    user.emailVerificationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
     await user.save();
 
     try {
@@ -570,10 +577,13 @@ export const verifyEmailRedirect = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const user = await User.findOne({ emailVerificationToken: token });
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    });
 
     if (!user) {
-      res.status(400).send(getSimpleStatusPage('Verification failed', 'Invalid verification token.', false));
+      res.status(400).send(getSimpleStatusPage('Verification failed', 'Invalid or expired verification token.', false));
       return;
     }
 
@@ -581,6 +591,7 @@ export const verifyEmailRedirect = async (req: Request, res: Response): Promise<
       user.emailVerified = true;
     }
     user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
     await user.save();
 
     res.send(

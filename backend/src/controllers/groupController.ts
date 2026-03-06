@@ -5,15 +5,16 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { sendNotificationToUser, sendUnreadCountUpdate } from './notificationWebSocket';
 import { escapeRegex } from '../utils/helpers';
+import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
 // @desc    Get all groups
 // @route   GET /api/groups
 // @access  Public
 export const getGroups = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const search = req.query.search as string;
     const tag = req.query.tag as string;
     const country = req.query.country as string;
@@ -68,7 +69,9 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
       query.$or = privacyQuery;
     }
 
-    console.log('Groups query:', JSON.stringify(query, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Groups query:', JSON.stringify(query, null, 2));
+    }
 
     const groups = await Group.find(query)
       .populate('admins', 'username displayName avatar')
@@ -79,7 +82,9 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
 
     const total = await Group.countDocuments(query);
 
-    console.log(`Found ${groups.length} groups (total: ${total})`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Found ${groups.length} groups (total: ${total})`);
+    }
 
     res.json({
       success: true,
@@ -366,9 +371,9 @@ export const updateGroup = async (req: AuthRequest, res: Response): Promise<void
 // @access  Public/Private (based on group privacy)
 export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const page = parsePage(req.query.page as string);
+    const limit = parseLimit(req.query.limit as string);
+    const skip = calculateSkip(page, limit);
     const sortBy = (req.query.sort as string) || 'newest';
 
     const group = await Group.findById(req.params.id);
