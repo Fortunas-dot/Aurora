@@ -348,9 +348,9 @@ export const deleteIdea = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Check if user is the author (or admin in future)
-    const authorId = typeof idea.author === 'object' && idea.author !== null
+    const authorId = typeof idea.author === 'object' && idea.author !== null && '_id' in idea.author
       ? (idea.author as any)._id.toString()
-      : idea.author.toString();
+      : String(idea.author);
 
     if (authorId !== req.userId) {
       res.status(403).json({
