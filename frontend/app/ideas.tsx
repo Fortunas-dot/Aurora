@@ -37,8 +37,9 @@ const STATUSES = [
   { id: 'all', label: 'All' },
   { id: 'open', label: 'Open' },
   { id: 'in-progress', label: 'In Progress' },
-  { id: 'completed', label: 'Completed' },
+  { id: 'completed', label: 'Implemented' },
   { id: 'rejected', label: 'Rejected' },
+  { id: 'coming-soon', label: 'Coming Soon' },
 ];
 
 const SORT_OPTIONS = [
@@ -57,6 +58,7 @@ const getStatusColor = (status: string) => {
     case 'in-progress': return COLORS.warning;
     case 'completed': return COLORS.success;
     case 'rejected': return COLORS.error;
+    case 'coming-soon': return '#06b6d4'; // Cyan/teal color for coming soon
     default: return COLORS.textMuted;
   }
 };
@@ -663,7 +665,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     ...TYPOGRAPHY.caption,
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: '600',
   },
   ideaTitle: {

@@ -6,6 +6,7 @@ import {
   upvoteIdea,
   downvoteIdea,
   updateIdeaStatus,
+  deleteIdea,
 } from '../controllers/ideaController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ router.post('/', protect, createIdea);
 router.post('/:id/upvote', protect, upvoteIdea);
 router.post('/:id/downvote', protect, downvoteIdea);
 router.put('/:id/status', protect, updateIdeaStatus);
+router.delete('/:id', protect, deleteIdea);
 
 export default router;
 

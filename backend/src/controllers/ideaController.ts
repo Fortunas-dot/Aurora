@@ -331,3 +331,50 @@ export const updateIdeaStatus = async (req: AuthRequest, res: Response): Promise
   }
 };
 
+// @desc    Delete idea
+// @route   DELETE /api/ideas/:id
+// @access  Private (author or admin)
+export const deleteIdea = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const idea = await Idea.findById(req.params.id)
+      .populate('author', 'username');
+
+    if (!idea) {
+      res.status(404).json({
+        success: false,
+        message: 'Idea not found',
+      });
+      return;
+    }
+
+    // Check if user is the author (or admin in future)
+    const authorId = typeof idea.author === 'object' && idea.author !== null
+      ? (idea.author as any)._id.toString()
+      : idea.author.toString();
+
+    if (authorId !== req.userId) {
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this idea',
+      });
+      return;
+    }
+
+    // Delete associated comments
+    await Comment.deleteMany({ idea: idea._id });
+
+    // Delete the idea
+    await Idea.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Idea deleted successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error deleting idea',
+    });
+  }
+};
+

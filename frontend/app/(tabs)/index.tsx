@@ -908,7 +908,7 @@ export default function FeedScreen() {
       
       {/* Star field effect – optimized for smooth scrolling */}
       <View style={feedStyles.starField} collapsable={false} removeClippedSubviews={false}>
-        {Array.from({ length: 14 }).map((_, i) => (
+        {Array.from({ length: 35 }).map((_, i) => (
           <AnimatedStar key={`star-${i}`} index={i} />
         ))}
       </View>

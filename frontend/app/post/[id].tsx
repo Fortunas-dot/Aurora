@@ -8,7 +8,7 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -156,9 +156,13 @@ export default function PostDetailsScreen() {
     setIsRefreshing(false);
   }, [loadPost, loadComments]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Reload post details whenever this screen gains focus (e.g. after editing the post)
+  useFocusEffect(
+    useCallback(() => {
+      if (!postId) return;
+      loadData();
+    }, [postId, loadData])
+  );
 
   const handleLikePost = async () => {
     if (!isAuthenticated || !post) {

@@ -105,9 +105,19 @@ export default function EditPostScreen() {
         tags,
       });
 
-      if (response.success) {
+      if (response.success && response.data) {
         Alert.alert('Success', 'Post updated successfully', [
-          { text: 'OK', onPress: () => router.back() },
+          {
+            text: 'OK',
+            onPress: () => {
+              // After editing, navigate to the updated post details screen
+              // so the user immediately sees the new title/content.
+              router.replace({
+                pathname: '/post/[id]',
+                params: { id: id! },
+              });
+            },
+          },
         ]);
       } else {
         Alert.alert('Error', response.message || 'Could not update post');

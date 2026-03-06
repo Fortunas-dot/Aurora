@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform, Animated, Dimensions, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, Platform, Animated, Dimensions, Easing, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -420,9 +420,36 @@ export default function AuroraScreen() {
             <View style={styles.quickActionsGrid}>
               <Pressable
                 style={styles.quickActionButton}
-                onPress={() => {
+                onPress={async () => {
                   if (!requirePremium()) return;
-                  router.push('/journal/create');
+                  
+                  try {
+                    // Get the most recent journal (first one from sorted list)
+                    const journalsResponse = await journalService.getUserJournals(1, 1);
+                    
+                    if (journalsResponse.success && journalsResponse.data && journalsResponse.data.length > 0) {
+                      const lastJournal = journalsResponse.data[0];
+                      router.push(`/journal/create?journalId=${lastJournal._id}`);
+                    } else {
+                      Alert.alert(
+                        'No Journal Found',
+                        'You need to create a journal first before you can add entries.',
+                        [
+                          {
+                            text: 'Cancel',
+                            style: 'cancel',
+                          },
+                          {
+                            text: 'Create Journal',
+                            onPress: () => router.push('/journal/create-journal'),
+                          },
+                        ]
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error loading journals for quick entry:', error);
+                    Alert.alert('Error', 'Could not load your journals. Please try again.');
+                  }
                 }}
               >
                 <GlassCard style={styles.quickActionCard} padding="md">

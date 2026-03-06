@@ -5,7 +5,7 @@ export interface IIdea extends Document {
   title: string;
   description: string;
   category: 'feature' | 'improvement' | 'bug-fix' | 'design' | 'other';
-  status: 'open' | 'in-progress' | 'completed' | 'rejected';
+  status: 'open' | 'in-progress' | 'completed' | 'rejected' | 'coming-soon';
   upvotes: Types.ObjectId[];
   downvotes: Types.ObjectId[];
   commentsCount: number;
@@ -39,7 +39,7 @@ const IdeaSchema = new Schema<IIdea>(
     },
     status: {
       type: String,
-      enum: ['open', 'in-progress', 'completed', 'rejected'],
+      enum: ['open', 'in-progress', 'completed', 'rejected', 'coming-soon'],
       default: 'open',
     },
     upvotes: [{
