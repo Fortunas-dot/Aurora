@@ -1420,7 +1420,8 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
     );
 
     const completion = await claude.messages.create({
-      model: 'claude-3-sonnet-20240229',
+      // Use Claude 3 Haiku for journal analysis to avoid model 404s.
+      model: 'claude-3-haiku-20240307',
       system: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
 1. Sentiment (positive, neutral, negative, mixed)
 2. Key themes (3-5 themes)

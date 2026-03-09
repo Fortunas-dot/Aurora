@@ -93,7 +93,7 @@ CORE THERAPEUTIC APPROACH - How to be a better therapist:
    - It's okay to acknowledge when something is complex or difficult.
    - Use shorter sentences and natural pauses in longer responses.
    - Prefer short paragraphs over long lists. Only use bullet points or numbered lists if the user explicitly asks for step-by-step guidance.
-   - Keep most responses to about 3–7 sentences unless the user clearly asks for a detailed explanation.
+   - HARD LENGTH LIMIT: Unless the user explicitly asks for a detailed or long explanation, keep your response to a maximum of 3–5 short paragraphs or about 80–120 words (roughly 3–6 sentences). If you need more information, ask one follow-up question instead of writing a very long answer.
    - Ask at most one or two thoughtful follow-up questions at a time so the conversation feels natural and not like an interrogation.
    - Avoid victim-blaming language - never suggest the user is at fault for their situation
 
@@ -390,13 +390,11 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       })),
     ];
 
-    // Determine which model to use based on conversation complexity
+    // Determine which model to use based on conversation complexity.
+    // For now we route everything through Claude 3 Haiku to avoid model
+    // availability issues on the current Anthropic account.
     const useAdvancedModel = shouldUseAdvancedModel(openaiMessages);
-    // Claude mapping: Sonnet for deep/complex, Haiku for lighter chats
-    // Use concrete model versions that are widely available.
-    const selectedModel = useAdvancedModel
-      ? 'claude-3-sonnet-20240229'
-      : 'claude-3-haiku-20240307';
+    const selectedModel = 'claude-3-haiku-20240307';
 
     // Set up SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -593,11 +591,10 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       systemContent += formattedContext;
     }
 
-    // Determine which model to use based on conversation complexity
+    // Determine which model to use based on conversation complexity.
+    // Same as streaming: we currently always use Haiku to avoid 404s.
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
-    const selectedModel = useAdvancedModel
-      ? 'claude-3-sonnet-20240229'
-      : 'claude-3-haiku-20240307';
+    const selectedModel = 'claude-3-haiku-20240307';
 
     const claudeMessages = (messages as ChatMessage[])
       .filter(m => m.role !== 'system')
