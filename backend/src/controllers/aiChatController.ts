@@ -393,7 +393,10 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // Determine which model to use based on conversation complexity
     const useAdvancedModel = shouldUseAdvancedModel(openaiMessages);
     // Claude mapping: Sonnet for deep/complex, Haiku for lighter chats
-    const selectedModel = useAdvancedModel ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
+    // Use concrete model versions that are widely available.
+    const selectedModel = useAdvancedModel
+      ? 'claude-3-sonnet-20240229'
+      : 'claude-3-haiku-20240307';
 
     // Set up SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -592,7 +595,9 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
 
     // Determine which model to use based on conversation complexity
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
-    const selectedModel = useAdvancedModel ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
+    const selectedModel = useAdvancedModel
+      ? 'claude-3-sonnet-20240229'
+      : 'claude-3-haiku-20240307';
 
     const claudeMessages = (messages as ChatMessage[])
       .filter(m => m.role !== 'system')

@@ -1420,7 +1420,7 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
     );
 
     const completion = await claude.messages.create({
-      model: 'claude-3-5-sonnet-latest',
+      model: 'claude-3-sonnet-20240229',
       system: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
 1. Sentiment (positive, neutral, negative, mixed)
 2. Key themes (3-5 themes)
@@ -1611,7 +1611,7 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
 
     // Use AI to extract important points
     const completion = await claude.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-3-haiku-20240307',
       system: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
 Extract 3-10 key points that include:
@@ -1671,7 +1671,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
 
     // Generate a brief summary
     const summaryCompletion = await claude.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-3-haiku-20240307',
       system: 'You are Aurora. Create a brief 1-2 sentence summary of this chat session. Keep it concise and focused on the main topics discussed.',
       max_tokens: 150,
       temperature: 0.5,
