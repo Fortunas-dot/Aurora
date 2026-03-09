@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import OpenAI from 'openai';
 import User, { IUser } from '../models/User';
 import ChatContext from '../models/ChatContext';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
@@ -8,20 +7,7 @@ import { AuthRequest } from '../middleware/auth';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { detectRisk, RiskLevel, getCrisisResources } from '../services/riskDetection.service';
 import { moderateContent } from '../services/contentModeration.service';
-
-// Lazy-load OpenAI client to ensure environment variables are loaded
-let openaiClient: OpenAI | null = null;
-
-const getOpenAI = (): OpenAI => {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY not configured');
-    }
-    openaiClient = new OpenAI({ apiKey });
-  }
-  return openaiClient;
-};
+import { getClaudeClient } from '../services/claudeClient';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -284,9 +270,9 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    let openai: OpenAI;
+    let claude;
     try {
-      openai = getOpenAI();
+      claude = getClaudeClient();
     } catch (error: any) {
       res.status(503).json({
         success: false,
@@ -406,7 +392,8 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // Determine which model to use based on conversation complexity
     const useAdvancedModel = shouldUseAdvancedModel(openaiMessages);
-    const selectedModel = useAdvancedModel ? 'gpt-4' : 'gpt-4o-mini';
+    // Claude mapping: Sonnet for deep/complex, Haiku for lighter chats
+    const selectedModel = useAdvancedModel ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
 
     // Set up SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -437,21 +424,39 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       console.log('⚠️ Not sending crisis resources - requiresCrisisResponse:', riskAssessment.requiresCrisisResponse, 'crisisResponse:', !!crisisResponse);
     }
 
+    // Prepare Claude messages: system prompt + user/assistant turns
+    const claudeMessages = openaiMessages
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role,
+        content: m.content,
+      })) as { role: 'user' | 'assistant'; content: string }[];
+
     // Create streaming completion with selected model
     // Use higher temperature for warmer, more human responses in therapeutic conversations
-    const stream = await openai.chat.completions.create({
+    const stream = await claude.messages.stream({
       model: selectedModel,
-      messages: openaiMessages,
-      stream: true,
-      temperature: 0.75, // Slightly higher for more natural, empathetic responses
+      system: systemContent,
       max_tokens: 2000, // Allow longer, more thoughtful responses when needed
+      temperature: 0.75, // Slightly higher for more natural, empathetic responses
+      messages: claudeMessages.map(m => ({
+        role: m.role,
+        content: [
+          {
+            type: 'text',
+            text: m.content,
+          },
+        ],
+      })),
     });
 
     // Stream chunks to client
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        const content = event.delta.text;
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
       }
     }
 
@@ -494,9 +499,9 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    let openai: OpenAI;
+    let claude;
     try {
-      openai = getOpenAI();
+      claude = getClaudeClient();
     } catch (error: any) {
       res.status(503).json({
         success: false,
@@ -587,7 +592,7 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
 
     // Determine which model to use based on conversation complexity
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
-    const selectedModel = useAdvancedModel ? 'gpt-4' : 'gpt-4o-mini';
+    const selectedModel = useAdvancedModel ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
 
     // Add system message to messages array
     const messagesWithSystem: ChatMessage[] = [
@@ -595,20 +600,36 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       ...messages.filter((m: ChatMessage) => m.role !== 'system') as ChatMessage[],
     ];
 
-    const completion = await openai.chat.completions.create({
+    const completion = await claude.messages.create({
       model: selectedModel,
-      messages: messagesWithSystem,
-      temperature: 0.75, // Slightly higher for more natural, empathetic responses
+      system: systemContent,
       max_tokens: maxTokens,
+      temperature: 0.75, // Slightly higher for more natural, empathetic responses
+      messages: (messages as ChatMessage[])
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role,
+          content: [
+            {
+              type: 'text',
+              text: m.content,
+            },
+          ],
+        })),
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content =
+      completion.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as any).text)
+        .join('') || '';
 
     res.json({
       success: true,
       data: {
         content,
-        usage: completion.usage,
+        // Claude SDK does not yet expose token usage in the same shape as OpenAI;
+        // you can add it here later if needed from completion.usage.
         ...(riskAssessment.requiresCrisisResponse && crisisResponse ? {
           crisisResources: {
             riskLevel: riskAssessment.level,

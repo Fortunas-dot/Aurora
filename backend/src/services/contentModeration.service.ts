@@ -1,22 +1,11 @@
 /**
  * Content Moderation Service
- * Uses OpenAI's moderation API to detect harmful content
+ *
+ * Previously used OpenAI's moderation API. Now that the backend has migrated to
+ * Claude, we rely primarily on our own riskDetection.service plus this
+ * lightweight keyword-based check. This keeps a moderation hook in place
+ * without requiring an external moderation API.
  */
-
-import OpenAI from 'openai';
-
-let openaiClient: OpenAI | null = null;
-
-const getOpenAI = (): OpenAI => {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY not configured');
-    }
-    openaiClient = new OpenAI({ apiKey });
-  }
-  return openaiClient;
-};
 
 export interface ModerationResult {
   flagged: boolean;
@@ -54,45 +43,53 @@ export interface ModerationResult {
  */
 export const moderateContent = async (content: string): Promise<ModerationResult | null> => {
   try {
-    const openai = getOpenAI();
-    
-    const moderation = await openai.moderations.create({
-      input: content,
-    });
+    if (!content || !content.trim()) {
+      return null;
+    }
 
-    const result = moderation.results[0];
-    
-    if (!result.flagged) {
+    const lower = content.toLowerCase();
+
+    // Very lightweight heuristic flags, complementary to riskDetection.service
+    const flags: Partial<ModerationResult['categories']> = {
+      selfHarm: /\b(self\-?harm|hurt myself|cut myself|bleeding)\b/.test(lower),
+      selfHarmIntent: /\b(want to die|want to kill myself|end my life|zelfmoord)\b/.test(lower),
+      sexualMinors: /\b(minor|underage|child porn|cp)\b/.test(lower),
+      violence: /\b(kill (him|her|them)|shoot|stab|murder)\b/.test(lower),
+      hate: /\b(hate (you|them|him|her)|racist|nazi)\b/.test(lower),
+    };
+
+    const flagged = Object.values(flags).some(Boolean);
+    if (!flagged) {
       return null;
     }
 
     return {
       flagged: true,
       categories: {
-        hate: result.categories.hate || false,
-        hateThreatening: result.categories['hate/threatening'] || false,
-        harassment: result.categories.harassment || false,
-        harassmentThreatening: result.categories['harassment/threatening'] || false,
-        selfHarm: result.categories['self-harm'] || false,
-        selfHarmIntent: result.categories['self-harm/intent'] || false,
-        selfHarmInstructions: result.categories['self-harm/instructions'] || false,
-        sexual: result.categories.sexual || false,
-        sexualMinors: result.categories['sexual/minors'] || false,
-        violence: result.categories.violence || false,
-        violenceGraphic: result.categories['violence/graphic'] || false,
+        hate: !!flags.hate,
+        hateThreatening: false,
+        harassment: false,
+        harassmentThreatening: false,
+        selfHarm: !!flags.selfHarm,
+        selfHarmIntent: !!flags.selfHarmIntent,
+        selfHarmInstructions: false,
+        sexual: false,
+        sexualMinors: !!flags.sexualMinors,
+        violence: !!flags.violence,
+        violenceGraphic: false,
       },
       categoryScores: {
-        hate: result.category_scores.hate || 0,
-        hateThreatening: result.category_scores['hate/threatening'] || 0,
-        harassment: result.category_scores.harassment || 0,
-        harassmentThreatening: result.category_scores['harassment/threatening'] || 0,
-        selfHarm: result.category_scores['self-harm'] || 0,
-        selfHarmIntent: result.category_scores['self-harm/intent'] || 0,
-        selfHarmInstructions: result.category_scores['self-harm/instructions'] || 0,
-        sexual: result.category_scores.sexual || 0,
-        sexualMinors: result.category_scores['sexual/minors'] || 0,
-        violence: result.category_scores.violence || 0,
-        violenceGraphic: result.category_scores['violence/graphic'] || 0,
+        hate: flags.hate ? 0.6 : 0,
+        hateThreatening: 0,
+        harassment: 0,
+        harassmentThreatening: 0,
+        selfHarm: flags.selfHarm ? 0.7 : 0,
+        selfHarmIntent: flags.selfHarmIntent ? 0.8 : 0,
+        selfHarmInstructions: 0,
+        sexual: 0,
+        sexualMinors: flags.sexualMinors ? 0.9 : 0,
+        violence: flags.violence ? 0.7 : 0,
+        violenceGraphic: 0,
       },
     };
   } catch (error) {

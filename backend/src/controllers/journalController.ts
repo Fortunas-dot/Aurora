@@ -7,14 +7,12 @@ import Notification from '../models/Notification';
 import CalendarEvent from '../models/Calendar';
 import ChatContext from '../models/ChatContext';
 import { AuthRequest } from '../middleware/auth';
-import OpenAI from 'openai';
+import { getClaudeClient } from '../services/claudeClient';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { escapeRegex } from '../utils/helpers';
 import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const claude = getClaudeClient();
 
 // ==================== JOURNAL CRUD ====================
 
@@ -1391,14 +1389,6 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    if (!openai.apiKey) {
-      res.status(500).json({
-        success: false,
-        message: 'AI analysis not configured',
-      });
-      return;
-    }
-
     // Get user's health info and upcoming calendar events for context
     const user = await User.findById(req.userId).select('healthInfo');
     const now = new Date();
@@ -1429,12 +1419,9 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
       }))
     );
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
+    const completion = await claude.messages.create({
+      model: 'claude-3-5-sonnet-latest',
+      system: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
 1. Sentiment (positive, neutral, negative, mixed)
 2. Key themes (3-5 themes)
 3. Cognitive patterns if detected (e.g., negative self-talk, catastrophizing, all-or-nothing thinking)
@@ -1442,17 +1429,26 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
 5. Follow-up questions (2-3 questions to encourage reflection)
 
 Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
-        },
+      max_tokens: 1000,
+      temperature: 0.7,
+      messages: [
         {
           role: 'user',
-          content: `Analyze this journal entry:\n\nMood: ${entry.mood}/10\n\nContent: ${entry.content}`,
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this journal entry:\n\nMood: ${entry.mood}/10\n\nContent: ${entry.content}`,
+            },
+          ],
         },
       ],
-      temperature: 0.7,
-      max_tokens: 1000,
     });
 
-    const responseText = completion.choices[0]?.message?.content || '';
+    const responseText =
+      completion.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as any).text)
+        .join('') || '';
     const insights: IAIInsights = {
       sentiment: 'neutral',
       themes: [],
@@ -1593,14 +1589,6 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    if (!openai.apiKey) {
-      res.status(500).json({
-        success: false,
-        message: 'AI analysis not configured',
-      });
-      return;
-    }
-
     // Format conversation history for AI
     const conversationText = messages
       .map((msg: any) => {
@@ -1622,12 +1610,9 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
       : '';
 
     // Use AI to extract important points
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Use gpt-4o-mini which supports response_format
-      messages: [
-        {
-          role: 'system',
-          content: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
+    const completion = await claude.messages.create({
+      model: 'claude-3-5-haiku-latest',
+      system: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
 Extract 3-10 key points that include:
 - Personal information the user shares about themselves (health conditions, diagnoses, personal circumstances, family, work, etc.)
@@ -1646,18 +1631,26 @@ Example format:
 {"points": ["User has been diagnosed with Alzheimer's disease", "User struggles with anxiety in social situations", "User is working on building self-confidence", "User mentioned feeling overwhelmed at work", "User lives alone and has limited family support"]}
 
 ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured, but DO include new personal information even if similar topics exist.` : ''}`,
-        },
+      max_tokens: 800,
+      temperature: 0.5,
+      messages: [
         {
           role: 'user',
-          content: `Extract important points from this conversation:\n\n${conversationText}`,
+          content: [
+            {
+              type: 'text',
+              text: `Extract important points from this conversation:\n\n${conversationText}`,
+            },
+          ],
         },
       ],
-      temperature: 0.5,
-      max_tokens: 800,
-      response_format: { type: 'json_object' },
     });
 
-    const responseText = completion.choices[0]?.message?.content || '{}';
+    const responseText =
+      completion.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as any).text)
+        .join('') || '{}';
     let importantPoints: string[] = [];
 
     try {
@@ -1677,23 +1670,30 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
     }
 
     // Generate a brief summary
-    const summaryCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const summaryCompletion = await claude.messages.create({
+      model: 'claude-3-5-haiku-latest',
+      system: 'You are Aurora. Create a brief 1-2 sentence summary of this chat session. Keep it concise and focused on the main topics discussed.',
+      max_tokens: 150,
+      temperature: 0.5,
       messages: [
         {
-          role: 'system',
-          content: 'You are Aurora. Create a brief 1-2 sentence summary of this chat session. Keep it concise and focused on the main topics discussed.',
-        },
-        {
           role: 'user',
-          content: `Summarize this conversation in 1-2 sentences:\n\n${conversationText}`,
+          content: [
+            {
+              type: 'text',
+              text: `Summarize this conversation in 1-2 sentences:\n\n${conversationText}`,
+            },
+          ],
         },
       ],
-      temperature: 0.5,
-      max_tokens: 150,
     });
 
-    const summary = summaryCompletion.choices[0]?.message?.content?.trim() || '';
+    const summary =
+      summaryCompletion.content
+        .filter(block => block.type === 'text')
+        .map(block => (block as any).text)
+        .join('')
+        .trim() || '';
 
     // Save to database
     const chatContext = await ChatContext.create({
