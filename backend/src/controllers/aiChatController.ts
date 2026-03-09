@@ -270,7 +270,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    let claude;
+    let claude: ReturnType<typeof getClaudeClient>;
     try {
       claude = getClaudeClient();
     } catch (error: any) {
@@ -381,7 +381,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // Update system message with the new content
     systemMessage.content = systemContent;
 
-    // Prepare messages for OpenAI
+    // Prepare messages for AI
     const openaiMessages: ChatMessage[] = [
       systemMessage,
       ...messages.map((m: { role: string; content: string }) => ({
@@ -499,7 +499,7 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    let claude;
+    let claude: ReturnType<typeof getClaudeClient>;
     try {
       claude = getClaudeClient();
     } catch (error: any) {
@@ -594,28 +594,26 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
     const selectedModel = useAdvancedModel ? 'claude-3-5-sonnet-latest' : 'claude-3-5-haiku-latest';
 
-    // Add system message to messages array
-    const messagesWithSystem: ChatMessage[] = [
-      { role: 'system', content: systemContent },
-      ...messages.filter((m: ChatMessage) => m.role !== 'system') as ChatMessage[],
-    ];
+    const claudeMessages = (messages as ChatMessage[])
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        // Claude only accepts 'user' or 'assistant' roles
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: [
+          {
+            type: 'text',
+            text: m.content,
+          },
+        ],
+      }));
 
     const completion = await claude.messages.create({
       model: selectedModel,
       system: systemContent,
       max_tokens: maxTokens,
       temperature: 0.75, // Slightly higher for more natural, empathetic responses
-      messages: (messages as ChatMessage[])
-        .filter(m => m.role !== 'system')
-        .map(m => ({
-          role: m.role,
-          content: [
-            {
-              type: 'text',
-              text: m.content,
-            },
-          ],
-        })),
+      // Cast to any to satisfy Anthropic's MessageParam typing without pulling in SDK types here
+      messages: claudeMessages as any,
     });
 
     const content =
