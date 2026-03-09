@@ -380,19 +380,30 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // Update system message with the new content
     systemMessage.content = systemContent;
 
-    // Prepare messages for AI
+    // Prepare user/assistant messages for AI (without system)
+    const userAssistantMessages: ChatMessage[] = messages.map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    // Determine which model/complexity setting to use based on conversation.
+    // For now we route everything through Claude 3 Haiku to avoid model
+    // availability issues on the current Anthropic account, but we still
+    // use complexity to tune length.
+    const useAdvancedModel = shouldUseAdvancedModel(userAssistantMessages);
+
+    // For simple questions, add an extra, very strict length guideline.
+    if (!useAdvancedModel) {
+      systemContent += '\n\nLENGTH GUIDELINE FOR THIS MESSAGE: The user is asking a relatively simple question. Respond in ONE short paragraph only (2–4 sentences, max ~60 words). Do NOT add extra paragraphs, bullet lists, or long explanations unless the user explicitly asks for a detailed answer.';
+      systemMessage.content = systemContent;
+    }
+
+    // Final message array including system
     const openaiMessages: ChatMessage[] = [
       systemMessage,
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
+      ...userAssistantMessages,
     ];
 
-    // Determine which model to use based on conversation complexity.
-    // For now we route everything through Claude 3 Haiku to avoid model
-    // availability issues on the current Anthropic account.
-    const useAdvancedModel = shouldUseAdvancedModel(openaiMessages);
     const selectedModel = 'claude-3-haiku-20240307';
 
     // Set up SSE headers for streaming
@@ -432,12 +443,15 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
         content: m.content,
       })) as { role: 'user' | 'assistant'; content: string }[];
 
+    // Choose a tighter token cap for simple questions so responses end faster
+    const streamMaxTokens = useAdvancedModel ? 260 : 140;
+
     // Create streaming completion with selected model
     // Use slightly higher temperature for warm, human responses, but cap length to keep answers short
     const stream = await claude.messages.stream({
       model: selectedModel,
       system: systemContent,
-      max_tokens: 350, // Keep responses relatively short and focused
+      max_tokens: streamMaxTokens, // Keep responses short and focused
       temperature: 0.75, // Slightly higher for more natural, empathetic responses
       messages: claudeMessages.map(m => ({
         role: m.role,
@@ -590,9 +604,15 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       systemContent += formattedContext;
     }
 
-    // Determine which model to use based on conversation complexity.
-    // Same as streaming: we currently always use Haiku to avoid 404s.
+    // Determine which model/complexity setting to use based on conversation.
+    // Same as streaming: we currently always use Haiku to avoid 404s, but use
+    // complexity signal to further tighten length for simple questions.
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
+
+    if (!useAdvancedModel) {
+      systemContent += '\n\nLENGTH GUIDELINE FOR THIS MESSAGE: The user is asking a relatively simple question. Respond in ONE short paragraph only (2–4 sentences, max ~60 words). Do NOT add extra paragraphs, bullet lists, or long explanations unless the user explicitly asks for a detailed answer.';
+    }
+
     const selectedModel = 'claude-3-haiku-20240307';
 
     const claudeMessages = (messages as ChatMessage[])
@@ -608,8 +628,10 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
         ],
       }));
 
-    // Enforce an upper bound on response length even if client passes a high maxTokens
-    const safeMaxTokens = Math.min(maxTokens, 400);
+    // Enforce an upper bound on response length even if client passes a high maxTokens.
+    // Use an even lower cap for simple questions so answers stay very short.
+    const hardCap = useAdvancedModel ? 320 : 170;
+    const safeMaxTokens = Math.min(maxTokens, hardCap);
 
     const completion = await claude.messages.create({
       model: selectedModel,
