@@ -27,11 +27,10 @@ const getTherapeuticSystemPrompt = (riskLevel?: RiskLevel): string => {
 
 CRITICAL SAFETY BOUNDARIES - You MUST follow these rules at all times:
 
-1. YOU ARE NOT A REPLACEMENT FOR PROFESSIONAL THERAPY:
-   - You are a supportive companion, NOT a licensed therapist or medical professional
-   - You cannot diagnose mental health conditions - you can only help users explore their feelings
-   - Always recommend professional help when appropriate: "This sounds like something a licensed therapist could help you work through"
-   - Never say "you have [condition]" - instead say "it sounds like you might be experiencing symptoms of [condition], and a professional could help you understand this better"
+1. PROFESSIONAL THERAPY BOUNDARIES:
+   - You are a supportive companion focused on emotional support and reflection
+   - You do not diagnose mental health conditions
+   - Avoid medical or diagnostic language like "you have [condition]"; instead, describe what the user seems to be experiencing in neutral, non-clinical terms
 
 2. MEDICATION & MEDICAL ADVICE - STRICTLY PROHIBITED:
    - NEVER provide specific medication advice (dosage, timing, combinations, stopping medications)
@@ -93,7 +92,7 @@ CORE THERAPEUTIC APPROACH - How to be a better therapist:
    - It's okay to acknowledge when something is complex or difficult.
    - Use shorter sentences and natural pauses in longer responses.
    - Prefer short paragraphs over long lists. Only use bullet points or numbered lists if the user explicitly asks for step-by-step guidance.
-   - HARD LENGTH LIMIT: Unless the user explicitly asks for a detailed or long explanation, keep your response to a maximum of 3–5 short paragraphs or about 80–120 words (roughly 3–6 sentences). If you need more information, ask one follow-up question instead of writing a very long answer.
+   - HARD LENGTH LIMIT: Unless the user explicitly asks for a detailed or long explanation, keep your response very concise: at most 2–3 short paragraphs or about 60–90 words total (roughly 3–6 sentences). Do not exceed this length – if more depth is needed, ask one follow-up question instead of writing a long essay.
    - Ask at most one or two thoughtful follow-up questions at a time so the conversation feels natural and not like an interrogation.
    - Avoid victim-blaming language - never suggest the user is at fault for their situation
 
@@ -434,11 +433,11 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       })) as { role: 'user' | 'assistant'; content: string }[];
 
     // Create streaming completion with selected model
-    // Use higher temperature for warmer, more human responses in therapeutic conversations
+    // Use slightly higher temperature for warm, human responses, but cap length to keep answers short
     const stream = await claude.messages.stream({
       model: selectedModel,
       system: systemContent,
-      max_tokens: 2000, // Allow longer, more thoughtful responses when needed
+      max_tokens: 350, // Keep responses relatively short and focused
       temperature: 0.75, // Slightly higher for more natural, empathetic responses
       messages: claudeMessages.map(m => ({
         role: m.role,
@@ -490,7 +489,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Private
 export const completeChat = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { messages, context, maxTokens = 500 } = req.body;
+    const { messages, context, maxTokens = 400 } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
@@ -609,10 +608,13 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
         ],
       }));
 
+    // Enforce an upper bound on response length even if client passes a high maxTokens
+    const safeMaxTokens = Math.min(maxTokens, 400);
+
     const completion = await claude.messages.create({
       model: selectedModel,
       system: systemContent,
-      max_tokens: maxTokens,
+      max_tokens: safeMaxTokens,
       temperature: 0.75, // Slightly higher for more natural, empathetic responses
       // Cast to any to satisfy Anthropic's MessageParam typing without pulling in SDK types here
       messages: claudeMessages as any,
