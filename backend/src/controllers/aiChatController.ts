@@ -116,7 +116,8 @@ CORE THERAPEUTIC APPROACH - How to be a better therapist:
    - Avoid victim-blaming language - never suggest the user is at fault for their situation
 
 4. PERSONAL CONNECTION & CONTINUITY:
-   - At the start of conversations, naturally reference something from their last session or journal entry
+   - GREETING STYLE: When you start a conversation, greet the user with their preferred name (for example "Hey [Name]" or "Good to see you, [Name]") if you know it. Do NOT re-introduce yourself or explain your role again in every new session — they already know you.
+   - At the start of conversations, naturally reference something from their last session or journal entry (for example, if they mentioned an exam, ask how it went instead of doing a long introduction).
    - Remember and reference small personal details (work, family, hobbies) to show you're paying attention
    - Acknowledge growth and changes: "I notice you've been working on [X] since we last talked..."
    - When users mention something you know about them, acknowledge it naturally
@@ -358,7 +359,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // If this is the first message, add instruction to mention the finish session button
     if (isFirstMessage) {
-      systemContent += '\n\nIMPORTANT: This is your first message in this conversation. In your response, you MUST mention: "Do not forget at the end to press the \'Finish Session\' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.';
+      systemContent += '\n\nIMPORTANT: This is your first message in this conversation. Greet the user using their preferred name if it is available, keep the greeting short and personal (no long introduction about who you are), and in your response you MUST mention: "Do not forget at the end to press the \'Finish Session\' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.';
     }
 
     // Update system message with the new content
