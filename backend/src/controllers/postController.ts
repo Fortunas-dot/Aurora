@@ -79,7 +79,7 @@ const normalizePostData = (post: any): any => {
 export const getPosts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[DEBUG] getPosts called');
+    console.log('[DEBUG] getPosts called');
     }
     const page = parsePage(req.query.page as string);
     const limit = parseLimit(req.query.limit as string);

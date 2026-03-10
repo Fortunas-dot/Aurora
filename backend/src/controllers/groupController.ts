@@ -70,7 +70,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('Groups query:', JSON.stringify(query, null, 2));
+    console.log('Groups query:', JSON.stringify(query, null, 2));
     }
 
     const groups = await Group.find(query)
@@ -83,7 +83,7 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     const total = await Group.countDocuments(query);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Found ${groups.length} groups (total: ${total})`);
+    console.log(`Found ${groups.length} groups (total: ${total})`);
     }
 
     res.json({

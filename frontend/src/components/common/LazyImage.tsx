@@ -23,18 +23,18 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
     // #region agent log (development only)
     if (__DEV__) {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          runId: 'initial',
-          hypothesisId: 'H2',
-          location: 'LazyImage.tsx:handleLoad',
-          message: 'LazyImage loaded successfully',
-          data: { uri, imageUrl },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H2',
+        location: 'LazyImage.tsx:handleLoad',
+        message: 'LazyImage loaded successfully',
+        data: { uri, imageUrl },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
     }
     // #endregion
   };
@@ -46,18 +46,18 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
     // #region agent log (development only)
     if (__DEV__) {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          runId: 'initial',
-          hypothesisId: 'H3',
-          location: 'LazyImage.tsx:handleError',
-          message: 'LazyImage failed to load image',
-          data: { uri, imageUrl, errorMessage },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H3',
+        location: 'LazyImage.tsx:handleError',
+        message: 'LazyImage failed to load image',
+        data: { uri, imageUrl, errorMessage },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
     }
     // #endregion
 
@@ -84,14 +84,14 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
     // #region agent log (development only)
     if (__DEV__) {
-      fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          runId: 'initial',
-          hypothesisId: 'H2',
-          location: 'LazyImage.tsx:imageUrl',
-          message: 'LazyImage normalized URL',
+    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: 'initial',
+        hypothesisId: 'H2',
+        location: 'LazyImage.tsx:imageUrl',
+        message: 'LazyImage normalized URL',
         data: { originalUri: uri, normalized },
         timestamp: Date.now(),
       }),
