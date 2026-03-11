@@ -97,6 +97,19 @@ export const apiLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
+    // Temporary load-testing bypass for AI chat endpoints.
+    // When AI_LOAD_TEST_MODE === 'true', we skip rate limiting specifically
+    // for /api/ai/chat and /api/ai/chat/complete so we can safely run tools
+    // like autocannon without being blocked by 429s.
+    //
+    // IMPORTANT: Only enable AI_LOAD_TEST_MODE during intentional tests.
+    if (
+      process.env.AI_LOAD_TEST_MODE === 'true' &&
+      (req.path === '/api/ai/chat' || req.path === '/api/ai/chat/complete')
+    ) {
+      return true;
+    }
+
     // Disable rate limiting in non-production to avoid issues during local development
     if (process.env.NODE_ENV !== 'production') {
       return true;
