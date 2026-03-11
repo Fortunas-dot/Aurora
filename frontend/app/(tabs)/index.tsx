@@ -33,6 +33,9 @@ import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { useRequirePremium } from '../../src/hooks/usePremium';
 
+// Reduce background rendering cost for smoother scrolling, especially on Android
+const STAR_COUNT = Platform.OS === 'ios' ? 24 : 10;
+
 // Animated star component - optimized for smooth scrolling
 const AnimatedStar = ({ index }: { index: number }) => {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -577,8 +580,13 @@ export default function FeedScreen() {
     }
   }, [isAuthenticated]); // Removed updateUnreadCount from dependencies
 
-  // Random falling star effect – similar visuals, slightly less frequent for smoother scrolling
+  // Random falling star effect – similar visuals, slightly less frequent for smoother scrolling.
+  // Disabled on Android to keep scrolling silky smooth on lower-end devices.
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      return;
+    }
+
     const createFallingStar = () => {
       const id = fallingStarIdRef.current++;
       setFallingStars((prev) => [...prev, { id, key: Date.now() + id }]);
@@ -906,14 +914,14 @@ export default function FeedScreen() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Star field effect – optimized for smooth scrolling */}
+      {/* Star field effect – lightweight background to keep feed scrolling fast */}
       <View style={feedStyles.starField} collapsable={false} removeClippedSubviews={false}>
-        {Array.from({ length: 35 }).map((_, i) => (
+        {Array.from({ length: STAR_COUNT }).map((_, i) => (
           <AnimatedStar key={`star-${i}`} index={i} />
         ))}
       </View>
       
-      {/* Falling stars */}
+      {/* Falling stars (iOS only – disabled on Android in the effect above) */}
       {fallingStars.map((star) => (
         <FallingStar
           key={star.key}
@@ -988,10 +996,11 @@ export default function FeedScreen() {
         ListHeaderComponent={!isSearching ? listHeader : null}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={8}
-        windowSize={8}
-        initialNumToRender={8}
-        updateCellsBatchingPeriod={60}
+        // Tune FlatList for smoother scrolling by reducing offscreen work
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        initialNumToRender={6}
+        updateCellsBatchingPeriod={50}
         getItemLayout={undefined}
         scrollEventThrottle={32}
         decelerationRate="normal"

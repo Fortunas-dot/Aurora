@@ -23,12 +23,14 @@
     "create-brokenwings": "ts-node src/scripts/createBrokenWings.ts",
     "create-hiddenvoice": "ts-node src/scripts/createHiddenVoice.ts",
     "remove-duplicates": "ts-node src/scripts/removeDuplicateEntries.ts",
-    "normalize-urls": "ts-node src/scripts/normalizePostUrls.ts"
+    "normalize-urls": "ts-node src/scripts/normalizePostUrls.ts",
+    "loadtest:chat": "autocannon -c 20 -d 60 -p 10 https://YOUR_BACKEND_URL/api/ai/chat"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
     "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -42,8 +44,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "multer": "^1.4.5-lts.1",
-    "twilio": "^5.12.1",
-    "@anthropic-ai/sdk": "^0.30.0"
+    "twilio": "^5.12.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -54,6 +55,7 @@
     "@types/node": "^20.10.5",
     "@types/twilio": "^3.19.2",
     "@types/ws": "^8.5.10",
+    "autocannon": "^8.0.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"
