@@ -766,10 +766,11 @@ export default function CreateJournalEntryScreen() {
 
   return (
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <Pressable 
@@ -808,12 +809,11 @@ export default function CreateJournalEntryScreen() {
             { paddingBottom: insets.bottom + SPACING.xl },
           ]}
           showsVerticalScrollIndicator={false}
-          // Keep taps on other inputs (like the tags field) from first dismissing the keyboard.
-          // This prevents the keyboard from opening and immediately closing when switching focus.
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           removeClippedSubviews={true}
           scrollEventThrottle={16}
           decelerationRate="normal"
+          onScrollBeginDrag={Keyboard.dismiss}
         >
           {/* Prompt display */}
           {params.promptText && (
@@ -953,6 +953,7 @@ export default function CreateJournalEntryScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
 
       {/* Keyboard Toolbar with Media Options - iOS InputAccessoryView */}
       {Platform.OS === 'ios' && (
