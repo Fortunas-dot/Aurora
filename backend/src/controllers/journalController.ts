@@ -1721,6 +1721,100 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
   }
 };
 
+// @desc    Transcribe a journal voice note using OpenAI Whisper via backend
+// @route   POST /api/journal/transcribe-audio
+// @access  Private
+export const transcribeAudio = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { audioUrl, language = 'nl' } = req.body || {};
+
+    if (!audioUrl || typeof audioUrl !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'audioUrl is required',
+      });
+      return;
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      res.status(503).json({
+        success: false,
+        message: 'Transcription service is not configured',
+      });
+      return;
+    }
+
+    // Fetch the audio file from storage (GridFS/Cloudflare) using Node 20+ global fetch
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) {
+      const text = await audioResponse.text().catch(() => '');
+      console.error('Failed to fetch audio for transcription:', audioResponse.status, text);
+      res.status(502).json({
+        success: false,
+        message: 'Could not fetch audio file for transcription',
+      });
+      return;
+    }
+
+    const contentType = audioResponse.headers.get('content-type') || 'audio/m4a';
+    const arrayBuffer = await audioResponse.arrayBuffer();
+
+    // Use global FormData / Blob (Node 20+) via globalThis to avoid TS lib issues
+    const BlobCtor = (globalThis as any).Blob;
+    const FormDataCtor = (globalThis as any).FormData;
+
+    if (!BlobCtor || !FormDataCtor) {
+      console.error('Blob/FormData not available in this runtime');
+      res.status(500).json({
+        success: false,
+        message: 'Transcription not supported in this runtime environment',
+      });
+      return;
+    }
+
+    const blob = new BlobCtor([arrayBuffer], { type: contentType });
+    const formData = new FormDataCtor();
+    (formData as any).append('file', blob, 'recording.m4a');
+    (formData as any).append('model', 'whisper-1');
+    (formData as any).append('language', language);
+
+    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData as any,
+    });
+
+    if (!whisperResponse.ok) {
+      const errorData = await whisperResponse.json().catch(() => ({}));
+      console.error('Whisper API error:', whisperResponse.status, errorData);
+      res.status(502).json({
+        success: false,
+        message: 'Transcription failed',
+      });
+      return;
+    }
+
+    const data = await whisperResponse.json();
+    const text = (data as any).text || '';
+
+    res.json({
+      success: true,
+      data: {
+        text,
+      },
+    });
+  } catch (error: any) {
+    console.error('Journal voice transcription error:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Error transcribing audio',
+    });
+  }
+};
+
 // @desc    Save chat context (important points already extracted on frontend)
 // @route   POST /api/journal/save-chat-context
 // @access  Private

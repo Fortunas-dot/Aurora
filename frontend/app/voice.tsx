@@ -99,8 +99,8 @@ export default function VoiceTherapyScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* AI Consent */}
-        {!isConsentLoading && aiConsentStatus !== 'granted' && (
+        {/* AI Consent - only when consent is unknown */}
+        {!isConsentLoading && aiConsentStatus === 'unknown' && (
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}

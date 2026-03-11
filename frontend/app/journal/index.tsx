@@ -693,8 +693,8 @@ export default function JournalScreen() {
           />
         }
       >
-        {/* AI Consent (for prompts & insights) */}
-        {!isConsentLoading && aiConsentStatus !== 'granted' && (
+        {/* AI Consent (for prompts & insights) - only when consent is unknown */}
+        {!isConsentLoading && aiConsentStatus === 'unknown' && (
           <AiConsentCard
             onAccept={grantAiConsent}
             onDecline={denyAiConsent}

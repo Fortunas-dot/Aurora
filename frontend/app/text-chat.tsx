@@ -1057,8 +1057,8 @@ export default function TextChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        {/* AI Consent banner above chat when not granted */}
-        {!isConsentLoading && aiConsentStatus !== 'granted' && (
+        {/* AI Consent banner above chat when consent is still unknown */}
+        {!isConsentLoading && aiConsentStatus === 'unknown' && (
           <View style={{ paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm }}>
             <AiConsentCard
               onAccept={grantAiConsent}

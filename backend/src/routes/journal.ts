@@ -12,6 +12,7 @@ import {
   getAuroraContext,
   finishChatSession,
   saveChatContext,
+  transcribeAudio,
 } from '../controllers/journalController';
 import { protect, optionalAuth } from '../middleware/auth';
 
@@ -50,6 +51,7 @@ router.get('/prompt', protect, getPrompt);
 router.get('/aurora-context', protect, getAuroraContext);
 router.post('/finish-session', protect, finishChatSession);
 router.post('/save-chat-context', protect, saveChatContext);
+router.post('/transcribe-audio', protect, transcribeAudio);
 
 // Catch-all route for entry IDs (must be after specific routes)
 router.get('/:id', optionalAuth, getEntry);

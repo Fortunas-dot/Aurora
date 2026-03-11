@@ -216,7 +216,11 @@ const VoiceRecorder: React.FC<{
   }, [state, transcription]);
 
   const handleRecordPress = async () => {
-    if (state === 'idle') {
+    // Allow starting a new recording from idle, done, or error states
+    if (state === 'idle' || state === 'done' || state === 'error') {
+      if (state === 'done' || state === 'error') {
+        reset();
+      }
       await startRecording();
     } else if (state === 'recording') {
       await stopRecording();
@@ -366,8 +370,21 @@ export default function CreateJournalEntryScreen() {
   const [isFullscreenKeyboardVisible, setIsFullscreenKeyboardVisible] = useState(false);
   const [mediaItems, setMediaItems] = useState<Array<{ type: 'image' | 'video'; uri: string; uploadedUrl?: string; isUploading?: boolean }>>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [pageScrollY, setPageScrollY] = useState(0);
+  const [voiceRecorderOffsetY, setVoiceRecorderOffsetY] = useState<number | null>(null);
+
+  // Dynamic heights for book-style guidelines
+  const BOOK_LINE_HEIGHT = 24;
+  const MIN_BOOK_LINES = 13;
+  const MIN_FULLSCREEN_LINES = 26;
+  const [bookPageHeight, setBookPageHeight] = useState(MIN_BOOK_LINES * BOOK_LINE_HEIGHT);
+  const [fullscreenPageHeight, setFullscreenPageHeight] = useState(
+    MIN_FULLSCREEN_LINES * BOOK_LINE_HEIGHT
+  );
   const contentInputRef = React.useRef<TextInput>(null);
   const fullscreenContentInputRef = React.useRef<TextInput>(null);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const fullscreenScrollViewRef = React.useRef<ScrollView>(null);
   const inputAccessoryViewID = 'mediaInputAccessoryView';
   const fullscreenInputAccessoryViewID = 'fullscreenMediaInputAccessoryView';
   const isMountedRef = React.useRef(true);
@@ -401,6 +418,7 @@ export default function CreateJournalEntryScreen() {
       const response = await journalService.getEntry(params.entryId);
       if (response.success && response.data) {
         const entry = response.data;
+
         setContent(entry.content || '');
         setMood(entry.mood || 5);
         setSymptoms(entry.symptoms || []);
@@ -424,9 +442,9 @@ export default function CreateJournalEntryScreen() {
     }
   };
 
-  // Handle voice transcription
+  // Handle voice transcription (used by input accessory mic)
   const handleVoiceTranscription = useCallback((text: string) => {
-    setContent((prev) => prev ? `${prev}\n\n${text}` : text);
+    setContent((prev) => (prev ? `${prev}\n\n${text}` : text));
   }, []);
 
   // Keyboard visibility listeners
@@ -803,6 +821,7 @@ export default function CreateJournalEntryScreen() {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
@@ -876,7 +895,16 @@ export default function CreateJournalEntryScreen() {
                 </View>
               )}
               
-              <View style={styles.bookPageContent}>
+              <View
+                style={styles.bookPageContent}
+                onLayout={(event) => {
+                  const height = Math.max(
+                    MIN_BOOK_LINES * BOOK_LINE_HEIGHT,
+                    event.nativeEvent.layout.height
+                  );
+                  setBookPageHeight(height);
+                }}
+              >
                 <TextInput
                   ref={contentInputRef}
                   style={[styles.bookPageInput, { fontFamily: selectedFontFamily }]}
@@ -889,11 +917,26 @@ export default function CreateJournalEntryScreen() {
                   autoFocus={!params.promptText}
                   blurOnSubmit={false}
                   inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
+                  onContentSizeChange={(event) => {
+                    const height = Math.max(
+                      MIN_BOOK_LINES * BOOK_LINE_HEIGHT,
+                      event.nativeEvent.contentSize.height
+                    );
+                    setBookPageHeight(height);
+                  }}
                 />
                 
-                {/* Book Lines Overlay - limited to content area */}
-                <View style={styles.bookLinesOverlay} pointerEvents="none">
-                  {Array.from({ length: 12 }).map((_, index) => (
+                {/* Book Lines Overlay - dynamically matches content height */}
+                <View
+                  style={[styles.bookLinesOverlay, { height: bookPageHeight }]}
+                  pointerEvents="none"
+                >
+                  {Array.from({
+                    length: Math.max(
+                      MIN_BOOK_LINES,
+                      Math.ceil(bookPageHeight / BOOK_LINE_HEIGHT)
+                    ),
+                  }).map((_, index) => (
                     <View key={index} style={styles.bookLine} />
                   ))}
                 </View>
@@ -902,7 +945,14 @@ export default function CreateJournalEntryScreen() {
           </View>
 
           {/* Voice Recorder */}
-          <VoiceRecorder onTranscriptionComplete={handleVoiceTranscription} />
+          <View
+            onLayout={(event) => {
+              // Store the vertical offset of the voice recorder relative to the ScrollView content
+              setVoiceRecorderOffsetY(event.nativeEvent.layout.y);
+            }}
+          >
+            <VoiceRecorder onTranscriptionComplete={handleVoiceTranscription} />
+          </View>
 
           {/* Symptom Tracker */}
           <SymptomTracker
@@ -955,31 +1005,67 @@ export default function CreateJournalEntryScreen() {
       </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
 
-      {/* Keyboard Toolbar with Media Options - iOS InputAccessoryView */}
+      {/* Keyboard Toolbar with Media & Voice Options - iOS InputAccessoryView */}
       {Platform.OS === 'ios' && (
         <InputAccessoryView nativeID={inputAccessoryViewID}>
-          <View style={styles.keyboardToolbar}>
-            <Pressable
-              style={styles.keyboardToolbarButton}
-              onPress={handleMediaSelection}
-            >
-              <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-              <Text style={styles.keyboardToolbarButtonText}>Media</Text>
-            </Pressable>
+          <View style={styles.keyboardToolbarContainer}>
+            <View style={styles.keyboardToolbarPill}>
+              <Pressable
+                style={styles.keyboardToolbarButton}
+                onPress={handleMediaSelection}
+              >
+                <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.keyboardToolbarButtonText}>Media</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+                onPress={() => {
+                if (voiceRecorderOffsetY != null) {
+                  scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, voiceRecorderOffsetY - 40),
+                    animated: true,
+                  });
+                } else {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }
+                }}
+              >
+                <Ionicons name="mic-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.keyboardToolbarButtonText}>Voice</Text>
+              </Pressable>
+            </View>
           </View>
         </InputAccessoryView>
       )}
 
-      {/* Keyboard Toolbar with Media Options - Android fallback */}
+      {/* Keyboard Toolbar with Media & Voice Options - Android fallback */}
       {Platform.OS === 'android' && isKeyboardVisible && (
-        <View style={[styles.keyboardToolbar, { bottom: insets.bottom }]}>
-          <Pressable
-            style={styles.keyboardToolbarButton}
-            onPress={handleMediaSelection}
-          >
-            <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-            <Text style={styles.keyboardToolbarButtonText}>Media</Text>
-          </Pressable>
+        <View style={[styles.keyboardToolbarContainer, { bottom: insets.bottom }]}>
+          <View style={styles.keyboardToolbarPill}>
+            <Pressable
+              style={styles.keyboardToolbarButton}
+              onPress={handleMediaSelection}
+            >
+              <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.keyboardToolbarButtonText}>Media</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+              onPress={() => {
+                if (voiceRecorderOffsetY != null) {
+                  scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, voiceRecorderOffsetY - 40),
+                    animated: true,
+                  });
+                } else {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }
+              }}
+            >
+              <Ionicons name="mic-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.keyboardToolbarButtonText}>Voice</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -1010,6 +1096,7 @@ export default function CreateJournalEntryScreen() {
               
               {/* Page Content */}
               <ScrollView
+                ref={fullscreenScrollViewRef}
                 style={styles.fullscreenPageScrollView}
                 contentContainerStyle={[
                   styles.fullscreenPageContent,
@@ -1064,7 +1151,16 @@ export default function CreateJournalEntryScreen() {
                 )}
 
                 {/* Content Input Area */}
-                <View style={styles.fullscreenContentContainer}>
+                <View
+                  style={styles.fullscreenContentContainer}
+                  onLayout={(event) => {
+                    const height = Math.max(
+                      MIN_FULLSCREEN_LINES * BOOK_LINE_HEIGHT,
+                      event.nativeEvent.layout.height
+                    );
+                    setFullscreenPageHeight(height);
+                  }}
+                >
                   <TextInput
                     ref={fullscreenContentInputRef}
                     style={[styles.fullscreenContentInput, { fontFamily: selectedFontFamily }]}
@@ -1077,11 +1173,26 @@ export default function CreateJournalEntryScreen() {
                     autoFocus
                     blurOnSubmit={false}
                     inputAccessoryViewID={Platform.OS === 'ios' ? fullscreenInputAccessoryViewID : undefined}
+                    onContentSizeChange={(event) => {
+                      const height = Math.max(
+                        MIN_FULLSCREEN_LINES * BOOK_LINE_HEIGHT,
+                        event.nativeEvent.contentSize.height
+                      );
+                      setFullscreenPageHeight(height);
+                    }}
                   />
                   
                   {/* Book Lines Overlay */}
-                  <View style={styles.fullscreenLinesOverlay} pointerEvents="none">
-                    {Array.from({ length: 25 }).map((_, index) => (
+                  <View
+                    style={[styles.fullscreenLinesOverlay, { height: fullscreenPageHeight }]}
+                    pointerEvents="none"
+                  >
+                    {Array.from({
+                      length: Math.max(
+                        MIN_FULLSCREEN_LINES,
+                        Math.ceil(fullscreenPageHeight / BOOK_LINE_HEIGHT)
+                      ),
+                    }).map((_, index) => (
                       <View key={index} style={styles.fullscreenBookLine} />
                     ))}
                   </View>
@@ -1089,31 +1200,75 @@ export default function CreateJournalEntryScreen() {
               </ScrollView>
             </Pressable>
 
-            {/* Keyboard Toolbar with Media Options - iOS InputAccessoryView for Fullscreen */}
+            {/* Keyboard Toolbar with Media & Voice Options - iOS InputAccessoryView for Fullscreen */}
             {Platform.OS === 'ios' && (
               <InputAccessoryView nativeID={fullscreenInputAccessoryViewID}>
-                <View style={styles.keyboardToolbar}>
+                <View style={styles.keyboardToolbarContainer}>
+                <View style={styles.keyboardToolbarPill}>
                   <Pressable
                     style={styles.keyboardToolbarButton}
                     onPress={handleMediaSelection}
                   >
-                    <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                    <Ionicons name="image-outline" size={20} color={COLORS.primary} />
                     <Text style={styles.keyboardToolbarButtonText}>Media</Text>
                   </Pressable>
+                  <Pressable
+                    style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+                    onPress={() => {
+                      // Close fullscreen and scroll main page to the voice recorder
+                      setIsFullscreenBookPage(false);
+                      setTimeout(() => {
+                        if (voiceRecorderOffsetY != null) {
+                          scrollViewRef.current?.scrollTo({
+                            y: Math.max(0, voiceRecorderOffsetY - 40),
+                            animated: true,
+                          });
+                        } else {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }
+                      }, 50);
+                    }}
+                  >
+                    <Ionicons name="mic-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.keyboardToolbarButtonText}>Voice</Text>
+                  </Pressable>
+                </View>
                 </View>
               </InputAccessoryView>
             )}
 
-            {/* Keyboard Toolbar with Media Options - Android fallback for Fullscreen */}
+            {/* Keyboard Toolbar with Media & Voice Options - Android fallback for Fullscreen */}
             {Platform.OS === 'android' && isFullscreenKeyboardVisible && (
-              <View style={[styles.keyboardToolbar, { bottom: insets.bottom }]}>
-                <Pressable
-                  style={styles.keyboardToolbarButton}
-                  onPress={handleMediaSelection}
-                >
-                  <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-                  <Text style={styles.keyboardToolbarButtonText}>Media</Text>
-                </Pressable>
+              <View style={[styles.keyboardToolbarContainer, { bottom: insets.bottom }]}>
+                <View style={styles.keyboardToolbarPill}>
+                  <Pressable
+                    style={styles.keyboardToolbarButton}
+                    onPress={handleMediaSelection}
+                  >
+                    <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.keyboardToolbarButtonText}>Media</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+                    onPress={() => {
+                    // Close fullscreen and scroll main page to the voice recorder
+                    setIsFullscreenBookPage(false);
+                    setTimeout(() => {
+                      if (voiceRecorderOffsetY != null) {
+                        scrollViewRef.current?.scrollTo({
+                          y: Math.max(0, voiceRecorderOffsetY - 40),
+                          animated: true,
+                        });
+                      } else {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }
+                    }, 50);
+                    }}
+                  >
+                    <Ionicons name="mic-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.keyboardToolbarButtonText}>Voice</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
           </View>
@@ -1310,17 +1465,15 @@ const styles = StyleSheet.create({
   },
   bookPageContent: {
     position: 'relative',
-    minHeight: 280,
-    maxHeight: 288, // 12 lines * 24px - limit to prevent overflow
-    overflow: 'hidden', // Prevent lines from going outside
+    minHeight: 312,
   },
   bookPageInput: {
     ...TYPOGRAPHY.body,
     fontSize: 16,
     color: '#4A3E2F',
     lineHeight: 24,
-    minHeight: 280,
-    maxHeight: 288, // Match content area
+    minHeight: 312,
+    maxHeight: 312, // Match content area
     zIndex: 2,
     backgroundColor: 'transparent',
     paddingTop: 0,
@@ -1330,7 +1483,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 288, // 12 lines * 24px - limited to content area
     zIndex: 0,
     justifyContent: 'flex-start',
   },
@@ -1547,14 +1699,14 @@ const styles = StyleSheet.create({
   },
   fullscreenContentContainer: {
     position: 'relative',
-    minHeight: 600,
+    minHeight: 624,
   },
   fullscreenContentInput: {
     fontSize: 16,
     fontFamily: 'Palatino',
     color: '#4A3E2F',
     lineHeight: 24,
-    minHeight: 600,
+    minHeight: 624,
     zIndex: 2,
     backgroundColor: 'transparent',
     paddingTop: 0,
@@ -1564,7 +1716,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 600, // 25 lines * 24px
+    height: 624, // 26 lines * 24px
     zIndex: 0,
     justifyContent: 'flex-start',
   },
@@ -1575,21 +1727,30 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   // Keyboard Toolbar Styles
-  keyboardToolbar: {
+  keyboardToolbarContainer: {
     ...(Platform.OS === 'ios' ? {} : { position: 'absolute', left: 0, right: 0 }),
-    backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  keyboardToolbarPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-    minHeight: 44, // iOS minimum touch target
+      // Make the toolbar background transparent so only the buttons "float"
+      backgroundColor: 'transparent',
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+      // Remove border and heavy shadow to avoid a visible pill/rectangle behind the buttons
+      borderWidth: 0,
+      borderColor: 'transparent',
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+    minHeight: 40,
   },
   keyboardToolbarButton: {
     flexDirection: 'row',
@@ -1597,8 +1758,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.backgroundSecondary,
+      // Use a subtle glass background instead of a solid dark block
+      backgroundColor: COLORS.glass.background,
     marginRight: SPACING.sm,
+  },
+  keyboardToolbarButtonSecondary: {
+    marginLeft: SPACING.xs,
   },
   keyboardToolbarButtonText: {
     ...TYPOGRAPHY.small,

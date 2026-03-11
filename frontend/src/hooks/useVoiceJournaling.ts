@@ -1,12 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
-import Constants from 'expo-constants';
-
-// ⚠️ SECURITY WARNING: OpenAI API key in frontend is a security risk!
-// If OPENAI_API_KEY is set in app.config.js, it will be exposed in the compiled app.
-// Consider routing transcription through your backend instead.
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || '';
+import { getApiUrl } from '../utils/apiUrl';
+import { secureStorage } from '../utils/secureStorage';
 
 export type RecordingState = 'idle' | 'recording' | 'processing' | 'done' | 'error';
 
@@ -91,7 +87,12 @@ export const useVoiceJournaling = (): VoiceJournalingResult => {
 
     } catch (err: any) {
       console.error('Error starting recording:', err);
-      setError(err.message || 'Failed to start recording');
+      const message = String(err?.message || '');
+      if (message.includes('background') || message.includes('audio session could not be activated')) {
+        setError('Recording only works while the app is active on screen. Please bring Aurora to the foreground and try again.');
+      } else {
+        setError('Failed to start recording. Please try again.');
+      }
       setState('error');
     }
   }, []);
@@ -169,7 +170,7 @@ export const useVoiceJournaling = (): VoiceJournalingResult => {
   };
 };
 
-// Helper function to transcribe audio using OpenAI Whisper
+// Helper function to transcribe audio using backend (which talks to OpenAI Whisper)
 async function transcribeAudio(audioUri: string): Promise<string> {
   try {
     // Check if file exists using legacy API (to avoid deprecation warning)
@@ -178,42 +179,72 @@ async function transcribeAudio(audioUri: string): Promise<string> {
       throw new Error('Audio file not found');
     }
 
-    // Create form data
-    const formData = new FormData();
-    
-    // Get file extension and mime type
+    const baseUrl = getApiUrl();
+    const token = await secureStorage.getItemAsync('auth_token');
+
+    // 1) Upload audio file to backend using existing /api/upload endpoint
     const ext = audioUri.split('.').pop() || 'm4a';
     const mimeType = ext === 'wav' ? 'audio/wav' : 'audio/m4a';
 
-    formData.append('file', {
+    const uploadForm = new FormData();
+    uploadForm.append('file', {
       uri: audioUri,
       type: mimeType,
       name: `recording.${ext}`,
     } as any);
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'nl');
 
-    // Send to OpenAI
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const uploadResponse = await fetch(`${baseUrl}/upload`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // DO NOT set Content-Type; React Native will set the correct multipart boundary
       },
-      body: formData,
+      body: uploadForm,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Whisper API error:', errorData);
-      throw new Error('Transcription failed');
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json().catch(() => ({}));
+      console.warn('Audio upload failed:', uploadResponse.status, errorData);
+      throw new Error('Failed to upload audio for transcription');
     }
 
-    const data = await response.json();
-    return data.text || '';
+    const uploadJson = await uploadResponse.json().catch(() => ({}));
+    const audioUrl: string | undefined = uploadJson?.data?.url;
+
+    if (!audioUrl) {
+      console.warn('Upload response missing audio URL:', uploadJson);
+      throw new Error('Audio URL missing after upload');
+    }
+
+    // 2) Ask backend to transcribe the uploaded audio using OpenAI Whisper
+    const transcribeResponse = await fetch(`${baseUrl}/journal/transcribe-audio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        audioUrl,
+        language: 'nl',
+      }),
+    });
+
+    if (!transcribeResponse.ok) {
+      const errorData = await transcribeResponse.json().catch(() => ({}));
+      console.warn('Backend transcription error:', transcribeResponse.status, errorData);
+      throw new Error(errorData?.message || 'Transcription failed');
+    }
+
+    const transcribeJson = await transcribeResponse.json().catch(() => ({}));
+    const text: string = transcribeJson?.data?.text || '';
+
+    // Fallback in case the backend returns empty text
+    return text || 'Voice note (no text detected).';
 
   } catch (error) {
-    console.error('Transcription error:', error);
-    return '';
+    console.warn('Transcription error:', error);
+    // Return a visible placeholder so the entry isn't empty
+    return 'Voice note (transcription failed).';
   }
 }
 
