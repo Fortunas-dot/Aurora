@@ -36,6 +36,24 @@ module.exports = function withAndroidFacebookAutoLog(config) {
         // Update existing entry to ensure it's true
         existingAutoLog.$['android:value'] = 'true';
       }
+
+      // Add AutoInitEnabled for Android (required for early SDK initialization)
+      const existingAutoInit = application['meta-data'].find(
+        (meta) =>
+          meta.$ &&
+          meta.$['android:name'] === 'com.facebook.sdk.AutoInitEnabled'
+      );
+
+      if (!existingAutoInit) {
+        application['meta-data'].push({
+          $: {
+            'android:name': 'com.facebook.sdk.AutoInitEnabled',
+            'android:value': 'true',
+          },
+        });
+      } else {
+        existingAutoInit.$['android:value'] = 'true';
+      }
     }
 
     return config;

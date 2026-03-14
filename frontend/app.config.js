@@ -35,6 +35,14 @@ module.exports = {
         FacebookAppID: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
         FacebookDisplayName: 'Aurora',
         FacebookAutoLogAppEventsEnabled: true, // Enable automatic app event logging (required for test events)
+        // CFBundleURLTypes for Facebook URL scheme (required for SDK deep linking)
+        CFBundleURLTypes: [
+          {
+            CFBundleURLSchemes: [
+              process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1261010692592854',
+            ],
+          },
+        ],
         LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
         ITSAppUsesNonExemptEncryption: false,
         NSUserTrackingUsageDescription: 'We use your data to improve your experience and provide personalized mental health support. Your privacy is important to us.',
@@ -110,6 +118,7 @@ module.exports = {
       ],
       require('./plugins/withAndroidLocale'),
       require('./plugins/withAndroidFacebookAutoLog'),
+      require('./plugins/withIOSFacebookAppDelegate'),
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
