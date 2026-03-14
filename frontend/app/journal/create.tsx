@@ -1049,8 +1049,8 @@ export default function CreateJournalEntryScreen() {
               <Ionicons name="image-outline" size={20} color={COLORS.primary} />
               <Text style={styles.keyboardToolbarButtonText}>Media</Text>
             </Pressable>
-            <Pressable
-              style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+              <Pressable
+                style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
               onPress={() => {
                 if (voiceRecorderOffsetY != null) {
                   scrollViewRef.current?.scrollTo({
@@ -1206,16 +1206,20 @@ export default function CreateJournalEntryScreen() {
                 <View style={styles.keyboardToolbarContainer}>
                 <View style={styles.keyboardToolbarPill}>
                   <Pressable
-                    style={styles.keyboardToolbarButton}
+                    style={[styles.keyboardToolbarButton, styles.fullscreenToolbarButton]}
                     onPress={handleMediaSelection}
                   >
                     <Ionicons name="image-outline" size={20} color={COLORS.primary} />
                     <Text style={styles.keyboardToolbarButtonText}>Media</Text>
                   </Pressable>
-                  <Pressable
-                    style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+              <Pressable
+                style={[
+                  styles.keyboardToolbarButton,
+                  styles.fullscreenToolbarButton,
+                  styles.keyboardToolbarButtonSecondary,
+                    ]}
                     onPress={() => {
-                      // Close fullscreen and scroll main page to the voice recorder
+                      // Close fullscreen and scroll main page to the voice recorder section
                       setIsFullscreenBookPage(false);
                       setTimeout(() => {
                         if (voiceRecorderOffsetY != null) {
@@ -1242,16 +1246,20 @@ export default function CreateJournalEntryScreen() {
               <View style={[styles.keyboardToolbarContainer, { bottom: insets.bottom }]}>
                 <View style={styles.keyboardToolbarPill}>
                   <Pressable
-                    style={styles.keyboardToolbarButton}
+                    style={[styles.keyboardToolbarButton, styles.fullscreenToolbarButton]}
                     onPress={handleMediaSelection}
                   >
                     <Ionicons name="image-outline" size={20} color={COLORS.primary} />
                     <Text style={styles.keyboardToolbarButtonText}>Media</Text>
                   </Pressable>
-                  <Pressable
-                    style={[styles.keyboardToolbarButton, styles.keyboardToolbarButtonSecondary]}
+              <Pressable
+                style={[
+                  styles.keyboardToolbarButton,
+                  styles.fullscreenToolbarButton,
+                  styles.keyboardToolbarButtonSecondary,
+                    ]}
                     onPress={() => {
-                    // Close fullscreen and scroll main page to the voice recorder
+                    // Close fullscreen and scroll main page to the voice recorder section
                     setIsFullscreenBookPage(false);
                     setTimeout(() => {
                       if (voiceRecorderOffsetY != null) {
@@ -1755,12 +1763,18 @@ const styles = StyleSheet.create({
   keyboardToolbarButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-      // Use a subtle glass background instead of a solid dark block
-      backgroundColor: COLORS.glass.background,
+    borderRadius: BORDER_RADIUS.full,
+    // Use a subtle glass background with a fully rounded shape
+    backgroundColor: COLORS.glass.background,
     marginRight: SPACING.sm,
+  },
+  // Stronger background specifically for the fullscreen book page toolbar,
+  // so the round buttons blijven duidelijk zichtbaar op het lichte papier.
+  fullscreenToolbarButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
   },
   keyboardToolbarButtonSecondary: {
     marginLeft: SPACING.xs,
@@ -1806,8 +1820,8 @@ const styles = StyleSheet.create({
   },
   mediaItemRemove: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: 4,
+    right: 4,
     backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.full,
     padding: 2,
@@ -1847,8 +1861,8 @@ const styles = StyleSheet.create({
   },
   fullscreenMediaItemRemove: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: 6,
+    right: 6,
     backgroundColor: '#F5F1E8',
     borderRadius: BORDER_RADIUS.full,
     padding: 2,

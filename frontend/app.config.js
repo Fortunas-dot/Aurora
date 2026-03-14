@@ -5,7 +5,7 @@ module.exports = {
     name: 'Aurora',
     slug: 'aurora',
     owner: 'pawbuddies',
-    version: '1.0.2',
+    version: '1.0.4',
     runtimeVersion: {
       policy: 'appVersion', // Use app version as runtime version
     },
@@ -34,6 +34,7 @@ module.exports = {
       infoPlist: {
         FacebookAppID: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
         FacebookDisplayName: 'Aurora',
+        FacebookAutoLogAppEventsEnabled: true, // Enable automatic app event logging (required for test events)
         LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'fbauth2', 'fbshareextension'],
         ITSAppUsesNonExemptEncryption: false,
         NSUserTrackingUsageDescription: 'We use your data to improve your experience and provide personalized mental health support. Your privacy is important to us.',
@@ -108,6 +109,7 @@ module.exports = {
         })(),
       ],
       require('./plugins/withAndroidLocale'),
+      require('./plugins/withAndroidFacebookAutoLog'),
     ],
     extra: {
       // Expo Project ID for push notifications and EAS

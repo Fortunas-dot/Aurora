@@ -64,23 +64,6 @@ export const Avatar: React.FC<AvatarProps> = ({
     const relativeUrl = uri.startsWith('/') ? uri : `/${uri}`;
     const normalized = `${baseUrl}${relativeUrl}`;
 
-    // #region agent log (development only)
-    if (__DEV__) {
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        runId: 'initial',
-        hypothesisId: 'H4',
-        location: 'Avatar.tsx:normalizedUri',
-        message: 'Avatar normalized URI',
-        data: { originalUri: uri, normalized },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    }
-    // #endregion
-
     return normalized;
   }, [uri]);
 

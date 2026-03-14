@@ -189,10 +189,11 @@ export default function RootLayout() {
         // Request App Tracking Transparency permission (iOS only, required before analytics)
         // This should be done before initializing analytics services like PostHog / Facebook
         // Wrap in try-catch to handle any module loading errors gracefully
+        let trackingAllowed: boolean = true; // Default to true so analytics still work if ATT is unavailable
         try {
           // Use a setTimeout to defer the call and avoid bundling issues
           // This allows the app to start even if the module has issues
-          const trackingAllowed = await Promise.race([
+          trackingAllowed = await Promise.race([
             trackingTransparencyService.requestPermission(),
             new Promise<boolean>((resolve) => {
               // Timeout after 1 second - if module loading takes too long, assume it's not available
@@ -222,7 +223,7 @@ export default function RootLayout() {
         // Initialize analytics / monetization SDKs (non-blocking)
         // PostHog is initialized via PostHogProvider + PostHogInitializer
         // Initialize Facebook SDK so Meta can recognize the SDK is installed
-        initializeFacebookSDK().catch((error) => {
+        initializeFacebookSDK({ trackingAllowed }).catch((error) => {
           console.warn('Facebook SDK initialization failed:', error);
         });
 

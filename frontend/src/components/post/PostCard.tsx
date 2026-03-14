@@ -170,23 +170,6 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
     const relativeUrl = post.video.startsWith('/') ? post.video : `/${post.video}`;
     const normalized = `${baseUrl}${relativeUrl}`;
 
-    // #region agent log (development only)
-    if (__DEV__) {
-    fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        runId: 'initial',
-        hypothesisId: 'H1',
-        location: 'PostCard.tsx:videoUrl',
-        message: 'PostCard normalized video URL',
-        data: { originalVideo: post.video, normalized },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    }
-    // #endregion
-
     return normalized;
   }, [post.video]);
 
@@ -197,23 +180,6 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           const baseUrl = 'https://aurora-production.up.railway.app';
           const relativeUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
           const normalized = `${baseUrl}${relativeUrl}`;
-
-          // #region agent log (development only)
-          if (__DEV__) {
-          fetch('http://127.0.0.1:7244/ingest/083d67a2-e9cc-407e-8327-24cf6b490b99', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              runId: 'initial',
-              hypothesisId: 'H2',
-              location: 'PostCard.tsx:normalizedImages',
-              message: 'PostCard normalized image URL',
-              data: { originalImage: imageUrl, normalized },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          }
-          // #endregion
 
           return normalized;
         }

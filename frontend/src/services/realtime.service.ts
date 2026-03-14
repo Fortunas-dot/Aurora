@@ -226,11 +226,6 @@ export class RealtimeService {
 
         case 'session.updated':
           console.log('✅ Session updated');
-          // #region agent log (development only)
-          if (__DEV__) {
-            fetch('http://127.0.0.1:7243/ingest/2b25c5b5-3faf-43ea-844d-1c98148740b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'realtime.service.ts:session.updated',message:'Session updated confirmed',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-          }
-          // #endregion
           this.sessionReady = true;
           break;
 

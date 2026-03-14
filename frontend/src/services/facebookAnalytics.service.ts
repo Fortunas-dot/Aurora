@@ -60,7 +60,7 @@ class FacebookAnalyticsService {
    * Initialize Facebook SDK and send the standard app activation event.
    * Safe to call multiple times; will only run once.
    */
-  async initialize() {
+  async initialize(options?: { trackingAllowed?: boolean }) {
     if (this.initialized) return;
 
     const fb = await this.loadNativeModule();
@@ -71,6 +71,49 @@ class FacebookAnalyticsService {
     try {
       if (Settings && typeof Settings.initializeSDK === 'function') {
         Settings.initializeSDK();
+      }
+
+      // Enable debug logging for Facebook events (helps with test events visibility)
+      if (Settings && typeof (Settings as any).setIsDebugEnabled === 'function') {
+        try {
+          (Settings as any).setIsDebugEnabled(__DEV__ || true); // Enable in dev and for test events
+          console.log('✅ Facebook SDK debug logging enabled');
+        } catch (debugError: any) {
+          console.warn('⚠️ Failed to enable Facebook SDK debug logging:', debugError);
+        }
+      }
+
+      // Enable app events logging behavior (iOS specific)
+      if (
+        Platform.OS === 'ios' &&
+        Settings &&
+        typeof (Settings as any).enableLoggingBehavior === 'function'
+      ) {
+        try {
+          // LoggingBehavior enum values: appEvents, developerErrors, networkRequests, etc.
+          (Settings as any).enableLoggingBehavior('appEvents');
+          console.log('✅ Facebook app events logging behavior enabled');
+        } catch (loggingError: any) {
+          console.warn('⚠️ Failed to enable Facebook app events logging behavior:', loggingError);
+        }
+      }
+
+      // Align with iOS 14.5+ requirement to set advertiser tracking consent
+      // React Native FB SDK exposes this as Settings.setAdvertiserTrackingEnabled on iOS.
+      if (
+        Platform.OS === 'ios' &&
+        Settings &&
+        typeof (Settings as any).setAdvertiserTrackingEnabled === 'function' &&
+        typeof options?.trackingAllowed === 'boolean'
+      ) {
+        try {
+          (Settings as any).setAdvertiserTrackingEnabled(options.trackingAllowed);
+          console.log(
+            `✅ Facebook advertiser tracking ${options.trackingAllowed ? 'enabled' : 'disabled'} based on ATT consent.`,
+          );
+        } catch (consentError: any) {
+          console.warn('⚠️ Failed to set Facebook advertiser tracking flag:', consentError);
+        }
       }
     } catch (initError: any) {
       if (
@@ -117,6 +160,8 @@ class FacebookAnalyticsService {
       } else {
         this.appEventsLogger.logEvent(eventName, params);
       }
+      // Log to console for debugging (helps verify events are being sent)
+      console.log(`📊 Facebook event logged: ${eventName}`, params || {}, valueToSum || '');
     } catch (error) {
       console.warn('⚠️ Error logging Facebook event:', eventName, error);
     }
@@ -160,7 +205,7 @@ export const facebookAnalytics = new FacebookAnalyticsService();
  * Backwards-compatible helper for existing initialization call in _layout.tsx.
  * (Keeps working if you later import { facebookAnalytics } directly.)
  */
-export async function initializeFacebookSDK() {
-  await facebookAnalytics.initialize();
+export async function initializeFacebookSDK(options?: { trackingAllowed?: boolean }) {
+  await facebookAnalytics.initialize(options);
 }
 
