@@ -48,7 +48,8 @@ module.exports = {
         NSUserTrackingUsageDescription: 'We use your data to improve your experience and provide personalized mental health support. Your privacy is important to us.',
         CFBundleDevelopmentRegion: 'en', // Force English locale for native components
         CFBundleLocalizations: ['en'], // Only allow English locale
-        ...(process.env.FACEBOOK_CLIENT_TOKEN ? { FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN } : {}),
+        // Client Token is REQUIRED for events to transmit - ensure it's always set
+        FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN || 'b1aa7924c3706f5ade68c995488318ab',
       },
     },
     android: {
@@ -101,24 +102,38 @@ module.exports = {
         'react-native-fbsdk-next',
         (() => {
         const facebookAppId = process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854');
+        // Client Token with fallback - REQUIRED for events to transmit
+        const facebookClientToken = process.env.FACEBOOK_CLIENT_TOKEN || 'b1aa7924c3706f5ade68c995488318ab';
+        
         if (!facebookAppId && process.env.NODE_ENV === 'production') {
           console.warn('⚠️  FACEBOOK_APP_ID not set in production. Facebook login will not work.');
         }
+        
+        if (!process.env.FACEBOOK_CLIENT_TOKEN) {
+          console.warn('⚠️  FACEBOOK_CLIENT_TOKEN not in env, using fallback token. For production, set it in Railway/EAS env vars.');
+        }
+        
         const config = {
           appID: facebookAppId || '1261010692592854',
           displayName: 'Aurora',
           scheme: facebookAppId ? `fb${facebookAppId}` : 'fb1261010692592854',
+          // Client Token is REQUIRED for events to transmit to Facebook servers
+          clientToken: facebookClientToken,
+          // Critical settings for Facebook SDK to work correctly
+          advertiserIDCollectionEnabled: true,
+          autoLogAppEventsEnabled: true,
+          // We initialize the SDK manually in JS via Settings.initializeSDK()
+          // so auto init must be disabled to avoid double init.
+          isAutoInitEnabled: false,
         };
-          // Client Token is optional - only add if you have it
-          if (process.env.FACEBOOK_CLIENT_TOKEN) {
-            config.clientToken = process.env.FACEBOOK_CLIENT_TOKEN;
-          }
-          return config;
+        
+        return config;
         })(),
       ],
       require('./plugins/withAndroidLocale'),
       require('./plugins/withAndroidFacebookAutoLog'),
       require('./plugins/withIOSFacebookAppDelegate'),
+      require('./plugins/withIOSFacebookClientToken'),
     ],
     extra: {
       // Expo Project ID for push notifications and EAS

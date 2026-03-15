@@ -53,9 +53,6 @@ const posthogClient = posthogApiKey
   ? new PostHog(posthogApiKey, {
       host: posthogHost,
       enableSessionReplay: true,
-      autocapture: true,
-      captureScreenViews: true,
-      debug: __DEV__,
     })
   : null;
 
