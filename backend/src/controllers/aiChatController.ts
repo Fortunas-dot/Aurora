@@ -123,6 +123,20 @@ GREETING & CONTINUITY:
 
 NAME QUESTIONS: If asked "what is my name?", check context and answer directly with the real name. No hedging.
 
+⚠️ CRITICAL NAME RULE — READ THIS CAREFULLY:
+Your name is "Aurora". You are the AI. The person you are talking TO is a human user — a different person entirely.
+NEVER address the human user as "Aurora", "Auroras", or ANY variation of your own AI name.
+If the user's stored display name happens to be "Aurora", "Auroras", or anything identical/very similar to your own name — DO NOT use it. This is almost always a registration mistake where the user typed the app name instead of their own name. Address them as "Hey" instead.
+This rule overrides the display name injection. If the name you are given matches your own name, ignore it and say "Hey".
+
+⚠️ ANTI-ROLEPLAY — ABSOLUTE RULE:
+You are responding ONLY as Aurora (the AI). You NEVER simulate the user's side of the conversation.
+NEVER output "User:", "Human:", "[User]:", or any prefix that pretends to be the user speaking.
+NEVER generate a fake back-and-forth like:
+  "User: I feel sad.
+  Aurora: That sounds hard."
+Your response contains ONLY Aurora's words — nothing else. One voice. Yours.
+
 ═══════════════════════════════════════════
 SAFETY — NON-NEGOTIABLE RULES
 ═══════════════════════════════════════════
@@ -348,7 +362,12 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // If we know the user's preferred display name, tell Aurora explicitly
     // so it can use the real name instead of any placeholders.
-    if (user?.displayName) {
+    // Guard: if the display name is identical to Aurora's own name (a common registration
+    // mistake), skip the injection so Aurora falls back to "Hey" instead of calling the user
+    // by its own AI name.
+    const displayNameLower = (user?.displayName || '').toLowerCase().trim();
+    const isAuroraOwnName = ['aurora', 'auroras', 'aurora.', 'aurora!'].includes(displayNameLower);
+    if (user?.displayName && !isAuroraOwnName) {
       systemContent += `\n\nUSER'S PREFERRED NAME:\n- The user's preferred name is "${user.displayName}".\n- When you greet them or refer to them by name, ALWAYS use "${user.displayName}" (without brackets).\n- NEVER write placeholders like "[user's name]", "[Name]", "[user]" or any other bracketed text instead of their real name.\n- If you choose not to use their name in a given message, just say something simple like "Hey" without any brackets.`;
     }
 
@@ -653,7 +672,11 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
 
     // If we know the user's preferred display name, tell Aurora explicitly
     // so it can use the real name instead of any placeholders.
-    if (user?.displayName) {
+    // Guard: if the display name matches Aurora's own AI name, skip it to prevent
+    // Aurora from calling the user by its own name (common registration mistake).
+    const completeChatDisplayNameLower = (user?.displayName || '').toLowerCase().trim();
+    const completeChatIsAuroraOwnName = ['aurora', 'auroras', 'aurora.', 'aurora!'].includes(completeChatDisplayNameLower);
+    if (user?.displayName && !completeChatIsAuroraOwnName) {
       systemContent += `\n\nUSER'S PREFERRED NAME:\n- The user's preferred name is "${user.displayName}".\n- When you greet them or refer to them by name, ALWAYS use "${user.displayName}" (without brackets).\n- NEVER write placeholders like "[user's name]", "[Name]", "[user]" or any other bracketed text instead of their real name.\n- If you choose not to use their name in a given message, just say something simple like "Hey" without any brackets.`;
     }
     
