@@ -388,17 +388,31 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     if (isFirstMessage) {
       // Determine the most recent journal entry (if any) for explicit reference instructions
       const latestEntry = journalEntries && journalEntries.length > 0 ? journalEntries[0] : null;
+      // Determine the most recent finished chat session date, if any
+      const latestSessionDate = chatContextData && chatContextData.length > 0
+        ? new Date(chatContextData[0].sessionDate)
+        : null;
       let journalInstruction = '';
 
+      // Only force Aurora to bring up the latest journal entry automatically if it is
+      // NEWER than the most recent finished chat session. This prevents Aurora from
+      // asking about the same entry again in every new session once it has already
+      // been discussed and the session was finished.
       if (latestEntry) {
-        const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
+        const latestEntryDate = new Date(latestEntry.createdAt);
+        const shouldHighlightLatestEntry =
+          !latestSessionDate || latestEntryDate > latestSessionDate;
+
+        if (shouldHighlightLatestEntry) {
+          const latestDateLabel = latestEntryDate.toLocaleDateString('en-US', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
           year: 'numeric',
         });
 
-        journalInstruction = `\n- You MUST explicitly acknowledge something from the most recent journal entry above in this very first reply (for example, the entry from ${latestDate}). Do not wait for the user to ask about their journal before bringing it up. Keep it short and compassionate, but clearly show you noticed what they recently wrote.`;
+          journalInstruction = `\n- You MUST explicitly acknowledge something from the most recent journal entry above in this very first reply (for example, the entry from ${latestDateLabel}). Do not wait for the user to ask about their journal before bringing it up. Keep it short and compassionate, but clearly show you noticed what they recently wrote.`;
+        }
       }
 
       systemContent += `\n\nIMPORTANT: This is your first message in this conversation.\n- Greet the user using their preferred name if it is available, and keep the greeting short and personal (no long introduction about who you are).\n- In your response, you MUST mention: "Do not forget at the end to press the 'Finish Session' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.${journalInstruction}`;

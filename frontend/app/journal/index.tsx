@@ -232,18 +232,6 @@ const EntryCard: React.FC<{
           {entry.content}
         </Text>
 
-        {/* AI Insights Themes */}
-        {entry.aiInsights?.themes && entry.aiInsights.themes.length > 0 && (
-          <View style={styles.themesContainer}>
-            <Ionicons name="sparkles" size={14} color={COLORS.primary} style={styles.themesIcon} />
-            {entry.aiInsights.themes.slice(0, 3).map((theme, idx) => (
-              <View key={idx} style={[styles.themeTag, { backgroundColor: `${moodColor}20` }]}>
-                <Text style={[styles.themeText, { color: moodColor }]}>{theme}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* Footer with indicators */}
         <View style={styles.entryFooter}>
           {entry.audioUrl && (
