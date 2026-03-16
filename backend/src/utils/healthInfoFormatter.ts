@@ -250,7 +250,7 @@ export const formatChatContextForAI = (chatContexts: Array<{
     return summary;
   }).join('\n\n');
 
-  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate`;
+  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Do NOT say or imply that this is your \"first time\" talking to the user when previous sessions are listed above; instead, speak as someone who has talked with them before.\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate`;
 };
 
 /**
