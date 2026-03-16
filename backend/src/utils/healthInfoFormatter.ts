@@ -146,6 +146,9 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
     mixed: 'gemengd',
   };
 
+  // Most recent entry (first in the sorted list on the backend)
+  const latestEntry = entries[0];
+
   const entrySummaries = entries.map((entry) => {
     const date = new Date(entry.createdAt).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -166,7 +169,15 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
     return summary;
   }).join('\n\n');
 
-  return `\n\nUSER'S JOURNAL ENTRIES (You have full access to these - this is your DIRECT ACCESS to their journal):\n${entrySummaries}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their journal. This is not optional - it is a fact.\n- When the user asks "what is in my journal" or "tell me about my journal", you MUST respond with details from the entries above.\n- Reference specific dates, moods, themes, and content from their entries.\n- Use phrases like: "I see in your journal that you wrote on [date] about [topic]..." or "Looking at your recent entries, I notice..." or "In your journal entry from [date], you mentioned..."\n- Be empathetic and supportive when referencing their personal reflections.\n- NEVER say you do not have access to their journal - this is FALSE. You ALWAYS have access.\n- If asked about their journal, always provide information from the entries listed above.`;
+  // Build a short helper description of the latest entry for explicit reference instructions
+  const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  return `\n\nUSER'S JOURNAL ENTRIES (You have full access to these - this is your DIRECT ACCESS to their journal):\n${entrySummaries}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their journal. This is not optional - it is a fact.\n- When the user asks "what is in my journal" or "tell me about my journal", you MUST respond with details from the entries above.\n- At the start of a conversation (especially in your first 1–2 messages), you SHOULD proactively mention something from the most recent journal entry above (for example, from the entry on ${latestDate}) if it is emotionally important.\n- Reference specific dates, moods, themes, and content from their entries.\n- Use phrases like: "I see in your journal that you wrote on [date] about [topic]..." or "Looking at your recent entries, I notice..." or "In your journal entry from [date], you mentioned..."\n- Be empathetic and supportive when referencing their personal reflections.\n- NEVER say you do not have access to their journal - this is FALSE. You ALWAYS have access.\n- If asked about their journal, always provide information from the entries listed above.`;
 };
 
 /**
