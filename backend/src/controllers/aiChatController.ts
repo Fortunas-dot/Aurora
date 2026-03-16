@@ -374,39 +374,47 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     const assistantMessages = messages.filter((m: { role: string }) => m.role === 'assistant');
     const isFirstMessage = userMessages.length === 1 && assistantMessages.length === 0;
 
-    // If this is the first message, add strict instructions for greeting, finish-session reminder,
-    // and proactively referencing the most recent journal entry if one exists.
+    // If this is the first message, add greeting instructions.
+    // Journal entries are only referenced proactively when they are genuinely new
+    // (newer than the last finished session) AND only ~60% of the time — so Aurora
+    // doesn't robotically open every single session by talking about the journal.
     if (isFirstMessage) {
-      // Determine the most recent journal entry (if any) for explicit reference instructions
       const latestEntry = journalEntries && journalEntries.length > 0 ? journalEntries[0] : null;
-      // Determine the most recent finished chat session date, if any
       const latestSessionDate = chatContextData && chatContextData.length > 0
         ? new Date(chatContextData[0].sessionDate)
         : null;
+
+      // Decide whether this opening should reference the journal entry.
+      // Conditions: entry exists AND is newer than the last finished session AND random coin flip (60%).
+      let shouldOpenWithJournal = false;
       let journalInstruction = '';
 
-      // Only force Aurora to bring up the latest journal entry automatically if it is
-      // NEWER than the most recent finished chat session. This prevents Aurora from
-      // asking about the same entry again in every new session once it has already
-      // been discussed and the session was finished.
       if (latestEntry) {
         const latestEntryDate = new Date(latestEntry.createdAt);
-        const shouldHighlightLatestEntry =
-          !latestSessionDate || latestEntryDate > latestSessionDate;
+        const isNewEntry = !latestSessionDate || latestEntryDate > latestSessionDate;
+        // 60% chance to lead with the journal when an unseen entry exists.
+        // The other 40% Aurora just greets naturally — keeps sessions feeling varied.
+        const coinFlip = Math.random() < 0.6;
+        shouldOpenWithJournal = isNewEntry && coinFlip;
 
-        if (shouldHighlightLatestEntry) {
+        if (shouldOpenWithJournal) {
           const latestDateLabel = latestEntryDate.toLocaleDateString('en-US', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-
-          journalInstruction = `\n- In this first reply, naturally bring up what they wrote in their most recent journal entry (${latestDateLabel}). Don't announce that you're checking their journal — just reference the content warmly and directly, the way a therapist would who read your notes before the session. Example approach: "I saw what you wrote [today/yesterday/on Monday] — [brief reference to content]. How are you feeling about that now?" Keep it warm and focused on them.`;
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          });
+          journalInstruction = `\n- In this first reply, naturally bring up what they wrote in their most recent journal entry (${latestDateLabel}). Don't announce that you're checking their journal — just reference the content directly, the way a therapist would who read your notes before the session. For example: "I saw what you wrote [today/yesterday/on Monday] — [brief reference to content]. How are you feeling about that now?" Keep it warm and focused on them.`;
         }
       }
 
-      systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly by their real name (if available). Keep it brief — no long introductions, no re-stating who you are or what you can see.\n- Dive straight into something personal: reference their latest journal entry or a theme from last session, and ask about it with genuine curiosity.${journalInstruction}\n- At the END of your opening message (not the beginning), add ONE short, natural sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time." Keep it casual, not administrative.`;
+      if (shouldOpenWithJournal) {
+        // Opening that leads with the new journal entry
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user briefly by their real name (if available) — no long introductions.\n- Then immediately reference their latest journal entry (see below). Make it feel natural, like a therapist who read their notes.${journalInstruction}\n- At the very end, add this ONE casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+      } else {
+        // Opening that just greets warmly without forcing the journal
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly and briefly by their real name (if available). Keep it simple and human.\n- Do NOT open by talking about their journal entry. Just check in naturally — ask how they are, what's on their mind, or gently reference a theme from a previous session if one is relevant. Keep it conversational and open.\n- At the very end, add this ONE casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+      }
     }
 
     // Update system message with the new content
@@ -677,7 +685,7 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
     const useAdvancedModel = shouldUseAdvancedModel(messages as ChatMessage[]);
 
     if (!useAdvancedModel) {
-      systemContent += '\n\nLENGTH GUIDELINE FOR THIS MESSAGE: This is a simple question. Reply in 1–2 sentences max (~20–40 words). Be warm but brief — like a quick text reply.';
+      systemContent += '\n\nLENGTH NOTE: This is a lighter message. Keep the response natural and conversational — around 40–80 words. Still follow the Reflect → Name → Explore structure. Do NOT drop below 2 meaningful sentences.';
     }
 
     const selectedModel = 'claude-3-haiku-20240307';
