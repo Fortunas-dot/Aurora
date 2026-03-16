@@ -366,9 +366,25 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     const assistantMessages = messages.filter((m: { role: string }) => m.role === 'assistant');
     const isFirstMessage = userMessages.length === 1 && assistantMessages.length === 0;
 
-    // If this is the first message, add instruction to mention the finish session button
+    // If this is the first message, add strict instructions for greeting, finish-session reminder,
+    // and proactively referencing the most recent journal entry if one exists.
     if (isFirstMessage) {
-      systemContent += '\n\nIMPORTANT: This is your first message in this conversation. Greet the user using their preferred name if it is available, keep the greeting short and personal (no long introduction about who you are), and in your response you MUST mention: "Do not forget at the end to press the \'Finish Session\' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.';
+      // Determine the most recent journal entry (if any) for explicit reference instructions
+      const latestEntry = journalEntries && journalEntries.length > 0 ? journalEntries[0] : null;
+      let journalInstruction = '';
+
+      if (latestEntry) {
+        const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+
+        journalInstruction = `\n- You MUST explicitly acknowledge something from the most recent journal entry above in this very first reply (for example, the entry from ${latestDate}). Do not wait for the user to ask about their journal before bringing it up. Keep it short and compassionate, but clearly show you noticed what they recently wrote.`;
+      }
+
+      systemContent += `\n\nIMPORTANT: This is your first message in this conversation.\n- Greet the user using their preferred name if it is available, and keep the greeting short and personal (no long introduction about who you are).\n- In your response, you MUST mention: "Do not forget at the end to press the 'Finish Session' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.${journalInstruction}`;
     }
 
     // Update system message with the new content
