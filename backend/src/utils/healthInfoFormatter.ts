@@ -149,29 +149,45 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
   // Most recent entry (first in the sorted list — guaranteed by DB sort createdAt: -1)
   const latestEntry = entries[0];
 
-  // Build explicit label for the latest entry
+  // Build explicit label for the latest entry (use user's local timezone)
   const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Europe/Amsterdam',
   });
   const latestContentSnippet = latestEntry.content.substring(0, 200) + (latestEntry.content.length > 200 ? '...' : '');
 
+  // Current date in user's timezone (Europe/Amsterdam) for relative date labels
+  const nowLocal = new Date();
+  const todayStr = nowLocal.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const yesterdayDate = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = yesterdayDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+
   const entrySummaries = entries.map((entry, idx) => {
-    const date = new Date(entry.createdAt).toLocaleDateString('en-US', {
+    const entryDate = new Date(entry.createdAt);
+    const entryDayStr = entryDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const date = entryDate.toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: 'Europe/Amsterdam',
     });
+
+    // Add a human-readable relative label so Aurora knows "today" vs "yesterday"
+    let relativeLabel = '';
+    if (entryDayStr === todayStr) relativeLabel = ' ← TODAY';
+    else if (entryDayStr === yesterdayStr) relativeLabel = ' ← YESTERDAY';
+
     const sentiment = entry.aiInsights?.sentiment ? entry.aiInsights.sentiment : '';
     const themes = (entry.aiInsights?.themes && entry.aiInsights.themes.length > 0) 
       ? entry.aiInsights.themes.join(', ') 
       : '';
     
     // Mark entry #1 very explicitly as the latest
-    const label = idx === 0 ? `[ENTRY #1 — THIS IS THE LATEST/MOST RECENT ENTRY] ${date}` : `[ENTRY #${idx + 1}] ${date}`;
+    const label = idx === 0 ? `[ENTRY #1 — THIS IS THE LATEST/MOST RECENT ENTRY] ${date}${relativeLabel}` : `[ENTRY #${idx + 1}] ${date}${relativeLabel}`;
     let summary = `- ${label}: Mood ${entry.mood}/10`;
     if (sentiment) summary += ` (${sentiment} sentiment)`;
     if (themes) summary += `. Themes: ${themes}`;

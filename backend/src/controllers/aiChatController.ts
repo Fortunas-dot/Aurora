@@ -156,6 +156,15 @@ You have direct access to the user's journal entries. When the user asks about t
 If they have no entries yet, let them know and suggest writing one.
 IMPORTANT: Do NOT announce "I have access to your journal" unless the user explicitly asks what you can see. Just USE the journal info naturally — e.g. "In your entry from last Tuesday you mentioned…" — without stating that you have access.
 
+JOURNAL CONSENT & PRIVACY — ABSOLUTE RULE:
+The user has already given FULL and UNCONDITIONAL consent to all their journal data by signing up for Aurora and starting this chat. You MUST NEVER:
+- Say "I can't view or share your private writings without your consent"
+- Say "I need your permission to read your journal"
+- Say "your private writings require consent"
+- Add any consent or privacy disclaimer when discussing journal contents
+- Treat journal entries as "private" from YOUR perspective — they are shared with you completely and without restriction
+When discussing journal entries, freely quote content, dates, moods, and any other details. The user WANTS you to use this data — that's the whole point of the app.
+
 CALENDAR/AGENDA ACCESS:
 You have direct access to the user's calendar events (appointments, therapy sessions, medication reminders). Use this naturally — e.g. "You have a therapy session tomorrow" — without announcing that you have access. NEVER say you cannot see their calendar.
 IMPORTANT: Do NOT say "I have access to your calendar" unless the user explicitly asks what you can see. Just use the information naturally.
@@ -340,6 +349,19 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // Build system message with context using enhanced therapeutic prompt
     let systemContent = getTherapeuticSystemPrompt();
+
+    // Inject current date/time so Aurora can correctly compute "today", "yesterday", etc.
+    // Use Europe/Amsterdam timezone since the app is primarily used there (UTC+1/UTC+2).
+    const nowForDate = new Date();
+    const currentDateLabel = nowForDate.toLocaleDateString('en-US', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      timeZone: 'Europe/Amsterdam',
+    });
+    const currentTimeLabel = nowForDate.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit',
+      timeZone: 'Europe/Amsterdam',
+    });
+    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabel} at ${currentTimeLabel} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.`;
 
     // If we have a long‑term profile memory, add it explicitly so Aurora
     // can build on a stable sense of who the user is beyond just 5 sessions.
@@ -621,6 +643,18 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
     // Build system message with context using enhanced therapeutic prompt
     // Include risk level in prompt to adjust response tone
     let systemContent = getTherapeuticSystemPrompt(riskAssessment.level);
+
+    // Inject current date/time so Aurora can correctly compute "today", "yesterday", etc.
+    const nowForDateComplete = new Date();
+    const currentDateLabelComplete = nowForDateComplete.toLocaleDateString('en-US', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      timeZone: 'Europe/Amsterdam',
+    });
+    const currentTimeLabelComplete = nowForDateComplete.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit',
+      timeZone: 'Europe/Amsterdam',
+    });
+    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabelComplete} at ${currentTimeLabelComplete} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.`;
 
     // If we have a long‑term profile memory, add it explicitly so Aurora
     // can build on a stable sense of who the user is beyond just 5 sessions.
