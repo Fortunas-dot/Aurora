@@ -251,37 +251,38 @@ export default function EditProfileScreen() {
       colors={COLORS.backgroundGradient}
       style={styles.container}
     >
+      {/* Header — outside KeyboardAvoidingView so it stays fixed when keyboard opens */}
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+        <Pressable
+          style={styles.headerIconButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="close" size={24} color={COLORS.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Pressable
+          style={[styles.headerIconButton, isSubmitting && styles.headerIconButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <Ionicons name="checkmark" size={24} color={COLORS.primary} />
+          )}
+        </Pressable>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
-        keyboardVerticalOffset={insets.top}
+        keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Pressable
-            style={styles.headerIconButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="close" size={24} color={COLORS.text} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-          <Pressable
-            style={[styles.headerIconButton, isSubmitting && styles.headerIconButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <Ionicons name="checkmark" size={24} color={COLORS.primary} />
-            )}
-          </Pressable>
-        </View>
-
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Avatar Section */}
           <GlassCard style={styles.avatarCard} padding="lg">
@@ -503,6 +504,7 @@ export default function EditProfileScreen() {
       </KeyboardAvoidingView>
     </LinearGradient>
   );
+
 }
 
 const styles = StyleSheet.create({
