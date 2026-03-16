@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import User, { IUser } from '../models/User';
 import ChatContext from '../models/ChatContext';
+import UserProfileMemory from '../models/UserProfileMemory';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
 import CalendarEvent from '../models/Calendar';
 import { AuthRequest } from '../middleware/auth';
@@ -310,6 +311,9 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       .select('importantPoints summary sessionDate')
       .lean();
 
+    // Get long‑term profile memory if available
+    const profileMemory = await UserProfileMemory.findOne({ user: req.userId }).lean();
+
     // Fetch journal entries if not provided in context
     let journalEntries: IJournalEntry[] = [];
     if (context?.journalEntries && Array.isArray(context.journalEntries) && context.journalEntries.length > 0) {
@@ -337,6 +341,19 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // Build system message with context using enhanced therapeutic prompt
     let systemContent = getTherapeuticSystemPrompt();
+
+    // If we have a long‑term profile memory, add it explicitly so Aurora
+    // can build on a stable sense of who the user is beyond just 5 sessions.
+    if (profileMemory && (profileMemory.coreFacts?.length || profileMemory.narrativeSummary)) {
+      const profileFacts = (profileMemory.coreFacts || []).slice(0, 40);
+      const factsText = profileFacts.length > 0
+        ? profileFacts.map((p: string, idx: number) => `  ${idx + 1}. ${p}`).join('\n')
+        : '';
+
+      const narrativeText = profileMemory.narrativeSummary || '';
+
+      systemContent += `\n\nUSER'S LONG‑TERM PROFILE SUMMARY (built across many past sessions):\n${factsText ? `${factsText}\n\n` : ''}${narrativeText}\n\nCRITICAL INSTRUCTIONS ABOUT THIS PROFILE:\n- Treat these as relatively stable facts and themes about the user.\n- Use them to keep continuity over time (values, long‑term struggles, recurring patterns, important relationships, work/study context, etc.).\n- When relevant, connect current messages to these long‑term themes so the user feels truly known.\n- Do NOT claim you don't remember past sessions if this profile is present — you DO have this persistent summary.\n- You don't need to recite the whole profile; instead, reference the parts that are relevant to what the user is talking about now.`;
+    }
 
     // If we know the user's preferred display name, tell Aurora explicitly
     // so it can use the real name instead of any placeholders.
@@ -566,6 +583,9 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       .select('importantPoints summary sessionDate')
       .lean();
 
+    // Get long‑term profile memory if available
+    const profileMemory = await UserProfileMemory.findOne({ user: req.userId }).lean();
+
     // Fetch journal entries if not provided in context
     let journalEntries: IJournalEntry[] = [];
     if (context?.journalEntries && Array.isArray(context.journalEntries) && context.journalEntries.length > 0) {
@@ -592,6 +612,19 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
     // Build system message with context using enhanced therapeutic prompt
     // Include risk level in prompt to adjust response tone
     let systemContent = getTherapeuticSystemPrompt(riskAssessment.level);
+
+    // If we have a long‑term profile memory, add it explicitly so Aurora
+    // can build on a stable sense of who the user is beyond just 5 sessions.
+    if (profileMemory && (profileMemory.coreFacts?.length || profileMemory.narrativeSummary)) {
+      const profileFacts = (profileMemory.coreFacts || []).slice(0, 40);
+      const factsText = profileFacts.length > 0
+        ? profileFacts.map((p: string, idx: number) => `  ${idx + 1}. ${p}`).join('\n')
+        : '';
+
+      const narrativeText = profileMemory.narrativeSummary || '';
+
+      systemContent += `\n\nUSER'S LONG‑TERM PROFILE SUMMARY (built across many past sessions):\n${factsText ? `${factsText}\n\n` : ''}${narrativeText}\n\nCRITICAL INSTRUCTIONS ABOUT THIS PROFILE:\n- Treat these as relatively stable facts and themes about the user.\n- Use them to keep continuity over time (values, long‑term struggles, recurring patterns, important relationships, work/study context, etc.).\n- When relevant, connect current messages to these long‑term themes so the user feels truly known.\n- Do NOT claim you don't remember past sessions if this profile is present — you DO have this persistent summary.\n- You don't need to recite the whole profile; instead, reference the parts that are relevant to what the user is talking about now.`;
+    }
 
     // If we know the user's preferred display name, tell Aurora explicitly
     // so it can use the real name instead of any placeholders.

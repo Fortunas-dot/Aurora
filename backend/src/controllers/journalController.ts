@@ -6,6 +6,7 @@ import User from '../models/User';
 import Notification from '../models/Notification';
 import CalendarEvent from '../models/Calendar';
 import ChatContext from '../models/ChatContext';
+import UserProfileMemory from '../models/UserProfileMemory';
 import { AuthRequest } from '../middleware/auth';
 import { getClaudeClient } from '../services/claudeClient';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
@@ -1602,7 +1603,7 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
     const user = await User.findById(req.userId).select('healthInfo');
     const existingContext = await ChatContext.find({ user: req.userId })
       .sort({ sessionDate: -1 })
-      .limit(5)
+      .limit(10)
       .select('importantPoints summary')
       .lean();
 
@@ -1703,6 +1704,44 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
       summary: summary.substring(0, 1000),
       sessionDate: new Date(),
     });
+
+    // Update or create long‑term profile memory using the most recent chat contexts.
+    try {
+      const recentContexts = await ChatContext.find({ user: req.userId })
+        .sort({ sessionDate: -1 })
+        .limit(15)
+        .select('importantPoints summary')
+        .lean();
+
+      const allPoints = recentContexts.flatMap(ctx => ctx.importantPoints || []);
+      const uniquePoints = Array.from(
+        new Set(
+          allPoints
+            .map(p => (p || '').trim())
+            .filter(p => p.length > 0)
+        )
+      ).slice(0, 40); // keep up to 40 core facts
+
+      const narrativeSummary = recentContexts
+        .map(ctx => ctx.summary || '')
+        .filter(Boolean)
+        .join('\n\n')
+        .slice(0, 3500);
+
+      await UserProfileMemory.findOneAndUpdate(
+        { user: req.userId },
+        {
+          $set: {
+            coreFacts: uniquePoints,
+            narrativeSummary,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    } catch (profileErr) {
+      console.error('Error updating UserProfileMemory:', profileErr);
+      // Do not fail the request if profile update fails
+    }
 
     res.json({
       success: true,
