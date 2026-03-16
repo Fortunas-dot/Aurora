@@ -453,7 +453,9 @@ export default function JournalEntriesInsightsScreen() {
               {/* Top Themes */}
               {insights.topThemes && insights.topThemes.length > 0 && (
                 <View style={styles.insightSection}>
-                  <Text style={styles.insightLabel}>Common Themes</Text>
+                  <Text style={[styles.insightLabel, { marginBottom: SPACING.md }]}>
+                    Common Themes
+                  </Text>
                   <View style={styles.themesContainer}>
                     {insights.topThemes.map((item, index) => (
                       <View key={index} style={styles.themeTag}>

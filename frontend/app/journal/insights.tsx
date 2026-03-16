@@ -982,7 +982,9 @@ export default function JournalInsightsScreen() {
             {/* Top Themes */}
             {insights.topThemes && insights.topThemes.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Common themes</Text>
+                <Text style={[styles.sectionTitle, { marginBottom: SPACING.md }]}>
+                  Common themes
+                </Text>
                 <GlassCard style={styles.listCard} padding="lg">
                   {insights.topThemes.map((item, index) => (
                     <InsightItem

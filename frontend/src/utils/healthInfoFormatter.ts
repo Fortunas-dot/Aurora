@@ -131,7 +131,8 @@ export const formatJournalContextForAI = (entries?: AuroraJournalContext[] | nul
     const sentiment = entry.sentiment ? sentimentLabels[entry.sentiment] : '';
     const themes = entry.themes.length > 0 ? entry.themes.join(', ') : '';
     
-    let summary = `- ${date}: Mood ${entry.mood}/10`;
+    // Mood is on a 1–5 scale in the app
+    let summary = `- ${date}: Mood ${entry.mood}/5`;
     if (sentiment) summary += ` (${sentiment})`;
     if (themes) summary += `. Themes: ${themes}`;
     summary += `\n  "${entry.summary}"`;
