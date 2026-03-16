@@ -1627,6 +1627,8 @@ Extract 3-10 key points that include:
 
 CRITICAL: Always extract personal information, health conditions, and diagnoses that the user shares. If the user explicitly states they have a condition (e.g., "I have Alzheimer's", "I have depression"), you MUST extract this as a point. These are essential facts about the user that must be remembered for future conversations.
 
+DO NOT EXTRACT: Do NOT include points that reference specific journal entries (e.g. "User's latest journal entry was about X" or "User discussed their journal entry from [date]"). Journal entries are fetched live and always up-to-date — saving references to them as "important points" causes confusion in future sessions because they become outdated. Only extract personal facts, emotional patterns, and life circumstances.
+
 Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 150 characters each).
 
 Example format:

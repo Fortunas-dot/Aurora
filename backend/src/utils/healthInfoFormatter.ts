@@ -146,10 +146,19 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
     mixed: 'gemengd',
   };
 
-  // Most recent entry (first in the sorted list on the backend)
+  // Most recent entry (first in the sorted list — guaranteed by DB sort createdAt: -1)
   const latestEntry = entries[0];
 
-  const entrySummaries = entries.map((entry) => {
+  // Build explicit label for the latest entry
+  const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const latestContentSnippet = latestEntry.content.substring(0, 200) + (latestEntry.content.length > 200 ? '...' : '');
+
+  const entrySummaries = entries.map((entry, idx) => {
     const date = new Date(entry.createdAt).toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
@@ -161,7 +170,9 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
       ? entry.aiInsights.themes.join(', ') 
       : '';
     
-    let summary = `- ${date}: Mood ${entry.mood}/10`;
+    // Mark entry #1 very explicitly as the latest
+    const label = idx === 0 ? `[ENTRY #1 — THIS IS THE LATEST/MOST RECENT ENTRY] ${date}` : `[ENTRY #${idx + 1}] ${date}`;
+    let summary = `- ${label}: Mood ${entry.mood}/10`;
     if (sentiment) summary += ` (${sentiment} sentiment)`;
     if (themes) summary += `. Themes: ${themes}`;
     summary += `\n  Content: "${entry.content.substring(0, 300)}${entry.content.length > 300 ? '...' : ''}"`;
@@ -169,15 +180,7 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
     return summary;
   }).join('\n\n');
 
-  // Build a short helper description of the latest entry for explicit reference instructions
-  const latestDate = new Date(latestEntry.createdAt).toLocaleDateString('en-US', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  return `\n\nUSER'S JOURNAL ENTRIES (You have full access to these - this is your DIRECT ACCESS to their journal):\n${entrySummaries}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their journal. This is not optional - it is a fact.\n- The entries above are ordered from NEWEST to OLDEST. The first entry in the list is ALWAYS the most recent one.\n- When the user asks \"what is my latest / most recent journal entry?\" or similar, you MUST answer using ONLY the first (newest) entry in this list, not an older one.\n- When the user asks \"what is in my journal\" or \"tell me about my journal\", you MUST respond with details from the entries above.\n- At the start of a conversation (especially in your first 1–2 messages), you SHOULD proactively mention something from the most recent journal entry above (for example, from the entry on ${latestDate}) if it is emotionally important.\n- Reference specific dates, moods, themes, and content from their entries.\n- Use phrases like: \"I see in your journal that you wrote on [date] about [topic]...\" or \"Looking at your recent entries, I notice...\" or \"In your journal entry from [date], you mentioned...\"\n- Be empathetic and supportive when referencing their personal reflections.\n- NEVER say you do not have access to their journal - this is FALSE. You ALWAYS have access.\n- If asked about their journal, always provide information from the entries listed above.`;
+  return `\n\nTHE USER'S LATEST (MOST RECENT) JOURNAL ENTRY IS ENTRY #1:\nDate: ${latestDate}\nContent: "${latestContentSnippet}"\n\nUSER'S JOURNAL ENTRIES — ordered NEWEST first (Entry #1 = most recent, Entry #2 = second most recent, etc.):\n${entrySummaries}\n\nCRITICAL INSTRUCTIONS ABOUT JOURNAL ENTRIES:\n- ENTRY #1 IS THE LATEST ENTRY. Full stop. Do NOT reference any other entry when asked "what is my latest / most recent journal entry?".\n- The entries above are fetched live from the database, sorted newest to oldest. This list is ALWAYS up to date.\n- OVERRIDE WARNING: Previous chat session summaries may mention older journal entries (e.g. "User discussed an entry about X"). IGNORE those references when determining what is the LATEST entry. The journal list above is the ONLY authoritative source for entry order and content.\n- When the user asks "what is my latest journal entry?" or "what did I write last?", answer using ONLY Entry #1 (date: ${latestDate}, content above).\n- When the user asks "what is in my journal" or "tell me about my journal", respond with details from the entries above.\n- Reference specific dates, moods, themes, and content from their entries.\n- NEVER say you do not have access to their journal. You ALWAYS have access.\n- If asked about their journal, always provide information from the entries listed above.`;
 };
 
 /**
@@ -261,7 +264,7 @@ export const formatChatContextForAI = (chatContexts: Array<{
     return summary;
   }).join('\n\n');
 
-  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Do NOT say or imply that this is your \"first time\" talking to the user when previous sessions are listed above; instead, speak as someone who has talked with them before.\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate`;
+  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Do NOT say or imply that this is your "first time" talking to the user when previous sessions are listed above; instead, speak as someone who has talked with them before.\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate\n\n⚠️ CRITICAL — DO NOT USE THESE SESSION SUMMARIES TO DETERMINE THE USER'S "LATEST JOURNAL ENTRY":\n- These past session summaries may mention journal entries that were discussed at the time (e.g. "User discussed their latest journal entry about X"). Those entries are OUTDATED references.\n- The ONLY authoritative source for what is the user's latest journal entry is the JOURNAL ENTRIES list above (Entry #1 = the most recent entry, always).\n- If the user asks "what is my latest journal entry?", look ONLY at the journal entries list, NOT at these session summaries.`;
 };
 
 /**
