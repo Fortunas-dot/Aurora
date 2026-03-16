@@ -548,7 +548,7 @@ export default function JournalEntryScreen() {
           <View style={[styles.moodBadge, { backgroundColor: `${moodColor}20` }]}>
             <Text style={styles.moodEmoji}>{getMoodEmoji(entry.mood)}</Text>
             <Text style={[styles.moodText, { color: moodColor }]}>
-              {entry.mood}/10
+              {entry.mood}/5
             </Text>
           </View>
         </View>
@@ -1445,6 +1445,8 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
     borderColor: `${COLORS.primary}30`,
+    flexShrink: 1,
+    maxWidth: '80%',
   },
   sentimentEmoji: {
     fontSize: 18,
@@ -1458,19 +1460,23 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   themesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: SPACING.sm,
   },
   themeTag: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     backgroundColor: 'rgba(96, 165, 250, 0.15)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.full,
+    width: '100%',
   },
   themeText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.primary,
+    flex: 1,
+    flexShrink: 1,
   },
   patternsContainer: {
     gap: SPACING.sm,

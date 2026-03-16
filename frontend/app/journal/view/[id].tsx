@@ -213,7 +213,7 @@ export default function JournalViewScreen() {
             </View>
             <View style={[styles.moodBadge, { backgroundColor: `${getMoodColor(item.mood)}20` }]}>
               <Text style={styles.moodEmoji}>{getMoodEmoji(item.mood)}</Text>
-              <Text style={[styles.moodText, { color: getMoodColor(item.mood) }]}>{item.mood}/10</Text>
+              <Text style={[styles.moodText, { color: getMoodColor(item.mood) }]}>{item.mood}/5</Text>
             </View>
           </View>
           <Text style={styles.entryContent} numberOfLines={3}>
