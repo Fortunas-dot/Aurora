@@ -248,7 +248,7 @@ const shouldUseAdvancedModel = (messages: ChatMessage[]): boolean => {
 // @access  Private
 export const streamChat = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { messages, context } = req.body;
+    const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
@@ -314,20 +314,16 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // Get long‑term profile memory if available
     const profileMemory = await UserProfileMemory.findOne({ user: req.userId }).lean();
 
-    // Fetch journal entries if not provided in context
-    let journalEntries: IJournalEntry[] = [];
-    if (context?.journalEntries && Array.isArray(context.journalEntries) && context.journalEntries.length > 0) {
-      // Use provided journal entries (convert from plain objects to IJournalEntry format)
-      journalEntries = context.journalEntries as IJournalEntry[];
-    } else {
-      // Fetch recent journal entries directly from database
-      const recentEntries = await JournalEntry.find({ author: req.userId })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select('createdAt mood content aiInsights')
-        .lean();
-      journalEntries = recentEntries as unknown as IJournalEntry[];
-    }
+    // Always fetch journal entries directly from the database to ensure:
+    // 1. Correct sort order (newest first, guaranteed by DB query)
+    // 2. Correct `createdAt` field (frontend context uses `date` not `createdAt`)
+    // 3. Most up-to-date data (not stale frontend-cached entries)
+    const recentEntries = await JournalEntry.find({ author: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('createdAt mood content aiInsights')
+      .lean();
+    const journalEntries: IJournalEntry[] = recentEntries as unknown as IJournalEntry[];
 
     // Fetch upcoming calendar events automatically
     const now = new Date();
@@ -545,7 +541,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Private
 export const completeChat = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { messages, context, maxTokens = 400 } = req.body;
+    const { messages, maxTokens = 400 } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
@@ -600,18 +596,14 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
     // Get long‑term profile memory if available
     const profileMemory = await UserProfileMemory.findOne({ user: req.userId }).lean();
 
-    // Fetch journal entries if not provided in context
-    let journalEntries: IJournalEntry[] = [];
-    if (context?.journalEntries && Array.isArray(context.journalEntries) && context.journalEntries.length > 0) {
-      journalEntries = context.journalEntries as IJournalEntry[];
-    } else {
-      const recentEntries = await JournalEntry.find({ author: req.userId })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select('createdAt mood content aiInsights')
-        .lean();
-      journalEntries = recentEntries as unknown as IJournalEntry[];
-    }
+    // Always fetch journal entries directly from the database (same reason as streamChat):
+    // ensures correct sort order, correct `createdAt` field, and fresh data.
+    const recentEntriesComplete = await JournalEntry.find({ author: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('createdAt mood content aiInsights')
+      .lean();
+    const journalEntries: IJournalEntry[] = recentEntriesComplete as unknown as IJournalEntry[];
 
     // Fetch upcoming calendar events automatically
     const now = new Date();
