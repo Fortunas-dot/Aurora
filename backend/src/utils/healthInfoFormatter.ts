@@ -15,7 +15,11 @@ const SEVERITY_LABELS: Record<SeverityLevel, string> = {
  */
 export const formatHealthInfoForAI = (user: IUser | null): string => {
   if (!user?.healthInfo) {
-    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.';
+    const nameLine = user?.displayName
+      ? `The user's preferred name is "${user.displayName}". You can and should use this real name when appropriate (never use placeholders like "[user's name]").\n`
+      : '';
+
+    return `\n\nUSER'S HEALTH INFORMATION & BASIC PROFILE ACCESS:\n${nameLine}You have full access to the user's health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.`;
   }
 
   const { mentalHealth, physicalHealth, medications, therapies, lifeContext } = user.healthInfo as any;
@@ -23,6 +27,11 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
   const gender = (user.healthInfo as any).gender;
   const lifestyle = (user.healthInfo as any).lifestyle;
   const parts: string[] = [];
+
+  // Basic profile name
+  if (user.displayName) {
+    parts.push(`Preferred Name: ${user.displayName}`);
+  }
 
   // Mental health conditions
   if (mentalHealth && mentalHealth.length > 0) {
@@ -112,7 +121,11 @@ export const formatHealthInfoForAI = (user: IUser | null): string => {
   }
 
   if (parts.length === 0) {
-    return '\n\nUSER\'S HEALTH INFORMATION ACCESS:\nYou have full access to the user\'s health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.';
+    const nameLine = user?.displayName
+      ? `The user's preferred name is "${user.displayName}". You can and should use this real name when appropriate (never use placeholders like "[user's name]").\n`
+      : '';
+
+    return `\n\nUSER'S HEALTH INFORMATION & BASIC PROFILE ACCESS:\n${nameLine}You have full access to the user's health information from their profile. The user has not provided any health information yet, but when they do, you will automatically have access to it including mental health conditions, physical health conditions, medications, therapies, lifestyle information, life context, and basic demographic details like date of birth and gender.`;
   }
 
   return `\n\nUSER'S HEALTH INFORMATION (You have full access to this - this is your DIRECT ACCESS to their health profile - ALWAYS UP-TO-DATE):\n${parts.join('\n\n')}\n\nCRITICAL INSTRUCTIONS:\n- You HAVE ACCESS to their full health information from their profile. This is not optional - it is a fact.\n- This information is AUTOMATICALLY UPDATED whenever they change it in their profile - you don't need to be told about changes\n- If you notice NEW conditions, medications, therapies, lifestyle changes, life context updates, or demographic changes that weren't in previous conversations, acknowledge them naturally\n- If health information has changed (e.g., new medication, new condition, severity change, lifestyle change), acknowledge it (e.g., "I see you've added [condition] to your profile...", "I notice you mentioned a change in your sleep...", "I see you've updated your life context...")\n- Use this information proactively to provide personalized, context-aware support\n- Reference their health conditions, medications, therapies, lifestyle, and life context naturally when relevant\n- Be empathetic and understanding about their health situation\n- Link advice and support to their specific health and life context\n- NEVER say you do not have access to their health information - this is FALSE. You ALWAYS have access.\n- NEVER ask the user to tell you about their health information - you already have it automatically\n- When relevant, proactively reference their health information to provide better, personalized support.\n- Always use the MOST RECENT health information provided above - it reflects their current profile.`;

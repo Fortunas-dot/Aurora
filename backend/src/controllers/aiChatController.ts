@@ -118,7 +118,8 @@ CORE THERAPEUTIC APPROACH - How to talk and think like a good therapist (without
    - Avoid victim-blaming language - never suggest the user is at fault for their situation
 
 4. PERSONAL CONNECTION & CONTINUITY:
-   - GREETING STYLE: When you start a conversation, greet the user with their preferred name if you know it. NEVER write placeholders like "[Name]" or "[your name]". Use the actual name from context (for example "Hey Alex" or "Good to see you, Sara"). If you don't know their name, just say something simple like "Hey" or "Good to see you again" without a name. Do NOT re-introduce yourself or explain your role again in every new session — they already know you.
+   - GREETING STYLE: When you start a conversation, greet the user with their preferred name if you know it. NEVER write placeholders like "[Name]", "[user]", "[user's name]", "[your name]" or any other bracketed placeholder instead of a real name. Use the actual name from context (for example "Hey Alex" or "Good to see you, Sara"). If you don't know their name, just say something simple like "Hey" or "Good to see you again" without a name. Do NOT re-introduce yourself or explain your role again in every new session — they already know you.
+   - NAME QUESTIONS: If the user asks "what is my name?", "do you know my name?" or similar, FIRST check if their preferred name is provided in your system context. If it is, answer with that exact name (for example "Your name is Alex.") without hedging and without claiming you don't have access. ONLY if no name is available in your context, say briefly that you don't actually know their name yet (but still avoid saying you don't have access to personal information at all).
    - At the start of conversations, naturally reference something from their last session or journal entry (for example, if they mentioned an exam, ask how it went instead of doing a long introduction).
    - Remember and reference small personal details (work, family, hobbies) to show you're paying attention
    - Acknowledge growth and changes: "I notice you've been working on [X] since we last talked..."
@@ -336,6 +337,12 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     // Build system message with context using enhanced therapeutic prompt
     let systemContent = getTherapeuticSystemPrompt();
+
+    // If we know the user's preferred display name, tell Aurora explicitly
+    // so it can use the real name instead of any placeholders.
+    if (user?.displayName) {
+      systemContent += `\n\nUSER'S PREFERRED NAME:\n- The user's preferred name is "${user.displayName}".\n- When you greet them or refer to them by name, ALWAYS use "${user.displayName}" (without brackets).\n- NEVER write placeholders like "[user's name]", "[Name]", "[user]" or any other bracketed text instead of their real name.\n- If you choose not to use their name in a given message, just say something simple like "Hey" without any brackets.`;
+    }
 
     // Add health, journal, and calendar context if available
     // formatCompleteContextForAI expects full IUser or null, so pass the user document
@@ -569,6 +576,12 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
     // Build system message with context using enhanced therapeutic prompt
     // Include risk level in prompt to adjust response tone
     let systemContent = getTherapeuticSystemPrompt(riskAssessment.level);
+
+    // If we know the user's preferred display name, tell Aurora explicitly
+    // so it can use the real name instead of any placeholders.
+    if (user?.displayName) {
+      systemContent += `\n\nUSER'S PREFERRED NAME:\n- The user's preferred name is "${user.displayName}".\n- When you greet them or refer to them by name, ALWAYS use "${user.displayName}" (without brackets).\n- NEVER write placeholders like "[user's name]", "[Name]", "[user]" or any other bracketed text instead of their real name.\n- If you choose not to use their name in a given message, just say something simple like "Hey" without any brackets.`;
+    }
     
     // Add crisis-specific instructions if high risk detected
     if (riskAssessment.requiresCrisisResponse && crisisResponse) {
