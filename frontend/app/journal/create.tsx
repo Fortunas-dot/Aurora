@@ -786,7 +786,7 @@ export default function CreateJournalEntryScreen() {
     <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
         {/* Header */}
