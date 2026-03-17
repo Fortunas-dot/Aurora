@@ -1613,7 +1613,7 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
 
     // Use AI to extract important points
     const completion = await claude.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-3-haiku-20240307', // TODO: upgrade to claude-3-5-haiku-20241022 once Anthropic Tier 1 reached
       system: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
 Extract 5-12 key points that capture:
@@ -1679,7 +1679,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
 
     // Generate a brief summary
     const summaryCompletion = await claude.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-3-haiku-20240307', // TODO: upgrade to claude-3-5-haiku-20241022 once Anthropic Tier 1 reached
       system: `You are Aurora. Create a 2-3 sentence summary of this chat session. Include: (1) the main emotional theme or struggle discussed, (2) any significant shift in mood or insight that occurred, and (3) where the user left off emotionally. Write it as notes a therapist would keep — specific, human, and useful for the next session.`,
       max_tokens: 200,
       temperature: 0.4,
@@ -1734,7 +1734,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
           .join('\n\n');
 
         const profileSynthesisCompletion = await claude.messages.create({
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-3-haiku-20240307', // TODO: upgrade to claude-3-5-haiku-20241022 once Anthropic Tier 1 reached
           system: `You are a clinical psychologist building a structured profile of a patient from their therapy session notes. Your profile will be used by an AI therapist to instantly understand who this person is at the start of each new session.
 
 Write a structured, insightful profile with these sections (use the exact headers):
