@@ -7,4 +7,5 @@ export { default as Notification, INotification, NotificationType } from './Noti
 export { default as JournalEntry, IJournalEntry, ISymptom, IAIInsights, SeverityLevel } from './JournalEntry';
 export { default as Journal, IJournal } from './Journal';
 export { default as CalendarEvent, ICalendarEvent } from './Calendar';
+export { default as UserMemoryVector, IUserMemoryVector } from './UserMemoryVector';
 

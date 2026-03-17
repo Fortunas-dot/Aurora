@@ -10,6 +10,7 @@ import { detectRisk, RiskLevel, getCrisisResources } from '../services/riskDetec
 import { moderateContent } from '../services/contentModeration.service';
 import { getClaudeClient } from '../services/claudeClient';
 import { getOpenAIClient } from '../services/openaiClient';
+import { retrieveRelevantMemories } from '../services/memoryEmbedding.service';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -396,6 +397,21 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       .limit(10)
       .lean();
 
+    // ── RAG: retrieve semantically relevant memories ──────────────────────────
+    // Use the user's latest message as the query so we surface memories that are
+    // actually relevant to what they're talking about RIGHT NOW — not just recent ones.
+    const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user');
+    const ragMemories: string[] = [];
+    if (lastUserMessage?.content) {
+      try {
+        const relevant = await retrieveRelevantMemories(req.userId, lastUserMessage.content, 8);
+        ragMemories.push(...relevant);
+      } catch (ragErr) {
+        // Non-critical — Aurora still works with standard context
+        console.error('RAG retrieval failed (non-critical):', ragErr);
+      }
+    }
+
     // Build system message with context using enhanced therapeutic prompt
     let systemContent = getTherapeuticSystemPrompt();
 
@@ -423,6 +439,16 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       const narrativeText = profileMemory.narrativeSummary || '';
 
       systemContent += `\n\nUSER'S LONG‑TERM PROFILE SUMMARY (built across many past sessions):\n${factsText ? `${factsText}\n\n` : ''}${narrativeText}\n\nCRITICAL INSTRUCTIONS ABOUT THIS PROFILE:\n- Treat these as relatively stable facts and themes about the user.\n- Use them to keep continuity over time (values, long‑term struggles, recurring patterns, important relationships, work/study context, etc.).\n- When relevant, connect current messages to these long‑term themes so the user feels truly known.\n- Do NOT claim you don't remember past sessions if this profile is present — you DO have this persistent summary.\n- You don't need to recite the whole profile; instead, reference the parts that are relevant to what the user is talking about now.`;
+    }
+
+    // ── RAG: inject semantically matched memories into the prompt ─────────────
+    // These are specific past memories most relevant to the current topic,
+    // retrieved via cosine similarity from ALL past sessions (not just the last 10).
+    if (ragMemories.length > 0) {
+      const memoriesText = ragMemories
+        .map((m, i) => `  ${i + 1}. ${m}`)
+        .join('\n');
+      systemContent += `\n\nRELEVANT MEMORIES FROM PAST SESSIONS (retrieved for this specific topic):\n${memoriesText}\n\nINSTRUCTIONS FOR THESE MEMORIES:\n- These points are specifically relevant to what the user is talking about RIGHT NOW.\n- Use them to show continuity and depth — e.g. "I remember you mentioned..." or weave them naturally.\n- Do NOT recite all of them; pick the ones most helpful for the current message.\n- Do NOT claim you don't remember if relevant memories are listed here.`;
     }
 
     // If we know the user's preferred display name, tell Aurora explicitly

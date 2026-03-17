@@ -9,6 +9,7 @@ import ChatContext from '../models/ChatContext';
 import UserProfileMemory from '../models/UserProfileMemory';
 import { AuthRequest } from '../middleware/auth';
 import { getClaudeClient } from '../services/claudeClient';
+import { storeMemoryPoints } from '../services/memoryEmbedding.service';
 import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { escapeRegex } from '../utils/helpers';
 import { parsePage, parseLimit, calculateSkip } from '../utils/pagination';
@@ -1726,6 +1727,15 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
         sessionDate: chatContext.sessionDate,
       },
     });
+
+    // ── RAG: embed and store each importantPoint as a memory vector ───────────
+    // Runs fire-and-forget in the background — zero user wait time.
+    // These vectors power the semantic memory retrieval at chat time.
+    if (chatContext.importantPoints && chatContext.importantPoints.length > 0) {
+      storeMemoryPoints(req.userId, chatContext.importantPoints, chatContext._id as any).catch(err => {
+        console.error('Error storing memory embeddings (non-critical):', err);
+      });
+    }
 
     // Update or create long-term profile memory using AI synthesis.
     // Runs IN THE BACKGROUND after the response is already sent — zero user wait time.
