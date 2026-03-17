@@ -1611,8 +1611,10 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
       ? `Previous important points from past sessions:\n${existingContext.map((ctx, idx) => `${idx + 1}. ${ctx.importantPoints.join(', ')}`).join('\n')}`
       : '';
 
-    // Use AI to extract important points
-    const completion = await claude.messages.create({
+    // Run point extraction and summary generation IN PARALLEL — cuts wait time roughly in half.
+    const [completion, summaryCompletion] = await Promise.all([
+    // ── Call 1: extract important points ────────────────────────────────────
+    claude.messages.create({
       model: 'claude-haiku-4-5',
       system: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
@@ -1652,7 +1654,26 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
           ],
         },
       ],
-    });
+    }),
+    // ── Call 2: session summary ──────────────────────────────────────────────
+    claude.messages.create({
+      model: 'claude-haiku-4-5',
+      system: `You are Aurora. Create a 2-3 sentence summary of this chat session. Include: (1) the main emotional theme or struggle discussed, (2) any significant shift in mood or insight that occurred, and (3) where the user left off emotionally. Write it as notes a therapist would keep — specific, human, and useful for the next session.`,
+      max_tokens: 200,
+      temperature: 0.4,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Write session notes for this conversation:\n\n${conversationText}`,
+            },
+          ],
+        },
+      ],
+    }),
+    ]); // end Promise.all
 
     const responseText =
       completion.content
@@ -1677,25 +1698,6 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
         .slice(0, 7);
     }
 
-    // Generate a brief summary
-    const summaryCompletion = await claude.messages.create({
-      model: 'claude-haiku-4-5',
-      system: `You are Aurora. Create a 2-3 sentence summary of this chat session. Include: (1) the main emotional theme or struggle discussed, (2) any significant shift in mood or insight that occurred, and (3) where the user left off emotionally. Write it as notes a therapist would keep — specific, human, and useful for the next session.`,
-      max_tokens: 200,
-      temperature: 0.4,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Write session notes for this conversation:\n\n${conversationText}`,
-            },
-          ],
-        },
-      ],
-    });
-
     const summary =
       summaryCompletion.content
         .filter(block => block.type === 'text')
@@ -1711,7 +1713,18 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
       sessionDate: new Date(),
     });
 
+    // Respond to the user immediately — they don't need to wait for profile synthesis.
+    res.json({
+      success: true,
+      data: {
+        importantPoints: chatContext.importantPoints,
+        summary: chatContext.summary,
+        sessionDate: chatContext.sessionDate,
+      },
+    });
+
     // Update or create long-term profile memory using AI synthesis.
+    // Runs IN THE BACKGROUND after the response is already sent — zero user wait time.
     // Instead of raw string concatenation, we have Claude produce a structured
     // psychological profile from all session data. This gives Aurora a genuine
     // understanding of the person rather than a bullet-point dump.
@@ -1807,17 +1820,8 @@ Guidelines:
       }
     } catch (profileErr) {
       console.error('Error updating UserProfileMemory:', profileErr);
-      // Do not fail the request if profile update fails
+      // Profile update failure is silent — response already sent
     }
-
-    res.json({
-      success: true,
-      data: {
-        importantPoints: chatContext.importantPoints,
-        summary: chatContext.summary,
-        sessionDate: chatContext.sessionDate,
-      },
-    });
   } catch (error: any) {
     console.error('Error finishing chat session:', error);
     res.status(500).json({
