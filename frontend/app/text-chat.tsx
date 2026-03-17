@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, KeyboardAvoidingView, Platform, Pressable, Animated, Dimensions, Easing, Modal } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -367,8 +367,9 @@ const AnimatedStar = ({ index }: { index: number }) => {
 
 export default function TextChatScreen() {
   const router = useRouter();
-  const { provider } = useLocalSearchParams<{ provider?: string }>();
-  const aiProvider = (provider === 'openai' ? 'openai' : 'claude') as 'claude' | 'openai';
+  // For now we always use Claude as the AI provider. The OpenAI path remains
+  // available in the codebase and can be re-enabled later if desired.
+  const aiProvider: 'claude' | 'openai' = 'claude';
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { user } = useAuthStore();
@@ -1047,8 +1048,9 @@ export default function TextChatScreen() {
         </Pressable>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
+          {/* Subtitle intentionally kept neutral; we don't surface the specific model here */}
           <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
-            {aiProvider === 'openai' ? 'OpenAI · GPT-4o mini' : 'Claude · Haiku'}
+            Mental health chat
           </Text>
         </View>
         <View style={styles.psychologySymbolContainer}>

@@ -551,7 +551,10 @@ export default function AuroraScreen() {
                 return;
               }
               if (!requirePremium()) return;
-              router.push('/ai-select');
+              // For now we always use Claude as the AI provider.
+              // The OpenAI path and ai-select screen remain in the codebase
+              // so they can be re-enabled later if needed.
+              router.push('/text-chat');
             }}
             padding="lg"
           >
