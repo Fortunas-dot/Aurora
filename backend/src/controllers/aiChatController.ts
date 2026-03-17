@@ -591,11 +591,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       accumulatedText = completion.choices[0]?.message?.content || '';
     } else {
       // ── Claude path ────────────────────────────────────────────────────────
-      // claude-3-5-haiku-20241022 is significantly better at following custom
-      // instructions (like "use the journal data above") vs the older Haiku.
-      // Same price, much better instruction adherence.
-      // TODO: upgrade to claude-3-5-haiku-20241022 once Anthropic Tier 1 is reached
-      const selectedModel = 'claude-3-haiku-20240307';
+      const selectedModel = 'claude-haiku-4-5';
 
       // Prepare Claude messages: system prompt + user/assistant turns
       const claudeMessages = openaiMessages
@@ -889,8 +885,7 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       rawContent = completionOpenAI.choices[0]?.message?.content || '';
     } else {
       // ── Claude path ────────────────────────────────────────────────────────
-      // TODO: upgrade to claude-3-5-haiku-20241022 once Anthropic Tier 1 is reached
-      const selectedModel = 'claude-3-haiku-20240307';
+      const selectedModel = 'claude-haiku-4-5';
 
       const claudeMessages = (messages as ChatMessage[])
         .filter(m => m.role !== 'system')
