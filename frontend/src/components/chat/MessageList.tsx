@@ -121,10 +121,13 @@ export const MessageList: React.FC = () => {
           ) : (
             <TypingIndicator />
           )}
+          {/* Spacer so the last streaming message never touches the toolbar */}
+          <View style={{ height: 16 }} />
         </View>
       );
     }
-    return null;
+    // Always render a spacer so the last message never touches the toolbar
+    return <View style={{ height: 16 }} />;
   }, [isStreaming, messages.length, availableContext, currentStreamingMessage]);
 
   // Memoize onContentSizeChange to prevent unnecessary re-renders

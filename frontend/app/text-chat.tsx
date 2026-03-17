@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, ActivityIndicator, Text, KeyboardAvoidingView, Platform, Pressable, Animated, Dimensions, Easing, Modal } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator, Text, Keyboard, Platform, Pressable, Animated, Dimensions, Easing, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -378,6 +378,24 @@ export default function TextChatScreen() {
   const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
   const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
   const [isFinishingSession, setIsFinishingSession] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showSessionDoneModal, setShowSessionDoneModal] = useState(false);
+
+  // Track keyboard height manually — more reliable than KeyboardAvoidingView
+  useEffect(() => {
+    const showListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0),
+    );
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
   
   // Animation for Aurora logo transition
   const auroraScale = useRef(new Animated.Value(1)).current;
@@ -732,66 +750,7 @@ export default function TextChatScreen() {
       const response = await journalService.finishChatSession(messagesForBackend);
       
       if (response.success) {
-        Alert.alert(
-          '',
-          'Thank you for talking, I have noted the most important points of our conversation for next time we talk again.',
-          [
-            {
-              text: 'OK',
-              onPress: async () => {
-                // Clear chat after finishing session
-                try {
-                  await clearHistory();
-                  clearMessages();
-                  
-                  // Clear border glows
-                  setBorderGlows([]);
-                  
-                  // Reset floating Aurora position immediately
-                  floatingAuroraX.setValue(width * 0.2);
-                  floatingAuroraY.setValue(height * 0.3);
-                  
-                  // Reset UI state
-                  setDisplayedText('');
-                  setIsTyping(false);
-                  setShowMenu(false);
-                  
-                  // Force animation reset - animate Aurora back to full size
-                  setTimeout(() => {
-                    Animated.parallel([
-                      Animated.timing(auroraScale, {
-                        toValue: 1,
-                        duration: 600,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true,
-                      }),
-                      Animated.timing(auroraOpacity, {
-                        toValue: 1,
-                        duration: 600,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true,
-                      }),
-                      Animated.timing(starsOpacity, {
-                        toValue: 0,
-                        duration: 400,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true,
-                      }),
-                      Animated.timing(floatingAuroraOpacity, {
-                        toValue: 0,
-                        duration: 400,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                      }),
-                    ]).start();
-                  }, 50);
-                } catch (err) {
-                  console.error('Failed to clear chat after session:', err);
-                }
-              },
-            },
-          ]
-        );
+        setShowSessionDoneModal(true);
       } else {
         Alert.alert('Error', response.message || 'Could not finish session');
       }
@@ -801,6 +760,30 @@ export default function TextChatScreen() {
       Alert.alert('Error', errorMessage);
     } finally {
       setIsFinishingSession(false);
+    }
+  };
+
+  const handleSessionDoneOK = async () => {
+    setShowSessionDoneModal(false);
+    try {
+      await clearHistory();
+      clearMessages();
+      setBorderGlows([]);
+      floatingAuroraX.setValue(width * 0.2);
+      floatingAuroraY.setValue(height * 0.3);
+      setDisplayedText('');
+      setIsTyping(false);
+      setShowMenu(false);
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(auroraScale, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(auroraOpacity, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(starsOpacity, { toValue: 0, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(floatingAuroraOpacity, { toValue: 0, duration: 400, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+        ]).start();
+      }, 50);
+    } catch (err) {
+      console.error('Failed to clear chat after session:', err);
     }
   };
 
@@ -1039,7 +1022,9 @@ export default function TextChatScreen() {
       ))}
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm, borderBottomColor: colors.glass.border }]}>
+      <View
+        style={[styles.header, { paddingTop: insets.top + SPACING.sm, borderBottomColor: colors.glass.border }]}
+      >
         <Pressable
           style={[styles.backButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]}
           onPress={() => router.back()}
@@ -1058,11 +1043,7 @@ export default function TextChatScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.chatContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
+      <View style={[styles.chatContainer, { paddingBottom: keyboardHeight }]}>
         {/* AI Consent banner above chat when consent is still unknown */}
         {!isConsentLoading && aiConsentStatus === 'unknown' && (
           <View style={{ paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm }}>
@@ -1102,7 +1083,30 @@ export default function TextChatScreen() {
           isStreaming={isStreaming}
           onStop={cancelStreaming}
         />
-      </KeyboardAvoidingView>
+      </View>
+
+      {/* Session Done Modal */}
+      <Modal
+        visible={showSessionDoneModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleSessionDoneOK}
+      >
+        <View style={styles.sessionDoneOverlay}>
+          <View style={[styles.sessionDoneCard, { backgroundColor: colors.surface, borderColor: colors.glass.border }]}>
+            <Text style={[styles.sessionDoneTitle, { color: colors.text }]}>Session saved ✓</Text>
+            <Text style={[styles.sessionDoneMessage, { color: colors.textSecondary }]}>
+              Thank you for talking. I have noted the most important points of our conversation for next time we talk again.
+            </Text>
+            <Pressable
+              style={[styles.sessionDoneButton, { backgroundColor: colors.primary }]}
+              onPress={handleSessionDoneOK}
+            >
+              <Text style={styles.sessionDoneButtonText}>OK</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Menu Modal */}
       <Modal
@@ -1335,6 +1339,48 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.glass.border,
     marginVertical: SPACING.xs,
+  },
+  sessionDoneOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  sessionDoneCard: {
+    width: '100%',
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
+    alignItems: 'center',
+    gap: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  sessionDoneTitle: {
+    ...TYPOGRAPHY.h3,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  sessionDoneMessage: {
+    ...TYPOGRAPHY.body,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  sessionDoneButton: {
+    marginTop: SPACING.sm,
+    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: SPACING.xl * 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  sessionDoneButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   toolbar: {
     flexDirection: 'row',
