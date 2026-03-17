@@ -551,7 +551,7 @@ export default function AuroraScreen() {
                 return;
               }
               if (!requirePremium()) return;
-              router.push('/text-chat');
+              router.push('/ai-select');
             }}
             padding="lg"
           >

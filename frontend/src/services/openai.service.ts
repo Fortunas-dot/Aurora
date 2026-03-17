@@ -20,6 +20,7 @@ export class OpenAIService {
    */
   async streamChatCompletion(
     messages: OpenAIMessage[],
+    provider: 'claude' | 'openai' = 'claude',
     onChunk: (text: string) => void,
     onComplete: () => void,
     onError: (error: Error) => void,
@@ -43,6 +44,7 @@ export class OpenAIService {
       },
       body: JSON.stringify({
         messages: messages.filter(m => m.role !== 'system'), // System message is built on backend
+        provider, // 'claude' or 'openai'
         context: {
           // Context will be fetched on backend from user data
         },

@@ -7,7 +7,7 @@ import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { journalService, AuroraJournalContext } from '../services/journal.service';
 import { v4 as uuidv4 } from 'uuid';
 
-export const useStreamingResponse = () => {
+export const useStreamingResponse = (provider: 'claude' | 'openai' = 'claude') => {
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [journalContext, setJournalContext] = useState<AuroraJournalContext[]>([]);
@@ -218,6 +218,7 @@ export const useStreamingResponse = () => {
         // Start streaming
         const cleanup = await openAIService.streamChatCompletion(
           conversationMessages,
+          provider,
           // On chunk received
           (chunk) => {
             hasReceivedData = true;

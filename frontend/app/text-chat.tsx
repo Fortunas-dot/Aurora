@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, KeyboardAvoidingView, Platform, Pressable, Animated, Dimensions, Easing, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -367,10 +367,12 @@ const AnimatedStar = ({ index }: { index: number }) => {
 
 export default function TextChatScreen() {
   const router = useRouter();
+  const { provider } = useLocalSearchParams<{ provider?: string }>();
+  const aiProvider = (provider === 'openai' ? 'openai' : 'claude') as 'claude' | 'openai';
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const { sendMessage, isLoading, cancelStreaming } = useStreamingResponse();
+  const { sendMessage, isLoading, cancelStreaming } = useStreamingResponse(aiProvider);
   const { clearHistory, isLoading: isLoadingHistory } = useChatHistory();
   const { messages, isStreaming, error, setError, clearMessages, setAvailableContext, availableContext } = useChatStore();
   const { aiConsentStatus, isLoading: isConsentLoading, loadConsent, grantAiConsent, denyAiConsent } = useConsentStore();
@@ -1045,7 +1047,9 @@ export default function TextChatScreen() {
         </Pressable>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>Mental health chat</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+            {aiProvider === 'openai' ? 'OpenAI · GPT-4o mini' : 'Claude · Haiku'}
+          </Text>
         </View>
         <View style={styles.psychologySymbolContainer}>
           <PsychologySymbol size={28} />

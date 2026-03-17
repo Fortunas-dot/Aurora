@@ -9,6 +9,7 @@ import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
 import { detectRisk, RiskLevel, getCrisisResources } from '../services/riskDetection.service';
 import { moderateContent } from '../services/contentModeration.service';
 import { getClaudeClient } from '../services/claudeClient';
+import { getOpenAIClient } from '../services/openaiClient';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -272,7 +273,8 @@ const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 // @access  Private
 export const streamChat = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { messages } = req.body;
+    const { messages, provider = 'claude' } = req.body;
+    const useOpenAI = provider === 'openai';
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
@@ -282,15 +284,29 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    let claude: ReturnType<typeof getClaudeClient>;
-    try {
-      claude = getClaudeClient();
-    } catch (error: any) {
-      res.status(503).json({
-        success: false,
-        message: 'AI service is not configured',
-      });
-      return;
+    let claude: ReturnType<typeof getClaudeClient> | null = null;
+    let openai: ReturnType<typeof getOpenAIClient> | null = null;
+
+    if (useOpenAI) {
+      try {
+        openai = getOpenAIClient();
+      } catch (error: any) {
+        res.status(503).json({
+          success: false,
+          message: 'OpenAI service is not configured',
+        });
+        return;
+      }
+    } else {
+      try {
+        claude = getClaudeClient();
+      } catch (error: any) {
+        res.status(503).json({
+          success: false,
+          message: 'AI service is not configured',
+        });
+        return;
+      }
     }
 
     // Get user data for context - cast to IUser | null for type compatibility
@@ -493,61 +509,81 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       ...userAssistantMessages,
     ];
 
-    const selectedModel = 'claude-3-haiku-20240307';
-
-    // Prepare Claude messages: system prompt + user/assistant turns
-    const claudeMessages = openaiMessages
-      .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: m.role,
-        content: m.content,
-      })) as { role: 'user' | 'assistant'; content: string }[];
-
     // Token cap for streaming responses.
     // Therapeutic responses need enough room to reflect + name emotion + ask one question.
     // Advanced (emotional/complex): 500 tokens (~350 words) — enough for deep therapeutic work.
     // Standard: 300 tokens (~200 words) — enough for a real, warm therapeutic reply.
     const streamMaxTokens = useAdvancedModel ? 500 : 300;
 
-    // ── Call Claude BEFORE opening the SSE connection ─────────────────────────
+    // ── Call AI provider BEFORE opening the SSE connection ─────────────────────
     // Accumulating the full response first means:
     //   1. We can retry on overloaded_error (up to 3 times, exponential back-off).
     //   2. We can strip stage directions before anything reaches the client.
-    //   3. If Claude fails entirely we can still return a clean JSON error.
+    //   3. If provider fails entirely we can still return a clean JSON error.
     const MAX_RETRIES = 3;
     let accumulatedText = '';
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        accumulatedText = '';
-        const stream = await claude.messages.stream({
-          model: selectedModel,
-          system: systemContent,
-          max_tokens: streamMaxTokens,
-          temperature: 0.75,
-          messages: claudeMessages.map(m => ({
-            role: m.role,
-            content: [{ type: 'text', text: m.content }],
-          })),
-        });
+    if (useOpenAI) {
+      // ── OpenAI path ────────────────────────────────────────────────────────
+      const openaiMessagesFormatted = openaiMessages.map(m => ({
+        role: m.role as 'system' | 'user' | 'assistant',
+        content: m.content,
+      }));
 
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            accumulatedText += event.delta.text;
+      const openaiModel = useAdvancedModel ? 'gpt-4o' : 'gpt-4o-mini';
+
+      const completion = await openai!.chat.completions.create({
+        model: openaiModel,
+        messages: openaiMessagesFormatted,
+        max_tokens: streamMaxTokens,
+        temperature: 0.75,
+      });
+
+      accumulatedText = completion.choices[0]?.message?.content || '';
+    } else {
+      // ── Claude path ────────────────────────────────────────────────────────
+      const selectedModel = 'claude-3-haiku-20240307';
+
+      // Prepare Claude messages: system prompt + user/assistant turns
+      const claudeMessages = openaiMessages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+        })) as { role: 'user' | 'assistant'; content: string }[];
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          accumulatedText = '';
+          const stream = await claude!.messages.stream({
+            model: selectedModel,
+            system: systemContent,
+            max_tokens: streamMaxTokens,
+            temperature: 0.75,
+            messages: claudeMessages.map(m => ({
+              role: m.role,
+              content: [{ type: 'text', text: m.content }],
+            })),
+          });
+
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              accumulatedText += event.delta.text;
+            }
           }
-        }
 
-        break; // ✅ Success — exit retry loop
+          break; // ✅ Success — exit retry loop
 
-      } catch (err: any) {
-        if (isOverloadedError(err) && attempt < MAX_RETRIES) {
-          const delay = Math.pow(2, attempt) * 1000; // 1 s, 2 s, 4 s
-          console.warn(`Claude overloaded — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-          await sleep(delay);
-          continue;
+        } catch (err: any) {
+          if (isOverloadedError(err) && attempt < MAX_RETRIES) {
+            const delay = Math.pow(2, attempt) * 1000; // 1 s, 2 s, 4 s
+            console.warn(`Claude overloaded — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+            await sleep(delay);
+            continue;
+          }
+          // Non-overloaded error OR max retries exhausted — bubble up to outer catch
+          throw err;
         }
-        // Non-overloaded error OR max retries exhausted — bubble up to outer catch
-        throw err;
       }
     }
 
@@ -610,7 +646,8 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Private
 export const completeChat = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { messages, maxTokens = 400 } = req.body;
+    const { messages, maxTokens = 400, provider = 'claude' } = req.body;
+    const useOpenAI = provider === 'openai';
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({
@@ -620,15 +657,29 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    let claude: ReturnType<typeof getClaudeClient>;
-    try {
-      claude = getClaudeClient();
-    } catch (error: any) {
-      res.status(503).json({
-        success: false,
-        message: 'AI service is not configured',
-      });
-      return;
+    let claude: ReturnType<typeof getClaudeClient> | null = null;
+    let openai: ReturnType<typeof getOpenAIClient> | null = null;
+
+    if (useOpenAI) {
+      try {
+        openai = getOpenAIClient();
+      } catch (error: any) {
+        res.status(503).json({
+          success: false,
+          message: 'OpenAI service is not configured',
+        });
+        return;
+      }
+    } else {
+      try {
+        claude = getClaudeClient();
+      } catch (error: any) {
+        res.status(503).json({
+          success: false,
+          message: 'AI service is not configured',
+        });
+        return;
+      }
     }
 
     // Get user data and context
@@ -754,58 +805,82 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       systemContent += '\n\nLENGTH NOTE: This is a lighter message. Keep the response natural and conversational — around 40–80 words. Still follow the Reflect → Name → Explore structure. Do NOT drop below 2 meaningful sentences.';
     }
 
-    const selectedModel = 'claude-3-haiku-20240307';
-
-    const claudeMessages = (messages as ChatMessage[])
-      .filter(m => m.role !== 'system')
-      .map(m => ({
-        // Claude only accepts 'user' or 'assistant' roles
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: [
-          {
-            type: 'text',
-            text: m.content,
-          },
-        ],
-      }));
-
     // Enforce an upper bound on response length even if client passes a high maxTokens.
     // Keep responses short and chat-like.
     // Therapeutic responses need room — raise caps to match streaming endpoint.
     const hardCap = useAdvancedModel ? 500 : 300;
     const safeMaxTokens = Math.min(maxTokens, hardCap);
 
-    // ── Call Claude with retry on overloaded errors ───────────────────────────
-    const MAX_RETRIES_COMPLETE = 3;
-    let completion: Awaited<ReturnType<typeof claude.messages.create>> | null = null;
+    let rawContent = '';
 
-    for (let attempt = 0; attempt <= MAX_RETRIES_COMPLETE; attempt++) {
-      try {
-        completion = await claude.messages.create({
-          model: selectedModel,
-          system: systemContent,
-          max_tokens: safeMaxTokens,
-          temperature: 0.75,
-          messages: claudeMessages as any,
-        });
-        break; // ✅ Success
+    if (useOpenAI) {
+      // ── OpenAI path ────────────────────────────────────────────────────────
+      const openaiMessagesFormatted = [
+        { role: 'system' as const, content: systemContent },
+        ...(messages as ChatMessage[])
+          .filter(m => m.role !== 'system')
+          .map(m => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+      ];
+      const openaiModel = useAdvancedModel ? 'gpt-4o' : 'gpt-4o-mini';
+      const completionOpenAI = await openai!.chat.completions.create({
+        model: openaiModel,
+        messages: openaiMessagesFormatted,
+        max_tokens: safeMaxTokens,
+        temperature: 0.75,
+      });
+      rawContent = completionOpenAI.choices[0]?.message?.content || '';
+    } else {
+      // ── Claude path ────────────────────────────────────────────────────────
+      const selectedModel = 'claude-3-haiku-20240307';
 
-      } catch (err: any) {
-        if (isOverloadedError(err) && attempt < MAX_RETRIES_COMPLETE) {
-          const delay = Math.pow(2, attempt) * 1000;
-          console.warn(`Claude overloaded (completeChat) — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES_COMPLETE})`);
-          await sleep(delay);
-          continue;
+      const claudeMessages = (messages as ChatMessage[])
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          // Claude only accepts 'user' or 'assistant' roles
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: [
+            {
+              type: 'text',
+              text: m.content,
+            },
+          ],
+        }));
+
+      // ── Call Claude with retry on overloaded errors ─────────────────────────
+      const MAX_RETRIES_COMPLETE = 3;
+      let completion: Awaited<ReturnType<typeof claude!.messages.create>> | null = null;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES_COMPLETE; attempt++) {
+        try {
+          completion = await claude!.messages.create({
+            model: selectedModel,
+            system: systemContent,
+            max_tokens: safeMaxTokens,
+            temperature: 0.75,
+            messages: claudeMessages as any,
+          });
+          break; // ✅ Success
+
+        } catch (err: any) {
+          if (isOverloadedError(err) && attempt < MAX_RETRIES_COMPLETE) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.warn(`Claude overloaded (completeChat) — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES_COMPLETE})`);
+            await sleep(delay);
+            continue;
+          }
+          throw err;
         }
-        throw err;
       }
-    }
 
-    const rawContent =
-      completion!.content
-        .filter(block => block.type === 'text')
-        .map(block => (block as any).text)
-        .join('') || '';
+      rawContent =
+        completion!.content
+          .filter(block => block.type === 'text')
+          .map(block => (block as any).text)
+          .join('') || '';
+    }
 
     // Apply the module-level stage-direction cleaner
     const content = cleanResponse(rawContent);

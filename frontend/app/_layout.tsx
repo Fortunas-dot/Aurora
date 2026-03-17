@@ -483,6 +483,13 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="ai-select"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="text-chat"
             options={{
               presentation: 'card',
