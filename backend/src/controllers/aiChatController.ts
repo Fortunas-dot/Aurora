@@ -870,7 +870,9 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
 
       // ── Call Claude with retry on overloaded errors ─────────────────────────
       const MAX_RETRIES_COMPLETE = 3;
-      let completion: Awaited<ReturnType<typeof claude!.messages.create>> | null = null;
+      // Use a broad type here for compatibility with different TS lib targets.
+      // We only read `.content` from the result below.
+      let completion: any = null;
 
       for (let attempt = 0; attempt <= MAX_RETRIES_COMPLETE; attempt++) {
         try {
@@ -896,8 +898,8 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
 
       rawContent =
         completion!.content
-          .filter(block => block.type === 'text')
-          .map(block => (block as any).text)
+          .filter((block: any) => block.type === 'text')
+          .map((block: any) => (block as any).text)
           .join('') || '';
     }
 
