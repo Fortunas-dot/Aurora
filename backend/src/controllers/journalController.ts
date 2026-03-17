@@ -1421,18 +1421,27 @@ export const analyzeEntry = async (req: AuthRequest, res: Response): Promise<voi
     );
 
     const completion = await claude.messages.create({
-      // Use Claude 3 Haiku for journal analysis to avoid model 404s.
-      model: 'claude-3-haiku-20240307',
-      system: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and provide:
-1. Sentiment (positive, neutral, negative, mixed)
-2. Key themes (3-5 themes)
-3. Cognitive patterns if detected (e.g., negative self-talk, catastrophizing, all-or-nothing thinking)
-4. Therapeutic feedback (brief, supportive, non-clinical)
-5. Follow-up questions (2-3 questions to encourage reflection)
+      model: 'claude-haiku-4-5',
+      system: `You are Aurora, a compassionate AI mental health assistant. Analyze journal entries and respond ONLY with a valid JSON object — no markdown, no extra text.
 
-Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
-      max_tokens: 1000,
-      temperature: 0.7,
+JSON format:
+{
+  "sentiment": "positive" | "neutral" | "negative" | "mixed",
+  "themes": ["theme 1", "theme 2", "theme 3"],
+  "cognitivePatterns": ["pattern 1"],
+  "therapeuticFeedback": "A warm, supportive 2-3 sentence response to the person about their entry.",
+  "followUpQuestions": ["Question 1?", "Question 2?", "Question 3?"]
+}
+
+Rules:
+- sentiment: choose exactly one of: positive, neutral, negative, mixed
+- themes: 3-5 short labels (e.g. "Family conflict", "Anxiety about work")
+- cognitivePatterns: 0-3 items, only if clearly present (e.g. "Catastrophizing", "All-or-nothing thinking"). Empty array if none detected.
+- therapeuticFeedback: empathetic, non-clinical, 2-3 sentences. Acknowledge what they shared specifically.
+- followUpQuestions: exactly 3 open-ended questions to encourage self-reflection.
+${context}`,
+      max_tokens: 800,
+      temperature: 0.5,
       messages: [
         {
           role: 'user',
@@ -1451,6 +1460,7 @@ Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
         .filter(block => block.type === 'text')
         .map(block => (block as any).text)
         .join('') || '';
+
     const insights: IAIInsights = {
       sentiment: 'neutral',
       themes: [],
@@ -1460,41 +1470,35 @@ Be empathetic, supportive, and focus on growth and self-awareness.${context}`,
       analyzedAt: new Date(),
     };
 
-    // Parse AI response (simplified - in production, use structured output)
+    // Parse structured JSON response
     try {
-      const lines = responseText.split('\n');
-      let currentSection = '';
+      // Strip any accidental markdown code fences
+      const cleaned = responseText.replace(/```(?:json)?/gi, '').trim();
+      const parsed = JSON.parse(cleaned);
 
-      for (const line of lines) {
-        if (line.toLowerCase().includes('sentiment')) {
-          if (line.toLowerCase().includes('positive')) insights.sentiment = 'positive';
-          else if (line.toLowerCase().includes('negative')) insights.sentiment = 'negative';
-          else if (line.toLowerCase().includes('mixed')) insights.sentiment = 'mixed';
-        } else if (line.toLowerCase().includes('theme')) {
-          currentSection = 'themes';
-        } else if (line.toLowerCase().includes('pattern')) {
-          currentSection = 'patterns';
-        } else if (line.toLowerCase().includes('feedback')) {
-          currentSection = 'feedback';
-        } else if (line.toLowerCase().includes('question')) {
-          currentSection = 'questions';
-        } else if (line.trim() && line.trim().startsWith('-')) {
-          const item = line.trim().substring(1).trim();
-          if (currentSection === 'themes' && insights.themes.length < 5) {
-            insights.themes.push(item);
-          } else if (currentSection === 'patterns') {
-            insights.cognitivePatterns?.push(item);
-          } else if (currentSection === 'questions') {
-            insights.followUpQuestions?.push(item);
-          }
-        } else if (currentSection === 'feedback' && line.trim()) {
-          insights.therapeuticFeedback = (insights.therapeuticFeedback || '') + line.trim() + ' ';
-        }
+      const validSentiments = ['positive', 'neutral', 'negative', 'mixed'];
+      if (validSentiments.includes(parsed.sentiment)) {
+        insights.sentiment = parsed.sentiment;
+      }
+      if (Array.isArray(parsed.themes)) {
+        insights.themes = parsed.themes.filter((t: any) => typeof t === 'string').slice(0, 5);
+      }
+      if (Array.isArray(parsed.cognitivePatterns)) {
+        insights.cognitivePatterns = parsed.cognitivePatterns.filter((p: any) => typeof p === 'string');
+      }
+      if (typeof parsed.therapeuticFeedback === 'string' && parsed.therapeuticFeedback.trim()) {
+        insights.therapeuticFeedback = parsed.therapeuticFeedback.trim();
+      }
+      if (Array.isArray(parsed.followUpQuestions)) {
+        insights.followUpQuestions = parsed.followUpQuestions.filter((q: any) => typeof q === 'string').slice(0, 3);
       }
 
-      insights.therapeuticFeedback = insights.therapeuticFeedback?.trim() || responseText.substring(0, 500);
+      // Ensure feedback is always set
+      if (!insights.therapeuticFeedback) {
+        insights.therapeuticFeedback = responseText.substring(0, 500);
+      }
     } catch (parseError) {
-      // Fallback: use raw response
+      // Fallback: use raw response as feedback
       insights.therapeuticFeedback = responseText.substring(0, 500);
     }
 
