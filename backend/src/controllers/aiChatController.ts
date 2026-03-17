@@ -528,18 +528,45 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       })),
     });
 
-    // Stream chunks to client
+    // Accumulate the full response before sending to the client.
+    // This allows us to strip stage directions (e.g. *warmly*, *gently*) before
+    // the text ever reaches the user.  The frontend typing animation provides the
+    // "streaming" visual effect on its own, so the UX is unchanged.
+    let accumulatedText = '';
     for await (const event of stream) {
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        const content = event.delta.text;
-        if (content) {
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
-        }
+        accumulatedText += event.delta.text;
       }
     }
 
-    // Note: Crisis resources are now sent immediately when detected (before streaming starts)
-    // This ensures users see help resources right away
+    // ── Stage-direction cleaner ──────────────────────────────────────────────
+    // Claude Haiku ignores prompt-level bans on *asterisk actions* — strip them here.
+    // Patterns removed:
+    //   *word*           e.g. *warmly*, *nods*, *gently*
+    //   *multi word*     e.g. *nods empathetically*, *leans in*
+    //   (adverb)         e.g. (warmly), (gently), (softly)
+    const cleanResponse = (text: string): string => {
+      return text
+        // Remove *anything up to ~8 words* in asterisks
+        .replace(/\*[^*\n]{1,60}\*/g, '')
+        // Remove single-word (adverb) parenthetical stage directions
+        .replace(/\(\s*\w+ly\s*\)/gi, '')
+        // Clean up extra whitespace left by removals
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/^\s+|\s+$/gm, '')   // trim each line
+        .replace(/\n{3,}/g, '\n\n')   // collapse 3+ blank lines to 2
+        .trim();
+    };
+
+    const cleanedContent = cleanResponse(accumulatedText);
+
+    // Send cleaned content as a single event — frontend types it out
+    if (cleanedContent) {
+      res.write(`data: ${JSON.stringify({ content: cleanedContent })}\n\n`);
+    }
+
+    // Note: Crisis resources are sent immediately when detected (before streaming starts)
+    // to ensure users see help resources right away.
 
     // Send completion signal
     res.write('data: [DONE]\n\n');
@@ -741,11 +768,20 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
       messages: claudeMessages as any,
     });
 
-    const content =
+    const rawContent =
       completion.content
         .filter(block => block.type === 'text')
         .map(block => (block as any).text)
         .join('') || '';
+
+    // Apply the same stage-direction cleaner used in streamChat
+    const content = rawContent
+      .replace(/\*[^*\n]{1,60}\*/g, '')
+      .replace(/\(\s*\w+ly\s*\)/gi, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/^\s+|\s+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
     res.json({
       success: true,
