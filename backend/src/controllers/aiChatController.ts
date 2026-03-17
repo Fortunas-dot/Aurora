@@ -271,8 +271,13 @@ const cleanResponse = (text: string): string => {
     .replace(/\(\s*\w+ly\s*\)/gi, '')
     // Clean up extra whitespace left by removals
     .replace(/[ \t]{2,}/g, ' ')
-    .replace(/^\s+|\s+$/gm, '')
+    // Trim leading/trailing spaces and tabs per line (not newlines — preserves paragraph breaks)
+    .replace(/[ \t]+$/gm, '')
+    .replace(/^[ \t]+/gm, '')
     .replace(/\n{3,}/g, '\n\n')
+    // Guarantee a space after sentence-ending punctuation when followed directly by a capital letter
+    // (guards against newlines being silently collapsed during rendering)
+    .replace(/([.?!])([A-Z])/g, '$1 $2')
     .trim();
 };
 
