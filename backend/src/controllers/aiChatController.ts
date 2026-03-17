@@ -400,11 +400,11 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // ── RAG: retrieve semantically relevant memories ──────────────────────────
     // Use the user's latest message as the query so we surface memories that are
     // actually relevant to what they're talking about RIGHT NOW — not just recent ones.
-    const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user');
+    const ragQueryMessage = [...messages].reverse().find((m: any) => m.role === 'user');
     const ragMemories: string[] = [];
-    if (lastUserMessage?.content) {
+    if (ragQueryMessage?.content && req.userId) {
       try {
-        const relevant = await retrieveRelevantMemories(req.userId, lastUserMessage.content, 8);
+        const relevant = await retrieveRelevantMemories(req.userId, ragQueryMessage.content, 8);
         ragMemories.push(...relevant);
       } catch (ragErr) {
         // Non-critical — Aurora still works with standard context

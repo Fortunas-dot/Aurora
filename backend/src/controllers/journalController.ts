@@ -1731,7 +1731,7 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
     // ── RAG: embed and store each importantPoint as a memory vector ───────────
     // Runs fire-and-forget in the background — zero user wait time.
     // These vectors power the semantic memory retrieval at chat time.
-    if (chatContext.importantPoints && chatContext.importantPoints.length > 0) {
+    if (chatContext.importantPoints && chatContext.importantPoints.length > 0 && req.userId) {
       storeMemoryPoints(req.userId, chatContext.importantPoints, chatContext._id as any).catch(err => {
         console.error('Error storing memory embeddings (non-critical):', err);
       });
