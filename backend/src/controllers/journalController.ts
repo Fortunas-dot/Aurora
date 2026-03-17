@@ -1613,29 +1613,33 @@ export const finishChatSession = async (req: AuthRequest, res: Response): Promis
 
     // Use AI to extract important points
     const completion = await claude.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-5-haiku-20241022',
       system: `You are Aurora, a compassionate AI mental health assistant. Your task is to extract the most important points from a chat conversation that should be remembered for future sessions.
 
-Extract 3-10 key points that include:
-- Personal information the user shares about themselves (health conditions, diagnoses, personal circumstances, family, work, etc.)
-- Direct statements about their condition (e.g., if user says "I have Alzheimer's", extract "User has Alzheimer's disease")
-- Important for understanding the user's mental health state
-- Relevant for future conversations
-- Specific and actionable (not generic)
-- Related to the user's concerns, goals, or progress
-- Any personal details, conditions, or facts the user mentions (e.g., "I have Alzheimer's", "I'm a teacher", "I live alone", "I have depression", etc.)
+Extract 5-12 key points that capture:
+- Personal information the user shares (health conditions, diagnoses, personal circumstances, family, work, relationships, living situation, etc.)
+- Direct statements about their condition (e.g., "I have depression" → "User has depression")
+- Emotional patterns and mood shifts observed during this session (e.g., "User started anxious but became calmer discussing work plans")
+- New goals, intentions, or commitments the user expressed
+- Changes since previous sessions (new stressors, improvements, setbacks, new events)
+- Recurring themes or struggles that came up again
+- Specific triggers, coping strategies, or insights the user mentioned
+- Any personal details that help build a picture of this person's life
 
-CRITICAL: Always extract personal information, health conditions, and diagnoses that the user shares. If the user explicitly states they have a condition (e.g., "I have Alzheimer's", "I have depression"), you MUST extract this as a point. These are essential facts about the user that must be remembered for future conversations.
+CRITICAL RULES:
+- If the user explicitly states they have a condition (e.g., "I have Alzheimer's", "I have depression"), you MUST extract this.
+- Capture emotional tone changes: e.g., "User expressed hopelessness about work situation but showed resilience when discussing family."
+- Capture NEW information introduced this session, even if a similar topic was mentioned before.
+- DO NOT extract references to specific journal entries (e.g., "User's latest journal entry was about X") — journal data is fetched live.
+- Each point should be specific and meaningful, not generic filler.
 
-DO NOT EXTRACT: Do NOT include points that reference specific journal entries (e.g. "User's latest journal entry was about X" or "User discussed their journal entry from [date]"). Journal entries are fetched live and always up-to-date — saving references to them as "important points" causes confusion in future sessions because they become outdated. Only extract personal facts, emotional patterns, and life circumstances.
-
-Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 150 characters each).
+Format your response as a JSON object with a "points" array of strings, where each string is one important point (max 180 characters each).
 
 Example format:
-{"points": ["User has been diagnosed with Alzheimer's disease", "User struggles with anxiety in social situations", "User is working on building self-confidence", "User mentioned feeling overwhelmed at work", "User lives alone and has limited family support"]}
+{"points": ["User has been diagnosed with Alzheimer's disease", "User struggles with anxiety in social situations and avoids group settings", "User expressed a goal to start therapy before end of the month", "User's mood improved noticeably when discussing their relationship with their sister", "User lives alone and has limited support network — loneliness is a recurring theme"]}
 
-${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured, but DO include new personal information even if similar topics exist.` : ''}`,
-      max_tokens: 800,
+${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points that are already captured, but DO include new personal information and emotional developments even if similar topics exist.` : ''}`,
+      max_tokens: 1000,
       temperature: 0.5,
       messages: [
         {
@@ -1675,17 +1679,17 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
 
     // Generate a brief summary
     const summaryCompletion = await claude.messages.create({
-      model: 'claude-3-haiku-20240307',
-      system: 'You are Aurora. Create a brief 1-2 sentence summary of this chat session. Keep it concise and focused on the main topics discussed.',
-      max_tokens: 150,
-      temperature: 0.5,
+      model: 'claude-3-5-haiku-20241022',
+      system: `You are Aurora. Create a 2-3 sentence summary of this chat session. Include: (1) the main emotional theme or struggle discussed, (2) any significant shift in mood or insight that occurred, and (3) where the user left off emotionally. Write it as notes a therapist would keep — specific, human, and useful for the next session.`,
+      max_tokens: 200,
+      temperature: 0.4,
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Summarize this conversation in 1-2 sentences:\n\n${conversationText}`,
+              text: `Write session notes for this conversation:\n\n${conversationText}`,
             },
           ],
         },
@@ -1707,39 +1711,100 @@ ${existingContextText ? `\n\n${existingContextText}\n\nAvoid duplicating points 
       sessionDate: new Date(),
     });
 
-    // Update or create long‑term profile memory using the most recent chat contexts.
+    // Update or create long-term profile memory using AI synthesis.
+    // Instead of raw string concatenation, we have Claude produce a structured
+    // psychological profile from all session data. This gives Aurora a genuine
+    // understanding of the person rather than a bullet-point dump.
     try {
       const recentContexts = await ChatContext.find({ user: req.userId })
         .sort({ sessionDate: -1 })
-        .limit(15)
-        .select('importantPoints summary')
+        .limit(20)
+        .select('importantPoints summary sessionDate')
         .lean();
 
-      const allPoints = recentContexts.flatMap(ctx => ctx.importantPoints || []);
-      const uniquePoints = Array.from(
-        new Set(
-          allPoints
-            .map(p => (p || '').trim())
-            .filter(p => p.length > 0)
-        )
-      ).slice(0, 40); // keep up to 40 core facts
+      if (recentContexts.length > 0) {
+        // Build a rich input for the synthesis call
+        const sessionDataText = recentContexts
+          .map((ctx, i) => {
+            const date = ctx.sessionDate ? new Date(ctx.sessionDate).toLocaleDateString() : `Session ${recentContexts.length - i}`;
+            const points = (ctx.importantPoints || []).join('\n  - ');
+            const sumText = ctx.summary ? `\n  Summary: ${ctx.summary}` : '';
+            return `[${date}]\n  - ${points}${sumText}`;
+          })
+          .join('\n\n');
 
-      const narrativeSummary = recentContexts
-        .map(ctx => ctx.summary || '')
-        .filter(Boolean)
-        .join('\n\n')
-        .slice(0, 3500);
+        const profileSynthesisCompletion = await claude.messages.create({
+          model: 'claude-3-5-haiku-20241022',
+          system: `You are a clinical psychologist building a structured profile of a patient from their therapy session notes. Your profile will be used by an AI therapist to instantly understand who this person is at the start of each new session.
 
-      await UserProfileMemory.findOneAndUpdate(
-        { user: req.userId },
-        {
-          $set: {
-            coreFacts: uniquePoints,
-            narrativeSummary,
+Write a structured, insightful profile with these sections (use the exact headers):
+
+STABLE FACTS
+Confirmed, stable information about the person: age (if mentioned), occupation, living situation, family structure, diagnosed conditions, medications, major life circumstances.
+
+EMOTIONAL PATTERNS
+Recurring emotional themes, triggers, default coping responses, what tends to make them feel better or worse. Be specific.
+
+RECURRING THEMES
+Topics, situations, or concerns that keep appearing across sessions.
+
+KEY RELATIONSHIPS
+Important people in their life and the emotional significance of those relationships.
+
+GOALS & PROGRESS
+What the person is working toward. Any growth, setbacks, or shifts in goals observed over time.
+
+WHAT MATTERS MOST
+The 2-3 things that are most central to understanding this person's inner world and wellbeing.
+
+Guidelines:
+- Write in clear, empathetic clinical language. Use "the user" or "they."
+- Be specific — use details from the sessions. Do not write generic filler.
+- Keep the total profile under 2800 characters.
+- If there is not enough data for a section, write "Insufficient data yet."`,
+          max_tokens: 1200,
+          temperature: 0.3,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Here are the session notes for this user across ${recentContexts.length} sessions:\n\n${sessionDataText}\n\nWrite the structured profile now.`,
+                },
+              ],
+            },
+          ],
+        });
+
+        const synthesizedProfile =
+          profileSynthesisCompletion.content
+            .filter((block: any) => block.type === 'text')
+            .map((block: any) => block.text)
+            .join('')
+            .trim();
+
+        // Also extract a deduplicated list of stable core facts from all points
+        const allPoints = recentContexts.flatMap(ctx => ctx.importantPoints || []);
+        const uniquePoints = Array.from(
+          new Set(
+            allPoints
+              .map(p => (p || '').trim())
+              .filter(p => p.length > 0)
+          )
+        ).slice(0, 50);
+
+        await UserProfileMemory.findOneAndUpdate(
+          { user: req.userId },
+          {
+            $set: {
+              coreFacts: uniquePoints,
+              narrativeSummary: synthesizedProfile.slice(0, 3000),
+            },
           },
-        },
-        { upsert: true, new: true }
-      );
+          { upsert: true, new: true }
+        );
+      }
     } catch (profileErr) {
       console.error('Error updating UserProfileMemory:', profileErr);
       // Do not fail the request if profile update fails

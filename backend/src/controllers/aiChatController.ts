@@ -363,10 +363,11 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       console.log('✅ No crisis response needed');
     }
     
-    // Get chat context from previous sessions
+    // Get chat context from previous sessions — load 10 so Aurora has a richer
+    // memory of who this person is across more recent history.
     const chatContextData = await ChatContext.find({ user: req.userId })
       .sort({ sessionDate: -1 })
-      .limit(5)
+      .limit(10)
       .select('importantPoints summary sessionDate')
       .lean();
 
@@ -377,9 +378,10 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // 1. Correct sort order (newest first, guaranteed by DB query)
     // 2. Correct `createdAt` field (frontend context uses `date` not `createdAt`)
     // 3. Most up-to-date data (not stale frontend-cached entries)
+    // Load 10 entries so Aurora can track mood trends over more time.
     const recentEntries = await JournalEntry.find({ author: req.userId })
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(10)
       .select('createdAt mood content aiInsights')
       .lean();
     const journalEntries: IJournalEntry[] = recentEntries as unknown as IJournalEntry[];
@@ -458,46 +460,72 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     const assistantMessages = messages.filter((m: { role: string }) => m.role === 'assistant');
     const isFirstMessage = userMessages.length === 1 && assistantMessages.length === 0;
 
-    // If this is the first message, add greeting instructions.
-    // Journal entries are only referenced proactively when they are genuinely new
-    // (newer than the last finished session) AND only ~60% of the time — so Aurora
-    // doesn't robotically open every single session by talking about the journal.
+    // On the first message, build a smart opening instruction for Aurora.
+    // Instead of a random coin flip, always lead with the MOST SALIENT piece of data:
+    //   Priority 1 — new journal entry (written since the last finished session) with a
+    //                low or distressed mood → feels most urgent to check in about.
+    //   Priority 2 — any new journal entry since last session (regardless of mood).
+    //   Priority 3 — upcoming event within 48 hours (therapy appt, important date, etc.).
+    //   Priority 4 — warm check-in that references a theme from the last session.
+    //   Priority 5 — simple warm greeting if no prior data exists at all.
     if (isFirstMessage) {
       const latestEntry = journalEntries && journalEntries.length > 0 ? journalEntries[0] : null;
       const latestSessionDate = chatContextData && chatContextData.length > 0
         ? new Date(chatContextData[0].sessionDate)
         : null;
 
-      // Decide whether this opening should reference the journal entry.
-      // Conditions: entry exists AND is newer than the last finished session AND random coin flip (60%).
-      let shouldOpenWithJournal = false;
-      let journalInstruction = '';
+      const LOW_MOOD_LABELS = ['sad', 'anxious', 'overwhelmed', 'depressed', 'stressed', 'bad', 'terrible', 'awful', 'hopeless', 'angry', 'frustrated'];
+
+      let openingHint = '';
 
       if (latestEntry) {
         const latestEntryDate = new Date(latestEntry.createdAt);
         const isNewEntry = !latestSessionDate || latestEntryDate > latestSessionDate;
-        // 60% chance to lead with the journal when an unseen entry exists.
-        // The other 40% Aurora just greets naturally — keeps sessions feeling varied.
-        const coinFlip = Math.random() < 0.6;
-        shouldOpenWithJournal = isNewEntry && coinFlip;
+        // mood is a numeric 1-10 scale; treat ≤4 as "low mood"
+        const moodIsLow = typeof latestEntry.mood === 'number'
+          ? (latestEntry.mood as number) <= 4
+          : latestEntry.mood && LOW_MOOD_LABELS.some(label =>
+              String(latestEntry.mood).toLowerCase().includes(label)
+            );
+        const latestDateLabel = latestEntryDate.toLocaleDateString('en-US', {
+          weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Amsterdam',
+        });
 
-        if (shouldOpenWithJournal) {
-          const latestDateLabel = latestEntryDate.toLocaleDateString('en-US', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          });
-          journalInstruction = `\n- In this first reply, naturally bring up what they wrote in their most recent journal entry (${latestDateLabel}). Don't announce that you're checking their journal — just reference the content directly, the way a therapist would who read your notes before the session. For example: "I saw what you wrote [today/yesterday/on Monday] — [brief reference to content]. How are you feeling about that now?" Keep it warm and focused on them.`;
+        if (isNewEntry && moodIsLow) {
+          // Priority 1: new entry with low mood — check in warmly but directly
+          openingHint = `The user wrote a new journal entry on ${latestDateLabel} and their mood appears low. In your first reply, gently acknowledge what they wrote — reference the content naturally, the way a therapist would after reading their notes. Don't say "I see you wrote…" — just weave it in. Then ask one open, caring question about how they're feeling now. Keep it warm and brief.`;
+        } else if (isNewEntry) {
+          // Priority 2: new entry any mood — reference it naturally
+          openingHint = `The user wrote a new journal entry on ${latestDateLabel}. In your first reply, naturally reference what they wrote — the way a therapist who read the notes before the session would. Don't announce you're "checking their journal." Just bring it up warmly and ask one question to open up the conversation.`;
         }
       }
 
-      if (shouldOpenWithJournal) {
-        // Opening that leads with the new journal entry
-        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user briefly by their real name (if available) — no long introductions.\n- Then immediately reference their latest journal entry (see below). Make it feel natural, like a therapist who read their notes.${journalInstruction}\n- At the very end, add this ONE casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+      // Priority 3: upcoming event within 48 hours, if no journal hook
+      if (!openingHint && upcomingEvents && upcomingEvents.length > 0) {
+        const nextEvent = upcomingEvents[0] as any;
+        const eventDate = new Date(nextEvent.startDate);
+        const hoursUntil = (eventDate.getTime() - Date.now()) / (1000 * 60 * 60);
+        if (hoursUntil <= 48) {
+          const eventLabel = nextEvent.title || 'something coming up';
+          openingHint = `The user has "${eventLabel}" happening in the next 48 hours. In your first reply, mention this naturally — ask how they're feeling about it or if they want to talk through it. Keep it casual and warm.`;
+        }
+      }
+
+      // Priority 4: theme from last session if no journal or event hook
+      if (!openingHint && chatContextData && chatContextData.length > 0) {
+        const lastSession = chatContextData[0];
+        if (lastSession.summary) {
+          openingHint = `Last session: "${lastSession.summary.slice(0, 200)}". In your first reply, briefly and warmly pick up the thread from last time — don't recite the summary, just reference the emotional core of it and ask how things have been since. Keep it short and human.`;
+        }
+      }
+
+      // Priority 5: no prior data at all — just a warm open greeting
+      const finishReminder = `At the very end of your first reply, add this one casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+
+      if (openingHint) {
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user briefly by their name (if you know it) — no long introductions.\n- ${openingHint}\n- ${finishReminder}`;
       } else {
-        // Opening that just greets warmly without forcing the journal
-        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly and briefly by their real name (if available). Keep it simple and human.\n- Do NOT open by talking about their journal entry. Just check in naturally — ask how they are, what's on their mind, or gently reference a theme from a previous session if one is relevant. Keep it conversational and open.\n- At the very end, add this ONE casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly and briefly by name (if you know it). Keep it simple and human — ask how they are or what's on their mind.\n- ${finishReminder}`;
       }
     }
 
@@ -730,10 +758,10 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       crisisResponse = getCrisisResources(riskAssessment.level, userCountry);
     }
     
-    // Get chat context from previous sessions
+    // Get chat context from previous sessions — load 10 for richer memory.
     const chatContextData = await ChatContext.find({ user: req.userId })
       .sort({ sessionDate: -1 })
-      .limit(5)
+      .limit(10)
       .select('importantPoints summary sessionDate')
       .lean();
 
@@ -742,9 +770,10 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
 
     // Always fetch journal entries directly from the database (same reason as streamChat):
     // ensures correct sort order, correct `createdAt` field, and fresh data.
+    // Load 10 entries for better mood trend visibility.
     const recentEntriesComplete = await JournalEntry.find({ author: req.userId })
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(10)
       .select('createdAt mood content aiInsights')
       .lean();
     const journalEntries: IJournalEntry[] = recentEntriesComplete as unknown as IJournalEntry[];
