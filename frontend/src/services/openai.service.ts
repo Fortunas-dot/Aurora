@@ -116,18 +116,29 @@ export class OpenAIService {
       console.error('Chat stream error:', event);
       eventSource.close();
 
-      // Try to extract error message
-      let errorMessage = 'Failed to stream response';
+      // Try to extract a user-friendly error message
+      let errorMessage = 'Something went wrong — please try again.';
 
-      if (event.message) {
-        errorMessage = event.message;
-      } else if (event.data) {
+      if (event.data) {
         try {
           const errorData = JSON.parse(event.data);
-          errorMessage = errorData.message || errorData.error?.message || errorMessage;
+          // Backend sends { success: false, message: "..." } or { error: "..." }
+          const extracted = errorData.message || errorData.error?.message || errorData.error || '';
+          if (extracted && typeof extracted === 'string') {
+            // Strip raw Anthropic JSON blobs — just use the human-readable message
+            const isRawApiError = extracted.startsWith('{"type"') || extracted.includes('"overloaded_error"');
+            errorMessage = isRawApiError
+              ? 'Aurora is a bit busy right now — please try again in a moment.'
+              : extracted;
+          }
         } catch {
-          // Ignore parse errors
+          // Ignore parse errors — keep the default friendly message
         }
+      } else if (event.message && typeof event.message === 'string') {
+        const isRawApiError = event.message.includes('overloaded_error') || event.message.startsWith('{"type"');
+        errorMessage = isRawApiError
+          ? 'Aurora is a bit busy right now — please try again in a moment.'
+          : event.message;
       }
 
       onError(new Error(errorMessage));

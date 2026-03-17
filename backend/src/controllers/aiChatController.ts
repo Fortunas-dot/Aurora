@@ -239,6 +239,34 @@ const shouldUseAdvancedModel = (messages: ChatMessage[]): boolean => {
          (isDeepConversation && hasComplexityKeywords) || hasMultipleQuestions;
 };
 
+// ── Stage-direction cleaner ────────────────────────────────────────────────
+// Claude Haiku ignores prompt-level bans on *asterisk actions* — strip them here.
+// Called on the complete accumulated response before it is sent to the client.
+const cleanResponse = (text: string): string => {
+  return text
+    // Remove *anything up to ~8 words* in asterisks (stage directions like *warmly*, *nods*)
+    .replace(/\*[^*\n]{1,60}\*/g, '')
+    // Remove single-adverb parenthetical stage directions: (warmly), (gently), (softly) …
+    .replace(/\(\s*\w+ly\s*\)/gi, '')
+    // Clean up extra whitespace left by removals
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/^\s+|\s+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+// ── Retry helper for Anthropic overloaded errors ───────────────────────────
+const isOverloadedError = (err: any): boolean => {
+  if (!err) return false;
+  return (
+    err?.error?.type === 'overloaded_error' ||
+    err?.type === 'overloaded_error' ||
+    (typeof err?.message === 'string' && err.message.toLowerCase().includes('overloaded'))
+  );
+};
+
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
 // @desc    Stream chat completion from OpenAI
 // @route   POST /api/ai/chat
 // @access  Private
@@ -467,35 +495,6 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
     const selectedModel = 'claude-3-haiku-20240307';
 
-    // Set up SSE headers for streaming
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
-    res.flushHeaders();
-
-    // If high risk, send crisis resources IMMEDIATELY before starting the AI response
-    // This ensures users see help resources right away, not after waiting for the full response
-    if (riskAssessment.requiresCrisisResponse && crisisResponse) {
-      const crisisData = {
-        type: 'crisis_resources',
-        riskLevel: riskAssessment.level,
-        message: crisisResponse.message,
-        resources: crisisResponse.resources 
-      };
-      // Security: Only log that crisis resources were sent, not the actual content
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🚨 Sending crisis resources immediately (details not logged for privacy)');
-      }
-      res.write(`data: ${JSON.stringify(crisisData)}\n\n`);
-      // Note: res.write() automatically flushes in Express for SSE streams
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Crisis resources sent');
-      }
-    } else if (process.env.NODE_ENV === 'development') {
-      console.log('⚠️ Not sending crisis resources - requiresCrisisResponse:', riskAssessment.requiresCrisisResponse, 'crisisResponse:', !!crisisResponse);
-    }
-
     // Prepare Claude messages: system prompt + user/assistant turns
     const claudeMessages = openaiMessages
       .filter(m => m.role !== 'system')
@@ -510,80 +509,97 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
     // Standard: 300 tokens (~200 words) — enough for a real, warm therapeutic reply.
     const streamMaxTokens = useAdvancedModel ? 500 : 300;
 
-    // Create streaming completion with selected model
-    // Use slightly higher temperature for warm, human responses, but cap length to keep answers short
-    const stream = await claude.messages.stream({
-      model: selectedModel,
-      system: systemContent,
-      max_tokens: streamMaxTokens, // Keep responses short and focused
-      temperature: 0.75, // Slightly higher for more natural, empathetic responses
-      messages: claudeMessages.map(m => ({
-        role: m.role,
-        content: [
-          {
-            type: 'text',
-            text: m.content,
-          },
-        ],
-      })),
-    });
-
-    // Accumulate the full response before sending to the client.
-    // This allows us to strip stage directions (e.g. *warmly*, *gently*) before
-    // the text ever reaches the user.  The frontend typing animation provides the
-    // "streaming" visual effect on its own, so the UX is unchanged.
+    // ── Call Claude BEFORE opening the SSE connection ─────────────────────────
+    // Accumulating the full response first means:
+    //   1. We can retry on overloaded_error (up to 3 times, exponential back-off).
+    //   2. We can strip stage directions before anything reaches the client.
+    //   3. If Claude fails entirely we can still return a clean JSON error.
+    const MAX_RETRIES = 3;
     let accumulatedText = '';
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        accumulatedText += event.delta.text;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        accumulatedText = '';
+        const stream = await claude.messages.stream({
+          model: selectedModel,
+          system: systemContent,
+          max_tokens: streamMaxTokens,
+          temperature: 0.75,
+          messages: claudeMessages.map(m => ({
+            role: m.role,
+            content: [{ type: 'text', text: m.content }],
+          })),
+        });
+
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            accumulatedText += event.delta.text;
+          }
+        }
+
+        break; // ✅ Success — exit retry loop
+
+      } catch (err: any) {
+        if (isOverloadedError(err) && attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 1000; // 1 s, 2 s, 4 s
+          console.warn(`Claude overloaded — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await sleep(delay);
+          continue;
+        }
+        // Non-overloaded error OR max retries exhausted — bubble up to outer catch
+        throw err;
       }
     }
 
-    // ── Stage-direction cleaner ──────────────────────────────────────────────
-    // Claude Haiku ignores prompt-level bans on *asterisk actions* — strip them here.
-    // Patterns removed:
-    //   *word*           e.g. *warmly*, *nods*, *gently*
-    //   *multi word*     e.g. *nods empathetically*, *leans in*
-    //   (adverb)         e.g. (warmly), (gently), (softly)
-    const cleanResponse = (text: string): string => {
-      return text
-        // Remove *anything up to ~8 words* in asterisks
-        .replace(/\*[^*\n]{1,60}\*/g, '')
-        // Remove single-word (adverb) parenthetical stage directions
-        .replace(/\(\s*\w+ly\s*\)/gi, '')
-        // Clean up extra whitespace left by removals
-        .replace(/[ \t]{2,}/g, ' ')
-        .replace(/^\s+|\s+$/gm, '')   // trim each line
-        .replace(/\n{3,}/g, '\n\n')   // collapse 3+ blank lines to 2
-        .trim();
-    };
-
+    // ── Clean stage directions ────────────────────────────────────────────────
     const cleanedContent = cleanResponse(accumulatedText);
 
-    // Send cleaned content as a single event — frontend types it out
+    // ── Only NOW open the SSE connection ─────────────────────────────────────
+    // At this point Claude has responded successfully, so we won't need to send a
+    // JSON error — it's safe to switch the response to SSE format.
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    // If high risk, send crisis resources before the AI reply
+    if (riskAssessment.requiresCrisisResponse && crisisResponse) {
+      const crisisData = {
+        type: 'crisis_resources',
+        riskLevel: riskAssessment.level,
+        message: crisisResponse.message,
+        resources: crisisResponse.resources,
+      };
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚨 Sending crisis resources (details not logged for privacy)');
+      }
+      res.write(`data: ${JSON.stringify(crisisData)}\n\n`);
+    }
+
+    // Send cleaned AI response as a single SSE event — frontend typing animation
+    // plays it out character by character so the UX feels identical to real streaming.
     if (cleanedContent) {
       res.write(`data: ${JSON.stringify({ content: cleanedContent })}\n\n`);
     }
 
-    // Note: Crisis resources are sent immediately when detected (before streaming starts)
-    // to ensure users see help resources right away.
-
-    // Send completion signal
     res.write('data: [DONE]\n\n');
     res.end();
 
   } catch (error: any) {
-    console.error('AI Chat streaming error:', error);
-    
-    // If headers haven't been sent, send JSON error
+    console.error('AI Chat error:', error);
+
+    const friendlyMessage = isOverloadedError(error)
+      ? "Aurora is a bit busy right now — please try again in a moment."
+      : (error.message || 'Error generating response');
+
     if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Error streaming chat response',
-      });
+      // SSE not yet opened — return a clean JSON error
+      const statusCode = isOverloadedError(error) ? 503 : 500;
+      res.status(statusCode).json({ success: false, message: friendlyMessage });
     } else {
-      // If streaming already started, send error in stream format
-      res.write(`data: ${JSON.stringify({ error: error.message || 'Streaming error' })}\n\n`);
+      // SSE already opened — send error through stream and close
+      res.write(`data: ${JSON.stringify({ error: friendlyMessage })}\n\n`);
       res.end();
     }
   }
@@ -759,29 +775,40 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
     const hardCap = useAdvancedModel ? 500 : 300;
     const safeMaxTokens = Math.min(maxTokens, hardCap);
 
-    const completion = await claude.messages.create({
-      model: selectedModel,
-      system: systemContent,
-      max_tokens: safeMaxTokens,
-      temperature: 0.75, // Slightly higher for more natural, empathetic responses
-      // Cast to any to satisfy Anthropic's MessageParam typing without pulling in SDK types here
-      messages: claudeMessages as any,
-    });
+    // ── Call Claude with retry on overloaded errors ───────────────────────────
+    const MAX_RETRIES_COMPLETE = 3;
+    let completion: Awaited<ReturnType<typeof claude.messages.create>> | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES_COMPLETE; attempt++) {
+      try {
+        completion = await claude.messages.create({
+          model: selectedModel,
+          system: systemContent,
+          max_tokens: safeMaxTokens,
+          temperature: 0.75,
+          messages: claudeMessages as any,
+        });
+        break; // ✅ Success
+
+      } catch (err: any) {
+        if (isOverloadedError(err) && attempt < MAX_RETRIES_COMPLETE) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.warn(`Claude overloaded (completeChat) — retrying in ${delay} ms (attempt ${attempt + 1}/${MAX_RETRIES_COMPLETE})`);
+          await sleep(delay);
+          continue;
+        }
+        throw err;
+      }
+    }
 
     const rawContent =
-      completion.content
+      completion!.content
         .filter(block => block.type === 'text')
         .map(block => (block as any).text)
         .join('') || '';
 
-    // Apply the same stage-direction cleaner used in streamChat
-    const content = rawContent
-      .replace(/\*[^*\n]{1,60}\*/g, '')
-      .replace(/\(\s*\w+ly\s*\)/gi, '')
-      .replace(/[ \t]{2,}/g, ' ')
-      .replace(/^\s+|\s+$/gm, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    // Apply the module-level stage-direction cleaner
+    const content = cleanResponse(rawContent);
 
     res.json({
       success: true,
@@ -801,9 +828,10 @@ ${crisisResponse.resources.map(r => `- ${r.name}: ${r.number} (${r.available})`)
 
   } catch (error: any) {
     console.error('AI Chat completion error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error completing chat',
-    });
+    const statusCode = isOverloadedError(error) ? 503 : 500;
+    const friendlyMessage = isOverloadedError(error)
+      ? "Aurora is a bit busy right now — please try again in a moment."
+      : (error.message || 'Error completing chat');
+    res.status(statusCode).json({ success: false, message: friendlyMessage });
   }
 };
