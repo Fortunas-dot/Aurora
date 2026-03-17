@@ -204,40 +204,59 @@ const shouldUseAdvancedModel = (messages: ChatMessage[]): boolean => {
     .map(m => m.content.toLowerCase())
     .join(' ');
 
-  // Heuristics for complex reasoning needs
-  const complexityIndicators = [
-    // Keywords indicating deep analysis
-    /\b(analyze|analysis|deep|complex|complicated|understand|explain|why|how|pattern|insight|therapeutic|cognitive|behavioral|psychological|trauma|ptsd|depression|anxiety|therapy|counseling|treatment)\b/i,
-    // Questions requiring reasoning
-    /\b(what does this mean|what should i do|help me understand|can you explain|why do i|how can i|what if|what would happen)\b/i,
-    // Emotional depth indicators
-    /\b(struggling|difficult|hard|challenging|overwhelming|confused|lost|stuck|trapped|hopeless|helpless)\b/i,
-    // Multi-part questions
-    /\?.*\?/i, // Multiple question marks
-    // Data/journal/profile queries — need enough tokens to actually describe the data
-    /\b(journal|entries|entry|wrote|written|health|profile|calendar|agenda|latest|recent|last|history)\b/i,
+  const conversationTurns = messages.filter(m => m.role === 'user').length;
+  const lastMessageLength = lastUserMessage.length;
+
+  // ── Trivial gate ────────────────────────────────────────────────────────────
+  // Only stay on the lighter model if the message is a very short, clearly
+  // non-emotional opener (e.g. "hi", "hello", "hey there").
+  // Everything else in a mental-health context deserves the full model.
+  const trivialGreeting = /^(hi|hey|hello|sup|yo|hiya|howdy|good morning|good evening|good afternoon|thanks|thank you|ok|okay|sure|sounds good|got it|great|nice|cool|lol|haha)[.!?\s]*$/i;
+  const isTrivialOpener = trivialGreeting.test(lastUserMessage.trim()) && conversationTurns <= 1;
+
+  if (isTrivialOpener) {
+    return false; // gpt-4o-mini is fine for a plain greeting
+  }
+
+  // ── After 3 turns the conversation is real — always use full model ──────────
+  if (conversationTurns >= 3) {
+    return true;
+  }
+
+  // ── Emotional / psychological signals (catches casual phrasing too) ─────────
+  const emotionalIndicators = [
+    // Core clinical terms
+    /\b(trauma|ptsd|depression|depressed|anxiety|anxious|panic|bipolar|ocd|adhd|therapy|therapist|counseling|treatment|psychiatrist|medication|diagnosis)\b/i,
+    // Cognitive / behavioural language
+    /\b(cognitive|behavioral|pattern|insight|trigger|coping|mechanism|dissociation|intrusive|rumination|avoidance)\b/i,
+    // Everyday emotional distress
+    /\b(sad|upset|angry|angry|frustrated|numb|empty|lonely|alone|scared|afraid|worried|stressed|exhausted|burnout|overwhelmed|hopeless|helpless|worthless|guilty|ashamed|embarrassed)\b/i,
+    // Struggling / stuck language
+    /\b(struggling|difficult|hard|challenging|confused|lost|stuck|trapped|falling apart|breaking down|can't cope|can't handle|giving up|no point|no purpose)\b/i,
+    // Relationship / life-event distress
+    /\b(relationship|breakup|divorce|grief|loss|death|abuse|toxic|narcissist|manipulative|family|parent|childhood|past)\b/i,
+    // Analytical questions
+    /\b(analyze|analysis|understand|explain|why do i|how can i|what does this mean|what should i do|help me understand|what if|what would happen|how come|what causes)\b/i,
+    // Data / journal queries — need room to describe the data
+    /\b(journal|entries|entry|wrote|written|health|profile|calendar|agenda|history|latest|recent|last week|last month)\b/i,
+    // Feeling statements (e.g. "I feel", "I am feeling")
+    /\b(i feel|i'm feeling|feeling like|i felt|makes me feel|i've been feeling)\b/i,
   ];
 
-  // Check if any complexity indicators match
-  const hasComplexityKeywords = complexityIndicators.some(pattern => 
+  const hasEmotionalSignal = emotionalIndicators.some(pattern =>
     pattern.test(lastUserMessage) || pattern.test(allUserMessages)
   );
 
-  // Check message length (longer messages often need more analysis)
-  const lastMessageLength = lastUserMessage.length;
-  const isLongMessage = lastMessageLength > 500;
+  if (hasEmotionalSignal) {
+    return true;
+  }
 
-  // Check conversation depth (longer conversations may need deeper context)
-  const conversationTurns = messages.filter(m => m.role === 'user').length;
-  const isDeepConversation = conversationTurns > 8;
-
-  // Check for multiple questions or complex sentence structure
+  // ── Length & question complexity ────────────────────────────────────────────
+  const isLongMessage = lastMessageLength > 200; // lower bar than before
   const questionCount = (lastUserMessage.match(/\?/g) || []).length;
   const hasMultipleQuestions = questionCount >= 2;
 
-  // Use advanced model if any complexity indicators are present
-  return hasComplexityKeywords || (isLongMessage && conversationTurns > 3) || 
-         (isDeepConversation && hasComplexityKeywords) || hasMultipleQuestions;
+  return isLongMessage || hasMultipleQuestions;
 };
 
 // ── Stage-direction cleaner ────────────────────────────────────────────────
