@@ -266,14 +266,30 @@ export const formatChatContextForAI = (chatContexts: Array<{
     return '';
   }
 
+  // Compute today/yesterday strings in the user's local timezone so relative
+  // labels are correct regardless of the UTC offset on the server.
+  const nowLocal = new Date();
+  const todayStr = nowLocal.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const yesterdayDate = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = yesterdayDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+
   const contextParts = chatContexts.map((ctx, idx) => {
-    const date = new Date(ctx.sessionDate).toLocaleDateString('en-US', {
+    const sessionDate = new Date(ctx.sessionDate);
+    const date = sessionDate.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'Europe/Amsterdam',
     });
+    const sessionDayStr = sessionDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+    // Explicit relative label so the AI never confuses "today" with "yesterday"
+    let relativeLabel = '';
+    if (sessionDayStr === todayStr) relativeLabel = ' ← TODAY (EARLIER TODAY)';
+    else if (sessionDayStr === yesterdayStr) relativeLabel = ' ← YESTERDAY';
+
     const points = ctx.importantPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n');
-    let summary = `Session ${idx + 1} (${date}):\n${points}`;
+    let summary = `Session ${idx + 1} (${date}${relativeLabel}):\n${points}`;
     if (ctx.summary) {
       summary += `\n  Summary: ${ctx.summary}`;
     }
