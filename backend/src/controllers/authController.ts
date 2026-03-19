@@ -596,10 +596,11 @@ export const verifyEmailRedirect = async (req: Request, res: Response): Promise<
 
     res.send(
       getSimpleStatusPage(
-        'Email verified',
-        'Your email has been successfully verified. You can now return to the Aurora app.',
-        true,
-        'aurora://email-verified'
+        'Email verified ✓',
+        'Your email has been successfully verified. You can now switch back to the Aurora app — it will update automatically.',
+        true
+        // No deep link here: the app detects verification via a focus-based refresh,
+        // so no button is needed and users won't see a "cannot open" Safari error.
       )
     );
   } catch (error) {
