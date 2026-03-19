@@ -66,10 +66,14 @@ export class SMSVerificationService {
     } catch (error: any) {
       const errorCode = error?.code;
       const errorMessage = error?.message || '';
-      console.error(`❌ Error sending SMS verification code [Twilio code: ${errorCode}]:`, errorMessage);
+      const normalizedMessage = errorMessage.toLowerCase();
+      console.error(
+        `❌ Error sending SMS verification code [Twilio code: ${errorCode}, status: ${error?.status}]:`,
+        errorMessage
+      );
       
       // Invalid phone number format
-      if (errorCode === 21211 || errorMessage.toLowerCase().includes('invalid')) {
+      if (errorCode === 21211 || normalizedMessage.includes('invalid')) {
         return {
           success: false,
           message: 'Invalid phone number. Please check the number and country code, and try again.',
@@ -77,7 +81,7 @@ export class SMSVerificationService {
       }
       
       // Unsubscribed / opted out
-      if (errorCode === 21614 || errorMessage.toLowerCase().includes('unsubscribed')) {
+      if (errorCode === 21614 || normalizedMessage.includes('unsubscribed')) {
         return {
           success: false,
           message: 'This phone number cannot receive SMS messages. Please use a different number.',
@@ -92,19 +96,33 @@ export class SMSVerificationService {
         errorCode === 21408 ||
         errorCode === 21215 ||
         errorCode === 30004 ||
-        errorMessage.toLowerCase().includes('permission') ||
-        errorMessage.toLowerCase().includes('not authorized') ||
-        errorMessage.toLowerCase().includes('geo') ||
-        errorMessage.toLowerCase().includes('region')
+        errorCode === 21608 ||
+        normalizedMessage.includes('permission') ||
+        normalizedMessage.includes('not authorized') ||
+        normalizedMessage.includes('geo') ||
+        normalizedMessage.includes('region')
       ) {
         return {
           success: false,
-          message: 'SMS is currently not supported for your country. Please contact support.',
+          message: 'SMS sending to this country/region is not enabled for the current Twilio sender. Please update Twilio regional permissions or sender configuration.',
+        };
+      }
+
+      // US A2P/10DLC and carrier filtering issues
+      if (
+        errorCode === 30034 ||
+        errorCode === 30007 ||
+        normalizedMessage.includes('10dlc') ||
+        normalizedMessage.includes('a2p')
+      ) {
+        return {
+          success: false,
+          message: 'SMS blocked by carrier policy. Please complete Twilio A2P 10DLC registration for your US sender.',
         };
       }
 
       // Rate limit / too many requests
-      if (errorCode === 20429 || errorMessage.toLowerCase().includes('too many')) {
+      if (errorCode === 20429 || normalizedMessage.includes('too many')) {
         return {
           success: false,
           message: 'Too many SMS requests. Please wait a moment and try again.',
@@ -114,7 +132,9 @@ export class SMSVerificationService {
       // Generic error
       return {
         success: false,
-        message: 'Failed to send verification code. Please check your phone number and try again.',
+        message: errorCode
+          ? `Failed to send verification code (Twilio error ${errorCode}). Please contact support.`
+          : 'Failed to send verification code. Please try again.',
       };
     }
   }

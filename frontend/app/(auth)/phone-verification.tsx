@@ -41,15 +41,22 @@ export default function PhoneVerificationScreen() {
   });
 
   const buildFullPhoneNumber = () => {
-    // Strip all non-digit characters
+    const countryCodeDigits = selectedCountry.dialCode.replace(/\D/g, '');
     let digitsOnly = phoneLocal.replace(/\D/g, '');
-    if (!digitsOnly) return '';
-    // Strip leading zero — most countries use 0 as a trunk prefix for national
-    // dialing (e.g. UK 07911123456, NL 0612345678). That 0 must be removed when
-    // prepending the international dial code (+44, +31, …).
-    if (digitsOnly.startsWith('0')) {
-      digitsOnly = digitsOnly.slice(1);
+    if (!digitsOnly || !countryCodeDigits) return '';
+
+    // Users may paste in international forms like 0044..., +44..., or 44...
+    if (digitsOnly.startsWith('00')) {
+      digitsOnly = digitsOnly.slice(2);
     }
+    if (digitsOnly.startsWith(countryCodeDigits)) {
+      digitsOnly = digitsOnly.slice(countryCodeDigits.length);
+    }
+
+    // Remove national trunk prefix (usually a leading 0) before E.164 rebuild.
+    digitsOnly = digitsOnly.replace(/^0+/, '');
+    if (!digitsOnly) return '';
+
     return `${selectedCountry.dialCode}${digitsOnly}`;
   };
 
@@ -253,7 +260,7 @@ export default function PhoneVerificationScreen() {
                 <View style={styles.helperRow}>
                   <Ionicons name="information-circle-outline" size={16} color={COLORS.textSecondary} />
                   <Text style={styles.helperText}>
-                    Select your country on the left and enter your phone number without the leading zero.
+                    Select your country and enter your number. You can type local format, with leading zero, or paste full international format.
                   </Text>
                 </View>
 
