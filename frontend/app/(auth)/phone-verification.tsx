@@ -18,7 +18,9 @@ export default function PhoneVerificationScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<Params>();
 
-  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(
+    COUNTRIES.find((c) => c.code === 'US') ?? COUNTRIES[0]
+  );
   const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [phoneLocal, setPhoneLocal] = useState('');
@@ -145,7 +147,8 @@ export default function PhoneVerificationScreen() {
               size="md"
               style={styles.backButton}
               onPress={() => router.back()}
-              leftIcon={<Ionicons name="arrow-back" size={22} color={COLORS.text} />}
+              icon={<Ionicons name="arrow-back" size={22} color={COLORS.text} />}
+              iconPosition="left"
             />
           </View>
 
@@ -284,7 +287,7 @@ export default function PhoneVerificationScreen() {
                   onChangeText={setCode}
                   placeholder="123456"
                   label="Verification code"
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   autoCapitalize="none"
                   autoCorrect={false}
                   icon="key-outline"

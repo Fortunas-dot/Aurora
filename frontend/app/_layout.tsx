@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, StyleSheet, Platform, Text, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
 import { useTheme } from '../src/hooks/useTheme';
@@ -23,6 +23,11 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PostHogProvider, PostHog, usePostHog } from 'posthog-react-native';
 import * as Updates from 'expo-updates';
+
+// Prevent the OS "Font size / Larger Text" accessibility setting from scaling our designed UI.
+// Individual components can still override `allowFontScaling` explicitly if needed.
+(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: false };
+(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: false };
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (

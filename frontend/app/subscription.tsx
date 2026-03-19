@@ -609,7 +609,9 @@ export default function SubscriptionScreen() {
                 )}
               </View>
               <View style={styles.priceRow}>
-                <Text style={[styles.priceBig, { color: '#9B59B6' }]}>€4.99</Text>
+                <Text style={[styles.priceBig, { color: '#9B59B6' }]}>
+                  {monthlyPackage?.product?.priceString ?? '...'}
+                </Text>
                 <Text style={[styles.priceDetail, { color: '#6C757D' }]}>per month</Text>
               </View>
               {isPremium ? (
@@ -688,7 +690,14 @@ export default function SubscriptionScreen() {
 
           {/* Auto-renew note */}
           <Text style={[styles.autoRenewNote, { color: '#6C757D' }]}>
-            Auto-renews for €4.99/month until canceled. Introductory price valid for the first 500 subscribers.
+            {monthlyPackage?.product?.priceString ? (
+              <>
+                Auto-renews for {monthlyPackage.product.priceString}/month until canceled. Introductory
+                price valid for the first 500 subscribers.
+              </>
+            ) : (
+              <>Auto-renews monthly until canceled. Introductory price valid for the first 500 subscribers.</>
+            )}
           </Text>
 
           {/* Restore Purchases */}
