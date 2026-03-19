@@ -7,6 +7,7 @@ const {
   TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN,
   TWILIO_PHONE_NUMBER,
+  TWILIO_MESSAGING_SERVICE_SID,
 } = process.env;
 
 if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
@@ -20,19 +21,22 @@ if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
 export class SMSVerificationService {
   private client: Twilio | null;
   private fromNumber: string | null;
+  private messagingServiceSid: string | null;
 
   constructor() {
-    if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER) {
+    if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && (TWILIO_PHONE_NUMBER || TWILIO_MESSAGING_SERVICE_SID)) {
       this.client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-      this.fromNumber = TWILIO_PHONE_NUMBER;
+      this.fromNumber = TWILIO_PHONE_NUMBER || null;
+      this.messagingServiceSid = TWILIO_MESSAGING_SERVICE_SID || null;
     } else {
       this.client = null;
       this.fromNumber = null;
+      this.messagingServiceSid = null;
     }
   }
 
   isConfigured(): boolean {
-    return !!this.client && !!this.fromNumber;
+    return !!this.client && (!!this.fromNumber || !!this.messagingServiceSid);
   }
 
   generateVerificationCode(): string {
@@ -53,11 +57,19 @@ export class SMSVerificationService {
       'This code will expire in 5 minutes.';
 
     try {
-      await this.client.messages.create({
+      const payload: Record<string, string> = {
         body,
-        from: this.fromNumber,
         to: phoneNumber,
-      });
+      };
+
+      // Prefer Messaging Service for international sending (it can pick a compliant sender per destination).
+      if (this.messagingServiceSid) {
+        payload.messagingServiceSid = this.messagingServiceSid;
+      } else if (this.fromNumber) {
+        payload.from = this.fromNumber;
+      }
+
+      await this.client.messages.create(payload);
 
       return {
         success: true,
@@ -118,6 +130,15 @@ export class SMSVerificationService {
         return {
           success: false,
           message: 'SMS blocked by carrier policy. Please complete Twilio A2P 10DLC registration for your US sender.',
+        };
+      }
+
+      // Twilio "To/From combination" errors (commonly sender-country/network restrictions)
+      if (errorCode === 21612 || normalizedMessage.includes('combination of "to" and/or "from"')) {
+        return {
+          success: false,
+          message:
+            'This sender number cannot deliver to the selected destination. Configure a Twilio Messaging Service with a sender compatible with that country.',
         };
       }
 
