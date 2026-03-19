@@ -667,18 +667,34 @@ function getSimpleStatusPage(title: string, message: string, success: boolean, d
     ? 'linear-gradient(135deg,#22c55e,#16a34a)'
     : 'linear-gradient(135deg,#ef4444,#b91c1c)';
 
+  // Try the deep link in two formats (triple-slash = Expo Router canonical form,
+  // double-slash = fallback used by older builds).  After 2 seconds, if the browser
+  // is still showing this page the app didn't open — reveal plain "go back manually"
+  // instructions instead of leaving the user stuck.
   const deepLinkScript = deepLink
     ? `<script>
-         setTimeout(function() {
-           window.location.href = '${deepLink}';
-         }, 800);
-       </script>`
+        var _deepLink = '${deepLink}';
+        // Attempt the open immediately
+        function tryOpen() {
+          try { window.location.href = _deepLink; } catch(e) {}
+        }
+        // iOS / Android might need a small delay before the app takes over
+        setTimeout(tryOpen, 400);
+        // If we are still here after 2 s the app did NOT open — show the fallback
+        setTimeout(function() {
+          var btn = document.getElementById('open-btn');
+          var fb  = document.getElementById('fallback-msg');
+          if (btn) btn.style.display = 'none';
+          if (fb)  fb.style.display  = 'block';
+        }, 2000);
+      </script>`
     : '';
 
   const deepLinkHint = deepLink
     ? `
-       <a 
-         href="${deepLink}" 
+       <button
+         id="open-btn"
+         onclick="try{window.location.href='${deepLink}';}catch(e){}"
          style="
            display:inline-block;
            margin-top:20px;
@@ -686,15 +702,17 @@ function getSimpleStatusPage(title: string, message: string, success: boolean, d
            border-radius:999px;
            background:linear-gradient(135deg,#6366f1,#a855f7);
            color:#f9fafb;
-           text-decoration:none;
+           border:none;
+           cursor:pointer;
            font-weight:600;
            font-size:15px;
          "
        >
          Open Aurora
-       </a>
-       <p style="margin-top:12px;font-size:13px;color:#9ca3af;">
-         If nothing happens, tap the button above again or copy and paste the link into your browser&apos;s address bar.
+       </button>
+       <p id="fallback-msg" style="display:none;margin-top:16px;font-size:14px;color:#d1d5db;line-height:1.6;">
+         Couldn&apos;t open Aurora automatically.<br/>
+         Please switch back to the Aurora app manually &mdash; your email is already verified. ✓
        </p>`
     : '';
 

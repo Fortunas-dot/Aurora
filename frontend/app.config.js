@@ -37,6 +37,11 @@ module.exports = {
         FacebookAutoLogAppEventsEnabled: true, // Enable automatic app event logging (required for test events)
         // CFBundleURLTypes for Facebook URL scheme (required for SDK deep linking)
         CFBundleURLTypes: [
+          // Register the Aurora deep-link scheme so ios opens the app for aurora:// URLs
+          {
+            CFBundleURLSchemes: ['aurora'],
+          },
+          // Facebook URL scheme required by the Facebook SDK
           {
             CFBundleURLSchemes: [
               process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1261010692592854',

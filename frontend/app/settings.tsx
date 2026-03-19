@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
   Alert,
   Modal,
   Linking,
+  AppState,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -98,7 +99,7 @@ const SwitchItem: React.FC<SwitchItemProps> = React.memo(({
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, updateUser } = useAuthStore();
   const { colors } = useTheme();
   const {
     auroraStyle,
@@ -123,6 +124,35 @@ export default function SettingsScreen() {
       loadConsent();
     }
   }, [isAuthenticated, loadSettings, loadConsent]);
+
+  // Refresh emailVerified from the server when the user returns to this screen
+  // (e.g. after clicking the verification link in their email and coming back).
+  const emailVerifiedRef = useRef(user?.emailVerified);
+  emailVerifiedRef.current = user?.emailVerified;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!emailVerifiedRef.current) {
+        authService.getMe().then((response) => {
+          if (response.success && response.data?.emailVerified) {
+            updateUser({ emailVerified: true });
+          }
+        }).catch(() => { /* silently ignore */ });
+      }
+
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active' && !emailVerifiedRef.current) {
+          authService.getMe().then((response) => {
+            if (response.success && response.data?.emailVerified) {
+              updateUser({ emailVerified: true });
+            }
+          }).catch(() => { /* silently ignore */ });
+        }
+      });
+
+      return () => subscription.remove();
+    }, [updateUser])
+  );
 
   const loadBlockedUsers = async () => {
     setIsLoadingBlocked(true);

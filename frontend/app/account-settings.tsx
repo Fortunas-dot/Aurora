@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   Platform,
   Alert,
   Pressable,
+  AppState,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -100,6 +101,39 @@ export default function AccountSettingsScreen() {
     setVerificationError('');
     setVerificationInfo('');
   }, [user?.phoneNumber, user?._id]); // Trigger when user or phoneNumber changes
+
+  // Refresh emailVerified status from the server when the screen comes back into
+  // focus (e.g. after the user clicked the verification link in their email and
+  // returned to the app).  Only runs while the email is still unverified to
+  // avoid unnecessary requests once verification is complete.
+  const emailVerifiedRef = useRef(user?.emailVerified);
+  emailVerifiedRef.current = user?.emailVerified;
+
+  useFocusEffect(
+    useCallback(() => {
+      // Refresh once on focus if not yet verified
+      if (!emailVerifiedRef.current) {
+        authService.getMe().then((response) => {
+          if (response.success && response.data?.emailVerified) {
+            updateUser({ emailVerified: true });
+          }
+        }).catch(() => { /* silently ignore */ });
+      }
+
+      // Also refresh when the app comes back from background while this screen is shown
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active' && !emailVerifiedRef.current) {
+          authService.getMe().then((response) => {
+            if (response.success && response.data?.emailVerified) {
+              updateUser({ emailVerified: true });
+            }
+          }).catch(() => { /* silently ignore */ });
+        }
+      });
+
+      return () => subscription.remove();
+    }, [updateUser])
+  );
 
   const filteredCountries = COUNTRIES.filter((country) => {
     if (!countrySearch.trim()) return true;
