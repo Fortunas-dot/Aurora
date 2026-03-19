@@ -64,30 +64,50 @@ export class SMSVerificationService {
         message: 'Verification code sent',
       };
     } catch (error: any) {
-      console.error('❌ Error sending SMS verification code:', error?.message || error);
-      
-      // Handle Twilio-specific errors
       const errorCode = error?.code;
       const errorMessage = error?.message || '';
+      console.error(`❌ Error sending SMS verification code [Twilio code: ${errorCode}]:`, errorMessage);
       
-      if (errorCode === 21211 || errorMessage.includes('Invalid') || errorMessage.includes('invalid')) {
+      // Invalid phone number format
+      if (errorCode === 21211 || errorMessage.toLowerCase().includes('invalid')) {
         return {
           success: false,
           message: 'Invalid phone number. Please check the number and country code, and try again.',
         };
       }
       
-      if (errorCode === 21614 || errorMessage.includes('unsubscribed')) {
+      // Unsubscribed / opted out
+      if (errorCode === 21614 || errorMessage.toLowerCase().includes('unsubscribed')) {
         return {
           success: false,
           message: 'This phone number cannot receive SMS messages. Please use a different number.',
         };
       }
       
-      if (errorCode === 21408 || errorMessage.includes('permission')) {
+      // Geographic permission denied (country not enabled in Twilio)
+      // 21408 = permission not enabled for region
+      // 21215 = account not authorized for region
+      // 30004 = message blocked
+      if (
+        errorCode === 21408 ||
+        errorCode === 21215 ||
+        errorCode === 30004 ||
+        errorMessage.toLowerCase().includes('permission') ||
+        errorMessage.toLowerCase().includes('not authorized') ||
+        errorMessage.toLowerCase().includes('geo') ||
+        errorMessage.toLowerCase().includes('region')
+      ) {
         return {
           success: false,
-          message: 'SMS service is not available for this phone number. Please contact support.',
+          message: 'SMS is currently not supported for your country. Please contact support.',
+        };
+      }
+
+      // Rate limit / too many requests
+      if (errorCode === 20429 || errorMessage.toLowerCase().includes('too many')) {
+        return {
+          success: false,
+          message: 'Too many SMS requests. Please wait a moment and try again.',
         };
       }
       

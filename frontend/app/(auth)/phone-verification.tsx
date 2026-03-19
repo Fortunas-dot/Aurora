@@ -41,8 +41,15 @@ export default function PhoneVerificationScreen() {
   });
 
   const buildFullPhoneNumber = () => {
-    const digitsOnly = phoneLocal.replace(/\D/g, '');
+    // Strip all non-digit characters
+    let digitsOnly = phoneLocal.replace(/\D/g, '');
     if (!digitsOnly) return '';
+    // Strip leading zero — most countries use 0 as a trunk prefix for national
+    // dialing (e.g. UK 07911123456, NL 0612345678). That 0 must be removed when
+    // prepending the international dial code (+44, +31, …).
+    if (digitsOnly.startsWith('0')) {
+      digitsOnly = digitsOnly.slice(1);
+    }
     return `${selectedCountry.dialCode}${digitsOnly}`;
   };
 
