@@ -57,7 +57,7 @@ export class SMSVerificationService {
       'This code will expire in 5 minutes.';
 
     try {
-      const payload: Record<string, string> = {
+      const payload: any = {
         body,
         to: phoneNumber,
       };
