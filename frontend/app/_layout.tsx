@@ -224,10 +224,11 @@ export default function RootLayout() {
           console.warn('Facebook SDK initialization failed:', error);
         });
 
-        // Initialize RevenueCat (non-blocking)
-        revenueCatService.initialize().catch((error) => {
-          console.warn('RevenueCat initialization failed:', error);
-        });
+        // NOTE: RevenueCat is intentionally NOT initialized here anonymously.
+        // Initializing without a user ID would create a new anonymous customer
+        // record in RevenueCat for every cold app launch, inflating "new customers"
+        // metrics. Instead, RevenueCat is initialized with the real user ID inside
+        // identifyUser(), which is called after login (see the auth useEffect below).
       } catch (error) {
         console.error('Initialization error:', error);
         // Ensure loading state is cleared even on error

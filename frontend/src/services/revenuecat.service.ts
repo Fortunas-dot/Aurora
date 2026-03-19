@@ -252,11 +252,9 @@ class RevenueCatServiceImpl implements RevenueCatService {
    * Get current customer info
    */
   async getCustomerInfo(): Promise<CustomerInfo | null> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    if (!this.isAvailable) {
+    // Do not trigger an anonymous initialization — only fetch if already initialized
+    // with a real user ID (via identifyUser).
+    if (!this.initialized || !this.isAvailable) {
       return null;
     }
 
@@ -285,11 +283,9 @@ class RevenueCatServiceImpl implements RevenueCatService {
    * Get available offerings (products/packages)
    */
   async getOfferings(): Promise<PurchasesOffering | null> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    if (!this.isAvailable) {
+    // Do not trigger an anonymous initialization — only fetch if already initialized
+    // with a real user ID (via identifyUser).
+    if (!this.initialized || !this.isAvailable) {
       return null;
     }
 
