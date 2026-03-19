@@ -692,9 +692,9 @@ function getSimpleStatusPage(title: string, message: string, success: boolean, d
 
   const deepLinkHint = deepLink
     ? `
-       <button
+       <a
          id="open-btn"
-         onclick="try{window.location.href='${deepLink}';}catch(e){}"
+         href="${deepLink}"
          style="
            display:inline-block;
            margin-top:20px;
@@ -702,14 +702,13 @@ function getSimpleStatusPage(title: string, message: string, success: boolean, d
            border-radius:999px;
            background:linear-gradient(135deg,#6366f1,#a855f7);
            color:#f9fafb;
-           border:none;
-           cursor:pointer;
+           text-decoration:none;
            font-weight:600;
            font-size:15px;
          "
        >
          Open Aurora
-       </button>
+       </a>
        <p id="fallback-msg" style="display:none;margin-top:16px;font-size:14px;color:#d1d5db;line-height:1.6;">
          Couldn&apos;t open Aurora automatically.<br/>
          Please switch back to the Aurora app manually &mdash; your email is already verified. ✓
