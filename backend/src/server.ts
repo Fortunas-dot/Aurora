@@ -20,6 +20,7 @@ import aiRoutes from './routes/ai';
 import therapistRoutes from './routes/therapists';
 import seedRoutes from './routes/seed';
 import calendarRoutes from './routes/calendar';
+import { ensureDemoPostsAndComments } from './scripts/ensureDemoPosts';
 
 // Models
 import Idea from './models/Idea';
@@ -74,6 +75,15 @@ connectDB().then(async () => {
     }
   } catch (err) {
     console.warn('[Idea] Failed to inspect/drop invalid upvotes/downvotes index:', err);
+  }
+
+  // Demo content safety net.
+  // Production uses Railway DB and does not allow /api/seed in NODE_ENV=production,
+  // so we ensure a small set of demo posts exist without wiping any data.
+  try {
+    await ensureDemoPostsAndComments();
+  } catch (err) {
+    console.warn('[ensureDemoPosts] Failed:', err);
   }
 }).catch((err) => {
   console.error('Failed to connect to MongoDB:', err);
