@@ -524,6 +524,71 @@ If you're struggling with OCD, please know that you're not alone, and you're not
     postType: 'story' as const,
     tags: ['ocd', 'anxiety', 'mental-health', 'therapy', 'recovery', 'hope'],
   },
+  {
+    title: 'My anxiety gets loud at night when it is quiet. What helps?',
+    content:
+      'During the day I can usually cope, but at night when things get quiet my brain starts racing. I end up stuck in that "what if" loop, and my body feels tense even when I am safe. Breathing helps for a minute, then the thoughts come right back.\n\nI am looking for routines or grounding strategies that help you switch from "on" to "sleep." What do you do to wind down (music, journaling, a routine, grounding, anything)? And what do you do when your mind refuses to slow down?',
+    postType: 'question' as const,
+    tags: ['anxiety', 'sleep', 'night-routine', 'coping', 'question'],
+    comments: [
+      'Oof, the quiet at night spiral is so real.',
+      'I relate. What is helped me is the same wind down every night, no negotiating.',
+      'If breathing only works for a minute, try grounding before bed. It gives my brain a task.',
+      'You are not alone. The fact you are looking for a strategy instead of blaming yourself matters.',
+    ],
+  },
+  {
+    title: 'Therapy homework week. I did the boring stuff and honestly… I am proud',
+    content:
+      'This week was not dramatic. It was just real. I did the little homework my therapist asked for, even when I did not feel like it.\n\nOne check in, one journaling prompt, and one moment where I caught my brain doing the worst case story and I interrupted it. Nothing magically fixed my life overnight, but I feel steadier.\n\nIf you are waiting for motivation to show up first, this is your reminder that showing up small still counts.',
+    postType: 'post' as const,
+    tags: ['therapy', 'self-care', 'progress', 'habits'],
+    comments: [
+      'This is the kind of progress I wish more people talked about.',
+      'Small homework wins are huge, especially when you are tired.',
+      'I love that you caught the worst case story and interrupted it. That is real work.',
+      'Proud of you. Keep doing the boring things.',
+    ],
+  },
+  {
+    title: 'The guilt that hits when I finally rest. How do you handle it?',
+    content:
+      'Does anyone else get guilt when they finally stop and rest? For me it is like, "If I am not being productive, I am falling behind." Even when I am exhausted, I feel restless like I should be doing chores, replying, catching up.\n\nI know rest is important, but the guilt feels louder than the logic. What helped you reframe it? Any practical scripts or boundaries you use so you can actually relax without spiraling?',
+    postType: 'question' as const,
+    tags: ['burnout', 'guilt', 'boundaries', 'self-care', 'question'],
+    comments: [
+      'Yes. My brain treats rest like it is optional, and that is exhausting.',
+      'A script helps me too. I literally say to myself, "I am allowed to stop now."',
+      'Try a tiny next step instead of trying to relax instantly. It eases the guilt.',
+      'Rest is not something you earn. Your nervous system needs it.',
+    ],
+  },
+  {
+    title: 'I set a boundary with my family and nothing exploded (small win)',
+    content:
+      'I used to dread certain family conversations because they always turned into pressure. I would go in stressed, and I would leave even more stressed.\n\nThis time I tried something small. I gave myself a time limit and used a simple script. When it started drifting into that zone, I said calmly I was not available right now, and I ended the call.\n\nI expected to feel awful, but honestly I felt lighter. Not perfect, not forever fixed, but my nervous system finally got a break.',
+    postType: 'story' as const,
+    tags: ['boundaries', 'family', 'stress', 'healing', 'support'],
+    comments: [
+      'That is a big win. Boundaries are hard when people keep pushing.',
+      'I am proud of you for using a script instead of arguing.',
+      'Ending the call is underrated. Your peace matters more than being understood in that moment.',
+      'Small wins like this change the pattern over time.',
+    ],
+  },
+  {
+    title: 'ADHD mornings. How do you start without burning out?',
+    content:
+      'Mornings are hard. I wake up and everything feels urgent, but I cannot decide what matters first. Then I either do nothing, or I do one thing and crash.\n\nJust be motivated advice does not work when my brain is overloaded.\n\nWhat helps you actually start? Do you use timers, body doubling, a tiny checklist, or prep the night before? What does your first 20 to 30 minutes look like on a tough day?',
+    postType: 'question' as const,
+    tags: ['adhd', 'routine', 'morning', 'productivity', 'question'],
+    comments: [
+      'I need a super short plan or I freeze.',
+      'Timers plus body doubling help me start without burning out.',
+      'Prep the night before is my cheat code. Even one tiny step helps.',
+      'Thank you for asking. I am saving this for the next rough morning.',
+    ],
+  },
 ];
 
 const sampleComments = [
@@ -663,9 +728,10 @@ async function seedDatabase() {
       const postData = samplePosts[i];
       const author = createdUsers[i % createdUsers.length];
       const group = i < createdGroups.length ? createdGroups[i] : null;
-      
-      const post = await Post.create({
-        ...postData,
+
+    const { comments: postComments, ...postDoc } = postData as any;
+    const post = await Post.create({
+      ...postDoc,
         author: author._id,
         groupId: group?._id,
         likes: createdUsers.slice(0, Math.floor(Math.random() * 5)).map(u => u._id),
@@ -677,10 +743,27 @@ async function seedDatabase() {
     
     // Create comments
     console.log('💬 Creating comments...');
-    for (let i = 0; i < createdPosts.length; i++) {
-      const post = createdPosts[i];
+  for (let i = 0; i < createdPosts.length; i++) {
+    const post = createdPosts[i];
+    const postData = samplePosts[i] as any;
+    const postComments = Array.isArray(postData.comments) ? postData.comments : null;
+
+    if (Array.isArray(postComments) && postComments.length > 0) {
+      for (const commentText of postComments) {
+        const commentAuthor = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+        const comment = await Comment.create({
+          post: post._id,
+          author: commentAuthor._id,
+          content: commentText,
+          likes: [],
+        });
+        
+        post.commentsCount += 1;
+        await post.save();
+        console.log(`  ✓ Created comment on post ${i + 1}`);
+      }
+    } else {
       const numComments = Math.floor(Math.random() * 4) + 1;
-      
       for (let j = 0; j < numComments; j++) {
         const commentAuthor = createdUsers[Math.floor(Math.random() * createdUsers.length)];
         const comment = await Comment.create({
@@ -690,12 +773,12 @@ async function seedDatabase() {
           likes: [],
         });
         
-        // Update post comments count
         post.commentsCount += 1;
         await post.save();
         console.log(`  ✓ Created comment on post ${i + 1}`);
       }
     }
+  }
     
     // Create follow relationships
     console.log('🔗 Creating follow relationships...');
