@@ -10,6 +10,11 @@ type DemoPostSeed = {
   postType: PostType;
   tags: string[];
   comments: string[];
+  /**
+   * Target number of demo comments we want for this post.
+   * We only ADD missing demo comments (we never delete).
+   */
+  targetCommentCount: number;
 };
 
 // Keep this list small and deterministic so it is safe to run on every backend start.
@@ -26,7 +31,10 @@ const DEMO_POSTS: DemoPostSeed[] = [
       'I relate. What is helped me is the same wind down every night, no negotiating.',
       'If breathing only works for a minute, try grounding before bed. It gives my brain a task.',
       'You are not alone. The fact you are looking for a strategy instead of blaming yourself matters.',
+      'If you can, try one small wind down promise (like no scrolling). It gives your brain a rule.',
+      'I do a quick body scan and it helps me stop arguing with my thoughts.',
     ],
+    targetCommentCount: 6,
   },
   {
     title: 'Therapy homework week. I did the boring stuff and honestly… I am proud',
@@ -39,7 +47,10 @@ const DEMO_POSTS: DemoPostSeed[] = [
       'Small homework wins are huge, especially when you are tired.',
       'I love that you caught the worst case story and interrupted it. That is real work.',
       'Proud of you. Keep doing the boring things.',
+      'Tiny efforts add up. It sounds boring, but it is actually powerful.',
+      'I needed to read this today. Thank you for sharing it.',
     ],
+    targetCommentCount: 6,
   },
   {
     title: 'The guilt that hits when I finally rest. How do you handle it?',
@@ -52,7 +63,10 @@ const DEMO_POSTS: DemoPostSeed[] = [
       'A script helps me too. I literally say to myself, "I am allowed to stop now."',
       'Try a tiny next step instead of trying to relax instantly. It eases the guilt.',
       'Rest is not something you earn. Your nervous system needs it.',
+      'That guilt voice gets quieter when you repeat the same permission phrase.',
+      'If rest feels guilty, try resting with a purpose. Like "I am recovering."',
     ],
+    targetCommentCount: 5,
   },
   {
     title: 'I set a boundary with my family and nothing exploded (small win)',
@@ -65,7 +79,10 @@ const DEMO_POSTS: DemoPostSeed[] = [
       'I am proud of you for using a script instead of arguing.',
       'Ending the call is underrated. Your peace matters more than being understood in that moment.',
       'Small wins like this change the pattern over time.',
+      'You did the healthy thing, even when it might have felt uncomfortable in the moment.',
+      'I love this. Boundaries aren\'t mean; they are protection.',
     ],
+    targetCommentCount: 6,
   },
   {
     title: 'ADHD mornings. How do you start without burning out?',
@@ -78,30 +95,72 @@ const DEMO_POSTS: DemoPostSeed[] = [
       'Timers plus body doubling help me start without burning out.',
       'Prep the night before is my cheat code. Even one tiny step helps.',
       'Thank you for asking. I am saving this for the next rough morning.',
+      'I set up the first task the night before. So in the morning I only have to start.',
+      'On bad days, I aim for start only and let the rest wait.',
     ],
+    targetCommentCount: 6,
   },
 ];
 
 // Force a stable demo date so the UI shows the expected timeline.
 // The UI typically uses Post.createdAt / Comment.createdAt.
-const FIXED_DEMO_DATE_UTC = new Date('2026-03-20T12:00:00.000Z');
+// We also vary the time within 09:00–13:00 on 20 March so everything doesn't look identical.
+const DEMO_DATE_UTC = { year: 2026, monthIndex: 2, day: 20 }; // monthIndex=2 => March
+const DEMO_HOUR_START_UTC = 9;
+const DEMO_HOUR_END_UTC = 13;
+
+const makeUtc = (hour: number, minute: number): Date => {
+  return new Date(Date.UTC(DEMO_DATE_UTC.year, DEMO_DATE_UTC.monthIndex, DEMO_DATE_UTC.day, hour, minute, 0, 0));
+};
+
+const getPostTimestamp = (seedIndex: number): Date => {
+  const hour = Math.min(DEMO_HOUR_END_UTC, DEMO_HOUR_START_UTC + seedIndex);
+  const minute = (seedIndex * 13) % 60;
+  return makeUtc(hour, minute);
+};
+
+const getCommentTimestamp = (seedIndex: number, commentIndex: number): Date => {
+  const hour = Math.min(DEMO_HOUR_END_UTC, DEMO_HOUR_START_UTC + seedIndex);
+  const minute = (commentIndex * 15 + seedIndex * 7) % 60;
+  return makeUtc(hour, minute);
+};
 
 export const ensureDemoPostsAndComments = async (): Promise<void> => {
-  const users = await User.find({}).select('_id username').limit(50);
-  if (users.length === 0) {
-    console.warn('[ensureDemoPosts] No users found; skipping demo post creation.');
-    return;
-  }
+  // Use explicit usernames so demo "poster" authors are deterministic and
+  // we never accidentally use the same person for every post.
+  const demoAuthorUsernames = [
+    'sarah_wellness',
+    'mike_mindful',
+    'lisa_healing',
+    'david_strong',
+    'emma_hopeful',
+    'james_calm',
+    'sophia_zen',
+    'alex_recovery',
+  ];
 
-  // Use a stable list of authors so comments/posts look consistent but still "human".
-  const pickUserId = (i: number) => users[i % users.length]._id;
+  const users = await User.find({ username: { $in: demoAuthorUsernames } }).select('_id username');
+  const usersByUsername = new Map(users.map((u) => [u.username, u._id]));
 
-  for (const seed of DEMO_POSTS) {
+  const pickUserId = (i: number) => {
+    const username = demoAuthorUsernames[i % demoAuthorUsernames.length];
+    const id = usersByUsername.get(username);
+    if (id) return id;
+
+    // Fallback: pick any user if some demo usernames are missing in DB.
+    const anyUser = users[0];
+    if (anyUser?._id) return anyUser._id;
+    throw new Error('[ensureDemoPosts] No demo users found to assign authors.');
+  };
+
+  for (let seedIndex = 0; seedIndex < DEMO_POSTS.length; seedIndex++) {
+    const seed = DEMO_POSTS[seedIndex];
     let post = await Post.findOne({ title: seed.title }).select('_id title commentsCount');
 
     if (!post) {
+      const postTimestamp = getPostTimestamp(seedIndex);
       post = await Post.create({
-        author: pickUserId(0),
+        author: pickUserId(seedIndex),
         title: seed.title,
         content: seed.content,
         postType: seed.postType,
@@ -111,42 +170,86 @@ export const ensureDemoPostsAndComments = async (): Promise<void> => {
         commentsCount: 0,
         images: [],
         video: undefined,
-        createdAt: FIXED_DEMO_DATE_UTC,
-        updatedAt: FIXED_DEMO_DATE_UTC,
+        createdAt: postTimestamp,
+        updatedAt: postTimestamp,
       });
     } else {
-      // If the post already exists (from a previous seed run), fix its timestamp anyway.
+      // If the post already exists (from a previous seed run), fix its timestamp and author anyway.
+      const postTimestamp = getPostTimestamp(seedIndex);
       await Post.updateOne(
         { _id: post._id },
-        { $set: { createdAt: FIXED_DEMO_DATE_UTC, updatedAt: FIXED_DEMO_DATE_UTC } }
+        {
+          $set: {
+            author: pickUserId(seedIndex),
+            createdAt: postTimestamp,
+            updatedAt: postTimestamp,
+          },
+        }
       );
     }
 
-    const existingComments = await Comment.find({ post: post._id }).select('content');
+    const existingComments = await Comment.find({ post: post._id }).select('content likes');
     const existingContents = new Set(existingComments.map((c) => c.content));
+    const existingCount = existingComments.length;
 
-    let created = 0;
-    for (let i = 0; i < seed.comments.length; i++) {
-      const text = seed.comments[i];
-      if (existingContents.has(text)) continue;
+    // Create missing demo comments up to the target count (never delete).
+    if (existingCount < seed.targetCommentCount) {
+      const remainingSlots = seed.targetCommentCount - existingCount;
+      const toCreate = seed.comments.filter((text) => !existingContents.has(text)).slice(0, remainingSlots);
 
-      await Comment.create({
-        post: post._id,
-        author: pickUserId(i + 1 + created),
-        content: text,
-        likes: [],
-        createdAt: FIXED_DEMO_DATE_UTC,
-        updatedAt: FIXED_DEMO_DATE_UTC,
-      });
+      for (let i = 0; i < toCreate.length; i++) {
+        const text = toCreate[i];
+        const authorId = pickUserId(seedIndex + 1 + i);
+        const commentIndex = seed.comments.indexOf(text);
+        const commentTimestamp = getCommentTimestamp(seedIndex, commentIndex >= 0 ? commentIndex : i);
 
-      created += 1;
+        // Random likes: 0..3 demo users.
+        const likesCount = Math.floor(Math.random() * 4);
+        const likeUsers = users
+          .filter((u) => u._id.toString() !== authorId.toString())
+          .sort(() => Math.random() - 0.5)
+          .slice(0, likesCount)
+          .map((u) => u._id);
+
+        await Comment.create({
+          post: post._id,
+          author: authorId,
+          content: text,
+          likes: likeUsers,
+          createdAt: commentTimestamp,
+          updatedAt: commentTimestamp,
+        });
+      }
     }
 
-    // Ensure all seeded comments (even if they existed already) have the fixed demo date.
-    await Comment.updateMany(
-      { post: post._id, content: { $in: seed.comments } },
-      { $set: { createdAt: FIXED_DEMO_DATE_UTC, updatedAt: FIXED_DEMO_DATE_UTC } }
-    );
+    // Ensure all seeded comments (even if they existed already) have stable timestamps.
+    // Use different times within 09:00–13:00 so they don't all look identical.
+    for (let commentIndex = 0; commentIndex < seed.comments.length; commentIndex++) {
+      const commentTimestamp = getCommentTimestamp(seedIndex, commentIndex);
+      await Comment.updateMany(
+        { post: post._id, content: seed.comments[commentIndex] },
+        { $set: { createdAt: commentTimestamp, updatedAt: commentTimestamp } }
+      );
+    }
+
+    // Give seeded comments random likes if they currently have none.
+    const seededComments = await Comment.find({
+      post: post._id,
+      content: { $in: seed.comments },
+    }).select('content likes author');
+
+    for (const c of seededComments) {
+      if (Array.isArray(c.likes) && c.likes.length > 0) continue;
+
+      const likesCount = Math.floor(Math.random() * 4);
+      const likeUsers = users
+        .filter((u) => u._id.toString() !== c.author.toString())
+        .sort(() => Math.random() - 0.5)
+        .slice(0, likesCount)
+        .map((u) => u._id);
+
+      await Comment.updateOne({ _id: c._id }, { $set: { likes: likeUsers } });
+    }
 
     const actualCount = await Comment.countDocuments({ post: post._id });
     if (post.commentsCount !== actualCount) {
