@@ -66,7 +66,7 @@ export default function AiDataInfoScreen() {
             <View style={styles.listItem}>
               <Ionicons name="mic" size={20} color={colors.primary} />
               <Text style={[styles.listText, { color: colors.textSecondary }]}>
-                Voice recordings and transcripts (for voice therapy)
+                Voice recordings and transcripts (for voice features)
               </Text>
             </View>
             <View style={styles.listItem}>
@@ -163,7 +163,7 @@ export default function AiDataInfoScreen() {
             and relevant health information with our AI provider.
           </Text>
           <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
-            Without this data sharing, AI features like chat support, voice therapy, and 
+            Without this data sharing, AI features like chat support, voice features, and 
             journal insights cannot function. However, you can still use Aurora's community 
             features, groups, and manual journaling without enabling AI.
           </Text>

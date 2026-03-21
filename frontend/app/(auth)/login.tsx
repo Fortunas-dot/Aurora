@@ -142,7 +142,9 @@ export default function LoginScreen() {
           {/* Register Link */}
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push({ pathname: '/(auth)/phone-verification', params: { from: 'pre-register' } })}>
+            {/* SMS pre-register verification is temporarily bypassed.
+               Keep phone-verification screen/code for future re-enable. */}
+            <Pressable onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.registerLink}>Register</Text>
             </Pressable>
           </View>

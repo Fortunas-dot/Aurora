@@ -1044,8 +1044,9 @@ export default function TextChatScreen() {
       </View>
 
       <View style={[styles.chatContainer, { paddingBottom: keyboardHeight }]}>
-        {/* AI Consent banner above chat when consent is still unknown */}
-        {!isConsentLoading && aiConsentStatus === 'unknown' && (
+        {/* AI Consent banner above chat whenever consent is not granted.
+            If user denied before, we still show this every time until they allow. */}
+        {!isConsentLoading && aiConsentStatus !== 'granted' && (
           <View style={{ paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm }}>
             <AiConsentCard
               onAccept={grantAiConsent}
@@ -1079,7 +1080,7 @@ export default function TextChatScreen() {
         )}
         <ChatInput 
           onSend={handleSend} 
-          isDisabled={isStreaming || isLoading}
+          isDisabled={isStreaming || isLoading || aiConsentStatus !== 'granted'}
           isStreaming={isStreaming}
           onStop={cancelStreaming}
         />

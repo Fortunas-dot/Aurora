@@ -41,19 +41,53 @@ export default function PhoneVerificationScreen() {
   });
 
   const buildFullPhoneNumber = () => {
+    const raw = phoneLocal.trim();
     const countryCodeDigits = selectedCountry.dialCode.replace(/\D/g, '');
-    let digitsOnly = phoneLocal.replace(/\D/g, '');
-    if (!digitsOnly || !countryCodeDigits) return '';
+    if (!raw || !countryCodeDigits) return '';
 
-    // Users may paste in international forms like 0044..., +44..., or 44...
-    if (digitsOnly.startsWith('00')) {
-      digitsOnly = digitsOnly.slice(2);
+    // Normalize input while preserving a possible leading '+'.
+    const normalized = raw.replace(/[^\d+]/g, '');
+
+    // If user pasted a full international number, normalize to E.164.
+    if (normalized.startsWith('+')) {
+      let internationalDigits = normalized.slice(1).replace(/\D/g, '');
+      if (!internationalDigits) return '';
+
+      // Common paste pattern: +44 07... (country code + trunk zero).
+      // If it matches selected country code, remove exactly one trunk zero.
+      if (internationalDigits.startsWith(countryCodeDigits)) {
+        const remainder = internationalDigits.slice(countryCodeDigits.length);
+        if (remainder.startsWith('0')) {
+          internationalDigits = `${countryCodeDigits}${remainder.slice(1)}`;
+        }
+      }
+
+      return `+${internationalDigits}`;
     }
+    if (normalized.startsWith('00')) {
+      let internationalDigits = normalized.slice(2).replace(/\D/g, '');
+      if (!internationalDigits) return '';
+
+      if (internationalDigits.startsWith(countryCodeDigits)) {
+        const remainder = internationalDigits.slice(countryCodeDigits.length);
+        if (remainder.startsWith('0')) {
+          internationalDigits = `${countryCodeDigits}${remainder.slice(1)}`;
+        }
+      }
+
+      return `+${internationalDigits}`;
+    }
+
+    // Otherwise treat as local number for selected country.
+    let digitsOnly = normalized.replace(/\D/g, '');
+    if (!digitsOnly) return '';
+
+    // If the user typed country code without '+', avoid double-prefixing.
     if (digitsOnly.startsWith(countryCodeDigits)) {
       digitsOnly = digitsOnly.slice(countryCodeDigits.length);
     }
 
-    // Remove national trunk prefix (usually a leading 0) before E.164 rebuild.
+    // Remove national trunk prefix (usually leading zero) before rebuilding.
     digitsOnly = digitsOnly.replace(/^0+/, '');
     if (!digitsOnly) return '';
 

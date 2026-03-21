@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Asset } from 'expo-asset';
 import { GlassCard, GlassButton } from '../src/components/common';
 import { PaginationDots } from '../src/components/onboarding/PaginationDots';
 import { AuroraCore } from '../src/components/voice/AuroraCore';
@@ -30,7 +31,7 @@ const mitLogo = require('../assets/mit-university-logo-vector-free-11574209211h7
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Animated Badge Component for University Logos
-const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: string; logo: any }; index: number; colors: any }) => {
+const AnimatedBadge = React.memo(({ badge, index, colors, logosReady }: { badge: { name: string; logo: any }; index: number; colors: any; logosReady: boolean }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -152,17 +153,19 @@ const AnimatedBadge = React.memo(({ badge, index, colors }: { badge: { name: str
         style={styles.badgeGradient}
       >
         <View style={styles.badgeImageContainer}>
-          <Image
-            source={badge.logo}
-            style={styles.badgeLogo}
-            resizeMode="contain"
-            onError={(error) => {
-              console.error(`Error loading ${badge.name} logo:`, error);
-            }}
-            onLoad={() => {
-              console.log(`${badge.name} logo loaded successfully`);
-            }}
-          />
+          {logosReady ? (
+            <Image
+              source={badge.logo}
+              style={styles.badgeLogo}
+              resizeMode="contain"
+              fadeDuration={0}
+              onError={(error) => {
+                console.error(`Error loading ${badge.name} logo:`, error);
+              }}
+            />
+          ) : (
+            <Text style={styles.badgeFallbackText}>{badge.name}</Text>
+          )}
         </View>
       </LinearGradient>
     </Animated.View>
@@ -410,6 +413,7 @@ export default function OnboardingScreen() {
   const { colors } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [logosReady, setLogosReady] = useState(false);
   const { startOnboarding, finishOnboarding, nextStep, setStep, isActive, currentStep: onboardingStep } = useOnboardingStore();
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -445,6 +449,28 @@ export default function OnboardingScreen() {
     // Start onboarding when component mounts
     startOnboarding();
   }, [startOnboarding]);
+
+  useEffect(() => {
+    // Preload logo assets so badges don't appear as blank white squares.
+    let isMounted = true;
+    Asset.loadAsync([harvardLogo, stanfordLogo, mitLogo])
+      .then(() => {
+        if (isMounted) {
+          setLogosReady(true);
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to preload onboarding logos:', error);
+        if (isMounted) {
+          // Still render badges with fallback text if preload fails.
+          setLogosReady(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleNext = () => {
     const currentSlide = onboardingSlides[currentIndex];
@@ -568,6 +594,7 @@ export default function OnboardingScreen() {
                       badge={badge}
                       index={badgeIndex}
                       colors={colors}
+                      logosReady={logosReady}
                     />
                   ))}
                 </View>
@@ -655,6 +682,7 @@ export default function OnboardingScreen() {
                     badge={badge}
                     index={badgeIndex}
                     colors={colors}
+                    logosReady={logosReady}
                   />
                 ))}
               </View>
@@ -857,6 +885,13 @@ const styles = StyleSheet.create({
   badgeLogo: {
     width: '100%',
     height: '100%',
+  },
+  badgeFallbackText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   featuresGrid: {
     flexDirection: 'row',

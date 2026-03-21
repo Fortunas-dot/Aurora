@@ -362,7 +362,7 @@ export default function SettingsScreen() {
                     if (aiConsentStatus === 'granted') {
                       Alert.alert(
                         'Disable AI Features?',
-                        'This will stop sharing your data with our LLM. AI chat, voice therapy, and journal insights will be disabled.',
+                        'This will stop sharing your data with our LLM. AI chat, voice features, and journal insights will be disabled.',
                         [
                           { text: 'Cancel', style: 'cancel' },
                           { 
@@ -373,7 +373,8 @@ export default function SettingsScreen() {
                         ]
                       );
                     } else {
-                      router.push('/text-chat'); // This will show the consent card
+                      // Go to chat; consent form will always appear there until user allows.
+                      router.push('/text-chat');
                     }
                   }}
                 >
@@ -434,7 +435,7 @@ export default function SettingsScreen() {
                     <View style={styles.infoListItem}>
                       <Ionicons name="mic" size={18} color={colors.primary} />
                       <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
-                        Voice recordings and transcripts (for voice therapy)
+                        Voice recordings and transcripts (for voice features)
                       </Text>
                     </View>
                     <View style={styles.infoListItem}>
