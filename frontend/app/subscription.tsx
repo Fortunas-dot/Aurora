@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Linking,
   ActivityIndicator,
   Dimensions,
   Animated,
@@ -492,6 +493,29 @@ export default function SubscriptionScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (Platform.OS === 'ios') {
+      const subscriptionsUrl = 'https://apps.apple.com/account/subscriptions';
+      try {
+        const canOpen = await Linking.canOpenURL(subscriptionsUrl);
+        if (canOpen) {
+          await Linking.openURL(subscriptionsUrl);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to open iOS subscriptions link:', error);
+      }
+
+      Alert.alert(
+        'Manage Subscription',
+        'Open iPhone Settings, tap your Apple ID, then tap Subscriptions.'
+      );
+      return;
+    }
+
+    Alert.alert('Manage Subscription', 'Manage your subscription from your app store account settings.');
+  };
+
   const handleBack = () => {
     // User dismissed the subscription screen – from now on, enforce paywall for non‑premium users
     enforcePaywall();
@@ -666,17 +690,20 @@ export default function SubscriptionScreen() {
               styles.ctaButton,
               {
                 backgroundColor: colors.secondary,
-                opacity: isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || isPremium || (!monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android')) ? 0.7 : 1,
+                opacity:
+                  isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))
+                    ? 0.7
+                    : 1,
               },
             ]}
-            onPress={handlePurchase}
-            disabled={isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || isPremium || (!monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))}
+            onPress={isPremium ? handleManageSubscription : handlePurchase}
+            disabled={isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))}
             activeOpacity={0.9}
           >
             {isPurchasing ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : isPremium ? (
-              <Text style={styles.ctaButtonText}>You are already subscribed ✓</Text>
+              <Text style={styles.ctaButtonText}>Manage Subscription</Text>
             ) : isLoadingProducts && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (

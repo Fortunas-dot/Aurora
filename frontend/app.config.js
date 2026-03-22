@@ -139,6 +139,7 @@ module.exports = {
       require('./plugins/withAndroidFacebookAutoLog'),
       require('./plugins/withIOSFacebookAppDelegate'),
       require('./plugins/withIOSFacebookClientToken'),
+      require('./plugins/withTikTokSDK'),
     ],
     extra: {
       // Expo Project ID for push notifications and EAS

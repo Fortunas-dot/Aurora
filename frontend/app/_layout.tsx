@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, Platform, Text, TextInput } from 'react-native';
+import { ActivityIndicator, StyleSheet, Platform, Text, TextInput, Animated as RNAnimated, PixelRatio, AccessibilityInfo } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
 import { useTheme } from '../src/hooks/useTheme';
@@ -24,10 +24,89 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PostHogProvider, PostHog, usePostHog } from 'posthog-react-native';
 import * as Updates from 'expo-updates';
 
-// Prevent the OS "Font size / Larger Text" accessibility setting from scaling our designed UI.
-// Individual components can still override `allowFontScaling` explicitly if needed.
-(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: false };
-(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: false };
+// Prevent OS Dynamic Type ("Larger Text") from scaling app typography.
+// We set both flags to make behavior consistent across RN versions/components.
+(Text as any).defaultProps = {
+  ...(Text as any).defaultProps,
+  allowFontScaling: false,
+  maxFontSizeMultiplier: 1,
+};
+(TextInput as any).defaultProps = {
+  ...(TextInput as any).defaultProps,
+  allowFontScaling: false,
+  maxFontSizeMultiplier: 1,
+};
+
+const withNoFontScaling = (props: any) => ({
+  ...props,
+  allowFontScaling: false,
+  maxFontSizeMultiplier: 1,
+});
+
+// Force-disable font scaling even when components bypass defaultProps.
+const patchRenderNoFontScaling = (Component: any) => {
+  if (!Component || typeof Component.render !== 'function' || Component.__noFontScalingPatched) {
+    return;
+  }
+  const originalRender = Component.render;
+  Component.render = function patchedRender(props: any, ...args: any[]) {
+    return originalRender.call(this, withNoFontScaling(props), ...args);
+  };
+  Component.__noFontScalingPatched = true;
+};
+
+patchRenderNoFontScaling(Text as any);
+patchRenderNoFontScaling(TextInput as any);
+
+// Also enforce on Animated.Text / Animated.TextInput (they don't always inherit defaultProps)
+try {
+  // Force global font scale = 1 (prevents iOS Dynamic Type from affecting RN)
+  try {
+    const originalGetFontScale = PixelRatio.getFontScale?.bind(PixelRatio);
+    if (originalGetFontScale) {
+      (PixelRatio as any).__originalGetFontScale = originalGetFontScale;
+      (PixelRatio as any).getFontScale = () => 1;
+    }
+  } catch {}
+
+  // iOS only: set all accessibility content size multipliers to 1 if API exists
+  try {
+    const setMultipliers = (AccessibilityInfo as any)?.setAccessibilityContentSizeMultipliers;
+    if (Platform.OS === 'ios' && typeof setMultipliers === 'function') {
+      setMultipliers({
+        extraSmall: 1,
+        small: 1,
+        medium: 1,
+        large: 1,
+        extraLarge: 1,
+        extraExtraLarge: 1,
+        extraExtraExtraLarge: 1,
+        accessibilityMedium: 1,
+        accessibilityLarge: 1,
+        accessibilityExtraLarge: 1,
+        accessibilityExtraExtraLarge: 1,
+        accessibilityExtraExtraExtraLarge: 1,
+      }).catch(() => {});
+    }
+  } catch {}
+
+  const AnimatedText = (RNAnimated as any).Text;
+  if (AnimatedText) {
+    AnimatedText.defaultProps = {
+      ...(AnimatedText.defaultProps || {}),
+      allowFontScaling: false,
+      maxFontSizeMultiplier: 1,
+    };
+  }
+  const AnimatedTextInput = (RNAnimated as any).TextInput;
+  if (AnimatedTextInput) {
+    AnimatedTextInput.defaultProps = {
+      ...(AnimatedTextInput.defaultProps || {}),
+      allowFontScaling: false,
+      maxFontSizeMultiplier: 1,
+    };
+  }
+} catch {}
 
 function LoadingScreen({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
@@ -59,7 +138,7 @@ const posthogClient = posthogApiKey
       host: posthogHost,
       enableSessionReplay: true,
       errorTracking: {
-        autoCapture: true,
+        autocapture: true,
       },
     })
   : null;

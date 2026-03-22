@@ -637,7 +637,7 @@ export default function OnboardingScreen() {
                       <View style={[styles.therapistFeatureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
                         <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
                       </View>
-                      <Text style={styles.therapistFeatureText} allowFontScaling={true} numberOfLines={2}>Licensed{'\n'}Professionals</Text>
+                      <Text style={styles.therapistFeatureText} numberOfLines={2}>Licensed{'\n'}Professionals</Text>
                     </View>
                   </GlassCard>
                   <GlassCard padding="sm" style={styles.therapistFeatureCard} variant="light" gradient={false}>
@@ -645,7 +645,7 @@ export default function OnboardingScreen() {
                       <View style={[styles.therapistFeatureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
                         <Ionicons name="time" size={22} color={colors.primary} />
                       </View>
-                      <Text style={styles.therapistFeatureText} numberOfLines={2} allowFontScaling={true}>Answer questions{'\n'}under posts</Text>
+                      <Text style={styles.therapistFeatureText} numberOfLines={2}>Answer questions{'\n'}under posts</Text>
                     </View>
                   </GlassCard>
                 </View>

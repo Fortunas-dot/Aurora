@@ -728,9 +728,9 @@ async function seedDatabase() {
       const postData = samplePosts[i];
       const author = createdUsers[i % createdUsers.length];
       const group = i < createdGroups.length ? createdGroups[i] : null;
-
+      
     const { comments: postComments, ...postDoc } = postData as any;
-    const post = await Post.create({
+      const post = await Post.create({
       ...postDoc,
         author: author._id,
         groupId: group?._id,
@@ -743,8 +743,8 @@ async function seedDatabase() {
     
     // Create comments
     console.log('💬 Creating comments...');
-  for (let i = 0; i < createdPosts.length; i++) {
-    const post = createdPosts[i];
+    for (let i = 0; i < createdPosts.length; i++) {
+      const post = createdPosts[i];
     const postData = samplePosts[i] as any;
     const postComments = Array.isArray(postData.comments) ? postData.comments : null;
 
@@ -777,8 +777,8 @@ async function seedDatabase() {
         await post.save();
         console.log(`  ✓ Created comment on post ${i + 1}`);
       }
+      }
     }
-  }
     
     // Create follow relationships
     console.log('🔗 Creating follow relationships...');
