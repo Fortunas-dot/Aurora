@@ -552,11 +552,12 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
 
       // Priority 5: no prior data at all — just a warm open greeting
       const finishReminder = `At the very end of your first reply, add this one casual sentence: "And whenever you're done — don't forget to hit 'Finish Session' so I can remember all of this next time."`;
+      const languageNote = `Also, in your first reply, include one short, natural sentence that lets them know they can talk to you in any language they prefer (e.g., "You can speak to me in any language — I'll follow along.").`;
 
       if (openingHint) {
-        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user briefly by their name (if you know it) — no long introductions.\n- ${openingHint}\n- ${finishReminder}`;
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user briefly by their name (if you know it) — no long introductions.\n- ${openingHint}\n- ${languageNote}\n- ${finishReminder}`;
       } else {
-        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly and briefly by name (if you know it). Keep it simple and human — ask how they are or what's on their mind.\n- ${finishReminder}`;
+        systemContent += `\n\nFIRST MESSAGE INSTRUCTIONS:\n- Greet the user warmly and briefly by name (if you know it). Keep it simple and human — ask how they are or what's on their mind.\n- ${languageNote}\n- ${finishReminder}`;
       }
     }
 

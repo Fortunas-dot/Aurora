@@ -104,7 +104,7 @@ export const useStreamingResponse = (provider: 'claude' | 'openai' = 'claude') =
 
       // If this is the first message, add instruction to mention the finish session button
       if (isFirstMessage) {
-        systemContent += '\n\nIMPORTANT: This is your first message in this conversation. In your response, you MUST mention: "Do not forget at the end to press the \'Finish Session\' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.';
+        systemContent += '\n\nIMPORTANT: This is your first message in this conversation. In your response, you MUST mention: "Do not forget at the end to press the \'Finish Session\' button so I can save everything that is being said in this chat and use it for our next conversations." Include this naturally in your greeting.\nAlso add one short, natural sentence letting the user know they can talk to you in any language they prefer (for example: "You can speak to me in any language — I\'ll follow along.").';
       }
       
       const systemMessage = {
