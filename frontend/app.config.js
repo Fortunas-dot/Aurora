@@ -172,6 +172,10 @@ module.exports = {
         process.env.EXPO_PUBLIC_POSTHOG_API_KEY ||
         'phc_6BMEJjnxrz3BAfLj8Y1N0lOizGAhnk1d9XNp3Tl2HRB',
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
+      // TikTok Business SDK – App IDs are safe to ship in the binary
+      // App Secret (TTTKAx9Hybui6DPuIEajio326Vk8pgTB) stays on the backend only
+      TIKTOK_APP_ID: '6758727961',
+      TIKTOK_TIKTOK_APP_ID: '7620071833756237841',
     },
   },
 };
