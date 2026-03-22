@@ -185,26 +185,72 @@ function withTikTokAppDelegate(config) {
       return config;
     }
 
-    // ── Add import ───────────────────────────────────────────────────────────
-    const tiktokImport = `#import <TikTokBusinessSDK/TikTokBusiness.h>`;
+    // ── Detect Swift vs Objective-C ─────────────────────────────────────────
+    // Expo SDK 50+ may generate AppDelegate.swift; older ones use AppDelegate.mm
+    const filePath = config.modResults.path || '';
+    const isSwift =
+      filePath.endsWith('.swift') ||
+      // Fallback: check for Swift-specific syntax in the file content
+      /^\s*import\s+UIKit/m.test(appDelegate) ||
+      /^\s*func\s+application\(/m.test(appDelegate);
 
-    if (appDelegate.includes('#import <UIKit/UIKit.h>')) {
-      appDelegate = appDelegate.replace(
-        '#import <UIKit/UIKit.h>',
-        `#import <UIKit/UIKit.h>\n${tiktokImport}`
-      );
-    } else if (appDelegate.includes('#import "AppDelegate.h"')) {
-      appDelegate = appDelegate.replace(
-        '#import "AppDelegate.h"',
-        `#import "AppDelegate.h"\n${tiktokImport}`
-      );
+    if (isSwift) {
+      // ────────────────────────────────────────────────────────────────────
+      // Swift AppDelegate
+      // ────────────────────────────────────────────────────────────────────
+      const tiktokImport = 'import TikTokBusinessSDK';
+
+      // Add import after the last top-level import statement
+      if (!appDelegate.includes(tiktokImport)) {
+        // Find the last "import Foo" line and insert after it
+        appDelegate = appDelegate.replace(
+          /^(import \S+)(\r?\n)(?!import )/m,
+          `$1$2${tiktokImport}$2`
+        );
+      }
+
+      const initCode = `
+    // ── TikTok Business SDK initialization ──────────────────────────────────
+    let tiktokConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
+    TikTokBusiness.initializeSdk(tiktokConfig)
+    // ────────────────────────────────────────────────────────────────────────
+`;
+
+      // Match Swift's didFinishLaunchingWithOptions signature
+      const swiftDidFinishPattern =
+        /func\s+application\s*\(\s*_\s+application\s*:\s*UIApplication\s*,\s*didFinishLaunchingWithOptions[^{]*\{/;
+
+      if (swiftDidFinishPattern.test(appDelegate)) {
+        appDelegate = appDelegate.replace(swiftDidFinishPattern, (match) => `${match}${initCode}`);
+        console.log('✅ TikTok SDK initialization injected into Swift AppDelegate');
+      } else {
+        console.warn(
+          '⚠️  Could not locate didFinishLaunchingWithOptions in Swift AppDelegate – ' +
+          'TikTok SDK init code was NOT injected. You may need to add it manually.'
+        );
+      }
     } else {
-      // Prepend to file if no known import anchor found
-      appDelegate = `${tiktokImport}\n${appDelegate}`;
-    }
+      // ────────────────────────────────────────────────────────────────────
+      // Objective-C AppDelegate (.m / .mm)
+      // ────────────────────────────────────────────────────────────────────
+      const tiktokImport = `#import <TikTokBusinessSDK/TikTokBusiness.h>`;
 
-    // ── Add initialization in didFinishLaunchingWithOptions ─────────────────
-    const initCode = `
+      if (appDelegate.includes('#import <UIKit/UIKit.h>')) {
+        appDelegate = appDelegate.replace(
+          '#import <UIKit/UIKit.h>',
+          `#import <UIKit/UIKit.h>\n${tiktokImport}`
+        );
+      } else if (appDelegate.includes('#import "AppDelegate.h"')) {
+        appDelegate = appDelegate.replace(
+          '#import "AppDelegate.h"',
+          `#import "AppDelegate.h"\n${tiktokImport}`
+        );
+      } else {
+        // Prepend to file if no known import anchor found
+        appDelegate = `${tiktokImport}\n${appDelegate}`;
+      }
+
+      const initCode = `
   // ── TikTok Business SDK initialization ──────────────────────────────────
   TikTokConfig *tiktokConfig = [[TikTokConfig alloc]
     initWithAppId:@"${TIKTOK_APP_ID}"
@@ -213,20 +259,18 @@ function withTikTokAppDelegate(config) {
   // ────────────────────────────────────────────────────────────────────────
 `;
 
-    // Match both Swift-template style and classic ObjC style
-    const didFinishPattern =
-      /(-\s*\(BOOL\)\s*application:\s*\(UIApplication\s*\*\)\s*\w+\s+didFinishLaunchingWithOptions:\s*\(NSDictionary\s*\*\)\s*\w+\s*\{)/;
+      const objcDidFinishPattern =
+        /(-\s*\(BOOL\)\s*application:\s*\(UIApplication\s*\*\)\s*\w+\s+didFinishLaunchingWithOptions:\s*\(NSDictionary\s*\*\)\s*\w+\s*\{)/;
 
-    if (didFinishPattern.test(appDelegate)) {
-      appDelegate = appDelegate.replace(didFinishPattern, (match) => {
-        return `${match}${initCode}`;
-      });
-      console.log('✅ TikTok SDK initialization injected into AppDelegate');
-    } else {
-      console.warn(
-        '⚠️  Could not locate didFinishLaunchingWithOptions in AppDelegate – ' +
-        'TikTok SDK init code was NOT injected. You may need to add it manually.'
-      );
+      if (objcDidFinishPattern.test(appDelegate)) {
+        appDelegate = appDelegate.replace(objcDidFinishPattern, (match) => `${match}${initCode}`);
+        console.log('✅ TikTok SDK initialization injected into ObjC AppDelegate');
+      } else {
+        console.warn(
+          '⚠️  Could not locate didFinishLaunchingWithOptions in ObjC AppDelegate – ' +
+          'TikTok SDK init code was NOT injected. You may need to add it manually.'
+        );
+      }
     }
 
     config.modResults.contents = appDelegate;
