@@ -12,6 +12,7 @@ const path = require('path');
  *  1. Adds `pod 'TikTokBusinessSDK'` to the generated Podfile
  *  2. Appends -ObjC and -lc++ to OTHER_LDFLAGS in Xcode (required by SDK)
  *  3. Injects SDK initialization into AppDelegate (didFinishLaunchingWithOptions)
+ *  4. Writes TikTokEventModule.h/.m and registers them in Xcode (React Native bridge)
  *
  * Credentials:
  *   appId      → your TikTok for Business App ID  (safe to ship in binary)
@@ -24,8 +25,76 @@ const path = require('path');
  */
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const TIKTOK_APP_ID     = '6758727961';
+const TIKTOK_APP_ID        = '6758727961';
 const TIKTOK_TIKTOK_APP_ID = '7620071833756237841';
+
+// ─── Native module source files ───────────────────────────────────────────────
+const HEADER_CONTENT = `\
+#import <React/RCTBridgeModule.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface TikTokEventModule : NSObject <RCTBridgeModule>
+@end
+
+NS_ASSUME_NONNULL_END
+`;
+
+const SOURCE_CONTENT = `\
+#import "TikTokEventModule.h"
+#import <TikTokBusinessSDK/TikTokBusiness.h>
+
+@implementation TikTokEventModule
+
+RCT_EXPORT_MODULE(TikTokEvents);
+
+// Identify user (link internal ID to TikTok user)
+RCT_EXPORT_METHOD(identify:(NSString *)externalId
+                  externalUserName:(NSString *)externalUserName
+                  phoneNumber:(NSString *)phoneNumber
+                  email:(NSString *)email)
+{
+  [TikTokBusiness identifyWithExternalID:externalId
+                         externalUserName:externalUserName
+                             phoneNumber:phoneNumber
+                                   email:email];
+}
+
+// Clear user identity on logout
+RCT_EXPORT_METHOD(logout)
+{
+  [TikTokBusiness logout];
+}
+
+// Track a simple named event (Registration, Login, Subscribe, etc.)
+RCT_EXPORT_METHOD(trackEvent:(NSString *)eventName)
+{
+  TikTokBaseEvent *event = [TikTokBaseEvent eventWithName:eventName];
+  [TikTokBusiness trackTTEvent:event];
+}
+
+// Track a purchase / subscription event with product details
+RCT_EXPORT_METHOD(trackPurchase:(NSDictionary *)params)
+{
+  TikTokContentsEvent *event = [[TikTokPurchaseEvent alloc] init];
+  if (params[@"contentId"])   [event setContentId:params[@"contentId"]];
+  if (params[@"description"]) [event setDescription:params[@"description"]];
+  if (params[@"contentType"]) [event setContentType:params[@"contentType"]];
+  if (params[@"value"])       [event setValue:params[@"value"]];
+
+  if (params[@"price"] != nil) {
+    TikTokContentParams *content = [[TikTokContentParams alloc] init];
+    content.price    = params[@"price"];
+    content.quantity = 1;
+    if (params[@"contentName"]) content.contentName = params[@"contentName"];
+    [event setContents:@[content]];
+  }
+
+  [TikTokBusiness trackTTEvent:event];
+}
+
+@end
+`;
 
 // ─── 1. Podfile modification ────────────────────────────────────────────────
 function withTikTokPodfile(config) {
@@ -165,10 +234,76 @@ function withTikTokAppDelegate(config) {
   });
 }
 
+// ─── 4. Native module: TikTokEventModule (.h + .m) ──────────────────────────
+function withTikTokNativeModule(config) {
+  // Step A: write the source files into ios/<projectName>/
+  config = withDangerousMod(config, [
+    'ios',
+    (config) => {
+      const iosDir     = config.modRequest.platformProjectRoot;
+      const projectName = config.modRequest.projectName;
+      const targetDir  = path.join(iosDir, projectName);
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const headerPath = path.join(targetDir, 'TikTokEventModule.h');
+      const sourcePath = path.join(targetDir, 'TikTokEventModule.m');
+
+      fs.writeFileSync(headerPath, HEADER_CONTENT, 'utf8');
+      fs.writeFileSync(sourcePath, SOURCE_CONTENT, 'utf8');
+      console.log('✅ TikTokEventModule.h/.m written to', targetDir);
+      return config;
+    },
+  ]);
+
+  // Step B: register the files in the Xcode project
+  config = withXcodeProject(config, (config) => {
+    const xcodeProject = config.modResults;
+    const projectName  = config.modRequest.projectName;
+
+    // Guard: skip if already registered
+    const fileRefs = xcodeProject.pbxFileReferenceSection();
+    const alreadyAdded = Object.values(fileRefs).some(
+      (ref) => ref && ref.path && String(ref.path).includes('TikTokEventModule')
+    );
+    if (alreadyAdded) {
+      console.log('✅ TikTokEventModule already registered in Xcode project');
+      return config;
+    }
+
+    const target   = xcodeProject.getFirstTarget().uuid;
+    const groupKey = xcodeProject.findPBXGroupKey({ name: projectName });
+
+    // Add .m to Sources build phase
+    xcodeProject.addSourceFile(
+      `${projectName}/TikTokEventModule.m`,
+      { target },
+      groupKey
+    );
+    // Add .h as a header reference (no build phase needed)
+    xcodeProject.addFile(
+      `${projectName}/TikTokEventModule.h`,
+      groupKey,
+      {
+        lastKnownFileType: 'sourcecode.c.h',
+        sourceTree: '"<group>"',
+      }
+    );
+
+    console.log('✅ TikTokEventModule registered in Xcode project');
+    return config;
+  });
+
+  return config;
+}
+
 // ─── Combined plugin ─────────────────────────────────────────────────────────
 module.exports = function withTikTokSDK(config) {
   config = withTikTokPodfile(config);
   config = withTikTokLinkerFlags(config);
   config = withTikTokAppDelegate(config);
+  config = withTikTokNativeModule(config);
   return config;
 };

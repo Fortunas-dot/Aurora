@@ -4,6 +4,7 @@ import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
 import { facebookAnalytics } from '../services/facebookAnalytics.service';
+import { tiktokService } from '../services/tiktok.service';
 import { revenueCatService } from '../services/revenuecat.service';
 
 type AuthErrorContext = 'login' | 'register';
@@ -105,6 +106,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Facebook: log login event (email)
         facebookAnalytics.logLogin('email');
 
+        // TikTok: identify user + track login
+        tiktokService.identify(user._id, user.username || '', '', user.email || '');
+        tiktokService.trackLogin();
+
         // Track login event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_LOGGED_IN, {
           [POSTHOG_PROPERTIES.USER_ID]: user._id,
@@ -177,6 +182,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // Facebook: log signup event (email)
         facebookAnalytics.logSignup('email');
+
+        // TikTok: identify user + track registration
+        tiktokService.identify(user._id, user.username || '', '', user.email || '');
+        tiktokService.trackRegistration();
 
         // Track signup event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_SIGNED_UP, {

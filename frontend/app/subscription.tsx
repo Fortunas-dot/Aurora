@@ -22,6 +22,7 @@ import { useAuthStore } from '../src/store/authStore';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuecat.service';
 import { facebookAnalytics } from '../src/services/facebookAnalytics.service';
+import { tiktokService } from '../src/services/tiktok.service';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -445,6 +446,17 @@ export default function SubscriptionScreen() {
           price,
           currency
         );
+
+        // TikTok: track subscription + purchase events
+        tiktokService.trackSubscribe();
+        tiktokService.trackPurchase({
+          contentId:   product?.identifier || 'com.aurora.app.monthly',
+          contentName: 'Aurora Premium Monthly',
+          contentType: 'subscription',
+          description: 'Aurora AI – Monthly Premium Subscription',
+          price,
+          value:       String(price),
+        });
 
         Alert.alert(
           'Welcome to Premium! 🎉',
