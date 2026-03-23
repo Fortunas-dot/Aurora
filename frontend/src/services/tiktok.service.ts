@@ -112,29 +112,6 @@ function trackPurchase(params: PurchaseParams): void {
   }
 }
 
-// ─── Debug / test event code ──────────────────────────────────────────────────
-/**
- * Set TikTok test event code so your events appear in TikTok Events Manager → Test Events.
- *
- * How to use:
- *  1. Open TikTok Events Manager → select your App → "Test Events" tab.
- *  2. Copy the test_event_code shown there.
- *  3. Call `tiktokService.setTestEventCode('YOUR_CODE')` at app startup (see _layout.tsx).
- *  4. Make a dev build, trigger events, confirm they appear in Event Activity.
- *  5. ⚠️  Remove the call to this function before releasing to production.
- *     Leaving test_event_code active routes ALL data to test mode and excludes
- *     it from ad campaigns.
- */
-function setTestEventCode(code: string): void {
-  if (!isAvailable()) return;
-  try {
-    TikTokEvents.setTestEventCode(code);
-    if (__DEV__) console.log('[TikTok] 🧪 Test event code set →', code);
-  } catch (e) {
-    if (__DEV__) console.warn('[TikTok] setTestEventCode error:', e);
-  }
-}
-
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const tiktokService = {
   identify,
@@ -146,5 +123,4 @@ export const tiktokService = {
   trackViewContent,
   trackLaunchApp,
   trackPurchase,
-  setTestEventCode,
 };

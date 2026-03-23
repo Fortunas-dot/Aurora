@@ -29,13 +29,6 @@ const path = require('path');
 const TIKTOK_APP_ID        = '6758727961';
 const TIKTOK_TIKTOK_APP_ID = '7620071833756237841';
 
-// ─── Test Event Code ─────────────────────────────────────────────────────────
-// Set this to any non-empty string while debugging (e.g. 'aurora_test').
-// Events tagged with this code appear under "Test Events" in TikTok Events Manager.
-// ⚠️  CLEAR THIS (set to '') before building for production – test events are
-//     excluded from campaigns.
-const TIKTOK_TEST_EVENT_CODE = '';
-
 // ─── Native module source files ───────────────────────────────────────────────
 const HEADER_CONTENT = `\
 #import <React/RCTBridgeModule.h>
@@ -91,17 +84,6 @@ RCT_EXPORT_METHOD(trackPurchase:(NSDictionary *)params)
   NSString *eventName = params[@"eventName"] ?: @"PlaceAnOrder";
   TikTokBaseEvent *event = [TikTokBaseEvent eventWithName:eventName];
   [TikTokBusiness trackTTEvent:event];
-}
-
-// ── Debug / Test mode ──────────────────────────────────────────────────────
-// Set the test event code so events appear in TikTok Events Manager → Test Events.
-// Get your code from: TikTok Events Manager → your App → "Test Events" tab.
-// ⚠️  Remove the JS call to this method once testing is complete (Step 4).
-//     Leaving the test_event_code active routes ALL data to test mode and
-//     excludes it from campaigns.
-RCT_EXPORT_METHOD(setTestEventCode:(NSString *)code)
-{
-  [TikTokBusiness setTestEventCode:code];
 }
 
 @end
@@ -300,12 +282,9 @@ function withTikTokAppDelegate(config) {
       // (they are available via the bridging header set in step 3).
       // ────────────────────────────────────────────────────────────────────
 
-      const testCodeLine = TIKTOK_TEST_EVENT_CODE
-        ? `\n    ttConfig?.testEventCode = "${TIKTOK_TEST_EVENT_CODE}" // ⚠️ remove before production`
-        : '';
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")${testCodeLine}
+    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
     TikTokBusiness.initializeSdk(ttConfig)
     // ────────────────────────────────────────────────────────────────────────
 `;
@@ -344,14 +323,11 @@ function withTikTokAppDelegate(config) {
         appDelegate = `${tiktokImport}\n${appDelegate}`;
       }
 
-      const testCodeLineObjC = TIKTOK_TEST_EVENT_CODE
-        ? `\n  tiktokConfig.testEventCode = @"${TIKTOK_TEST_EVENT_CODE}"; // ⚠️ remove before production`
-        : '';
       const initCode = `
   // ── TikTok Business SDK initialization ──────────────────────────────────
   TikTokConfig *tiktokConfig = [[TikTokConfig alloc]
     initWithAppId:@"${TIKTOK_APP_ID}"
-    tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];${testCodeLineObjC}
+    tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];
   [TikTokBusiness initializeSdk:tiktokConfig];
   // ────────────────────────────────────────────────────────────────────────
 `;
