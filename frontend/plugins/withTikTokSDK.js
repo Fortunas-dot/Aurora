@@ -305,10 +305,7 @@ function withTikTokAppDelegate(config) {
         : '';
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
-    #if DEBUG
-    ttConfig?.debugMode = true${testCodeLine}
-    #endif
+    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")${testCodeLine}
     TikTokBusiness.initializeSdk(ttConfig)
     // ────────────────────────────────────────────────────────────────────────
 `;
@@ -354,10 +351,7 @@ function withTikTokAppDelegate(config) {
   // ── TikTok Business SDK initialization ──────────────────────────────────
   TikTokConfig *tiktokConfig = [[TikTokConfig alloc]
     initWithAppId:@"${TIKTOK_APP_ID}"
-    tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];
-#if DEBUG
-  tiktokConfig.debugMode = YES;${testCodeLineObjC}
-#endif
+    tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];${testCodeLineObjC}
   [TikTokBusiness initializeSdk:tiktokConfig];
   // ────────────────────────────────────────────────────────────────────────
 `;
