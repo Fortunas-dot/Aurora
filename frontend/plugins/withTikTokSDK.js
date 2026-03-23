@@ -284,11 +284,7 @@ function withTikTokAppDelegate(config) {
 
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    // Use the two-step init to avoid the deprecated (appId:tiktokAppId:) init.
-    if let tiktokConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}") {
-      tiktokConfig.tiktokAppId = "${TIKTOK_TIKTOK_APP_ID}"
-      TikTokBusiness.initializeSdk(tiktokConfig)
-    }
+    TikTokBusiness.initializeSdk(TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}"))
     // ────────────────────────────────────────────────────────────────────────
 `;
 
