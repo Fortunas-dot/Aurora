@@ -284,7 +284,7 @@ function withTikTokAppDelegate(config) {
 
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
+    let ttConfig = TikTokConfig(accessToken: nil, appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
     TikTokBusiness.initializeSdk(ttConfig)
     // ────────────────────────────────────────────────────────────────────────
 `;
@@ -326,7 +326,8 @@ function withTikTokAppDelegate(config) {
       const initCode = `
   // ── TikTok Business SDK initialization ──────────────────────────────────
   TikTokConfig *tiktokConfig = [[TikTokConfig alloc]
-    initWithAppId:@"${TIKTOK_APP_ID}"
+    initWithAccessToken:nil
+    appId:@"${TIKTOK_APP_ID}"
     tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];
   [TikTokBusiness initializeSdk:tiktokConfig];
   // ────────────────────────────────────────────────────────────────────────
