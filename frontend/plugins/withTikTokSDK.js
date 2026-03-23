@@ -74,23 +74,15 @@ RCT_EXPORT_METHOD(trackEvent:(NSString *)eventName)
   [TikTokBusiness trackTTEvent:event];
 }
 
-// Track a purchase / subscription event with product details
+// Track a purchase event
+// Uses TikTokBaseEvent with "PlaceAnOrder" to avoid specialized-class
+// availability issues across SDK versions (TikTokPurchaseEvent /
+// TikTokContentsEvent / TikTokContentParams are not guaranteed to be
+// exposed through the main TikTokBusiness.h umbrella header).
 RCT_EXPORT_METHOD(trackPurchase:(NSDictionary *)params)
 {
-  TikTokContentsEvent *event = [[TikTokPurchaseEvent alloc] init];
-  if (params[@"contentId"])   [event setContentId:params[@"contentId"]];
-  if (params[@"description"]) [event setDescription:params[@"description"]];
-  if (params[@"contentType"]) [event setContentType:params[@"contentType"]];
-  if (params[@"value"])       [event setValue:params[@"value"]];
-
-  if (params[@"price"] != nil) {
-    TikTokContentParams *content = [[TikTokContentParams alloc] init];
-    content.price    = params[@"price"];
-    content.quantity = 1;
-    if (params[@"contentName"]) content.contentName = params[@"contentName"];
-    [event setContents:@[content]];
-  }
-
+  NSString *eventName = params[@"eventName"] ?: @"PlaceAnOrder";
+  TikTokBaseEvent *event = [TikTokBaseEvent eventWithName:eventName];
   [TikTokBusiness trackTTEvent:event];
 }
 
@@ -292,7 +284,9 @@ function withTikTokAppDelegate(config) {
 
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    if let tiktokConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}") {
+    // Use the two-step init to avoid the deprecated (appId:tiktokAppId:) init.
+    if let tiktokConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}") {
+      tiktokConfig.tiktokAppId = "${TIKTOK_TIKTOK_APP_ID}"
       TikTokBusiness.initializeSdk(tiktokConfig)
     }
     // ────────────────────────────────────────────────────────────────────────
