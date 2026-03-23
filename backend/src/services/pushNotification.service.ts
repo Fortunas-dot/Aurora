@@ -1,4 +1,4 @@
-import Expo, { ExpoPushMessage, ExpoPushTicket, ExpoPushReceipt } from 'expo-server-sdk';
+import Expo, { ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 import User from '../models/User';
 
 // Create a new Expo SDK client
@@ -62,7 +62,8 @@ export const sendPushNotification = async (payload: PushNotificationPayload): Pr
       }
     }
 
-    // Log ticket results for debugging
+    // Log ticket results for debugging and collect receipt ids for delivery checks
+    const receiptIds: string[] = [];
     tickets.forEach((ticket, index) => {
       if (ticket.status === 'error') {
         console.error(`Push notification error for token ${validTokens[index]}:`, ticket.message);
@@ -72,8 +73,54 @@ export const sendPushNotification = async (payload: PushNotificationPayload): Pr
           // Token is invalid, should be removed from user's tokens
           removeInvalidToken(userId, validTokens[index]);
         }
+      } else if ('id' in ticket && ticket.id) {
+        receiptIds.push(ticket.id);
       }
     });
+
+    // Fetch Expo receipts to detect downstream APNs/FCM delivery issues.
+    // This is especially important for iOS where APNs credential issues only appear in receipts.
+    if (receiptIds.length > 0) {
+      const receiptIdChunks = expo.chunkPushNotificationReceiptIds(receiptIds);
+
+      for (const chunk of receiptIdChunks) {
+        try {
+          const receipts = await expo.getPushNotificationReceiptsAsync(chunk);
+
+          for (const receiptId of chunk) {
+            const receipt = receipts[receiptId];
+            if (!receipt || receipt.status !== 'error') {
+              continue;
+            }
+
+            const receiptError = receipt.details?.error;
+            const receiptMessage = receipt.message || 'Unknown receipt error';
+            console.error(
+              `Push receipt error for user ${userId} (receipt ${receiptId}): ${receiptMessage}`,
+              receipt.details || {}
+            );
+
+            // If APNs/FCM marks a token as unregistered, remove it to avoid future failed sends.
+            if (receiptError === 'DeviceNotRegistered') {
+              // We do not get the token directly from receipt, so find matching ticket by receipt id.
+              const ticketIndex = tickets.findIndex((ticket) => 'id' in ticket && ticket.id === receiptId);
+              if (ticketIndex >= 0) {
+                void removeInvalidToken(userId, validTokens[ticketIndex]);
+              }
+            }
+
+            // Surface iOS credential issues in logs clearly for faster troubleshooting.
+            if (receiptError === 'InvalidCredentials') {
+              console.error(
+                'Invalid APNs credentials detected. Re-upload Apple Push Key in Expo/EAS credentials for this iOS app.'
+              );
+            }
+          }
+        } catch (receiptError) {
+          console.error('Error fetching Expo push receipts:', receiptError);
+        }
+      }
+    }
 
     console.log(`Push notification sent to user ${userId}: ${tickets.length} tickets`);
   } catch (error) {
