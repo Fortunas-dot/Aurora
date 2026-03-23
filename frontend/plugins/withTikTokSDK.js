@@ -86,6 +86,17 @@ RCT_EXPORT_METHOD(trackPurchase:(NSDictionary *)params)
   [TikTokBusiness trackTTEvent:event];
 }
 
+// ── Debug / Test mode ──────────────────────────────────────────────────────
+// Set the test event code so events appear in TikTok Events Manager → Test Events.
+// Get your code from: TikTok Events Manager → your App → "Test Events" tab.
+// ⚠️  Remove the JS call to this method once testing is complete (Step 4).
+//     Leaving the test_event_code active routes ALL data to test mode and
+//     excludes it from campaigns.
+RCT_EXPORT_METHOD(setTestEventCode:(NSString *)code)
+{
+  [TikTokBusiness setTestEventCode:code];
+}
+
 @end
 `;
 
@@ -284,7 +295,11 @@ function withTikTokAppDelegate(config) {
 
       const initCode = `
     // ── TikTok Business SDK initialization ──────────────────────────────────
-    TikTokBusiness.initializeSdk(TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}"))
+    let ttConfig = TikTokConfig(appId: "${TIKTOK_APP_ID}", tiktokAppId: "${TIKTOK_TIKTOK_APP_ID}")
+    #if DEBUG
+    ttConfig?.debugMode = true
+    #endif
+    TikTokBusiness.initializeSdk(ttConfig)
     // ────────────────────────────────────────────────────────────────────────
 `;
 
@@ -327,6 +342,9 @@ function withTikTokAppDelegate(config) {
   TikTokConfig *tiktokConfig = [[TikTokConfig alloc]
     initWithAppId:@"${TIKTOK_APP_ID}"
     tiktokAppId:@"${TIKTOK_TIKTOK_APP_ID}"];
+#if DEBUG
+  tiktokConfig.debugMode = YES;
+#endif
   [TikTokBusiness initializeSdk:tiktokConfig];
   // ────────────────────────────────────────────────────────────────────────
 `;

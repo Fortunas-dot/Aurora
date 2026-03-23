@@ -19,6 +19,7 @@ import { usePremiumStore } from '../src/store/premiumStore';
 import { useRequirePremium } from '../src/hooks/usePremium';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
 import { initializeFacebookSDK, facebookAnalytics } from '../src/services/facebookAnalytics.service';
+import { tiktokService } from '../src/services/tiktok.service';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PostHogProvider, PostHog, usePostHog } from 'posthog-react-native';
@@ -310,6 +311,26 @@ export default function RootLayout() {
         initializeFacebookSDK({ trackingAllowed }).catch((error) => {
           console.warn('Facebook SDK initialization failed:', error);
         });
+
+        // ── TikTok debug / test mode ────────────────────────────────────────
+        // STEP 1–3: Uncomment the block below to route TikTok events to the
+        //           "Test Events" tab in TikTok Events Manager.
+        //
+        //   1. Go to TikTok Events Manager → your App → "Test Events" tab.
+        //   2. Copy the test_event_code shown there.
+        //   3. Replace 'YOUR_TEST_EVENT_CODE' with that value.
+        //   4. Make a new dev build (eas build --profile development --platform ios).
+        //   5. Open the app, trigger events (login, subscribe, etc.).
+        //   6. Confirm events appear in Event Activity on TikTok Events Manager.
+        //
+        // STEP 4 (important!): Remove / re-comment this block once verified.
+        //   Leaving test_event_code active routes ALL data to test mode and
+        //   excludes it from ad campaigns.
+        //
+        // if (__DEV__) {
+        //   tiktokService.setTestEventCode('YOUR_TEST_EVENT_CODE');
+        // }
+        // ───────────────────────────────────────────────────────────────────
 
         // NOTE: RevenueCat is intentionally NOT initialized here anonymously.
         // Initializing without a user ID would create a new anonymous customer
