@@ -180,10 +180,11 @@ const getPostTimestamp = (seed: DemoPostSeed): Date => {
   return ts;
 };
 
-const getCommentTimestamp = (seedIndex: number, commentIndex: number): Date => {
-  const hour = Math.min(DEMO_HOUR_END_UTC, DEMO_HOUR_START_UTC + seedIndex);
-  const minute = (commentIndex * 15 + seedIndex * 7) % 60;
-  return makeUtc(hour, minute);
+/** Comments appear after the post, staggered by a few minutes each. */
+const getCommentTimestamp = (seed: DemoPostSeed, commentIndex: number): Date => {
+  const base = getPostTimestamp(seed).getTime();
+  const offsetMinutes = 5 + commentIndex * 9 + (seed.dayOffset * 3 + seed.minute) % 7;
+  return new Date(base + offsetMinutes * 60 * 1000);
 };
 
 export const ensureDemoPostsAndComments = async (): Promise<void> => {
@@ -276,7 +277,7 @@ export const ensureDemoPostsAndComments = async (): Promise<void> => {
           ? pickUserIdByUsername(commentSeed.authorUsername, seedIndex + 1 + i)
           : pickUserId(seedIndex + 1 + i);
         const commentIndex = commentTexts.indexOf(text);
-        const commentTimestamp = getCommentTimestamp(seedIndex, commentIndex >= 0 ? commentIndex : i);
+        const commentTimestamp = getCommentTimestamp(seed, commentIndex >= 0 ? commentIndex : i);
 
         // Random likes: 0..3 demo users.
         const likesCount = Math.floor(Math.random() * 4);
@@ -300,7 +301,7 @@ export const ensureDemoPostsAndComments = async (): Promise<void> => {
     // Ensure all seeded comments (even if they existed already) have stable timestamps.
     // Use different times within 09:00–13:00 so they don't all look identical.
     for (let commentIndex = 0; commentIndex < seed.comments.length; commentIndex++) {
-      const commentTimestamp = getCommentTimestamp(seedIndex, commentIndex);
+      const commentTimestamp = getCommentTimestamp(seed, commentIndex);
       await Comment.updateMany(
         { post: post._id, content: commentTexts[commentIndex] },
         { $set: { createdAt: commentTimestamp, updatedAt: commentTimestamp } }
