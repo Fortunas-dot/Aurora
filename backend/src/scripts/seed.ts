@@ -49,6 +49,7 @@ const sampleUsers = [
     displayName: 'Lisa',
     bio: 'Therapist in training | Mental health warrior | Spreading positivity ✨',
     isAnonymous: false,
+    isTherapist: true,
     healthInfo: {
       mentalHealth: [
         { condition: 'anxiety', severity: 'mild' },
@@ -591,6 +592,176 @@ If you're struggling with OCD, please know that you're not alone, and you're not
   },
 ];
 
+// New recent posts (today = March 31 2025, yesterday = March 30, day before = March 29)
+// authorIndex maps to sampleUsers: 0=Sarah, 1=Mike, 2=Lisa(therapist), 3=David, 4=Emma, 5=James, 6=Sophia, 7=Alex
+// groupIndex maps to sampleGroups: 0=Depression, 1=Anxiety, 2=Self-Care, 3=Bipolar, 4=ADHD, 5=Trauma, 6=Autism, 7=Eating Disorder, 8=NL Mental Health, 9=PTSD Warriors
+const recentPosts = [
+  {
+    title: 'I finally told someone how I really feel',
+    content: 'I have been carrying this weight for months, pretending everything is fine when it is not. Today at lunch my coworker asked how I was doing and instead of saying "good" I said "honestly, not great." She just listened. No advice, no judgment, just listened.\n\nI cried in the bathroom after, but not because I was sad. I think I was relieved. I did not realize how exhausting it is to fake being okay every single day.\n\nIf you are holding everything in because you think nobody wants to hear it, maybe try telling one person. It does not fix things, but the weight gets a tiny bit lighter.',
+    postType: 'post' as const,
+    tags: ['vulnerability', 'support', 'depression', 'honesty'],
+    authorIndex: 1, // Mike
+    groupIndex: 0, // Depression Support
+    createdAt: new Date('2025-03-31T14:22:00'),
+    comments: [
+      { text: 'This hit me hard. I do the same thing every day. Maybe I will try being honest with someone this week.', authorIndex: 0 }, // Sarah
+      { text: 'The fact that she just listened without trying to fix it is everything. That is what real support looks like.', authorIndex: 6 }, // Sophia
+      { text: 'I am proud of you for being vulnerable. That takes real courage, especially when you have been masking for a long time.', authorIndex: 4 }, // Emma
+      { text: 'Being heard without judgment can be deeply healing. What you experienced is called co-regulation — when another person\'s calm presence helps your nervous system settle. It is a reminder that we are not meant to carry everything alone. Keep letting people in, even in small ways.', authorIndex: 2, isTherapistComment: true }, // Lisa (therapist)
+    ],
+  },
+  {
+    title: 'Does anyone else feel worse after scrolling social media?',
+    content: 'I know this is not a new topic but I need to talk about it. Every time I open Instagram I end up comparing my life to everyone else and feeling like I am falling behind. People my age are getting promoted, traveling, getting married, and I am just trying to get through the day without a panic attack.\n\nI deleted the app twice but I always re-download it because I feel disconnected without it. It is like I know it is bad for me but I cannot stop.\n\nHow do you manage this? Has anyone found a healthy balance or did you just quit entirely?',
+    postType: 'question' as const,
+    tags: ['social-media', 'comparison', 'anxiety', 'self-worth', 'question'],
+    authorIndex: 0, // Sarah
+    groupIndex: 1, // Anxiety & Panic
+    createdAt: new Date('2025-03-31T10:05:00'),
+    comments: [
+      { text: 'I set a 20 minute daily limit on Instagram and it honestly changed my mental health. The first week was hard but now I do not even miss it.', authorIndex: 5 }, // James
+      { text: 'I unfollowed everyone who made me feel bad about myself and only follow accounts about nature and dogs now. My feed is completely different.', authorIndex: 7 }, // Alex
+      { text: 'The comparison trap is real. I had to remind myself that people only post their highlights. Nobody is posting their panic attacks or crying in the car.', authorIndex: 4 }, // Emma
+      { text: 'I quit Instagram for 3 months and genuinely felt better. When I came back I was way more intentional about who I follow.', authorIndex: 3 }, // David
+    ],
+  },
+  {
+    title: 'Small win: I cooked a real meal today',
+    content: 'When my depression is bad I survive on cereal and toast. Today I actually made pasta with vegetables and sat down at the table to eat it instead of eating over the sink.\n\nIt sounds so small but if you know what depression meals look like you understand. I even did the dishes after.\n\nCounting this as a victory.',
+    postType: 'post' as const,
+    tags: ['depression', 'small-wins', 'self-care', 'progress'],
+    authorIndex: 4, // Emma
+    groupIndex: 0, // Depression Support
+    createdAt: new Date('2025-03-31T18:30:00'),
+    comments: [
+      { text: 'This IS a victory. When I was at my worst, making food felt impossible. Proud of you.', authorIndex: 1 }, // Mike
+      { text: 'And you did the dishes? That is two wins. Give yourself credit.', authorIndex: 0 }, // Sarah
+      { text: 'I know exactly what you mean. The sink meals. The standing-in-the-kitchen-eating-crackers meals. Making real food and sitting down is huge.', authorIndex: 3 }, // David
+    ],
+  },
+  {
+    title: 'Medication update: 3 months on sertraline',
+    content: 'I wanted to share an honest update because when I was considering medication I could not find enough real experiences.\n\nWeek 1-2: Nausea, headaches, felt worse than before. Almost quit.\nWeek 3-4: Side effects faded. Started sleeping better. Still anxious but the edge was softer.\nMonth 2: First time in years I woke up without dread. Cried happy tears.\nMonth 3 (now): I still have bad days but the baseline is so much higher. I can function. I can enjoy things again.\n\nMedication is not for everyone and it is not a magic pill. But for me it gave me enough stability to actually use the coping skills I learned in therapy. If you are on the fence, talk to your doctor. There is no shame in needing help.',
+    postType: 'story' as const,
+    tags: ['medication', 'sertraline', 'anxiety', 'depression', 'honest-review'],
+    authorIndex: 1, // Mike
+    groupIndex: 0, // Depression Support
+    createdAt: new Date('2025-03-30T16:45:00'),
+    comments: [
+      { text: 'Thank you for being so honest about the timeline. I am on week 2 and feeling awful. This gives me hope to push through.', authorIndex: 0 }, // Sarah
+      { text: 'The "woke up without dread" part made me tear up. I want that so badly.', authorIndex: 7 }, // Alex
+      { text: 'Similar experience here with a different SSRI. The first two weeks are genuinely rough but it does get better.', authorIndex: 5 }, // James
+      { text: 'Thank you for sharing this so openly. What you described — medication lowering the floor so therapy skills can actually land — is exactly how it is designed to work. The courage it takes to stay with it through those early weeks is something many people underestimate. Keep checking in with your prescriber and be honest about what you notice.', authorIndex: 2, isTherapistComment: true }, // Lisa (therapist)
+      { text: 'I was so scared to start but reading posts like this helped me make the decision. Been on it for 6 weeks now and finally starting to feel the shift.', authorIndex: 6 }, // Sophia
+    ],
+  },
+  {
+    title: 'How do you explain depression to someone who has never had it?',
+    content: 'My partner is incredibly supportive but he genuinely does not understand what depression feels like. He says things like "just try to think positive" or "go for a walk, you will feel better" and I know he means well but it makes me feel so misunderstood.\n\nI have tried explaining it but I cannot find the right words. It is not sadness. It is not laziness. It is like trying to run through water while everyone else is running on land.\n\nHow have you explained it to people who have never experienced it? Are there analogies or resources that helped your loved ones understand?',
+    postType: 'question' as const,
+    tags: ['depression', 'relationships', 'communication', 'question', 'understanding'],
+    authorIndex: 0, // Sarah
+    groupIndex: 0, // Depression Support
+    createdAt: new Date('2025-03-30T11:20:00'),
+    comments: [
+      { text: 'I told my wife it is like your phone being on 2 percent battery all day no matter how much you charge it. She finally got it after that.', authorIndex: 3 }, // David
+      { text: 'I sent my boyfriend the "black dog" video on YouTube by the WHO. It explains it visually and he understood so much more after watching it.', authorIndex: 4 }, // Emma
+      { text: 'The running through water analogy is actually really good. I might use that myself.', authorIndex: 6 }, // Sophia
+      { text: 'Sometimes people cannot fully understand things they have not lived. But they can learn to believe you when you say it is real. That matters more than perfect understanding.', authorIndex: 2, isTherapistComment: true }, // Lisa (therapist)
+    ],
+  },
+  {
+    title: 'I went to a coffee shop alone and did not panic',
+    content: 'This probably sounds ridiculous to most people but for someone with social anxiety this is massive. I walked in, ordered, sat down with my book, and stayed for an hour. My heart was beating fast at first but I kept breathing and it passed.\n\nSix months ago I could not even make a phone call without rehearsing it five times. Exposure therapy is working. Slowly, painfully, but it is working.\n\nTo anyone starting exposure therapy and thinking it is pointless: keep going. It gets easier.',
+    postType: 'post' as const,
+    tags: ['social-anxiety', 'exposure-therapy', 'progress', 'anxiety', 'celebration'],
+    authorIndex: 6, // Sophia
+    groupIndex: 1, // Anxiety & Panic
+    createdAt: new Date('2025-03-30T19:10:00'),
+    comments: [
+      { text: 'Not ridiculous at all. I remember the first time I ate alone in public. It felt like climbing a mountain. Well done.', authorIndex: 0 }, // Sarah
+      { text: 'The phone call rehearsal thing is SO relatable. I still do that sometimes.', authorIndex: 5 }, // James
+      { text: 'Exposure therapy changed my life too. The key is doing it consistently even when every part of you wants to avoid.', authorIndex: 7 }, // Alex
+    ],
+  },
+  {
+    title: 'Today I journaled for the first time in years',
+    content: 'My therapist has been suggesting journaling for months and I kept brushing it off because it felt pointless. What is writing going to do?\n\nBut last night I could not sleep and I just started writing. Not structured, not pretty, just whatever came out. I filled three pages and when I was done I actually felt calmer. Like the thoughts had somewhere to go instead of looping in my head.\n\nI am not saying journaling is a cure but I understand now why people recommend it. Sometimes you just need to get the noise out of your head and onto paper.',
+    postType: 'post' as const,
+    tags: ['journaling', 'therapy', 'coping', 'sleep', 'self-discovery'],
+    authorIndex: 3, // David
+    groupIndex: 2, // Self-Care & Mindfulness
+    createdAt: new Date('2025-03-29T21:40:00'),
+    comments: [
+      { text: 'The "thoughts had somewhere to go" part perfectly describes why journaling works for me. Your brain stops recycling them.', authorIndex: 6 }, // Sophia
+      { text: 'I do this every night before bed now. Even 5 minutes makes a difference.', authorIndex: 0 }, // Sarah
+      { text: 'What you discovered on your own is something called externalization — moving internal experiences outside of yourself so you can observe them instead of being consumed by them. It is one of the simplest and most powerful tools available. Keep writing, even when it feels messy.', authorIndex: 2, isTherapistComment: true }, // Lisa (therapist)
+      { text: 'I tried structured journals and hated them. Free writing like you describe is way more natural for me.', authorIndex: 1 }, // Mike
+    ],
+  },
+  {
+    title: 'The loneliness of depression nobody talks about',
+    content: 'Everyone talks about the sadness part of depression but nobody talks about the loneliness. Not the "I have no friends" kind but the "I am surrounded by people and still feel completely alone" kind.\n\nI went to dinner with friends on Saturday. They were laughing and having a great time and I was sitting there feeling like I was watching them through glass. Present but not connected. There but not really there.\n\nI smiled and nodded and said the right things but inside I felt nothing. And then I went home and cried because I wanted so badly to feel what they were feeling.\n\nDoes anyone else experience this? How do you bridge that gap?',
+    postType: 'question' as const,
+    tags: ['depression', 'loneliness', 'disconnection', 'question', 'emotional-numbness'],
+    authorIndex: 7, // Alex
+    groupIndex: 0, // Depression Support
+    createdAt: new Date('2025-03-29T13:15:00'),
+    comments: [
+      { text: 'The glass metaphor is exactly it. You described something I could never put into words. You are not alone in feeling alone.', authorIndex: 1 }, // Mike
+      { text: 'I experience this constantly. The worst part is feeling guilty for not being present when your friends are right there.', authorIndex: 4 }, // Emma
+      { text: 'For me the bridge started with being honest with one friend about it. She said "you do not have to pretend with me" and it cracked something open.', authorIndex: 0 }, // Sarah
+      { text: 'This is called emotional numbness or depersonalization and it is more common than people realize. It does not mean you are broken. It is your brain protecting you when it is overwhelmed.', authorIndex: 2, isTherapistComment: true }, // Lisa (therapist)
+      { text: 'I force myself to tell at least one person at the table something real. Even a small "I am having a rough day." It breaks the glass a little.', authorIndex: 3 }, // David
+    ],
+  },
+  {
+    title: 'ADHD tax: what is the most expensive thing your ADHD has cost you?',
+    content: 'I will start. I forgot to cancel a free trial and got charged 6 months of a service I never used. Before that I paid a late fee on rent because I forgot to set up auto-pay even though I had the money.\n\nThe ADHD tax is real and nobody warns you about it. Expired groceries, duplicate purchases because you forgot you already bought it, impulse spending when your brain needs dopamine.\n\nWhat is your worst ADHD tax moment? And more importantly, what systems have you set up to prevent it?',
+    postType: 'question' as const,
+    tags: ['adhd', 'adhd-tax', 'money', 'executive-function', 'question'],
+    authorIndex: 5, // James
+    groupIndex: 4, // ADHD Community
+    createdAt: new Date('2025-03-29T10:30:00'),
+    comments: [
+      { text: 'Parking tickets. So many parking tickets. I set a timer now every single time I park. Non-negotiable.', authorIndex: 3 }, // David
+      { text: 'I bought the same book three times because I kept forgetting I already owned it. Now I have a shared note with my partner of everything I buy.', authorIndex: 4 }, // Emma
+      { text: 'Auto-pay everything. Seriously everything. It was the single best decision I made for my ADHD brain.', authorIndex: 0 }, // Sarah
+      { text: 'Expired food in the fridge is my biggest one. I started putting masking tape with the date I opened things and it actually helps.', authorIndex: 7 }, // Alex
+    ],
+  },
+  {
+    title: 'I stopped saying sorry for existing',
+    content: 'I caught myself apologizing to someone for asking a question at work today and I stopped mid-sentence. Why am I sorry for needing information to do my job?\n\nI have been apologizing my whole life. Sorry for taking up space. Sorry for having needs. Sorry for being too much or not enough. My therapist pointed out that I say sorry an average of 12 times per session.\n\nSo I am practicing. Replacing "sorry for venting" with "thank you for listening." Replacing "sorry I am late" with "thank you for waiting." It feels awkward but I am done apologizing for existing.\n\nAnyone else working on this?',
+    postType: 'post' as const,
+    tags: ['self-worth', 'boundaries', 'anxiety', 'growth', 'therapy'],
+    authorIndex: 0, // Sarah
+    groupIndex: 2, // Self-Care & Mindfulness
+    createdAt: new Date('2025-03-31T08:15:00'),
+    comments: [
+      { text: 'The "thank you for listening" instead of "sorry for venting" reframe is something I am going to start using immediately.', authorIndex: 5 }, // James
+      { text: '12 times per session. That hit me because I would probably be the same. We are so conditioned to shrink ourselves.', authorIndex: 4 }, // Emma
+      { text: 'I started this last year and people actually respond better to thank you than sorry. It changes the whole energy of the conversation.', authorIndex: 6 }, // Sophia
+    ],
+  },
+  {
+    title: 'Night anxiety check-in: who else is awake right now?',
+    content: 'It is almost midnight and my brain decided now is the perfect time to replay every awkward thing I have ever said. Cannot sleep. Heart is racing. Already tried breathing exercises and they helped for about 5 minutes.\n\nJust wanted to post here because sometimes it helps to know other people are awake and fighting the same battle. If you are reading this at 2am, you are not alone.\n\nWhat is keeping you up tonight?',
+    postType: 'post' as const,
+    tags: ['anxiety', 'insomnia', 'night', 'support', 'community'],
+    authorIndex: 5, // James
+    groupIndex: 1, // Anxiety & Panic
+    createdAt: new Date('2025-03-29T23:48:00'),
+    comments: [
+      { text: 'Right here with you. 1am and my brain is doing the highlight reel of embarrassing moments from 2019.', authorIndex: 1 }, // Mike
+      { text: 'The replay at night is the worst. I started keeping a notepad by my bed to write down the thoughts so my brain stops looping them.', authorIndex: 6 }, // Sophia
+      { text: 'You are not alone. I am up too. Sending you calm energy from across the internet.', authorIndex: 7 }, // Alex
+      { text: 'Try the 5-4-3-2-1 grounding technique if breathing is not enough. Name 5 things you can see, 4 you can touch, etc. It gives your brain a different task.', authorIndex: 0 }, // Sarah
+    ],
+  },
+];
+
 const sampleComments = [
   'You are so strong! Keep going 💪',
   'I relate to this so much. Thanks for sharing.',
@@ -780,6 +951,42 @@ async function seedDatabase() {
       }
     }
     
+    // Create recent posts with specific dates, authors, and comments
+    console.log('📝 Creating recent posts...');
+    for (const rp of recentPosts) {
+      const author = createdUsers[rp.authorIndex % createdUsers.length];
+      const group = rp.groupIndex != null && rp.groupIndex < createdGroups.length ? createdGroups[rp.groupIndex] : null;
+
+      const { comments: rpComments, authorIndex: _a, groupIndex: _g, createdAt: rpDate, ...rpDoc } = rp as any;
+      const post = await Post.create({
+        ...rpDoc,
+        author: author._id,
+        groupId: group?._id,
+        likes: createdUsers.slice(0, Math.floor(Math.random() * 5) + 1).map(u => u._id),
+        commentsCount: 0,
+        createdAt: rpDate,
+      });
+      createdPosts.push(post);
+      console.log(`  ✓ Created recent post: "${rp.title.substring(0, 40)}..." by ${author.username}`);
+
+      if (Array.isArray(rpComments)) {
+        for (let ci = 0; ci < rpComments.length; ci++) {
+          const c = rpComments[ci];
+          const commentAuthor = createdUsers[c.authorIndex % createdUsers.length];
+          const commentDate = new Date(rpDate.getTime() + (ci + 1) * 1000 * 60 * (5 + Math.floor(Math.random() * 55)));
+          await Comment.create({
+            post: post._id,
+            author: commentAuthor._id,
+            content: c.text,
+            likes: [],
+            createdAt: commentDate,
+          });
+          post.commentsCount += 1;
+        }
+        await post.save();
+      }
+    }
+
     // Create follow relationships
     console.log('🔗 Creating follow relationships...');
     for (let i = 0; i < createdUsers.length; i++) {
