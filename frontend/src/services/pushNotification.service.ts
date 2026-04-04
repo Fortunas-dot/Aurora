@@ -1,5 +1,5 @@
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { apiService } from './api.service';
 
@@ -13,15 +13,20 @@ async function loadNotificationsModule() {
   try {
     Notifications = await import('expo-notifications');
     
-    // Configure how notifications are handled when app is in foreground
-    // Only set handler if module loaded successfully
     if (Notifications) {
       Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-        }),
+        handleNotification: async () => {
+          // Suppress the banner when the app is actively in the foreground;
+          // the WebSocket already delivers real-time in-app updates.
+          // When the app is backgrounded or killed the OS handles display
+          // automatically (this handler is not called in those states).
+          const isForegrounded = AppState.currentState === 'active';
+          return {
+            shouldShowAlert: !isForegrounded,
+            shouldPlaySound: !isForegrounded,
+            shouldSetBadge: true,
+          };
+        },
       });
     }
     

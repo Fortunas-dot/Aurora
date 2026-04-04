@@ -95,21 +95,23 @@ export const handleNotificationWebSocket = (ws: AuthenticatedWebSocket, req: any
 };
 
 /**
- * Send notification to user via WebSocket and/or push notification
- * If user is online (WebSocket connected), sends via WebSocket
- * If user is offline, sends push notification to their device
+ * Send notification to user via WebSocket AND push notification.
+ *
+ * Push notifications are always sent so the OS can display an alert when the
+ * app is in the background or killed. When the app is in the foreground the
+ * client-side notification handler suppresses the banner, and the WebSocket
+ * delivers real-time in-app updates instead.
  */
 export const sendNotificationToUser = async (userId: string, notification: any): Promise<void> => {
   const ws = activeConnections.get(userId);
   const notificationData = notification.toObject ? notification.toObject() : notification;
   
-  // Ensure createdAt exists
   if (!notificationData.createdAt) {
     notificationData.createdAt = new Date();
   }
 
-  // Try to send via WebSocket if user is online
-  if (ws && ws.readyState === 1) { // OPEN
+  // Send via WebSocket for real-time in-app updates (if connected)
+  if (ws && ws.readyState === 1) {
     try {
       ws.send(JSON.stringify({
         type: 'notification',
@@ -119,95 +121,93 @@ export const sendNotificationToUser = async (userId: string, notification: any):
     } catch (error) {
       console.error('Error sending notification via WebSocket:', error);
     }
-  } else {
-    // User is offline, send push notification
-    try {
-      const notificationType = notificationData.type as NotificationType;
-      const relatedUser = notificationData.relatedUser;
-      const relatedGroup = notificationData.relatedGroup;
-      const relatedJournal = notificationData.relatedJournal;
-      const streakDays = typeof notificationData.streakDays === 'number' ? notificationData.streakDays : 0;
-      
-      // Get username for the notification message
-      const username = relatedUser?.displayName || relatedUser?.username || 'Someone';
-      const groupName = relatedGroup?.name || 'a group';
-      const journalName = relatedJournal?.name || 'a journal';
-      
-      // Get title and body based on notification type
-      let title = 'Aurora';
-      let body = notificationData.message || 'You have a new notification';
-      
-      switch (notificationType) {
-        case 'like': {
-          const likeMsg = notificationMessages.like(username);
-          title = likeMsg.title;
-          body = likeMsg.body;
-          break;
-        }
-        case 'comment': {
-          const commentMsg = notificationMessages.comment(username);
-          title = commentMsg.title;
-          body = commentMsg.body;
-          break;
-        }
-        case 'message': {
-          const messageMsg = notificationMessages.message(username);
-          title = messageMsg.title;
-          body = messageMsg.body;
-          break;
-        }
-        case 'follow': {
-          const followMsg = notificationMessages.follow(username);
-          title = followMsg.title;
-          body = followMsg.body;
-          break;
-        }
-        case 'group_invite': {
-          const inviteMsg = notificationMessages.group_invite(username, groupName);
-          title = inviteMsg.title;
-          body = inviteMsg.body;
-          break;
-        }
-        case 'group_join': {
-          const joinMsg = notificationMessages.group_join(username, groupName);
-          title = joinMsg.title;
-          body = joinMsg.body;
-          break;
-        }
-        case 'journal_entry': {
-          const journalMsg = notificationMessages.journal_entry(username, journalName);
-          title = journalMsg.title;
-          body = journalMsg.body;
-          break;
-        }
-        case 'journal_streak': {
-          const streakMsg = notificationMessages.journal_streak(streakDays);
-          title = streakMsg.title;
-          body = streakMsg.body;
-          break;
-        }
+  }
+
+  // Always send push notification so the OS can show it when the app is
+  // backgrounded or killed. The client suppresses the banner in foreground.
+  try {
+    const notificationType = notificationData.type as NotificationType;
+    const relatedUser = notificationData.relatedUser;
+    const relatedGroup = notificationData.relatedGroup;
+    const relatedJournal = notificationData.relatedJournal;
+    const streakDays = typeof notificationData.streakDays === 'number' ? notificationData.streakDays : 0;
+    
+    const username = relatedUser?.displayName || relatedUser?.username || 'Someone';
+    const groupName = relatedGroup?.name || 'a group';
+    const journalName = relatedJournal?.name || 'a journal';
+    
+    let title = 'Aurora';
+    let body = notificationData.message || 'You have a new notification';
+    
+    switch (notificationType) {
+      case 'like': {
+        const likeMsg = notificationMessages.like(username);
+        title = likeMsg.title;
+        body = likeMsg.body;
+        break;
       }
-      
-      // Send push notification
-      await sendPushNotification({
-        userId,
-        title,
-        body,
-        data: {
-          notificationId: notificationData._id?.toString(),
-          type: notificationType,
-          relatedUserId: relatedUser?._id?.toString(),
-          relatedPostId: notificationData.relatedPost?._id?.toString(),
-          relatedGroupId: relatedGroup?._id?.toString(),
-          relatedJournalId: relatedJournal?._id?.toString(),
-          relatedEntryId: notificationData.relatedEntry?._id?.toString(),
-        },
-      });
-      
-      console.log(`Push notification sent to user ${userId} (offline)`);
-    } catch (error) {
-      console.error('Error sending push notification:', error);
+      case 'comment': {
+        const commentMsg = notificationMessages.comment(username);
+        title = commentMsg.title;
+        body = commentMsg.body;
+        break;
+      }
+      case 'message': {
+        const messageMsg = notificationMessages.message(username);
+        title = messageMsg.title;
+        body = messageMsg.body;
+        break;
+      }
+      case 'follow': {
+        const followMsg = notificationMessages.follow(username);
+        title = followMsg.title;
+        body = followMsg.body;
+        break;
+      }
+      case 'group_invite': {
+        const inviteMsg = notificationMessages.group_invite(username, groupName);
+        title = inviteMsg.title;
+        body = inviteMsg.body;
+        break;
+      }
+      case 'group_join': {
+        const joinMsg = notificationMessages.group_join(username, groupName);
+        title = joinMsg.title;
+        body = joinMsg.body;
+        break;
+      }
+      case 'journal_entry': {
+        const journalMsg = notificationMessages.journal_entry(username, journalName);
+        title = journalMsg.title;
+        body = journalMsg.body;
+        break;
+      }
+      case 'journal_streak': {
+        const streakMsg = notificationMessages.journal_streak(streakDays);
+        title = streakMsg.title;
+        body = streakMsg.body;
+        break;
+      }
     }
+    
+    await sendPushNotification({
+      userId,
+      title,
+      body,
+      data: {
+        notificationId: notificationData._id?.toString(),
+        type: notificationType,
+        relatedUserId: relatedUser?._id?.toString(),
+        relatedPostId: notificationData.relatedPost?._id?.toString(),
+        relatedGroupId: relatedGroup?._id?.toString(),
+        relatedJournalId: relatedJournal?._id?.toString(),
+        relatedEntryId: notificationData.relatedEntry?._id?.toString(),
+      },
+    });
+    
+    console.log(`Push notification sent to user ${userId}`);
+  } catch (error) {
+    console.error('Error sending push notification:', error);
   }
 };
 
