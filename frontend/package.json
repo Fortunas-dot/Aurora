@@ -10,7 +10,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "update:production": "eas update --channel production",
-    "update:preview": "eas update --channel preview"
+    "update:preview": "eas update --channel preview",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/config-plugins": "^55.0.6",
@@ -65,6 +66,7 @@
     "@types/uuid": "^10.0.0",
     "babel-preset-expo": "~54.0.10",
     "dotenv": "^16.6.1",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2",
     "ws": "^8.18.0"
   },

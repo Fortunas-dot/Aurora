@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   profileInfoContainer: {
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   followButtonContainer: {
-    marginTop: SPACING.md,
+    marginTop: SPACING.sm,
     alignItems: 'center',
     gap: SPACING.sm,
   },
@@ -626,6 +626,8 @@ const styles = StyleSheet.create({
   bio: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
+    // Small gap so the bio doesn't look "stuck" directly under the Follow button.
+    marginTop: SPACING.sm,
     marginBottom: SPACING.md,
   },
   statsContainer: {

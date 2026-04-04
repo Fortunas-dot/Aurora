@@ -99,7 +99,6 @@ export default function SubscriptionScreen() {
     restorePurchases,
     refreshCustomerInfo,
     clearError,
-    enforcePaywall,
   } = usePremiumStore();
 
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -529,9 +528,6 @@ export default function SubscriptionScreen() {
   };
 
   const handleBack = () => {
-    // User dismissed the subscription screen – from now on, enforce paywall for non‑premium users
-    enforcePaywall();
-
     if (router.canGoBack()) {
       router.back();
     } else {

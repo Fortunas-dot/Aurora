@@ -6,13 +6,13 @@ interface PremiumState {
   // State
   isPremium: boolean;
   isLoading: boolean;
+  // When true, premium-gated screens should not immediately redirect to `/subscription`.
+  // This avoids a brief "subscription flicker" on cold-start deep links/notification taps.
+  suppressSubscriptionRedirect: boolean;
   customerInfo: CustomerInfo | null;
   offerings: PurchasesOffering | null;
   availablePackages: PurchasesPackage[];
   error: string | null;
-  // Simple paywall flag: once enforced, non‑premium users hit the paywall for gated features
-  isPaywallEnforced: boolean;
-
   // Actions
   checkPremiumStatus: () => Promise<void>;
   loadOfferings: () => Promise<void>;
@@ -20,19 +20,18 @@ interface PremiumState {
   restorePurchases: () => Promise<boolean>;
   refreshCustomerInfo: () => Promise<void>;
   clearError: () => void;
-  enforcePaywall: () => void;
-  resetPaywall: () => void;
+  setSuppressSubscriptionRedirect: (value: boolean) => void;
 }
 
 export const usePremiumStore = create<PremiumState>((set, get) => ({
   // Initial state
   isPremium: false,
   isLoading: false,
+  suppressSubscriptionRedirect: false,
   customerInfo: null,
   offerings: null,
   availablePackages: [],
   error: null,
-  isPaywallEnforced: false,
 
   // Check premium status
   checkPremiumStatus: async () => {
@@ -47,10 +46,6 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
         isLoading: false,
       });
 
-      // If user became premium, disable paywall enforcement
-      if (isPremium && get().isPaywallEnforced) {
-        set({ isPaywallEnforced: false });
-      }
     } catch (error: any) {
       console.error('Error checking premium status:', error);
       set({
@@ -102,9 +97,6 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
           isLoading: false,
         });
 
-        if (isPremium && get().isPaywallEnforced) {
-          set({ isPaywallEnforced: false });
-        }
         return true;
       }
       
@@ -134,9 +126,6 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
           isLoading: false,
         });
 
-        if (isPremium && get().isPaywallEnforced) {
-          set({ isPaywallEnforced: false });
-        }
         return true;
       }
       
@@ -163,9 +152,6 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
           customerInfo,
         });
 
-        if (isPremium && get().isPaywallEnforced) {
-          set({ isPaywallEnforced: false });
-        }
       }
     } catch (error: any) {
       console.error('Error refreshing customer info:', error);
@@ -177,15 +163,8 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
     set({ error: null });
   },
 
-  // Mark that the user has dismissed the subscription paywall and should now be paywalled
-  enforcePaywall: () => {
-    if (!get().isPremium) {
-      set({ isPaywallEnforced: true });
-    }
-  },
-
-  // Reset paywall flag (e.g. if needed for debugging)
-  resetPaywall: () => {
-    set({ isPaywallEnforced: false });
+  // Temporarily suppress redirect for premium-gated navigation flows (e.g. notification taps).
+  setSuppressSubscriptionRedirect: (value: boolean) => {
+    set({ suppressSubscriptionRedirect: value });
   },
 }));

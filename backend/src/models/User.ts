@@ -68,6 +68,8 @@ export interface IUser extends Document {
       sleep?: string;
     };
   };
+  lastActiveAt?: Date;
+  lastInactivityNotificationAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -317,6 +319,14 @@ const UserSchema = new Schema<IUser>(
     isTherapist: {
       type: Boolean,
       default: false,
+    },
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
+    lastInactivityNotificationAt: {
+      type: Date,
+      default: null,
     },
   },
   {

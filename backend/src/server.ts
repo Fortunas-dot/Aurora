@@ -21,6 +21,7 @@ import therapistRoutes from './routes/therapists';
 import seedRoutes from './routes/seed';
 import calendarRoutes from './routes/calendar';
 import { ensureDemoPostsAndComments } from './scripts/ensureDemoPosts';
+import { startInactivityCron } from './jobs/inactivityNotification';
 
 // Models
 import Idea from './models/Idea';
@@ -85,6 +86,8 @@ connectDB().then(async () => {
   } catch (err) {
     console.warn('[ensureDemoPosts] Failed:', err);
   }
+
+  startInactivityCron();
 }).catch((err) => {
   console.error('Failed to connect to MongoDB:', err);
 });

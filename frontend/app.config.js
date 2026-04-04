@@ -5,7 +5,7 @@ module.exports = {
     name: 'Aurora',
     slug: 'aurora',
     owner: 'pawbuddies',
-    version: '1.0.5',
+    version: '1.0.6',
     runtimeVersion: {
       policy: 'appVersion', // Use app version as runtime version
     },

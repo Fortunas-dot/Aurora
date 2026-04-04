@@ -54,6 +54,9 @@ export const protect = async (
 
     req.user = user;
     req.userId = decoded.userId;
+
+    touchLastActive(user);
+
     next();
   } catch (error) {
     res.status(401).json({
@@ -64,6 +67,19 @@ export const protect = async (
 };
 
 // Optional auth - doesn't fail if no token, but attaches user if present
+const ACTIVITY_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
+
+function touchLastActive(user: IUser): void {
+  const now = Date.now();
+  const last = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
+  if (now - last > ACTIVITY_THROTTLE_MS) {
+    User.updateOne(
+      { _id: user._id },
+      { $set: { lastActiveAt: new Date(now) } },
+    ).exec().catch(() => {});
+  }
+}
+
 export const optionalAuth = async (
   req: AuthRequest,
   res: Response,
