@@ -28,6 +28,11 @@ const harvardLogo = require('../assets/Harvard_University_logo.svg.png');
 const stanfordLogo = require('../assets/stanford-logo-660x330.png');
 const mitLogo = require('../assets/mit-university-logo-vector-free-11574209211h7atqdgxtm.png');
 
+// Hero images for onboarding slides
+const onboardingHero = require('../assets/onboarding-hero.jpg');
+const onboardingUniversity = require('../assets/onboarding-university.jpg');
+const onboardingTherapist = require('../assets/onboarding-therapist.jpg');
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Animated Badge Component for University Logos
@@ -382,28 +387,23 @@ const onboardingSlides: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'sparkles',
-    title: 'Welcome to Aurora',
-    description: 'Your personal mental health companion, designed to support you on your journey to better wellbeing.',
-    route: null, // Stay on onboarding screen
+    title: 'Meet your AI\nMental Health\ncompanion',
+    description: 'Someone to talk to whenever you need it.\nHelping you reflect and grow',
+    route: null,
   },
   {
     id: '2',
     icon: 'brain',
-    title: 'Meet Your AI Companion',
-    description: 'Aurora is trained on comprehensive psychology and behavior science knowledge from leading institutions. Get evidence-based support whenever you need it.',
-    badges: [
-      { name: 'Harvard', logo: harvardLogo },
-      { name: 'Stanford', logo: stanfordLogo },
-      { name: 'MIT', logo: mitLogo },
-    ],
-    route: null, // Stay on onboarding screen
+    title: 'Built with the best\nExperts in Mental\nHealth',
+    description: 'Trained on comprehensive psychology and behavioral science. Developed with the best in their fields.',
+    route: null,
   },
   {
     id: '3',
     icon: 'medical',
-    title: 'Expert Therapists Available',
-    description: 'Real licensed therapists are online in the app. They can answer questions on posts and provide professional guidance when you need it most.',
-    route: '/(tabs)', // Navigate to Feed tab after this slide
+    title: 'Real Therapists\nReady to Help',
+    description: 'Licensed professionals are available in the app. They respond under your posts and question posts to provide real, professional guidance when you need it most.',
+    route: '/(tabs)',
   },
 ];
 
@@ -536,144 +536,153 @@ export default function OnboardingScreen() {
 
     return (
       <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-        {/* Star field background for first and second slide - reduced for performance */}
-        {(index === 0 || index === 1) && (
-          <View style={styles.starField} pointerEvents="none">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <AnimatedStar key={i} index={i} />
-            ))}
-          </View>
-        )}
-
-        {/* Floating sparkles background for third slide only */}
-        {index === 2 && (
-          <View pointerEvents="none">
-            <FloatingSparkle delay={0} startX={30} startY={100} size={20} />
-            <FloatingSparkle delay={300} startX={SCREEN_WIDTH - 50} startY={150} size={16} />
-            <FloatingSparkle delay={500} startX={SCREEN_WIDTH / 2} startY={200} size={18} />
-          </View>
-        )}
-
-        {index === 1 && item.badges ? (
-          // Special redesigned layout for "Meet Your AI Companion" slide
-          <View style={styles.companionSlideContent}>
-            {/* Floating Aurora Sphere - Top Section */}
-            <View style={styles.companionAuroraSection}>
-              <AnimatedIconContainer 
-                icon={item.icon} 
-                delay={index * 100} 
-                useAurora={true}
-                compact={false}
+        {index === 1 ? (
+          // University/experts slide - hero image style
+          <View style={styles.welcomeSlide}>
+            <View style={styles.welcomeImageContainer}>
+              <Image
+                source={onboardingUniversity}
+                style={styles.welcomeHeroImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.45)']}
+                style={styles.credentialOverlayGradient}
+              />
+              {/* Credential tags overlaid on the image */}
+              <View style={styles.credentialTagsContainer}>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="school-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Harvard</Text>
+                </View>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="school-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Oxford</Text>
+                </View>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="school-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Stanford</Text>
+                </View>
+              </View>
+              <LinearGradient
+                colors={['transparent', '#FFF5F1']}
+                style={styles.welcomeImageFade}
               />
             </View>
 
-            {/* Main Content Section */}
-            <View style={styles.companionMainContent}>
-              {/* Title with accent */}
-              <View style={styles.companionTitleContainer}>
-                <Text style={[styles.companionTitle, { color: colors.text }]}>{item.title}</Text>
-                <View style={[styles.companionTitleAccent, { backgroundColor: colors.primary }]} />
-              </View>
+            <View style={styles.welcomeContent}>
+              <Text style={styles.welcomeTitle}>
+                <Text style={styles.welcomeTitleDark}>Built with </Text>
+                <Text style={styles.welcomeTitleAccent1}>the best{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>Experts in </Text>
+                <Text style={styles.welcomeTitleAccent2}>Mental{'\n'}</Text>
+                <Text style={styles.welcomeTitleAccent2}>Health</Text>
+              </Text>
 
-              {/* Description with better styling */}
-              <GlassCard padding="md" style={styles.companionDescriptionCard} variant="primary" gradient>
-                <Text style={[styles.companionDescription, { color: colors.text }]}>
-                  {item.description}
-                </Text>
-              </GlassCard>
-
-              {/* Premium University Logos Section */}
-              <View style={styles.companionBadgesSection}>
-                <Text style={[styles.companionBadgesLabel, { color: colors.textMuted }]}>
-                  Powered by leading institutions
-                </Text>
-                <View style={styles.companionBadgesContainer}>
-                  {item.badges.map((badge, badgeIndex) => (
-                    <AnimatedBadge
-                      key={badge.name}
-                      badge={badge}
-                      index={badgeIndex}
-                      colors={colors}
-                      logosReady={logosReady}
-                    />
-                  ))}
-                </View>
-              </View>
+              <Text style={styles.welcomeSubtitle}>
+                {item.description}
+              </Text>
             </View>
           </View>
         ) : index === 2 ? (
-          // Special redesigned layout for "Expert Therapists Available" slide
-          <View style={styles.therapistSlideContent}>
-            {/* Icon Section */}
-            <View style={styles.therapistIconSection}>
-              <AnimatedIconContainer 
-                icon={item.icon} 
-                delay={index * 100} 
-                useAurora={false}
-                compact={true}
+          // Therapist slide - hero image style
+          <View style={styles.welcomeSlide}>
+            <View style={styles.welcomeImageContainer}>
+              <Image
+                source={onboardingTherapist}
+                style={styles.welcomeHeroImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.45)']}
+                style={styles.credentialOverlayGradient}
+              />
+              {/* Therapist feature tags overlaid on the image */}
+              <View style={styles.credentialTagsContainer}>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Licensed</Text>
+                </View>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="chatbubbles-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Respond on Posts</Text>
+                </View>
+                <View style={styles.credentialTag}>
+                  <Ionicons name="help-circle-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.credentialTagText}>Answer Questions</Text>
+                </View>
+              </View>
+              <LinearGradient
+                colors={['transparent', '#FFF5F1']}
+                style={styles.welcomeImageFade}
               />
             </View>
 
-            {/* Main Content */}
-            <View style={styles.therapistMainContent}>
-              {/* Title with accent */}
-              <View style={styles.therapistTitleContainer}>
-                <Text style={[styles.therapistTitle, { color: colors.text }]}>{item.title}</Text>
-                <View style={[styles.therapistTitleAccent, { backgroundColor: colors.primary }]} />
-              </View>
+            <View style={styles.welcomeContent}>
+              <Text style={styles.welcomeTitle}>
+                <Text style={styles.welcomeTitleDark}>Real </Text>
+                <Text style={styles.welcomeTitleAccent1}>Therapists{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>Ready to </Text>
+                <Text style={styles.welcomeTitleAccent2}>Help</Text>
+              </Text>
 
-              {/* Description */}
-              <GlassCard padding="md" style={styles.therapistDescriptionCard} variant="primary" gradient>
-                <Text style={[styles.therapistDescription, { color: colors.text }]}>
-                  {item.description}
-                </Text>
-              </GlassCard>
+              <Text style={styles.welcomeSubtitle}>
+                {item.description}
+              </Text>
+            </View>
+          </View>
 
-              {/* Feature Highlights */}
-              <View style={styles.therapistFeaturesContainer}>
-                <View style={styles.therapistFeatureRow}>
-                  <GlassCard padding="sm" style={styles.therapistFeatureCard} variant="light" gradient={false}>
-                    <View style={styles.therapistFeatureContent}>
-                      <View style={[styles.therapistFeatureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
-                        <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                      </View>
-                      <Text style={styles.therapistFeatureText} numberOfLines={2}>Licensed{'\n'}Professionals</Text>
-                    </View>
-                  </GlassCard>
-                  <GlassCard padding="sm" style={styles.therapistFeatureCard} variant="light" gradient={false}>
-                    <View style={styles.therapistFeatureContent}>
-                      <View style={[styles.therapistFeatureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
-                        <Ionicons name="time" size={22} color={colors.primary} />
-                      </View>
-                      <Text style={styles.therapistFeatureText} numberOfLines={2}>Answer questions{'\n'}under posts</Text>
-                    </View>
-                  </GlassCard>
-                </View>
-              </View>
+        ) : index === 0 ? (
+          // Welcome slide - matching screenshot style
+          <View style={styles.welcomeSlide}>
+            {/* Hero image - top portion */}
+            <View style={styles.welcomeImageContainer}>
+              <Image
+                source={onboardingHero}
+                style={styles.welcomeHeroImage}
+                resizeMode="cover"
+              />
+              {/* Gradient fade at bottom of image */}
+              <LinearGradient
+                colors={['transparent', '#FFF5F1']}
+                style={styles.welcomeImageFade}
+              />
+            </View>
+
+            {/* Text content */}
+            <View style={styles.welcomeContent}>
+              <Text style={styles.welcomeTitle}>
+                <Text style={styles.welcomeTitleDark}>Meet </Text>
+                <Text style={styles.welcomeTitleAccent1}>your </Text>
+                <Text style={styles.welcomeTitleDark}>AI{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>Mental </Text>
+                <Text style={styles.welcomeTitleAccent2}>Health{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>companion</Text>
+              </Text>
+
+              <Text style={styles.welcomeSubtitle}>
+                {item.description}
+              </Text>
             </View>
           </View>
         ) : (
           // Standard layout for other slides
           <View style={styles.slideContent}>
-            {/* Icon with animation - use Aurora for first, second, and Aurora page slide */}
             <AnimatedIconContainer 
               icon={item.icon} 
               delay={index * 100} 
-              useAurora={index === 0 || index === 1 || (item.id === '5' && item.title === 'Aurora')}
+              useAurora={index === 1 || (item.id === '5' && item.title === 'Aurora')}
               compact={index === 1}
             />
 
-            {/* Title */}
             <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
 
-            {/* Description in GlassCard */}
             <GlassCard padding="lg" style={styles.descriptionCard} variant="dark" gradient>
               <Text style={[styles.description, { color: colors.text }]} numberOfLines={0}>
                 {item.description}
               </Text>
             </GlassCard>
 
-            {/* University badges for slide 2 */}
             {item.badges && (
               <View style={styles.badgesContainer}>
                 {item.badges.map((badge, badgeIndex) => (
@@ -693,13 +702,20 @@ export default function OnboardingScreen() {
     );
   }, [colors.text, currentIndex]);
 
+  const isHeroSlide = true;
+
   return (
-    <LinearGradient
-      colors={colors.backgroundGradient as readonly [string, string, string]}
-      style={styles.container}
-    >
-      {/* Simple header spacing (no Skip button) */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]} />
+    <View style={[styles.container, isHeroSlide && styles.welcomeContainer]}>
+      {!isHeroSlide && (
+        <LinearGradient
+          colors={colors.backgroundGradient as readonly [string, string, string]}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+
+      {!isHeroSlide && (
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]} />
+      )}
 
       {/* Slides FlatList */}
       <FlatList
@@ -732,28 +748,44 @@ export default function OnboardingScreen() {
         disableVirtualization={false}
       />
 
-      {/* Pagination Dots */}
-      <View style={styles.paginationContainer}>
-        <PaginationDots total={onboardingSlides.length} currentIndex={currentIndex} />
-      </View>
+      {!isHeroSlide && (
+        <View style={styles.paginationContainer}>
+          <PaginationDots total={onboardingSlides.length} currentIndex={currentIndex} />
+        </View>
+      )}
 
-      {/* Next/Get Started Button */}
+      {/* Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md }]}>
-        <GlassButton
-          title={currentIndex === onboardingSlides.length - 1 ? "Get Started" : "Next"}
-          onPress={handleNext}
-          variant="primary"
-          size="lg"
-          style={styles.nextButton}
-        />
+        {isHeroSlide ? (
+          <Pressable
+            onPress={handleNext}
+            style={({ pressed }) => [
+              styles.welcomeButton,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <Text style={styles.welcomeButtonText}>{currentIndex === 1 ? "Next" : "Get Started"}</Text>
+          </Pressable>
+        ) : (
+          <GlassButton
+            title={currentIndex === onboardingSlides.length - 1 ? "Get Started" : "Next"}
+            onPress={handleNext}
+            variant="primary"
+            size="lg"
+            style={styles.nextButton}
+          />
+        )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  welcomeContainer: {
+    backgroundColor: '#FFF5F1',
   },
   floatingSparkle: {
     position: 'absolute',
@@ -1136,5 +1168,107 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,
+  },
+  // Welcome slide styles
+  welcomeSlide: {
+    flex: 1,
+    width: SCREEN_WIDTH,
+    backgroundColor: '#FFF5F1',
+  },
+  welcomeImageContainer: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.52,
+    overflow: 'hidden',
+  },
+  welcomeHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  welcomeImageFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+  welcomeContent: {
+    flex: 1,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    alignItems: 'flex-start',
+  },
+  welcomeTitle: {
+    fontSize: 36,
+    lineHeight: 46,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  welcomeTitleDark: {
+    color: '#1A1A2E',
+    fontSize: 36,
+    fontWeight: '700',
+  },
+  welcomeTitleAccent1: {
+    color: '#E8956D',
+    fontSize: 36,
+    fontWeight: '700',
+  },
+  welcomeTitleAccent2: {
+    color: '#D4878F',
+    fontSize: 36,
+    fontWeight: '700',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#7A7A8E',
+    fontWeight: '500',
+  },
+  welcomeButton: {
+    width: '100%',
+    backgroundColor: '#1A1A2E',
+    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  // Credential tags overlaid on the image
+  credentialOverlayGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+  },
+  credentialTagsContainer: {
+    position: 'absolute',
+    bottom: SPACING.lg,
+    left: SPACING.md,
+    right: SPACING.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  credentialTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  credentialTagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

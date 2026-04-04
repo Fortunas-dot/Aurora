@@ -428,6 +428,42 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, isLoading, user, checkPremiumStatus, resetConsent]);
 
+  // Request App Store review after 5 app opens
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const maybeRequestReview = async () => {
+      try {
+        const key = 'app_open_count';
+        const raw = await AsyncStorage.getItem(key);
+        const count = (parseInt(raw || '0', 10) || 0) + 1;
+        await AsyncStorage.setItem(key, String(count));
+
+        if (count === 5) {
+          try {
+            const StoreReview = await import('expo-store-review');
+            const available = await StoreReview.isAvailableAsync();
+            if (available) {
+              setTimeout(() => {
+                StoreReview.requestReview();
+              }, 2000);
+            }
+          } catch {
+            // Native module not available (dev/web) — skip silently
+          }
+        }
+
+        if (__DEV__) {
+          console.log(`App open count: ${count}${count === 5 ? ' → requesting review' : ''}`);
+        }
+      } catch (error) {
+        console.warn('Store review check failed:', error);
+      }
+    };
+
+    maybeRequestReview();
+  }, [isAuthenticated, user]);
+
   // Track screen views in Facebook (PostHog screen tracking is handled by PostHogScreenTracker)
   useEffect(() => {
     if (!pathname) return;

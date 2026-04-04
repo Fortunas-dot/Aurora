@@ -64,34 +64,30 @@ export function usePremium() {
  * ```
  */
 export function useRequirePremium() {
-  const { isPremium, isLoading, suppressSubscriptionRedirect } = usePremiumStore();
+  const { isPremium, isLoading, hasCheckedPremium, suppressSubscriptionRedirect } = usePremiumStore();
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
 
   const requirePremium = (): boolean => {
-    // Keep auth behavior consistent for gated actions triggered from deep links/notifications.
     if (!isAuthenticated) {
       router.push('/(auth)/login');
       return false;
     }
 
-    // Avoid false redirects while premium status is still being fetched.
-    if (isLoading) {
+    // Don't redirect while premium status is loading or hasn't been checked yet.
+    // This prevents false redirects on cold start before RevenueCat responds.
+    if (isLoading || !hasCheckedPremium) {
       return false;
     }
 
-    // If user is premium, always allow.
     if (isPremium) {
       return true;
     }
 
-    // Avoid redirect during flows where we intentionally refresh entitlement first
-    // (e.g. notification taps). The caller will navigate once the refresh completes.
     if (suppressSubscriptionRedirect) {
       return false;
     }
 
-    // Non-premium users are always redirected to subscription for gated features.
     router.push('/subscription');
     return false;
   };

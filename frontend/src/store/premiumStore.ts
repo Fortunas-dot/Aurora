@@ -6,6 +6,9 @@ interface PremiumState {
   // State
   isPremium: boolean;
   isLoading: boolean;
+  // True after the first successful checkPremiumStatus() call.
+  // Prevents false redirects before entitlement is known.
+  hasCheckedPremium: boolean;
   // When true, premium-gated screens should not immediately redirect to `/subscription`.
   // This avoids a brief "subscription flicker" on cold-start deep links/notification taps.
   suppressSubscriptionRedirect: boolean;
@@ -27,6 +30,7 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
   // Initial state
   isPremium: false,
   isLoading: false,
+  hasCheckedPremium: false,
   suppressSubscriptionRedirect: false,
   customerInfo: null,
   offerings: null,
@@ -44,6 +48,7 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
         isPremium,
         customerInfo,
         isLoading: false,
+        hasCheckedPremium: true,
       });
 
     } catch (error: any) {
@@ -51,6 +56,7 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
       set({
         error: error.message || 'Failed to check premium status',
         isLoading: false,
+        hasCheckedPremium: true,
       });
     }
   },
