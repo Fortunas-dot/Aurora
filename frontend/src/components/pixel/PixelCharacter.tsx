@@ -2,120 +2,120 @@ import React, { useMemo } from 'react';
 import Svg, { Rect } from 'react-native-svg';
 import { PixelCharacterConfig, HairStyle } from '../../constants/pixelCharacterOptions';
 
-// ── Part type codes ─────────────────────────────────────────────
-const _ = 0;   // empty
+// ── Part codes ──────────────────────────────────────────────
+const _ = 0;
 const H = 1;   // hair
 const S = 2;   // skin
-const D = 3;   // skin shadow (cheeks)
-const W = 4;   // eye white
-const E = 5;   // eye color (iris)
-const M = 6;   // mouth
+const W = 4;   // eye white (unused but reserved)
+const E = 5;   // eye color (simple dot)
+const M = 6;   // mouth (single pixel)
 const T = 7;   // shirt
-const U = 8;   // shirt fold/shadow
+const U = 8;   // shirt fold/crease
 const P = 9;   // pants
-const Q = 10;  // pants cuff (darker)
+const Q = 10;  // pants cuff
 const K = 11;  // shoe
 const B = 12;  // belt
 
-// Side variants → base code + 20, rendered 30% darker for 3D depth
-const Hs = 21; // hair side
-const Ss = 22; // skin side
-const Ts = 27; // shirt side
-const Ps = 29; // pants side
-const Qs = 30; // pants cuff side
-const Ks = 31; // shoe side
-const Bs = 32; // belt side
+// Side variants: code + 20 → rendered 30% darker (3D right-side face)
+const Hs = 21;
+const Ss = 22;
+const Ts = 27;
+const Ps = 29;
+const Qs = 30;
+const Ks = 31;
+const Bs = 32;
 
-const GRID_W = 17;
+const GRID_W = 15;
 const OUTLINE_COLOR = '#0E0E1A';
 
-// ── HEAD grids (11 rows × 17 cols) ─────────────────────────────
-// 3/4 view: 2-pixel side depth on the right edge
+// ════════════════════════════════════════════════════════════════
+// HABBO-STYLE CHARACTER GRIDS
+//
+// Design principles:
+//   • Cube-shaped head (rectangular block with visible right side)
+//   • 50% head / 50% body ratio (big head, stubby body)
+//   • Simple dot eyes, single-pixel mouth
+//   • Blocky torso with one visible arm
+//   • Wide 2px gap between stubby legs
+//   • Everything reads as isometric blocks
+// ════════════════════════════════════════════════════════════════
+
+// ── HEAD grids (10 rows × 15 cols) ─────────────────────────
 
 const HEADS: Record<HairStyle, number[][]> = {
   bob: [
-    [_,_,_,_,_,H,H,H,H,H,Hs,Hs,_,_,_,_,_],
-    [_,_,_,_,H,H,H,H,H,H,H,Hs,Hs,_,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,W,E,S,S,E,W,H,Hs,Hs,_,_,_],
-    [_,_,_,D,S,S,S,S,S,S,S,D,Ss,Ss,_,_,_],
-    [_,_,_,S,S,S,M,M,M,S,S,S,Ss,Ss,_,_,_],
-    [_,_,_,_,S,S,S,S,S,S,S,Ss,Ss,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,Ss,Ss,_,_,_,_,_],
-    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_,_,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,E,S,S,S,E,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,M,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_],
   ],
   long: [
-    [_,_,_,_,_,H,H,H,H,H,Hs,Hs,_,_,_,_,_],
-    [_,_,_,_,H,H,H,H,H,H,H,Hs,Hs,_,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,W,E,S,S,E,W,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,S,M,M,M,S,S,H,Hs,Hs,_,_,_],
-    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,_,_,_,_],
-    [_,_,_,H,_,S,S,S,S,S,_,H,Hs,_,_,_,_],
-    [_,_,_,H,_,_,S,S,S,_,_,H,Hs,_,_,_,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_],
+    [_,_,_,H,S,E,S,S,S,E,S,H,Hs,Hs,_],
+    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_],
+    [_,_,_,H,S,S,S,M,S,S,S,H,Hs,Hs,_],
+    [_,_,_,H,S,S,S,S,S,S,S,H,Hs,Hs,_],
+    [_,_,_,H,_,_,S,S,S,Ss,_,H,Hs,_,_],
   ],
   spiky: [
-    [_,_,_,H,_,_,H,H,H,_,_,H,_,_,_,_,_],
-    [_,_,_,H,H,_,H,H,H,_,H,H,Hs,_,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_,_],
-    [_,_,_,_,S,S,S,S,S,S,S,Ss,Ss,_,_,_,_],
-    [_,_,_,_,S,W,E,S,S,E,W,Ss,Ss,_,_,_,_],
-    [_,_,_,D,S,S,S,S,S,S,S,D,Ss,Ss,_,_,_],
-    [_,_,_,S,S,S,M,M,M,S,S,S,Ss,Ss,_,_,_],
-    [_,_,_,_,S,S,S,S,S,S,S,Ss,Ss,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,Ss,Ss,_,_,_,_,_],
-    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_,_,_],
+    [_,_,H,_,H,_,H,H,H,_,H,_,Hs,_,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,H,H,H,H,H,H,H,H,H,Hs,Hs,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,E,S,S,S,E,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,M,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_],
   ],
   curly: [
-    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_],
-    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_],
-    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_],
-    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,Hs,_,_],
-    [_,_,H,S,S,S,S,S,S,S,S,S,H,Ss,Ss,_,_],
-    [_,_,H,S,S,W,E,S,S,E,W,S,H,Ss,Ss,_,_],
-    [_,_,_,D,S,S,S,S,S,S,S,D,Ss,Ss,_,_,_],
-    [_,_,_,S,S,S,M,M,M,S,S,S,Ss,Ss,_,_,_],
-    [_,_,_,_,S,S,S,S,S,S,S,Ss,Ss,_,_,_,_],
-    [_,_,_,_,_,S,S,S,S,S,Ss,Ss,_,_,_,_,_],
-    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_,_,_],
+    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,_],
+    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,_],
+    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,_],
+    [_,_,H,H,H,H,H,H,H,H,H,H,H,Hs,_],
+    [_,_,H,S,S,S,S,S,S,S,S,S,H,Ss,_],
+    [_,_,H,S,S,E,S,S,S,E,S,S,H,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,M,S,S,S,S,Ss,Ss,_],
+    [_,_,_,S,S,S,S,S,S,S,S,S,Ss,Ss,_],
+    [_,_,_,_,_,_,S,S,S,Ss,_,_,_,_,_],
   ],
 };
 
-// ── BODY grid (shared, 15 rows × 17 cols) ──────────────────────
-// 3/4 view: right side depth on torso + right leg
-// Left arm visible (closer to viewer), right arm hidden behind body
+// ── BODY grid (shared, 10 rows × 15 cols) ──────────────────
+// Short stubby torso, one arm visible, wide leg gap
 
 const BODY: number[][] = [
-  [_,_,_,_,_,T,T,T,T,T,Ts,Ts,_,_,_,_,_],  // 0  collar
-  [_,_,_,_,T,T,T,T,T,T,T,Ts,Ts,_,_,_,_],  // 1  shirt
-  [_,_,_,T,T,T,T,T,T,T,T,T,Ts,Ts,_,_,_],  // 2  shirt wider
-  [_,S,S,T,T,T,T,U,T,T,T,T,Ts,Ts,_,_,_],  // 3  left arm + fold + side
-  [_,S,S,T,T,U,U,U,U,U,T,T,Ts,Ts,_,_,_],  // 4  left arm + crease + side
-  [_,_,_,T,T,T,T,T,T,T,T,T,Ts,Ts,_,_,_],  // 5  shirt
-  [_,_,_,_,T,T,T,T,T,T,T,Ts,Ts,_,_,_,_],  // 6  shirt bottom
-  [_,_,_,_,B,B,B,B,B,B,B,Bs,Bs,_,_,_,_],  // 7  belt
-  [_,_,_,_,P,P,P,P,P,P,P,Ps,Ps,_,_,_,_],  // 8  pants top
-  [_,_,_,_,P,P,P,_,P,P,P,Ps,_,_,_,_,_],   // 9  legs split
-  [_,_,_,_,P,P,P,_,P,P,P,Ps,_,_,_,_,_],   // 10 legs
-  [_,_,_,_,P,P,P,_,P,P,P,Ps,_,_,_,_,_],   // 11 legs
-  [_,_,_,_,Q,Q,Q,_,Q,Q,Q,Qs,_,_,_,_,_],   // 12 cuffs
-  [_,_,_,K,K,K,K,_,K,K,K,K,Ks,_,_,_,_],   // 13 shoes
-  [_,_,_,K,K,K,K,_,K,K,K,K,Ks,_,_,_,_],   // 14 shoes
+  [_,_,_,T,T,T,T,T,T,T,T,Ts,Ts,_,_],  // shirt top
+  [_,S,S,T,T,T,T,T,T,T,T,Ts,Ts,_,_],  // arm + shirt
+  [_,S,S,T,T,T,U,U,T,T,T,Ts,Ts,_,_],  // arm + crease
+  [_,_,_,T,T,T,T,T,T,T,T,Ts,Ts,_,_],  // shirt bottom
+  [_,_,_,P,P,P,P,P,P,P,P,Ps,Ps,_,_],  // pants
+  [_,_,_,P,P,P,_,_,P,P,P,Ps,_,_,_],   // legs split (2px gap)
+  [_,_,_,P,P,P,_,_,P,P,P,Ps,_,_,_],   // legs
+  [_,_,_,P,P,P,_,_,P,P,P,Ps,_,_,_],   // legs
+  [_,_,_,K,K,K,_,_,K,K,K,Ks,_,_,_],   // shoes
+  [_,_,_,K,K,K,_,_,K,K,K,Ks,_,_,_],   // shoes
 ];
 
-// ── Grid builder ────────────────────────────────────────────────
+// ── Grid assembly ───────────────────────────────────────────
 
 function buildGrid(hairStyle: HairStyle): number[][] {
   return [...HEADS[hairStyle], ...BODY];
 }
 
-// ── Auto-outline: outline any empty cell adjacent to a fill ─────
+// ── Auto-outline: every empty cell next to a fill → outline ─
 
 function computeOutlines(grid: number[][]): [number, number][] {
   const set = new Set<string>();
@@ -136,23 +136,21 @@ function computeOutlines(grid: number[][]): [number, number][] {
   }
 
   const result: [number, number][] = [];
-  set.forEach(key => {
-    const [x, y] = key.split(',').map(Number);
+  set.forEach((k) => {
+    const [x, y] = k.split(',').map(Number);
     result.push([x, y]);
   });
   return result;
 }
 
-// ── Color mapping ───────────────────────────────────────────────
+// ── Color mapping ───────────────────────────────────────────
 
 function getBaseColor(part: number, cfg: PixelCharacterConfig): string {
   switch (part) {
     case H:  return cfg.hairColor;
     case S:  return cfg.skinColor;
-    case D:  return darken(cfg.skinColor, 0.12);
-    case W:  return '#FFFFFF';
     case E:  return cfg.eyeColor;
-    case M:  return darken(cfg.skinColor, 0.32);
+    case M:  return darken(cfg.skinColor, 0.35);
     case T:  return cfg.shirtColor;
     case U:  return darken(cfg.shirtColor, 0.18);
     case P:  return cfg.pantsColor;
@@ -165,13 +163,12 @@ function getBaseColor(part: number, cfg: PixelCharacterConfig): string {
 
 function getColor(part: number, cfg: PixelCharacterConfig): string {
   if (part >= 20) {
-    // Side variant: darken the base color for 3D depth
     return darken(getBaseColor(part - 20, cfg), 0.30);
   }
   return getBaseColor(part, cfg);
 }
 
-// ── Component ───────────────────────────────────────────────────
+// ── Component ───────────────────────────────────────────────
 
 interface PixelCharacterProps {
   config: PixelCharacterConfig;
@@ -183,31 +180,22 @@ export default function PixelCharacter({ config, size = 140 }: PixelCharacterPro
   const outlines = useMemo(() => computeOutlines(grid), [grid]);
 
   const gridH = grid.length;
-  // 1px padding so outlines that bleed outside the grid are visible
-  const vbW = GRID_W + 2;
+  const vbW = GRID_W + 2; // 1px outline padding
   const vbH = gridH + 2;
   const width = size;
   const height = Math.round(size * (vbH / vbW));
 
   return (
     <Svg width={width} height={height} viewBox={`-1 -1 ${vbW} ${vbH}`}>
-      {/* Layer 1 — dark outlines around the silhouette */}
+      {/* Outlines */}
       {outlines.map(([x, y], i) => (
         <Rect key={`o${i}`} x={x} y={y} width={1} height={1} fill={OUTLINE_COLOR} />
       ))}
-
-      {/* Layer 2 — colored fill pixels */}
+      {/* Fill */}
       {grid.map((row, y) =>
         row.map((part, x) =>
           part !== _ ? (
-            <Rect
-              key={`${y}-${x}`}
-              x={x}
-              y={y}
-              width={1}
-              height={1}
-              fill={getColor(part, config)}
-            />
+            <Rect key={`${y}-${x}`} x={x} y={y} width={1} height={1} fill={getColor(part, config)} />
           ) : null,
         ),
       )}
@@ -215,7 +203,7 @@ export default function PixelCharacter({ config, size = 140 }: PixelCharacterPro
   );
 }
 
-// ── Utility ─────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────
 
 function darken(hex: string, amount: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
