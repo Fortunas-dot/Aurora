@@ -3,8 +3,8 @@ import { WebSocket } from 'ws';
 import User from '../models/User';
 
 /** Keep in sync with frontend pixel room constants */
-export const WORLD_GRID_WIDTH = 12;
-export const WORLD_GRID_HEIGHT = 10;
+export const WORLD_GRID_WIDTH = 10;
+export const WORLD_GRID_HEIGHT = 8;
 const MAX_LOBBY_PLAYERS = 40;
 const MIN_MOVE_INTERVAL_MS = 150;
 const CHAT_COOLDOWN_MS = 500;
