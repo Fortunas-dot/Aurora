@@ -66,6 +66,16 @@ class UserService {
     email?: string;
     phoneNumber?: string;
     healthInfo?: UserProfile['healthInfo'];
+    pixelCharacter?: {
+      skinColor: string;
+      hairStyle: string;
+      hairColor: string;
+      eyeColor: string;
+      shirtColor: string;
+      pantsColor: string;
+      shoeColor: string;
+      name?: string;
+    };
   }): Promise<ApiResponse<UserProfile>> {
     return apiService.put<UserProfile>('/users/profile', data);
   }

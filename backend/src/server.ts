@@ -224,8 +224,10 @@ console.log('✅ WebSocket support enabled');
 // WebSocket Routes (must be before regular API routes)
 import { handleNotificationWebSocket } from './controllers/notificationWebSocket';
 import { handleChatWebSocket } from './controllers/chatWebSocket';
+import { handleWorldWebSocket } from './controllers/worldWebSocket';
 (app as any).ws('/ws/notifications', handleNotificationWebSocket);
 (app as any).ws('/ws/chat', handleChatWebSocket);
+(app as any).ws('/ws/world', handleWorldWebSocket);
 
 // API Routes with specific rate limiting
 app.use('/api/auth', authLimiter, authRoutes); // Stricter rate limiting for auth

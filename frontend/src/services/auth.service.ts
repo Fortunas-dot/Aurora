@@ -11,6 +11,16 @@ export interface User {
   avatarCharacter?: string;
   avatarBackgroundColor?: string;
   nameColor?: string | null;
+  pixelCharacter?: {
+    skinColor: string;
+    hairStyle: string;
+    hairColor: string;
+    eyeColor: string;
+    shirtColor: string;
+    pantsColor: string;
+    shoeColor: string;
+    name?: string;
+  };
   bio?: string;
   isAnonymous: boolean;
   showEmail: boolean;

@@ -177,6 +177,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
     if (showEmail !== undefined) updateData.showEmail = showEmail;
     if (req.body.healthInfo !== undefined) updateData.healthInfo = req.body.healthInfo;
+    if (req.body.pixelCharacter !== undefined) updateData.pixelCharacter = req.body.pixelCharacter;
     
     // Handle email update
     if (email !== undefined && email !== currentUser.email) {

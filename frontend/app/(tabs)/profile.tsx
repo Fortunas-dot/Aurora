@@ -332,6 +332,20 @@ export default function ProfileScreen() {
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
+              icon="body-outline"
+              title="Pixel Character"
+              subtitle="Create your avatar for the Pixel World"
+              onPress={() => router.push('/pixel-avatar')}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
+              icon="game-controller-outline"
+              title="Pixel Room"
+              subtitle="Walk around and chat with others"
+              onPress={() => router.push('/pixel-room')}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
               icon="mail-outline"
               title={t('profile_account_settings')}
               subtitle={t('profile_account_sub')}
