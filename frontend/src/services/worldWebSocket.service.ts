@@ -30,6 +30,10 @@ class WorldWebSocketService {
   private reconnectDelay = 3000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isConnecting = false;
+  /** Incremented on disconnect so in-flight async connect() aborts (avoids orphan sockets + stuck isConnecting). */
+  private connectGeneration = 0;
+  /** Latest snapshot while socket is open — replay if a listener subscribes late. */
+  private lastSnapshot: WorldPlayer[] | null = null;
   private listeners: Map<WorldEventType | 'pong', Set<EventHandler>> = new Map();
 
   on(event: WorldEventType | 'pong', handler: EventHandler): () => void {
@@ -37,6 +41,20 @@ class WorldWebSocketService {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(handler);
+    if (
+      event === 'snapshot' &&
+      this.lastSnapshot !== null &&
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
+      const snap = this.lastSnapshot;
+      setTimeout(() => {
+        try {
+          handler(snap);
+        } catch (e) {
+          console.error('World WS snapshot replay error:', e);
+        }
+      }, 0);
+    }
     return () => this.listeners.get(event)?.delete(handler);
   }
 
@@ -52,6 +70,9 @@ class WorldWebSocketService {
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
+      if (this.lastSnapshot !== null) {
+        this.emit('snapshot', this.lastSnapshot);
+      }
       return;
     }
     if (this.isConnecting) {
@@ -67,10 +88,15 @@ class WorldWebSocketService {
       this.ws = null;
     }
 
+    const myGen = this.connectGeneration;
     this.isConnecting = true;
 
     try {
       const token = await secureStorage.getItemAsync('auth_token');
+      if (myGen !== this.connectGeneration) {
+        this.isConnecting = false;
+        return;
+      }
       if (!token) {
         this.isConnecting = false;
         this.emit('error', new Error('No auth token'));
@@ -81,15 +107,26 @@ class WorldWebSocketService {
       const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://');
       const url = `${wsUrl}/ws/world?token=${encodeURIComponent(token)}`;
 
+      if (myGen !== this.connectGeneration) {
+        this.isConnecting = false;
+        return;
+      }
+
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
+        if (myGen !== this.connectGeneration) {
+          return;
+        }
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.emit('connected');
       };
 
       this.ws.onmessage = (event) => {
+        if (myGen !== this.connectGeneration) {
+          return;
+        }
         try {
           const data = JSON.parse(event.data as string);
           this.handleMessage(data);
@@ -102,10 +139,17 @@ class WorldWebSocketService {
 
       this.ws.onerror = () => {
         this.isConnecting = false;
+        if (__DEV__) {
+          console.warn('[World WS] socket error');
+        }
       };
 
       this.ws.onclose = (event) => {
         this.isConnecting = false;
+        if (myGen !== this.connectGeneration) {
+          return;
+        }
+        this.lastSnapshot = null;
         this.emit('disconnected');
 
         const shouldReconnect =
@@ -121,7 +165,9 @@ class WorldWebSocketService {
       };
     } catch (e) {
       this.isConnecting = false;
-      this.emit('error', e instanceof Error ? e : new Error(String(e)));
+      if (myGen === this.connectGeneration) {
+        this.emit('error', e instanceof Error ? e : new Error(String(e)));
+      }
     }
   }
 
@@ -137,7 +183,8 @@ class WorldWebSocketService {
   private handleMessage(data: any): void {
     switch (data.type) {
       case 'snapshot':
-        this.emit('snapshot', data.players as WorldPlayer[]);
+        this.lastSnapshot = (data.players as WorldPlayer[]) ?? [];
+        this.emit('snapshot', this.lastSnapshot);
         break;
       case 'player_joined':
         this.emit('player_joined', data.player as WorldPlayer);
@@ -176,6 +223,9 @@ class WorldWebSocketService {
   }
 
   disconnect(): void {
+    this.connectGeneration += 1;
+    this.isConnecting = false;
+    this.lastSnapshot = null;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

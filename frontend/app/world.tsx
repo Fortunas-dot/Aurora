@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,11 @@ export default function WorldScreen() {
   const [players, setPlayers] = useState<WorldPlayer[]>([]);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(true);
+  /** First snapshot from server (must register WS listeners before connect to avoid missing it). */
+  const [snapshotReceived, setSnapshotReceived] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const snapshotReceivedRef = useRef(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const { width: screenW, height: screenH } = Dimensions.get('window');
   const horizontalPad = SPACING.md * 2;
@@ -54,10 +59,16 @@ export default function WorldScreen() {
       return;
     }
 
+    worldWebSocketService.disconnect();
+
+    snapshotReceivedRef.current = false;
+    setSnapshotReceived(false);
+    setLoadFailed(false);
     setConnecting(true);
-    void worldWebSocketService.connect();
 
     const unSubSnap = worldWebSocketService.on('snapshot', (list: WorldPlayer[]) => {
+      snapshotReceivedRef.current = true;
+      setSnapshotReceived(true);
       setPlayers(list);
       setConnected(true);
       setConnecting(false);
@@ -83,10 +94,28 @@ export default function WorldScreen() {
     });
     const unErr = worldWebSocketService.on('error', (e: Error) => {
       if (e.message?.includes('No auth')) return;
+      setConnecting(false);
+      if (!snapshotReceivedRef.current) {
+        setLoadFailed(true);
+      }
       Alert.alert('Plaza', e.message || 'Connection issue');
     });
 
+    const loadTimeout = setTimeout(() => {
+      if (!snapshotReceivedRef.current) {
+        setLoadFailed(true);
+        setConnecting(false);
+        Alert.alert(
+          'Plaza',
+          'Could not load the plaza in time. Check your connection, then tap Try again.'
+        );
+      }
+    }, 12000);
+
+    void worldWebSocketService.connect();
+
     return () => {
+      clearTimeout(loadTimeout);
       unSubSnap();
       unJoin();
       unMove();
@@ -96,7 +125,7 @@ export default function WorldScreen() {
       unErr();
       worldWebSocketService.disconnect();
     };
-  }, [user, router]);
+  }, [user, router, retryNonce]);
 
   const onCellPress = useCallback(
     (tx: number, ty: number) => {
@@ -141,17 +170,37 @@ export default function WorldScreen() {
         </Pressable>
         <View style={styles.headerTitleBlock}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Commune Plaza</Text>
-          <Text style={[styles.headerSub, { color: colors.textMuted }]}>
-            {connected ? 'Walk on highlighted tiles' : connecting ? 'Connecting…' : '…'}
+          <Text style={[styles.headerSub, { color: colors.textMuted }]} numberOfLines={2}>
+            {loadFailed
+              ? 'Could not connect — try again later'
+              : snapshotReceived
+                ? 'Walk on highlighted tiles'
+                : connecting
+                  ? 'Connecting…'
+                  : '…'}
           </Text>
         </View>
         <View style={{ width: 44 }} />
       </View>
 
       <View style={styles.centerArea}>
-        {(connecting || (!connected && players.length === 0)) && (
+        {!snapshotReceived && !loadFailed && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+
+        {loadFailed && (
+          <View style={styles.retryBanner}>
+            <Text style={[styles.retryText, { color: colors.textMuted }]}>
+              No connection to the plaza.
+            </Text>
+            <Pressable
+              style={[styles.retryBtn, { borderColor: colors.primary, backgroundColor: colors.glass.background }]}
+              onPress={() => setRetryNonce((n) => n + 1)}
+            >
+              <Text style={[styles.retryBtnText, { color: colors.primary }]}>Try again</Text>
+            </Pressable>
           </View>
         )}
 
@@ -245,6 +294,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  retryBanner: {
+    position: 'absolute',
+    top: '38%',
+    zIndex: 11,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
+  },
+  retryText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 0,
+    borderWidth: 2,
+  },
+  retryBtnText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
