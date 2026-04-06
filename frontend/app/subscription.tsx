@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '../src/hooks/useTheme';
+import { useTranslation } from '../src/hooks/useTranslation';
 import { useAuthStore } from '../src/store/authStore';
 import { usePremiumStore } from '../src/store/premiumStore';
 import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuecat.service';
@@ -85,6 +86,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
   const userId = user?._id || '';
   const {
@@ -368,14 +370,14 @@ export default function SubscriptionScreen() {
   // Handlers
   const handlePurchase = async () => {
     if (!isAuthenticated) {
-      Alert.alert('Login Required', 'Please log in to purchase a subscription.', [
-        { text: 'OK', onPress: () => router.push('/(auth)/login') },
+      Alert.alert(t('sub_login_required'), t('sub_login_to_purchase'), [
+        { text: t('ok'), onPress: () => router.push('/(auth)/login') },
       ]);
       return;
     }
 
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-      Alert.alert('Not Available', 'In-app purchases are only available on mobile devices.');
+      Alert.alert(t('sub_not_available'), t('sub_iap_mobile_only'));
       return;
     }
 
@@ -414,9 +416,9 @@ export default function SubscriptionScreen() {
       }
       
       Alert.alert(
-        'Package Not Available', 
-        'Unable to load subscription packages. Please check your internet connection and try again, or contact support.',
-        [{ text: 'OK' }]
+        t('sub_package_not_available'), 
+        t('sub_package_not_available_body'),
+        [{ text: t('ok') }]
       );
       return;
     }
@@ -425,7 +427,7 @@ export default function SubscriptionScreen() {
     retryAttemptRef.current = 0;
 
     if (isPremium) {
-      Alert.alert('Already Premium', 'You already have an active premium subscription!');
+      Alert.alert(t('sub_already_premium'), t('sub_already_premium_body'));
       return;
     }
 
@@ -458,11 +460,11 @@ export default function SubscriptionScreen() {
         });
 
         Alert.alert(
-          'Welcome to Premium! 🎉',
-          'Your subscription is now active. Enjoy all premium features!',
+          t('sub_welcome_premium_title'),
+          t('sub_welcome_premium_body'),
           [
             {
-              text: 'OK',
+              text: t('ok'),
               onPress: () => {
                 router.push('/health-info');
               },
@@ -472,7 +474,7 @@ export default function SubscriptionScreen() {
       }
     } catch (error: any) {
       if (error.message !== 'Purchase cancelled') {
-        Alert.alert('Purchase Failed', error.message || 'Something went wrong. Please try again.');
+        Alert.alert(t('sub_purchase_failed'), error.message || t('sub_purchase_failed_body'));
       }
     } finally {
       setIsPurchasing(false);
@@ -481,7 +483,7 @@ export default function SubscriptionScreen() {
 
   const handleRestorePurchases = async () => {
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-      Alert.alert('Not Available', 'Restore is only available on mobile devices.');
+      Alert.alert(t('sub_not_available'), t('sub_restore_mobile_only'));
       return;
     }
 
@@ -493,12 +495,12 @@ export default function SubscriptionScreen() {
 
       if (success) {
         // Facebook: treat restore as an active subscription (no separate event in guide)
-        Alert.alert('Purchases Restored', 'Your previous purchases have been restored successfully.');
+        Alert.alert(t('sub_purchases_restored'), t('sub_purchases_restored_body'));
       } else {
-        Alert.alert('No Purchases Found', "We couldn't find any previous purchases to restore.");
+        Alert.alert(t('sub_no_purchases'), t('sub_no_purchases_body'));
       }
     } catch (error: any) {
-      Alert.alert('Restore Failed', error.message || 'Failed to restore purchases. Please try again.');
+      Alert.alert(t('sub_restore_failed'), error.message || t('sub_restore_failed_body'));
     } finally {
       setIsRestoring(false);
     }
@@ -518,13 +520,13 @@ export default function SubscriptionScreen() {
       }
 
       Alert.alert(
-        'Manage Subscription',
-        'Open iPhone Settings, tap your Apple ID, then tap Subscriptions.'
+        t('sub_manage_subscription'),
+        t('sub_manage_ios_settings')
       );
       return;
     }
 
-    Alert.alert('Manage Subscription', 'Manage your subscription from your app store account settings.');
+    Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
   };
 
   const handleBack = () => {
@@ -535,14 +537,16 @@ export default function SubscriptionScreen() {
     }
   };
 
-  // Features list for Aurora
-  const featuresList = [
-    { icon: 'people', title: 'COMMUNITY', desc: 'Access to like-minded people' },
-    { icon: 'medical', title: 'THERAPISTS', desc: '2-5 therapists available to answer questions in the feed' },
-    { icon: 'sparkles', title: 'A.I. EMOTIONAL SUPPORT', desc: 'Your own free A.I. emotional companion' },
-    { icon: 'book', title: 'JOURNALS & INSIGHTS', desc: 'Access to functionalities like journals, insights etc' },
-    { icon: 'rocket', title: 'COMING SOON', desc: 'Voice sessions, White noises, Events' },
-  ];
+  const featuresList = useMemo(
+    () => [
+      { icon: 'people' as const, title: t('feat_community_title'), desc: t('feat_community_desc') },
+      { icon: 'medical' as const, title: t('feat_therapists_title'), desc: t('feat_therapists_desc') },
+      { icon: 'sparkles' as const, title: t('feat_ai_title'), desc: t('feat_ai_desc') },
+      { icon: 'book' as const, title: t('feat_journal_title'), desc: t('feat_journal_desc') },
+      { icon: 'rocket' as const, title: t('feat_coming_title'), desc: t('feat_coming_desc') },
+    ],
+    [t]
+  );
 
   if (!isAuthenticated) {
     return (
@@ -554,17 +558,17 @@ export default function SubscriptionScreen() {
           >
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Premium</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('sub_header_premium')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.authPrompt}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in to subscribe</Text>
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>{t('sub_login_subscribe')}</Text>
           <TouchableOpacity
             style={[styles.authButton, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(auth)/login')}
           >
-            <Text style={styles.authButtonText}>Log In</Text>
+            <Text style={styles.authButtonText}>{t('sub_log_in_button')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -592,9 +596,9 @@ export default function SubscriptionScreen() {
 
           {/* Header content */}
           <View style={styles.headerContent}>
-            <Text style={styles.headerSmallTitle}>LIMITED TIME OFFER</Text>
+            <Text style={styles.headerSmallTitle}>{t('sub_limited_offer')}</Text>
             <Animated.View style={[styles.headerTitleRow, { opacity: fadeAnim }]}>
-              <Text style={styles.headerBigTitle}>Aurora</Text>
+              <Text style={styles.headerBigTitle}>{t('sub_brand_title')}</Text>
             </Animated.View>
           </View>
         </LinearGradient>
@@ -626,17 +630,17 @@ export default function SubscriptionScreen() {
             <View style={styles.planCardInner}>
               {/* Dynamic promo text at the very top of the card */}
               <Text style={[styles.planNote, styles.introBadge, { color: '#9B59B6' }]}>
-                Price valid for the first 500 members!
+                {t('sub_price_first_500')}
               </Text>
               <View style={styles.planHeader}>
-                <Text style={[styles.planLabel, { color: '#1A1F2E' }]}>premium</Text>
+                <Text style={[styles.planLabel, { color: '#1A1F2E' }]}>{t('sub_plan_label')}</Text>
                 {isPremium ? (
                   <View style={[styles.saveBadge, { backgroundColor: '#27AE60' }]}>
-                    <Text style={styles.saveBadgeText}>ACTIVE</Text>
+                    <Text style={styles.saveBadgeText}>{t('sub_badge_active')}</Text>
                   </View>
                 ) : (
                   <View style={[styles.saveBadge, { backgroundColor: '#9B59B6' }]}>
-                    <Text style={styles.saveBadgeText}>POPULAR</Text>
+                    <Text style={styles.saveBadgeText}>{t('sub_badge_popular')}</Text>
                   </View>
                 )}
               </View>
@@ -644,15 +648,15 @@ export default function SubscriptionScreen() {
                 <Text style={[styles.priceBig, { color: '#9B59B6' }]}>
                   {monthlyPackage?.product?.priceString ?? '...'}
                 </Text>
-                <Text style={[styles.priceDetail, { color: '#6C757D' }]}>per month</Text>
+                <Text style={[styles.priceDetail, { color: '#6C757D' }]}>{t('sub_per_month')}</Text>
               </View>
               {isPremium ? (
                 <Text style={[styles.planNote, { color: '#27AE60', fontWeight: '700' }]}>
-                  ✓ You are already subscribed!
+                  {t('sub_you_are_subscribed')}
                 </Text>
               ) : (
                 <Text style={[styles.planNote, styles.planCoffeeNote]}>
-                  ☕ Just 2 coffees per month
+                  {t('sub_coffee_note')}
                 </Text>
               )}
             </View>
@@ -662,8 +666,8 @@ export default function SubscriptionScreen() {
           <View style={styles.freeTrialNotice}>
             <Ionicons name="gift-outline" size={20} color="#9B59B6" />
             <Text style={styles.freeTrialText}>
-              <Text style={styles.freeTrialBold}>3-day free trial</Text>
-              {' '}included - Cancel anytime
+              <Text style={styles.freeTrialBold}>{t('sub_free_trial_bold')}</Text>
+              {' '}{t('sub_free_trial_rest')}
             </Text>
           </View>
 
@@ -711,15 +715,15 @@ export default function SubscriptionScreen() {
             {isPurchasing ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : isPremium ? (
-              <Text style={styles.ctaButtonText}>Manage Subscription</Text>
+              <Text style={styles.ctaButtonText}>{t('sub_cta_manage')}</Text>
             ) : isLoadingProducts && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (
-              <Text style={styles.ctaButtonText}>Coming Soon</Text>
+              <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
             ) : !monthlyPackage ? (
-              <Text style={styles.ctaButtonText}>Coming Soon</Text>
+              <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
             ) : (
-              <Text style={styles.ctaButtonText}>Start 3-day Free Trial</Text>
+              <Text style={styles.ctaButtonText}>{t('sub_cta_start_trial')}</Text>
             )}
           </TouchableOpacity>
 
@@ -727,11 +731,10 @@ export default function SubscriptionScreen() {
           <Text style={[styles.autoRenewNote, { color: '#6C757D' }]}>
             {monthlyPackage?.product?.priceString ? (
               <>
-                Auto-renews for {monthlyPackage.product.priceString}/month until canceled. Introductory
-                price valid for the first 500 subscribers.
+                {t('sub_auto_renew_with_price', { price: monthlyPackage.product.priceString })}
               </>
             ) : (
-              <>Auto-renews monthly until canceled. Introductory price valid for the first 500 subscribers.</>
+              <>{t('sub_auto_renew_generic')}</>
             )}
           </Text>
 
@@ -741,7 +744,7 @@ export default function SubscriptionScreen() {
               {isRestoring ? (
                 <ActivityIndicator color="#6C757D" size="small" />
               ) : (
-                <Text style={[styles.restoreButtonText, { color: '#6C757D' }]}>Restore Purchases</Text>
+                <Text style={[styles.restoreButtonText, { color: '#6C757D' }]}>{t('sub_restore_purchases')}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -752,14 +755,14 @@ export default function SubscriptionScreen() {
               style={styles.legalLink}
               onPress={() => router.push('/terms-of-service')}
             >
-              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>Terms of Service</Text>
+              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>{t('termsOfService')}</Text>
             </TouchableOpacity>
             <Text style={[styles.legalLinkSeparator, { color: '#6C757D' }]}>•</Text>
             <TouchableOpacity
               style={styles.legalLink}
               onPress={() => router.push('/privacy-policy')}
             >
-              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>Privacy Policy</Text>
+              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>{t('privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
         </View>

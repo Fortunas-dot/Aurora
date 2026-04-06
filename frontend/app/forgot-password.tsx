@@ -7,10 +7,12 @@ import { GlassCard, GlassButton, GlassInput } from '../src/components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { authService } from '../src/services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../src/services/posthog.service';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,12 +27,12 @@ export default function ForgotPasswordScreen() {
     const trimmed = email.trim().toLowerCase();
 
     if (!trimmed) {
-      setValidationError('Email is required');
+      setValidationError(t('email_required'));
       return;
     }
 
     if (!trimmed.includes('@') || !trimmed.includes('.')) {
-      setValidationError('Please enter a valid email address');
+      setValidationError(t('invalid_email'));
       return;
     }
 
@@ -71,9 +73,9 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Reset password</Text>
+            <Text style={styles.title}>{t('forgot_title')}</Text>
             <Text style={styles.subtitle}>
-              Enter the email you used for Aurora. If we find an account, we’ll send a link to reset your password.
+              {t('forgot_subtitle')}
             </Text>
           </View>
 
@@ -101,7 +103,7 @@ export default function ForgotPasswordScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="you@example.com"
-                  label="Email"
+                  label={t('email_label')}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -115,7 +117,7 @@ export default function ForgotPasswordScreen() {
                 )}
 
                 <GlassButton
-                  title="Send reset link"
+                  title={t('send_reset_link')}
                   onPress={handleSubmit}
                   variant="primary"
                   size="lg"
@@ -125,7 +127,7 @@ export default function ForgotPasswordScreen() {
                 />
 
                 <GlassButton
-                  title="Back to login"
+                  title={t('back_to_login')}
                   onPress={() => router.replace('/(auth)/login')}
                   variant="ghost"
                   size="md"

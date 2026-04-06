@@ -1,0 +1,33 @@
+export const onboardingJa = {
+  ob_slide1_title: 'あなたのメンタルヘルス\nAIコンパニオンに\n出会う',
+  ob_slide1_desc:
+    '必要なときに話せる相手。\n内省と成長をサポートします',
+  ob_slide2_title: '最高峰の知見で\n構築\nメンタルヘルスの専門家',
+  ob_slide2_desc:
+    '心理学と行動科学に基づいて学習。各分野の第一人者とともに開発しました。',
+  ob_slide3_title: '本物のセラピストが\nあなたをサポート',
+  ob_slide3_desc:
+    '有資格の専門家がアプリ内で対応。投稿や質問への返信で、必要なときに本格的なガイダンスを提供します。',
+  ob_get_started: 'はじめる',
+  ob_next: '次へ',
+  ob_tag_harvard: 'ハーバード',
+  ob_tag_oxford: 'オックスフォード',
+  ob_tag_stanford: 'スタンフォード',
+  ob_tag_licensed: '有資格',
+  ob_tag_respond_posts: '投稿に返信',
+  ob_tag_answer_questions: '質問に回答',
+  ob_hero_built_with: '最高峰の知見で ',
+  ob_hero_the_best: '構築\n',
+  ob_hero_experts_in: '専門家：',
+  ob_hero_mental: 'メンタル\n',
+  ob_hero_health: 'ヘルス',
+  ob_hero_real: '本物の',
+  ob_hero_therapists: 'セラピスト\n',
+  ob_hero_ready_to: 'すぐに',
+  ob_hero_help: 'サポート',
+  ob_hero_meet: '出会う ',
+  ob_hero_your: 'あなたの ',
+  ob_hero_ai: 'AI\n',
+  ob_hero_mental_lower: 'メンタル ',
+  ob_hero_companion: 'パートナー',
+} as const;

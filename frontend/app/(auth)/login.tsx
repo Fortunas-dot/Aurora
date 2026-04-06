@@ -1,24 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Pressable,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../src/constants/theme';
+import { AuthLanguagePicker } from '../../src/components/auth/AuthLanguagePicker';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { AuroraCore } from '../../src/components/voice/AuroraCore';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { login, authSubmitting, error, clearError, isAuthenticated, isLoading } = useAuthStore();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState('');
 
-  // Redirect immediately if already authenticated (prevents flash)
   React.useEffect(() => {
     if (isAuthenticated && !isLoading) {
       router.replace('/(tabs)');
@@ -30,41 +40,30 @@ export default function LoginScreen() {
     clearError();
 
     if (!email.trim()) {
-      setValidationError('Email is required');
+      setValidationError(t('email_required'));
       return;
     }
     if (!password) {
-      setValidationError('Password is required');
+      setValidationError(t('password_required'));
       return;
     }
 
     const success = await login(email.trim(), password);
     if (success) {
-      // Navigation will happen via the useEffect above when isAuthenticated becomes true
-      // This prevents the flash by ensuring immediate redirect
       router.replace('/(tabs)');
     }
   };
 
   const displayError = validationError || error;
 
-  // Redirect if already authenticated
-  React.useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      router.replace('/(tabs)');
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Don't show login screen if already authenticated
   if (isAuthenticated && !isLoading) {
     return null;
   }
 
   return (
-    <LinearGradient
-      colors={COLORS.backgroundGradient}
-      style={styles.container}
-    >
+    <LinearGradient colors={COLORS.backgroundGradient} style={styles.container}>
+      <AuthLanguagePicker />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -72,26 +71,24 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + SPACING.xl, paddingBottom: insets.bottom + SPACING.xl },
+            { paddingTop: insets.top + SPACING.xxl, paddingBottom: insets.bottom + SPACING.xl },
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo/Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <AuroraCore state="idle" audioLevel={0} size={180} />
             </View>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Log in to continue with Aurora</Text>
+            <Text style={styles.title}>{t('login_welcome_back')}</Text>
+            <Text style={styles.subtitle}>{t('login_subtitle')}</Text>
           </View>
 
-          {/* Login Form */}
           <GlassCard style={styles.formCard} padding="lg" gradient>
             <GlassInput
               value={email}
               onChangeText={setEmail}
-              placeholder="Email"
-              label="Email"
+              placeholder={t('email_label')}
+              label={t('email_label')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -104,8 +101,8 @@ export default function LoginScreen() {
             <GlassInput
               value={password}
               onChangeText={setPassword}
-              placeholder="Password"
-              label="Password"
+              placeholder={t('password_label')}
+              label={t('password_label')}
               secureTextEntry
               icon="lock-closed-outline"
               textContentType="password"
@@ -122,7 +119,7 @@ export default function LoginScreen() {
             )}
 
             <GlassButton
-              title="Log in"
+              title={t('log_in')}
               onPress={handleLogin}
               variant="primary"
               size="lg"
@@ -135,23 +132,20 @@ export default function LoginScreen() {
               style={styles.forgotPassword}
               onPress={() => router.push('/forgot-password')}
             >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
             </Pressable>
           </GlassCard>
 
-          {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            {/* SMS pre-register verification is temporarily bypassed.
-               Keep phone-verification screen/code for future re-enable. */}
+            <Text style={styles.registerText}>{t('no_account')}</Text>
             <Pressable onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.registerLink}>Register</Text>
+              <Text style={styles.registerLink}>{t('register_link')}</Text>
             </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={authSubmitting} message="Logging in..." />
+      <LoadingOverlay visible={authSubmitting} message={t('logging_in')} />
     </LinearGradient>
   );
 }
@@ -232,4 +226,3 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 });
-

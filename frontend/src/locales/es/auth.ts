@@ -1,0 +1,53 @@
+export const authEs = {
+  login_welcome_back: 'Bienvenido de nuevo',
+  login_subtitle: 'Inicia sesión para continuar con Aurora',
+  email_label: 'Correo electrónico',
+  password_label: 'Contraseña',
+  log_in: 'Iniciar sesión',
+  logging_in: 'Iniciando sesión...',
+  forgot_password: '¿Olvidaste la contraseña?',
+  no_account: '¿No tienes cuenta? ',
+  register_link: 'Registrarse',
+  email_required: 'El correo electrónico es obligatorio',
+  password_required: 'La contraseña es obligatoria',
+
+  register_title: 'Crear cuenta',
+  register_subtitle: 'Únete a la comunidad Aurora',
+  username_label: 'Nombre de usuario',
+  confirm_password_label: 'Confirmar contraseña',
+  register_button: 'Registrarse',
+  creating_account: 'Creando cuenta...',
+  already_have_account: '¿Ya tienes cuenta? ',
+  log_in_link: 'Iniciar sesión',
+  username_required: 'El nombre de usuario es obligatorio',
+  username_min_length: 'El nombre de usuario debe tener al menos 3 caracteres',
+  username_max_length: 'El nombre de usuario no puede superar los 30 caracteres',
+  username_invalid_chars: 'Solo letras, números y guiones bajos',
+  username_taken: 'Nombre de usuario no disponible',
+  username_available: 'Nombre de usuario disponible',
+  username_check_failed:
+    'No pudimos verificar el nombre ahora. Lo comprobaremos al registrarte.',
+  password_min_length: 'La contraseña debe tener al menos 6 caracteres',
+  passwords_no_match: 'Las contraseñas no coinciden',
+  terms_required: 'Debes aceptar los Términos del servicio para crear una cuenta',
+  terms_agree_prefix: 'Acepto los ',
+  terms_of_service_link: 'Términos del servicio',
+  terms_agree_suffix:
+    ' y reconozco la política de tolerancia cero de Aurora frente a contenido objetable y usuarios abusivos.',
+  privacy_note_register: 'Tu privacidad importa. Siempre puedes permanecer anónimo.',
+
+  forgot_title: 'Restablecer contraseña',
+  forgot_subtitle:
+    'Introduce el correo que usaste en Aurora. Si existe una cuenta, enviaremos un enlace para restablecerla.',
+  forgot_email_sent_title: 'Correo enviado',
+  forgot_email_sent_body:
+    'Si existe una cuenta para {{email}}, hemos enviado un enlace para restablecer la contraseña. Revisa también la carpeta de spam.',
+  send_reset_link: 'Enviar enlace',
+  back_to_login: 'Volver al inicio de sesión',
+  invalid_email: 'Introduce un correo electrónico válido',
+  generic_error_retry: 'Algo salió mal. Inténtalo de nuevo.',
+
+  reset_password_title: 'Actualizar contraseña',
+  new_password_label: 'Nueva contraseña',
+  confirm_new_password_label: 'Confirmar nueva contraseña',
+} as const;

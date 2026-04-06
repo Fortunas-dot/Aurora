@@ -1,0 +1,33 @@
+export const onboardingEs = {
+  ob_slide1_title: 'Conoce a tu compañero\nIA para la salud\nmental',
+  ob_slide1_desc:
+    'Alguien con quien hablar cuando lo necesites.\nTe ayuda a reflexionar y a crecer',
+  ob_slide2_title: 'Creado con los mejores\nexpertos en salud\nmental',
+  ob_slide2_desc:
+    'Formado con psicología y ciencia del comportamiento. Desarrollado con los mejores en su campo.',
+  ob_slide3_title: 'Terapeutas reales\nlistos para ayudar',
+  ob_slide3_desc:
+    'Profesionales con licencia en la app. Responden en tus publicaciones y en las de preguntas para ofrecerte orientación profesional cuando más lo necesitas.',
+  ob_get_started: 'Empezar',
+  ob_next: 'Siguiente',
+  ob_tag_harvard: 'Harvard',
+  ob_tag_oxford: 'Oxford',
+  ob_tag_stanford: 'Stanford',
+  ob_tag_licensed: 'Con licencia',
+  ob_tag_respond_posts: 'Responden en publicaciones',
+  ob_tag_answer_questions: 'Responden preguntas',
+  ob_hero_built_with: 'Creado con ',
+  ob_hero_the_best: 'lo mejor',
+  ob_hero_experts_in: 'Expertos en ',
+  ob_hero_mental: 'salud',
+  ob_hero_health: 'mental',
+  ob_hero_real: 'Terapeutas ',
+  ob_hero_therapists: 'reales',
+  ob_hero_ready_to: 'Listos para ',
+  ob_hero_help: 'ayudar',
+  ob_hero_meet: 'Conoce a ',
+  ob_hero_your: 'tu ',
+  ob_hero_ai: 'IA',
+  ob_hero_mental_lower: 'Salud ',
+  ob_hero_companion: 'compañero',
+} as const;

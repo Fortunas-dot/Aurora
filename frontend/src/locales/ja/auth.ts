@@ -1,0 +1,53 @@
+export const authJa = {
+  login_welcome_back: 'おかえりなさい',
+  login_subtitle: '引き続きAuroraを使うにはログインしてください',
+  email_label: 'メールアドレス',
+  password_label: 'パスワード',
+  log_in: 'ログイン',
+  logging_in: 'ログイン中…',
+  forgot_password: 'パスワードをお忘れですか？',
+  no_account: 'アカウントをお持ちでないですか？ ',
+  register_link: '新規登録',
+  email_required: 'メールアドレスを入力してください',
+  password_required: 'パスワードを入力してください',
+
+  register_title: 'アカウント作成',
+  register_subtitle: 'Auroraコミュニティに参加',
+  username_label: 'ユーザー名',
+  confirm_password_label: 'パスワード（確認）',
+  register_button: '登録',
+  creating_account: 'アカウント作成中…',
+  already_have_account: 'すでにアカウントをお持ちですか？ ',
+  log_in_link: 'ログイン',
+  username_required: 'ユーザー名を入力してください',
+  username_min_length: 'ユーザー名は3文字以上にしてください',
+  username_max_length: 'ユーザー名は30文字以内にしてください',
+  username_invalid_chars: 'ユーザー名は英数字とアンダースコアのみ使用できます',
+  username_taken: 'このユーザー名は使用されています',
+  username_available: 'このユーザー名は利用できます',
+  username_check_failed:
+    '今はユーザー名を確認できませんでした。登録時に再度確認します。',
+  password_min_length: 'パスワードは6文字以上にしてください',
+  passwords_no_match: 'パスワードが一致しません',
+  terms_required: 'アカウント作成には利用規約への同意が必要です',
+  terms_agree_prefix: '',
+  terms_of_service_link: '利用規約',
+  terms_agree_suffix:
+    'に同意し、不適切なコンテンツや嫌がらせ・虐待的な行為を行うユーザーに対するAuroraのゼロトレランス方針を理解したものとします。',
+  privacy_note_register: 'プライバシーを大切にしています。いつでも匿名のまま利用できます。',
+
+  forgot_title: 'パスワードのリセット',
+  forgot_subtitle:
+    'Auroraに登録したメールアドレスを入力してください。アカウントが見つかれば、パスワード再設定用のリンクをお送りします。',
+  forgot_email_sent_title: 'メールを送信しました',
+  forgot_email_sent_body:
+    '{{email}}にAuroraのアカウントが存在する場合、パスワード再設定用のリンクをお送りしました。迷惑メールフォルダもご確認ください。',
+  send_reset_link: '再設定リンクを送信',
+  back_to_login: 'ログインに戻る',
+  invalid_email: '有効なメールアドレスを入力してください',
+  generic_error_retry: '問題が発生しました。もう一度お試しください。',
+
+  reset_password_title: 'パスワードを更新',
+  new_password_label: '新しいパスワード',
+  confirm_new_password_label: '新しいパスワード（確認）',
+} as const;

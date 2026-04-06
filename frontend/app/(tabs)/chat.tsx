@@ -27,6 +27,7 @@ import { messageService, Conversation } from '../../src/services/message.service
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
 import { getUsernameColor } from '../../src/utils/usernameColors';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -132,6 +133,7 @@ const AnimatedStar = ({ index }: { index: number }) => {
 export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { isAuthenticated } = useAuthStore();
   const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
@@ -359,20 +361,20 @@ export default function ChatScreen() {
         style={styles.container}
       >
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('messages')}</Text>
         </View>
         
         <View style={styles.authPrompt}>
           <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in to chat</Text>
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>{t('chat_login_prompt')}</Text>
           <Text style={[styles.authPromptText, { color: colors.textSecondary }]}>
-            Connect with other community members
+            {t('chat_auth_subtitle')}
           </Text>
           <Pressable
             style={[styles.authButton, { backgroundColor: colors.primaryGlow, borderColor: colors.primary }]}
             onPress={() => router.push('/(auth)/login')}
           >
-            <Text style={[styles.authButtonText, { color: colors.primary }]}>Login</Text>
+            <Text style={[styles.authButtonText, { color: colors.primary }]}>{t('log_in')}</Text>
           </Pressable>
         </View>
       </LinearGradient>
@@ -393,7 +395,7 @@ export default function ChatScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('messages')}</Text>
         <Pressable style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={handleCreateNewChat}>
           <Ionicons name="create-outline" size={24} color={colors.text} />
         </Pressable>
@@ -404,7 +406,7 @@ export default function ChatScreen() {
         <GlassInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search conversations..."
+          placeholder={t('chat_search_placeholder')}
           icon="search"
           style={styles.searchInput}
           // Prevent iOS password/email AutoFill styling from leaking into this field
@@ -443,15 +445,15 @@ export default function ChatScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={48} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No conversations</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('chat_empty_conversations')}</Text>
               <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                Start a conversation with someone from the community
+                {t('chat_empty_sub')}
               </Text>
               <Pressable
                 style={[styles.startChatButton, { backgroundColor: colors.glass.backgroundLight, borderColor: colors.glass.border }]}
                 onPress={handleCreateNewChat}
               >
-                <Text style={[styles.startChatButtonText, { color: colors.primary }]}>Start new conversation</Text>
+                <Text style={[styles.startChatButtonText, { color: colors.primary }]}>{t('chat_start_new')}</Text>
               </Pressable>
             </View>
           )
@@ -462,8 +464,8 @@ export default function ChatScreen() {
       {isOnboardingActive && currentStep === 6 && (
         <OnboardingOverlay
           visible={true}
-          title="Chats"
-          description="Message with friends and community members. Stay connected and build your support network through private conversations."
+          title={t('chat_onboarding_title')}
+          description={t('chat_onboarding_desc')}
           onNext={() => {
             finishOnboarding();
             router.push('/subscription');

@@ -16,13 +16,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, LoadingSpinner, Avatar } from '../src/components/common';
+import { LanguagePickerSheet } from '../src/components/common/LanguagePickerSheet';
+import { APP_LANGUAGES } from '../src/utils/i18n';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
+import { useTranslation } from '../src/hooks/useTranslation';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
 import { useAuthStore } from '../src/store/authStore';
 import { useConsentStore } from '../src/store/consentStore';
 import { userService, UserProfile } from '../src/services/user.service';
-import { i18n, Language } from '../src/utils/i18n';
 import { authService } from '../src/services/auth.service';
 import { getUsernameColor } from '../src/utils/usernameColors';
 
@@ -108,14 +110,21 @@ export default function SettingsScreen() {
     setAuroraStyle,
     setNotificationPreference,
     loadSettings,
+    language,
   } = useSettingsStore();
 
-  const [t, setT] = useState(() => i18n.getTranslations());
+  const { t } = useTranslation();
   const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
   const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
   const [showAiInfoModal, setShowAiInfoModal] = useState(false);
   const { aiConsentStatus, loadConsent, grantAiConsent, denyAiConsent, resetConsent } = useConsentStore();
   const [isSendingEmailVerification, setIsSendingEmailVerification] = useState(false);
+  const [languagePickerVisible, setLanguagePickerVisible] = useState(false);
+
+  const currentLanguageMeta = useMemo(
+    () => APP_LANGUAGES.find((l) => l.code === language) ?? APP_LANGUAGES[0],
+    [language]
+  );
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -170,7 +179,7 @@ export default function SettingsScreen() {
 
   const handleSendEmailVerification = async () => {
     if (!user?.email) {
-      Alert.alert('Email required', 'Please set an email address in your account settings first.');
+      Alert.alert(t('email_required_title'), t('email_required_body'));
       return;
     }
 
@@ -178,15 +187,12 @@ export default function SettingsScreen() {
     try {
       const response = await authService.sendVerificationEmail(user.email);
       if (response.success) {
-        Alert.alert(
-          'Verification email sent',
-          'Please check your inbox and follow the link to verify your email address.'
-        );
+        Alert.alert(t('verification_email_sent_title'), t('verification_email_sent_body'));
       } else {
-        Alert.alert('Error', response.message || 'Could not send verification email');
+        Alert.alert(t('error'), response.message || t('could_not_send_verification'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'Could not send verification email');
+      Alert.alert(t('error'), error?.message || t('could_not_send_verification'));
     } finally {
       setIsSendingEmailVerification(false);
     }
@@ -194,15 +200,15 @@ export default function SettingsScreen() {
 
   const handleUnblock = async (userId: string, username: string) => {
     Alert.alert(
-      'Unblock User',
-      `Are you sure you want to unblock ${username}?`,
+      t('unblock_user_title'),
+      t('unblock_confirm', { name: username }),
       [
         {
-          text: 'Cancel',
+          text: t('cancel'),
           style: 'cancel',
         },
         {
-          text: 'Unblock',
+          text: t('unblock'),
           style: 'default',
           onPress: async () => {
             try {
@@ -210,24 +216,19 @@ export default function SettingsScreen() {
               if (response.success) {
                 // Remove from list
                 setBlockedUsers((prev) => prev.filter((u) => u._id !== userId));
-                Alert.alert('Success', 'User unblocked successfully');
+                Alert.alert(t('success'), t('user_unblocked'));
               } else {
-                Alert.alert('Error', response.message || 'Failed to unblock user');
+                Alert.alert(t('error'), response.message || t('unblock_failed'));
               }
             } catch (error) {
               console.error('Error unblocking user:', error);
-              Alert.alert('Error', 'Failed to unblock user. Please try again.');
+              Alert.alert(t('error'), t('unblock_failed_retry'));
             }
           },
         },
       ]
     );
   };
-
-  // Initialize translations (app is always in English)
-  useEffect(() => {
-    setT(i18n.getTranslations());
-  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -236,14 +237,14 @@ export default function SettingsScreen() {
           <Pressable style={[styles.backButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t.settings}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.authPrompt}>
           <Ionicons name="settings-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Log in to access settings</Text>
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>{t('auth_prompt_settings')}</Text>
           <GlassButton
-            title={t.back}
+            title={t('back')}
             onPress={() => router.push('/(auth)/login')}
             variant="primary"
             style={styles.authButton}
@@ -258,7 +259,7 @@ export default function SettingsScreen() {
       <LinearGradient colors={colors.backgroundGradient as readonly [string, string, string]} style={styles.container}>
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="lg" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t.loading}</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('loading')}</Text>
         </View>
       </LinearGradient>
     );
@@ -271,7 +272,7 @@ export default function SettingsScreen() {
         <Pressable style={[styles.backButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t.settings}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -287,7 +288,7 @@ export default function SettingsScreen() {
       >
         {/* App Settings */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.appSettings}</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t('appSettings')}</Text>
           <GlassCard padding={0}>
             {/*
             <MenuItem
@@ -303,9 +304,16 @@ export default function SettingsScreen() {
             <View style={styles.menuDivider} />
             */}
             <MenuItem
+              icon="globe-outline"
+              title={t('language')}
+              subtitle={currentLanguageMeta.nativeLabel}
+              onPress={() => setLanguagePickerVisible(true)}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
               icon="school-outline"
-              title="View Onboarding"
-              subtitle="Learn about Aurora's features"
+              title={t('view_onboarding')}
+              subtitle={t('view_onboarding_sub')}
               onPress={() => router.push('/onboarding')}
             />
           </GlassCard>
@@ -313,7 +321,7 @@ export default function SettingsScreen() {
 
         {/* AI Data Sharing */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>AI Data Sharing</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t('ai_data_sharing')}</Text>
           <GlassCard padding={0}>
             <View style={styles.aiConsentContainer}>
               <View style={styles.aiConsentHeader}>
@@ -321,11 +329,11 @@ export default function SettingsScreen() {
                   <Ionicons name="sparkles" size={22} color={colors.primary} />
                 </View>
                 <View style={styles.aiConsentInfo}>
-                  <Text style={[styles.menuTitle, { color: colors.text }]}>AI Features</Text>
+                  <Text style={[styles.menuTitle, { color: colors.text }]}>{t('ai_features')}</Text>
                   <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>
                     {aiConsentStatus === 'granted' 
-                      ? 'Data shared with our LLM' 
-                      : 'AI features disabled'}
+                      ? t('ai_data_shared_llm') 
+                      : t('ai_features_disabled')}
                   </Text>
                 </View>
                 <View style={[
@@ -336,7 +344,7 @@ export default function SettingsScreen() {
                     styles.aiStatusText, 
                     { color: aiConsentStatus === 'granted' ? colors.success : colors.textMuted }
                   ]}>
-                    {aiConsentStatus === 'granted' ? 'Enabled' : 'Disabled'}
+                    {aiConsentStatus === 'granted' ? t('enabled') : t('disabled')}
                   </Text>
                 </View>
               </View>
@@ -347,7 +355,7 @@ export default function SettingsScreen() {
                 >
                   <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
                   <Text style={[styles.aiLearnMoreText, { color: colors.primary }]}>
-                    Learn More
+                    {t('learnMore')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -361,12 +369,12 @@ export default function SettingsScreen() {
                   onPress={() => {
                     if (aiConsentStatus === 'granted') {
                       Alert.alert(
-                        'Disable AI Features?',
-                        'This will stop sharing your data with our LLM. AI chat, voice features, and journal insights will be disabled.',
+                        t('disable_ai_title'),
+                        t('disable_ai_message'),
                         [
-                          { text: 'Cancel', style: 'cancel' },
+                          { text: t('cancel'), style: 'cancel' },
                           { 
-                            text: 'Disable', 
+                            text: t('disable'), 
                             style: 'destructive',
                             onPress: () => resetConsent()
                           },
@@ -387,7 +395,7 @@ export default function SettingsScreen() {
                     styles.aiConsentButtonText,
                     { color: aiConsentStatus === 'granted' ? colors.error : colors.primary }
                   ]}>
-                    {aiConsentStatus === 'granted' ? 'Revoke' : 'Enable'}
+                    {aiConsentStatus === 'granted' ? t('revoke') : t('enable')}
                   </Text>
                 </Pressable>
               </View>
@@ -403,10 +411,10 @@ export default function SettingsScreen() {
           onRequestClose={() => setShowAiInfoModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.backgroundDark, paddingTop: insets.top }]}>
+            <View style={[styles.modalContent, { backgroundColor: colors.glass.backgroundDark, paddingTop: insets.top }]}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalHeaderLeft} />
-                <Text style={[styles.modalTitle, { color: colors.text }]}>AI Data Sharing</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{t('ai_data_modal_title')}</Text>
                 <Pressable style={styles.modalCloseButton} onPress={() => setShowAiInfoModal(false)}>
                   <Ionicons name="close" size={24} color={colors.text} />
                 </Pressable>
@@ -417,31 +425,31 @@ export default function SettingsScreen() {
                 <View style={styles.infoSection}>
                   <View style={styles.infoSectionHeader}>
                     <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
-                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>What data is shared?</Text>
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>{t('ai_what_data_shared')}</Text>
                   </View>
                   <View style={styles.infoList}>
                     <View style={styles.infoListItem}>
                       <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
                       <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
-                        Text you type in AI chat conversations
+                        {t('ai_data_chat')}
                       </Text>
                     </View>
                     <View style={styles.infoListItem}>
                       <Ionicons name="book" size={18} color={colors.primary} />
                       <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
-                        Journal entries (for AI-generated prompts and insights)
+                        {t('ai_data_journal')}
                       </Text>
                     </View>
                     <View style={styles.infoListItem}>
                       <Ionicons name="mic" size={18} color={colors.primary} />
                       <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
-                        Voice recordings and transcripts (for voice features)
+                        {t('ai_data_voice')}
                       </Text>
                     </View>
                     <View style={styles.infoListItem}>
                       <Ionicons name="heart" size={18} color={colors.primary} />
                       <Text style={[styles.infoListText, { color: colors.textSecondary }]}>
-                        Health information from your profile (if applicable)
+                        {t('ai_data_health')}
                       </Text>
                     </View>
                   </View>
@@ -451,22 +459,22 @@ export default function SettingsScreen() {
                 <View style={styles.infoSection}>
                   <View style={styles.infoSectionHeader}>
                     <Ionicons name="business-outline" size={24} color={colors.primary} />
-                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>Who receives this data?</Text>
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>{t('ai_who_receives')}</Text>
                   </View>
                   <GlassCard style={styles.recipientCard} padding="md">
-                    <Text style={[styles.recipientName, { color: colors.text }]}>Our LLM</Text>
+                    <Text style={[styles.recipientName, { color: colors.text }]}>{t('our_llm')}</Text>
                     <Text style={[styles.recipientDesc, { color: colors.textSecondary }]}>
-                      Our LLM (large language model) processes your data to generate supportive responses and insights.
+                      {t('our_llm_desc')}
                     </Text>
                     <Text style={[styles.recipientHighlight, { color: colors.success }]}>
-                      ✓ Our LLM provider does NOT use your data to train its models
+                      {t('ai_provider_no_train')}
                     </Text>
                     <Pressable 
                       style={styles.externalLink}
                       onPress={() => Linking.openURL('https://openai.com/privacy')}
                     >
                       <Text style={[styles.externalLinkText, { color: colors.primary }]}>
-                        View our AI provider's Privacy Policy
+                        {t('view_provider_privacy')}
                       </Text>
                       <Ionicons name="open-outline" size={16} color={colors.primary} />
                     </Pressable>
@@ -477,37 +485,37 @@ export default function SettingsScreen() {
                 <View style={styles.infoSection}>
                   <View style={styles.infoSectionHeader}>
                     <Ionicons name="shield-checkmark-outline" size={24} color={colors.primary} />
-                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>How is your data protected?</Text>
+                    <Text style={[styles.infoSectionTitle, { color: colors.text }]}>{t('ai_how_protected')}</Text>
                   </View>
                   <View style={styles.protectionList}>
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        Encrypted in transit and at rest
+                        {t('prot_encrypted')}
                       </Text>
                     </View>
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        Our AI provider is contractually obligated to protect your data
+                        {t('prot_contract')}
                       </Text>
                     </View>
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        NOT used for advertising
+                        {t('prot_not_ads')}
                       </Text>
                     </View>
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        NOT sold to third parties
+                        {t('prot_not_sold')}
                       </Text>
                     </View>
                     <View style={styles.protectionItem}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                       <Text style={[styles.protectionText, { color: colors.textSecondary }]}>
-                        You can revoke consent anytime in Settings
+                        {t('prot_revoke_settings')}
                       </Text>
                     </View>
                   </View>
@@ -523,14 +531,14 @@ export default function SettingsScreen() {
                 >
                   <Ionicons name="document-text-outline" size={20} color={colors.primary} />
                   <Text style={[styles.privacyPolicyText, { color: colors.primary }]}>
-                    Read our full Privacy Policy
+                    {t('read_full_privacy')}
                   </Text>
                   <Ionicons name="chevron-forward" size={20} color={colors.primary} />
                 </Pressable>
 
                 {/* Optional Note */}
                 <Text style={[styles.optionalNote, { color: colors.textMuted }]}>
-                  AI features are optional. You can use Aurora's community, journaling, and other features without enabling AI.
+                  {t('ai_optional_note')}
                 </Text>
               </ScrollView>
             </View>
@@ -539,18 +547,18 @@ export default function SettingsScreen() {
 
         {/* Privacy Settings */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.privacySettings}</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t('privacySettings')}</Text>
           
           {/* Account Data & Privacy */}
           <GlassCard padding={0} style={styles.menuCard}>
-            <Text style={[styles.subsectionTitle, { color: colors.textSecondary }]}>{t.accountData}</Text>
+            <Text style={[styles.subsectionTitle, { color: colors.textSecondary }]}>{t('accountData')}</Text>
             <MenuItem
               icon={user?.emailVerified ? 'shield-checkmark-outline' : 'alert-circle-outline'}
-              title="Email verification"
+              title={t('email_verification')}
               subtitle={
                 user?.emailVerified
-                  ? 'Your email is verified'
-                  : 'Verify your email to keep your account secure'
+                  ? t('email_verified_sub')
+                  : t('email_verify_prompt_sub')
               }
               onPress={() => {
                 if (user?.emailVerified) {
@@ -563,7 +571,7 @@ export default function SettingsScreen() {
               rightComponent={
                 user?.emailVerified ? (
                   <View style={styles.emailStatusPillVerified}>
-                    <Text style={styles.emailStatusPillTextVerified}>Verified</Text>
+                    <Text style={styles.emailStatusPillTextVerified}>{t('verified')}</Text>
                   </View>
                 ) : (
                   <Pressable
@@ -572,7 +580,7 @@ export default function SettingsScreen() {
                     disabled={isSendingEmailVerification}
                   >
                     <Text style={styles.emailStatusPillTextUnverified}>
-                      {isSendingEmailVerification ? 'Sending...' : 'Verify'}
+                      {isSendingEmailVerification ? t('sending') : t('verify')}
                     </Text>
                   </Pressable>
                 )
@@ -581,25 +589,25 @@ export default function SettingsScreen() {
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="trash-outline"
-              title="Delete account and all data"
-              subtitle={t.deleteAccountDesc}
+              title={t('delete_account_title')}
+              subtitle={t('deleteAccountDesc')}
               onPress={() => {
                 Alert.alert(
-                  t.deleteAccount,
-                  'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data, posts, comments, and messages.',
+                  t('deleteAccount'),
+                  t('delete_account_confirm'),
                   [
-                    { text: t.cancel, style: 'cancel' },
+                    { text: t('cancel'), style: 'cancel' },
                     {
-                      text: t.deleteAccount,
+                      text: t('deleteAccount'),
                       style: 'destructive',
                       onPress: () => {
                         Alert.alert(
-                          'Confirm Deletion',
-                          'This will permanently delete your account. Type DELETE to confirm.',
+                          t('confirm_deletion_title'),
+                          t('confirm_deletion_body'),
                           [
-                            { text: t.cancel, style: 'cancel' },
+                            { text: t('cancel'), style: 'cancel' },
                             {
-                              text: 'Delete',
+                              text: t('delete'),
                               style: 'destructive',
                               onPress: async () => {
                                 try {
@@ -607,11 +615,11 @@ export default function SettingsScreen() {
                                   
                                   if (response.success) {
                                     Alert.alert(
-                                      'Account Deleted',
-                                      'Your account and all associated data have been permanently deleted.',
+                                      t('account_deleted_title'),
+                                      t('account_deleted_body'),
                                       [
                                         {
-                                          text: 'OK',
+                                          text: t('ok'),
                                           onPress: () => {
                                             useAuthStore.getState().logout();
                                             router.replace('/(auth)/login');
@@ -620,10 +628,10 @@ export default function SettingsScreen() {
                                       ]
                                     );
                                   } else {
-                                    Alert.alert('Error', response.message || 'Failed to delete account');
+                                    Alert.alert(t('error'), response.message || t('failed_delete_account'));
                                   }
                                 } catch (error: any) {
-                                  Alert.alert('Error', error.message || 'Failed to delete account');
+                                  Alert.alert(t('error'), error.message || t('failed_delete_account'));
                                 }
                               },
                             },
@@ -641,15 +649,15 @@ export default function SettingsScreen() {
           <GlassCard padding={0} style={styles.menuCard}>
             <MenuItem
               icon="document-text-outline"
-              title={t.privacyPolicy}
-              subtitle="Read our privacy policy"
+              title={t('privacyPolicy')}
+              subtitle={t('privacy_read_sub')}
               onPress={() => router.push('/privacy-policy')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="document-outline"
-              title={t.termsOfService}
-              subtitle="Read our terms of service"
+              title={t('termsOfService')}
+              subtitle={t('terms_read_sub')}
               onPress={() => router.push('/terms-of-service')}
             />
           </GlassCard>
@@ -657,12 +665,12 @@ export default function SettingsScreen() {
 
         {/* Notification Preferences */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t.notificationSettings}</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t('notificationSettings')}</Text>
           <GlassCard padding={0}>
             <SwitchItem
               icon="notifications-outline"
-              title={t.pushNotifications}
-              subtitle={t.pushNotificationsDesc}
+              title={t('pushNotifications')}
+              subtitle={t('pushNotificationsDesc')}
               value={notificationPreferences.pushEnabled}
               onValueChange={(value) =>
                 setNotificationPreference('pushEnabled', value)
@@ -671,8 +679,8 @@ export default function SettingsScreen() {
             <View style={styles.menuDivider} />
             <SwitchItem
               icon="mail-outline"
-              title={t.emailNotifications}
-              subtitle={t.emailNotificationsDesc}
+              title={t('emailNotifications')}
+              subtitle={t('emailNotificationsDesc')}
               value={notificationPreferences.emailEnabled}
               onValueChange={(value) =>
                 setNotificationPreference('emailEnabled', value)
@@ -683,7 +691,7 @@ export default function SettingsScreen() {
 
         {/* Blocked Users */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>Blocked Users</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.text }]}>{t('blocked_users_title')}</Text>
           <GlassCard padding={0}>
             {isLoadingBlocked ? (
               <View style={styles.blockedLoadingContainer}>
@@ -693,7 +701,7 @@ export default function SettingsScreen() {
               <View style={styles.blockedEmptyContainer}>
                 <Ionicons name="ban-outline" size={32} color={colors.textMuted} />
                 <Text style={[styles.blockedEmptyText, { color: colors.textMuted }]}>
-                  No blocked users
+                  {t('blocked_users_empty')}
                 </Text>
               </View>
             ) : (
@@ -728,7 +736,7 @@ export default function SettingsScreen() {
                     >
                       <Ionicons name="ban" size={16} color={colors.error} />
                       <Text style={[styles.unblockButtonText, { color: colors.error }]}>
-                        Unblock
+                        {t('unblock')}
                       </Text>
                     </Pressable>
                   </Pressable>
@@ -743,6 +751,11 @@ export default function SettingsScreen() {
 
         {/* Design Preview (removed v2/v3 variants on request) */}
       </ScrollView>
+
+      <LanguagePickerSheet
+        visible={languagePickerVisible}
+        onClose={() => setLanguagePickerVisible(false)}
+      />
     </LinearGradient>
   );
 }

@@ -26,7 +26,7 @@ import { postService, PostType } from '../src/services/post.service';
 import { uploadService } from '../src/services/upload.service';
 import { groupService, Group } from '../src/services/group.service';
 import { useAuthStore } from '../src/store/authStore';
-import { useSettingsStore } from '../src/store/settingsStore';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const SUGGESTED_TAGS = [
   'meditation',
@@ -49,7 +49,7 @@ export default function CreatePostScreen() {
   const { groupId: initialGroupId } = useLocalSearchParams<{ groupId?: string }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
-  const { language } = useSettingsStore();
+  const { t } = useTranslation();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -114,7 +114,7 @@ export default function CreatePostScreen() {
   const requestMediaPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need access to your photos and videos');
+      Alert.alert(t('post_perm_title'), t('post_perm_body'));
       return false;
     }
     return true;
@@ -142,14 +142,14 @@ export default function CreatePostScreen() {
           const remainingSlots = MAX_IMAGES_PER_POST - currentImageCount;
 
           if (remainingSlots <= 0) {
-            Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES_PER_POST} photos per post.`);
+            Alert.alert(t('post_alert_limit_title'), t('post_alert_photos_limit', { max: MAX_IMAGES_PER_POST }));
             return prevMedia;
           }
 
           const imagesToAdd = pickedImages.slice(0, remainingSlots);
 
           if (imagesToAdd.length < pickedImages.length) {
-            Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES_PER_POST} photos per post.`);
+            Alert.alert(t('post_alert_limit_title'), t('post_alert_photos_limit', { max: MAX_IMAGES_PER_POST }));
           }
 
           return [...prevMedia, ...imagesToAdd];
@@ -157,7 +157,7 @@ export default function CreatePostScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Could not select image');
+      Alert.alert(t('error'), t('post_alert_pick_image_fail'));
     }
   };
 
@@ -185,7 +185,7 @@ export default function CreatePostScreen() {
           // Even though the schema only allows a single video URL, we keep a clear max here
           const hasVideo = existingVideoIndex !== -1;
           if (hasVideo && MAX_VIDEOS_PER_POST <= 0) {
-            Alert.alert('Limit reached', 'You can only add 1 video per post.');
+            Alert.alert(t('post_alert_limit_title'), t('post_alert_video_limit'));
             return prevMedia;
           }
 
@@ -196,7 +196,7 @@ export default function CreatePostScreen() {
           }
 
           if (MAX_VIDEOS_PER_POST <= 0) {
-            Alert.alert('Limit reached', 'You can only add 1 video per post.');
+            Alert.alert(t('post_alert_limit_title'), t('post_alert_video_limit'));
             return prevMedia;
           }
 
@@ -208,7 +208,7 @@ export default function CreatePostScreen() {
       }
     } catch (error) {
       console.error('Error picking video:', error);
-      Alert.alert('Error', 'Could not select video');
+      Alert.alert(t('error'), t('post_alert_pick_video_fail'));
     }
   };
 
@@ -248,22 +248,22 @@ export default function CreatePostScreen() {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please add a title to your post');
+      Alert.alert(t('error'), t('post_err_title_required'));
       return;
     }
 
     if (title.trim().length < 3) {
-      Alert.alert('Error', 'Title must be at least 3 characters');
+      Alert.alert(t('error'), t('post_err_title_short'));
       return;
     }
 
     if (!content.trim()) {
-      Alert.alert('Error', 'Please add content to your post');
+      Alert.alert(t('error'), t('post_err_content_required'));
       return;
     }
 
     if (content.trim().length < 10) {
-      Alert.alert('Error', 'Content must be at least 10 characters');
+      Alert.alert(t('error'), t('post_err_content_short'));
       return;
     }
 
@@ -290,8 +290,8 @@ export default function CreatePostScreen() {
           } else {
             console.error('Video upload failed:', uploadResult.message);
             Alert.alert(
-              'Video Upload Failed',
-              uploadResult.message || 'Could not upload video. Please check your internet connection and try again. If the problem persists, try a smaller video file.'
+              t('post_video_fail_title'),
+              uploadResult.message || t('post_video_fail_body')
             );
             setIsSubmitting(false);
             setUploadingMedia(false);
@@ -320,11 +320,11 @@ export default function CreatePostScreen() {
       if (response.success) {
         router.back();
       } else {
-        Alert.alert('Error', response.message || 'Could not create post');
+        Alert.alert(t('error'), response.message || t('post_err_create_failed'));
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
-      Alert.alert('Error', 'Something went wrong while creating your post');
+      Alert.alert(t('error'), t('post_err_create_generic'));
     } finally {
       setIsSubmitting(false);
       setUploadingMedia(false);
@@ -352,7 +352,7 @@ export default function CreatePostScreen() {
           >
             <Ionicons name="close" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>New Post</Text>
+          <Text style={styles.headerTitle}>{t('post_header_new')}</Text>
           <Pressable
             style={[styles.headerIconButton, (!title.trim() || !content.trim() || isSubmitting) && styles.headerIconButtonDisabled]}
             onPress={handleSubmit}
@@ -379,7 +379,7 @@ export default function CreatePostScreen() {
         >
           {/* Post Type Selection */}
           <GlassCard style={styles.postTypeCard} padding="lg">
-            <Text style={styles.label}>Type *</Text>
+            <Text style={styles.label}>{t('post_type_label')}</Text>
             <View style={styles.postTypeContainer}>
               <Pressable
                 style={[styles.postTypeButton, postType === 'post' && styles.postTypeButtonActive]}
@@ -391,7 +391,7 @@ export default function CreatePostScreen() {
                   color={postType === 'post' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'post' && styles.postTypeTextActive]}>
-                  Post
+                  {t('post_type_post')}
                 </Text>
               </Pressable>
               <Pressable
@@ -404,7 +404,7 @@ export default function CreatePostScreen() {
                   color={postType === 'question' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'question' && styles.postTypeTextActive]}>
-                  Question
+                  {t('post_type_question')}
                 </Text>
               </Pressable>
               <Pressable
@@ -417,7 +417,7 @@ export default function CreatePostScreen() {
                   color={postType === 'story' ? COLORS.primary : COLORS.textMuted} 
                 />
                 <Text style={[styles.postTypeText, postType === 'story' && styles.postTypeTextActive]}>
-                  Story
+                  {t('post_type_story')}
                 </Text>
               </Pressable>
             </View>
@@ -425,16 +425,16 @@ export default function CreatePostScreen() {
 
           {/* Title Input */}
           <GlassCard style={styles.titleCard} padding="md">
-            <Text style={styles.label}>Title *</Text>
+            <Text style={styles.label}>{t('post_field_title')}</Text>
             <GlassInput
               value={title}
               onChangeText={setTitle}
               placeholder={
-                postType === 'question' 
-                  ? "What's your question?" 
+                postType === 'question'
+                  ? t('post_title_ph_question')
                   : postType === 'story'
-                  ? "What's your story about?"
-                  : "Enter a title for your post..."
+                    ? t('post_title_ph_story')
+                    : t('post_title_ph_post')
               }
               style={styles.titleInput}
               maxLength={200}
@@ -530,11 +530,11 @@ export default function CreatePostScreen() {
             <View style={styles.mediaActions}>
               <Pressable style={styles.mediaButton} onPress={handlePickImage}>
                 <Ionicons name="image-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.mediaButtonText}>Photo</Text>
+                <Text style={styles.mediaButtonText}>{t('post_media_photo')}</Text>
               </Pressable>
               <Pressable style={styles.mediaButton} onPress={handlePickVideo}>
                 <Ionicons name="videocam-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.mediaButtonText}>Video</Text>
+                <Text style={styles.mediaButtonText}>{t('post_media_video')}</Text>
               </Pressable>
               <View style={styles.mediaSpacer} />
               <Text style={styles.charCount}>
@@ -545,9 +545,9 @@ export default function CreatePostScreen() {
 
           {/* Community/Group Selection */}
           <GlassCard style={styles.groupCard} padding="lg">
-            <Text style={styles.sectionTitle}>Community (optional)</Text>
+            <Text style={styles.sectionTitle}>{t('post_community_title')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Post in a specific community or leave empty for general feed
+              {t('post_community_sub')}
             </Text>
 
             {selectedGroup ? (
@@ -578,16 +578,16 @@ export default function CreatePostScreen() {
                 onPress={() => setShowGroupModal(true)}
               >
                 <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.selectGroupButtonText}>Select a community</Text>
+                <Text style={styles.selectGroupButtonText}>{t('post_select_community')}</Text>
               </Pressable>
             )}
           </GlassCard>
 
           {/* Tags Section */}
           <GlassCard style={styles.tagsCard} padding="lg">
-            <Text style={styles.sectionTitle}>Tags (optional)</Text>
+            <Text style={styles.sectionTitle}>{t('post_tags_title')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Add tags to make your post more discoverable
+              {t('post_tags_sub')}
             </Text>
 
             {/* Current Tags */}
@@ -614,7 +614,7 @@ export default function CreatePostScreen() {
                 <GlassInput
                   value={tagInput}
                   onChangeText={setTagInput}
-                  placeholder="Add a tag..."
+                  placeholder={t('post_tag_placeholder')}
                   style={styles.tagInput}
                   onSubmitEditing={() => handleAddTag(tagInput)}
                   returnKeyType="done"
@@ -635,7 +635,7 @@ export default function CreatePostScreen() {
 
             {/* Suggested Tags */}
             <View style={styles.suggestedTags}>
-              <Text style={styles.suggestedTagsTitle}>Suggestions:</Text>
+              <Text style={styles.suggestedTagsTitle}>{t('post_tags_suggestions')}</Text>
               <View style={styles.suggestedTagsList}>
                 {SUGGESTED_TAGS.filter((tag) => !tags.includes(tag)).map((tag) => (
                   <Pressable
@@ -663,7 +663,7 @@ export default function CreatePostScreen() {
           <View style={[styles.modalContent, { paddingTop: insets.top + SPACING.md }]}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Community</Text>
+              <Text style={styles.modalTitle}>{t('post_modal_title')}</Text>
               <Pressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowGroupModal(false)}
@@ -707,7 +707,8 @@ export default function CreatePostScreen() {
                       <View style={styles.groupItemMeta}>
                         <Ionicons name="people-outline" size={14} color={COLORS.textMuted} />
                         <Text style={styles.groupItemMetaText}>
-                          {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
+                          {item.memberCount}{' '}
+                          {item.memberCount === 1 ? t('feed_member') : t('feed_members')}
                         </Text>
                       </View>
                     </View>
@@ -720,9 +721,9 @@ export default function CreatePostScreen() {
                 ListEmptyComponent={
                   <View style={styles.modalEmptyContainer}>
                     <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-                    <Text style={styles.modalEmptyText}>No communities available</Text>
+                    <Text style={styles.modalEmptyText}>{t('post_modal_empty')}</Text>
                     <Text style={styles.modalEmptySubtext}>
-                      Join a community to post there
+                      {t('post_modal_empty_sub')}
                     </Text>
                   </View>
                 }
@@ -1067,17 +1068,22 @@ const styles = StyleSheet.create({
     padding: SPACING.xxl,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
   },
   modalEmptyText: {
     ...TYPOGRAPHY.h3,
     color: COLORS.textSecondary,
     marginTop: SPACING.md,
+    textAlign: 'center',
+    width: '100%',
   },
   modalEmptySubtext: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+    width: '100%',
   },
   tagsCard: {
     marginBottom: SPACING.md,

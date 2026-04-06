@@ -1,18 +1,12 @@
-import { useEffect, useState } from 'react';
-import { i18n } from '../utils/i18n';
+import { useCallback } from 'react';
+import { translate, type TranslationKey } from '../locales/translate';
 import { useSettingsStore } from '../store/settingsStore';
 
 export const useTranslation = () => {
-  const { language } = useSettingsStore();
-  const [t, setT] = useState(() => i18n.getTranslations());
-
-  useEffect(() => {
-    setT(i18n.getTranslations());
-  }, [language]);
-
-  return {
-    t: (key: keyof typeof t) => t[key] || key,
-    language,
-  };
+  const language = useSettingsStore((s) => s.language);
+  const t = useCallback(
+    (key: TranslationKey, vars?: Record<string, string | number>) => translate(language, key, vars),
+    [language]
+  );
+  return { t, language };
 };
-

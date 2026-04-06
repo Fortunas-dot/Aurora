@@ -5,14 +5,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard, GlassButton, GlassInput, LoadingOverlay } from '../../src/components/common';
+import { AuthLanguagePicker } from '../../src/components/auth/AuthLanguagePicker';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { apiService } from '../../src/services/api.service';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { register, authSubmitting, registerError, clearError } = useAuthStore();
   const { startOnboarding } = useOnboardingStore();
   
@@ -29,16 +32,16 @@ export default function RegisterScreen() {
 
   const validateUsernameLocally = (value: string): string | null => {
     if (!value.trim()) {
-      return 'Username is required';
+      return t('username_required');
     }
     if (value.length < 3) {
-      return 'Username must be at least 3 characters';
+      return t('username_min_length');
     }
     if (value.length > 30) {
-      return 'Username cannot exceed 30 characters';
+      return t('username_max_length');
     }
     if (!/^[a-zA-Z0-9_]+$/.test(value)) {
-      return 'Username can only contain letters, numbers, and underscores';
+      return t('username_invalid_chars');
     }
     return null;
   };
@@ -67,17 +70,17 @@ export default function RegisterScreen() {
 
       const available = (response.data as any)?.available;
       if (available === false) {
-        setUsernameError('Username already taken');
+        setUsernameError(t('username_taken'));
         setUsernameStatus('');
         return false;
       }
 
       setUsernameError('');
-      setUsernameStatus('Username is available');
+      setUsernameStatus(t('username_available'));
       return true;
     } catch (e: any) {
       // Network error – allow user to try to register anyway, but show a gentle info message
-      setUsernameStatus('Could not verify username right now. We will check again when you register.');
+      setUsernameStatus(t('username_check_failed'));
       return true;
     } finally {
       setIsCheckingUsername(false);
@@ -93,7 +96,7 @@ export default function RegisterScreen() {
 
     // Validation
     if (!email.trim()) {
-      setEmailError('Email is required');
+      setEmailError(t('email_required'));
       return;
     }
     const usernameValidation = validateUsernameLocally(username);
@@ -103,19 +106,19 @@ export default function RegisterScreen() {
       return;
     }
     if (!password) {
-      setValidationError('Password is required');
+      setValidationError(t('password_required'));
       return;
     }
     if (password.length < 6) {
-      setValidationError('Password must be at least 6 characters');
+      setValidationError(t('password_min_length'));
       return;
     }
     if (password !== confirmPassword) {
-      setValidationError('Passwords do not match');
+      setValidationError(t('passwords_no_match'));
       return;
     }
     if (!acceptedTerms) {
-      setValidationError('You must accept the Terms of Service to create an account');
+      setValidationError(t('terms_required'));
       return;
     }
 
@@ -153,6 +156,8 @@ export default function RegisterScreen() {
       colors={COLORS.backgroundGradient}
       style={styles.container}
     >
+      <AuthLanguagePicker />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -160,7 +165,7 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + SPACING.lg, paddingBottom: insets.bottom + SPACING.xl },
+            { paddingTop: insets.top + SPACING.xxl, paddingBottom: insets.bottom + SPACING.xl },
           ]}
           keyboardShouldPersistTaps="handled"
         >
@@ -184,8 +189,8 @@ export default function RegisterScreen() {
                 <Ionicons name="person-add" size={36} color={COLORS.primary} />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join the Aurora community</Text>
+            <Text style={styles.title}>{t('register_title')}</Text>
+            <Text style={styles.subtitle}>{t('register_subtitle')}</Text>
           </View>
 
           {/* Register Form */}
@@ -198,8 +203,8 @@ export default function RegisterScreen() {
                   setEmailError('');
                 }
               }}
-              placeholder="Email"
-              label="Email"
+              placeholder={t('email_label')}
+              label={t('email_label')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -220,8 +225,8 @@ export default function RegisterScreen() {
                   setUsernameStatus('');
                 }
               }}
-              placeholder="Username"
-              label="Username"
+              placeholder={t('username_label')}
+              label={t('username_label')}
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={30}
@@ -247,23 +252,23 @@ export default function RegisterScreen() {
             <GlassInput
               value={password}
               onChangeText={setPassword}
-              placeholder="Password"
-              label="Password"
+              placeholder={t('password_label')}
+              label={t('password_label')}
               secureTextEntry
               icon="lock-closed-outline"
               textContentType="newPassword"
-              autoComplete="password-new"
+              autoComplete="password"
             />
 
             <GlassInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Confirm password"
-              label="Confirm password"
+              placeholder={t('confirm_password_label')}
+              label={t('confirm_password_label')}
               secureTextEntry
               icon="lock-closed-outline"
               textContentType="newPassword"
-              autoComplete="password-new"
+              autoComplete="password"
             />
 
             {displayError && (
@@ -283,7 +288,7 @@ export default function RegisterScreen() {
               </View>
               <View style={styles.termsTextContainer}>
                 <Text style={styles.termsText}>
-                  I agree to the{' '}
+                  {t('terms_agree_prefix')}
                   <Text
                     style={styles.termsLink}
                     onPress={(e) => {
@@ -291,9 +296,9 @@ export default function RegisterScreen() {
                       router.push('/terms-of-service');
                     }}
                   >
-                    Terms of Service
+                    {t('terms_of_service_link')}
                   </Text>
-                  {' '}and acknowledge Aurora's zero tolerance policy for objectionable content and abusive users.
+                  {t('terms_agree_suffix')}
                 </Text>
               </View>
             </Pressable>
@@ -302,12 +307,12 @@ export default function RegisterScreen() {
             <View style={styles.privacyNote}>
               <Ionicons name="shield-checkmark" size={16} color={COLORS.success} />
               <Text style={styles.privacyText}>
-                Your privacy is important. You can always stay anonymous.
+                {t('privacy_note_register')}
               </Text>
             </View>
 
             <GlassButton
-              title="Register"
+              title={t('register_button')}
               onPress={handleRegister}
               variant="primary"
               size="lg"
@@ -319,15 +324,15 @@ export default function RegisterScreen() {
 
           {/* Login Link */}
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={styles.loginText}>{t('already_have_account')}</Text>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.loginLink}>Log in</Text>
+              <Text style={styles.loginLink}>{t('log_in_link')}</Text>
             </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <LoadingOverlay visible={authSubmitting} message="Creating account..." />
+      <LoadingOverlay visible={authSubmitting} message={t('creating_account')} />
     </LinearGradient>
   );
 }

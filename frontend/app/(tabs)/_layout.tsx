@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { SPACING } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useTranslation } from '../../src/hooks/useTranslation';
 import { AuroraCore as BlobsAuroraCore } from '../../src/components/voice/AuroraCore.blobs';
 import { Badge } from '../../src/components/common';
 import { useAuthStore } from '../../src/store/authStore';
@@ -15,6 +16,7 @@ import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { useCallback } from 'react';
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuthStore();
   const { isActive: isOnboardingActive, finishOnboarding, currentStep } = useOnboardingStore();
@@ -135,7 +137,9 @@ export default function TabsLayout() {
           {
             backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.tabBar,
             borderTopColor: colors.tabBarBorder,
-            display: isOnboardingActive ? 'none' : 'flex', // Hide tab bar during onboarding
+            // Only hide during the feed overlay (step 3). Hiding for any isActive also hid the bar after
+            // leaving "View onboarding" or other flows where isActive stayed true without step 3.
+            display: isOnboardingActive && currentStep === 3 ? 'none' : 'flex',
           },
         ],
         tabBarBackground: () => (
@@ -158,7 +162,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Feed',
+          title: t('tab_feed'),
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
             <Ionicons name="home" size={size} color={color} />
@@ -172,7 +176,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="groups"
         options={{
-          title: 'Connect',
+          title: t('tab_connect'),
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
               <Ionicons name="people" size={size} color={color} />
@@ -183,7 +187,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="aurora"
         options={{
-          title: 'Aurora',
+          title: t('tab_aurora'),
           tabBarIcon: ({ color, size }) => (
             <View style={styles.auroraIconContainer}>
               <View style={styles.auroraCoreWrapper}>
@@ -196,7 +200,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Messages',
+          title: t('tab_messages'),
           tabBarIcon: ({ color, size }) => (
             <View style={styles.chatIconContainer}>
               <Ionicons name="chatbubbles" size={size} color={color} />
@@ -210,7 +214,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tab_profile'),
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
               <Ionicons name="person" size={size} color={color} />

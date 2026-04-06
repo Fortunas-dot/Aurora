@@ -9,22 +9,22 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export type FeedTab = 'all' | 'post' | 'question' | 'story' | 'saved';
 
 interface TabConfig {
   id: FeedTab;
-  label: string;
-  labelEn: string;
+  labelKey: 'feed_tab_all' | 'feed_tab_posts' | 'feed_tab_questions' | 'feed_tab_stories' | 'feed_tab_saved';
   icon: keyof typeof Ionicons.glyphMap;
 }
 
 const TABS: TabConfig[] = [
-  { id: 'all', label: 'All', labelEn: 'All', icon: 'apps-outline' },
-  { id: 'post', label: 'Posts', labelEn: 'Posts', icon: 'chatbubbles-outline' },
-  { id: 'question', label: 'Questions', labelEn: 'Questions', icon: 'help-circle-outline' },
-  { id: 'story', label: 'Stories', labelEn: 'Stories', icon: 'book-outline' },
-  { id: 'saved', label: 'Saved', labelEn: 'Saved', icon: 'bookmark-outline' },
+  { id: 'all', labelKey: 'feed_tab_all', icon: 'apps-outline' },
+  { id: 'post', labelKey: 'feed_tab_posts', icon: 'chatbubbles-outline' },
+  { id: 'question', labelKey: 'feed_tab_questions', icon: 'help-circle-outline' },
+  { id: 'story', labelKey: 'feed_tab_stories', icon: 'book-outline' },
+  { id: 'saved', labelKey: 'feed_tab_saved', icon: 'bookmark-outline' },
 ];
 
 interface FeedTabsProps {
@@ -38,6 +38,7 @@ export const FeedTabs: React.FC<FeedTabsProps> = ({
   onTabChange,
   isAuthenticated = false,
 }) => {
+  const { t } = useTranslation();
   const filteredTabs = TABS.filter((tab) => {
     // Hide "saved" tab for non-authenticated users
     if (!isAuthenticated && tab.id === 'saved') {
@@ -67,7 +68,7 @@ export const FeedTabs: React.FC<FeedTabsProps> = ({
                 color={isActive ? COLORS.primary : COLORS.textMuted}
               />
               <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                {tab.label}
+                {t(tab.labelKey)}
               </Text>
               {isActive && <View style={styles.activeIndicator} />}
             </Pressable>

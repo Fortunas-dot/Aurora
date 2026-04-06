@@ -32,6 +32,7 @@ import { useNotificationStore } from '../../src/store/notificationStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { useRequirePremium } from '../../src/hooks/usePremium';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 // Reduce background rendering cost for smoother scrolling, especially on Android
 const STAR_COUNT = Platform.OS === 'ios' ? 24 : 10;
@@ -288,6 +289,7 @@ export default function FeedScreen() {
   const { user, isAuthenticated } = useAuthStore();
   const { unreadCount, updateUnreadCount } = useNotificationStore();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { isActive: isOnboardingActive, currentStep, nextStep, finishOnboarding } = useOnboardingStore();
   const { requirePremium } = useRequirePremium();
   
@@ -803,37 +805,6 @@ export default function FeedScreen() {
     );
   }, [user?._id, router, handleLike, handleShare, handleSavePost, handleDeletePost]);
 
-  const getEmptyStateText = () => {
-    if (isSearching && searchQuery) {
-      return {
-        title: 'No results',
-        subtitle: `No posts found for "${searchQuery}"`,
-      };
-    }
-    switch (activeTab) {
-      case 'home':
-        return {
-          title: 'No posts yet',
-          subtitle: 'Join communities to see posts in your Home feed',
-        };
-      case 'popular':
-        return {
-          title: 'No trending posts',
-          subtitle: 'There are no popular posts yet',
-        };
-      case 'saved':
-        return {
-          title: 'No saved posts',
-          subtitle: 'Save interesting posts to find them here',
-        };
-      default:
-        return {
-          title: 'No posts yet',
-          subtitle: 'Be the first to share something!',
-        };
-    }
-  };
-
   // IMPORTANT: ListHeaderComponent must be referentially stable.
   // If we pass an inline component (function) here, FlatList can remount the header frequently,
   // which makes CommunityFilter re-fetch and causes the "No communities yet" flicker.
@@ -857,11 +828,11 @@ export default function FeedScreen() {
               <View style={styles.therapistTextContainer}>
                 <Text style={styles.therapistBannerTitle}>
                   {therapistCount === 1
-                    ? 'There is 1 certified therapist online'
-                    : `There are ${therapistCount} certified therapists online`}
+                    ? t('feed_therapist_one')
+                    : t('feed_therapist_many', { count: therapistCount })}
                 </Text>
                 <Text style={styles.therapistBannerSubtitle}>
-                  They can answer questions and give guidance under posts.
+                  {t('feed_therapist_sub')}
                 </Text>
               </View>
               <View style={styles.therapistStatusDotContainer}>
@@ -898,9 +869,34 @@ export default function FeedScreen() {
     showAllPublicPosts,
     sortOption,
     handleSortChange,
+    t,
   ]);
 
-  const emptyState = getEmptyStateText();
+  const emptyState = useMemo(() => {
+    if (isSearching && searchQuery) {
+      return {
+        title: t('feed_empty_no_results'),
+        subtitle: t('feed_empty_no_results_sub', { query: searchQuery }),
+      };
+    }
+    switch (activeTab) {
+      case 'all':
+        return {
+          title: t('feed_empty_all_title'),
+          subtitle: t('feed_empty_all_sub'),
+        };
+      case 'saved':
+        return {
+          title: t('feed_empty_saved_title'),
+          subtitle: t('feed_empty_saved_sub'),
+        };
+      default:
+        return {
+          title: t('feed_empty_default_title'),
+          subtitle: t('feed_empty_default_sub'),
+        };
+    }
+  }, [isSearching, searchQuery, activeTab, t]);
 
   // Show overlay on the Feed only for the Feed step of onboarding
   // Only show overlay for step 3 (Feed)
@@ -933,7 +929,7 @@ export default function FeedScreen() {
         {isSearchExpanded ? (
           <SearchBar
             onSearch={handleSearch}
-            placeholder="Search posts..."
+            placeholder={t('feed_search_placeholder')}
             isExpanded={isSearchExpanded}
             onExpandChange={handleSearchExpandChange}
           />
@@ -945,10 +941,11 @@ export default function FeedScreen() {
             >
               <Ionicons name="menu" size={24} color={colors.text} />
             </Pressable>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Aurora</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('feed_brand')}</Text>
             <View style={styles.headerRight}>
               <SearchBar
                 onSearch={handleSearch}
+                placeholder={t('feed_search_placeholder')}
                 isExpanded={isSearchExpanded}
                 onExpandChange={handleSearchExpandChange}
               />
@@ -970,10 +967,10 @@ export default function FeedScreen() {
       {isSearching && searchQuery && (
         <View style={styles.searchResultsHeader}>
           <Text style={styles.searchResultsText}>
-            Search results for "{searchQuery}"
+            {t('feed_search_results', { query: searchQuery })}
           </Text>
           <Pressable onPress={() => handleSearchExpandChange(false)}>
-            <Text style={styles.clearSearchText}>Clear</Text>
+            <Text style={styles.clearSearchText}>{t('feed_clear')}</Text>
           </Pressable>
         </View>
       )}
@@ -1004,7 +1001,8 @@ export default function FeedScreen() {
         getItemLayout={undefined}
         scrollEventThrottle={32}
         decelerationRate="normal"
-        scrollEnabled={!isOnboardingActive || (currentStep !== 3 && currentStep < 3)}
+        // Only lock scroll during the Feed onboarding overlay (step 3), not for later steps
+        scrollEnabled={!(isOnboardingActive && currentStep === 3)}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -1069,8 +1067,8 @@ export default function FeedScreen() {
       {isOnboardingActive && (
         <OnboardingOverlay
           visible={shouldShowOverlay}
-          title="Feed"
-          description="Discover posts, share your thoughts, and connect with a supportive community. Find inspiration and support from others on similar journeys."
+          title={t('feed_onboarding_title')}
+          description={t('feed_onboarding_desc')}
           onNext={() => {
             console.log('🔵 Feed Overlay - Next clicked, currentStep:', currentStep);
             nextStep();
@@ -1106,7 +1104,7 @@ export default function FeedScreen() {
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Communities</Text>
+              <Text style={styles.modalTitle}>{t('feed_modal_communities')}</Text>
               <Pressable
                 onPress={() => setShowJoinedGroupsModal(false)}
                 style={[styles.modalCloseButton, { backgroundColor: colors.glass.backgroundLight }]}
@@ -1132,10 +1130,10 @@ export default function FeedScreen() {
                 </LinearGradient>
                 <View style={styles.modalGroupInfo}>
                   <Text style={[styles.modalGroupName, { color: colors.primary }]}>
-                    Alle communities
+                    {t('feed_modal_browse_all')}
                   </Text>
                   <Text style={styles.modalGroupMeta}>
-                    Browse all communities
+                    {t('feed_modal_browse_all_sub')}
                   </Text>
                 </View>
               </View>
@@ -1163,10 +1161,10 @@ export default function FeedScreen() {
                 </LinearGradient>
                 <View style={styles.modalGroupInfo}>
                   <Text style={[styles.modalGroupName, { color: colors.primary }]}>
-                    Alle public posts
+                    {t('feed_modal_public_posts')}
                   </Text>
                   <Text style={styles.modalGroupMeta}>
-                    Posts van alle public communities
+                    {t('feed_modal_public_posts_sub')}
                   </Text>
                 </View>
               </View>
@@ -1184,15 +1182,15 @@ export default function FeedScreen() {
             ) : joinedGroups.length === 0 ? (
               <View style={styles.modalEmptyContainer}>
                 <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-                <Text style={styles.modalEmptyText}>No communities yet</Text>
+                <Text style={styles.modalEmptyText}>{t('feed_modal_no_communities')}</Text>
                 <Text style={styles.modalEmptySubtext}>
-                  Join communities to see them here
+                  {t('feed_modal_no_communities_sub')}
                 </Text>
               </View>
             ) : (
               <>
                 <View style={styles.modalSectionHeader}>
-                  <Text style={styles.modalSectionTitle}>Your Communities</Text>
+                  <Text style={styles.modalSectionTitle}>{t('feed_modal_your_communities')}</Text>
                 </View>
                 <FlatList
                   data={joinedGroups}
@@ -1219,7 +1217,8 @@ export default function FeedScreen() {
                         <View style={styles.modalGroupInfo}>
                           <Text style={styles.modalGroupName}>{item.name}</Text>
                           <Text style={styles.modalGroupMeta}>
-                            {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}
+                            {item.memberCount}{' '}
+                            {item.memberCount === 1 ? t('feed_member') : t('feed_members')}
                           </Text>
                         </View>
                       </View>
@@ -1452,17 +1451,22 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: SPACING.xxl,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
   },
   emptyText: {
     ...TYPOGRAPHY.h3,
     color: COLORS.textSecondary,
     marginTop: SPACING.md,
+    textAlign: 'center',
+    width: '100%',
   },
   emptySubtext: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+    width: '100%',
   },
   browseGroupsButton: {
     marginTop: SPACING.md,
@@ -1544,17 +1548,22 @@ const styles = StyleSheet.create({
   modalEmptyContainer: {
     padding: SPACING.xxl,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
   },
   modalEmptyText: {
     ...TYPOGRAPHY.h3,
     color: COLORS.textSecondary,
     marginTop: SPACING.md,
+    textAlign: 'center',
+    width: '100%',
   },
   modalEmptySubtext: {
     ...TYPOGRAPHY.body,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
     textAlign: 'center',
+    width: '100%',
   },
   modalEmptyButton: {
     marginTop: SPACING.lg,

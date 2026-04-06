@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { I18nManager, Platform } from 'react-native';
+import * as Updates from 'expo-updates';
 import { i18n, Language } from '../utils/i18n';
 import { secureStorage } from '../utils/secureStorage';
 import { useAuthStore } from './authStore';
@@ -155,11 +157,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // App is always in English (Dutch translations are kept for future use)
       await i18n.init();
-      const language: Language = 'en';
-      
-      // Set language in i18n to English
+      // Reset legacy RTL so Arabic uses the same LTR shell as other languages.
+      if (Platform.OS !== 'web' && I18nManager.isRTL) {
+        I18nManager.allowRTL(true);
+        I18nManager.forceRTL(false);
+        try {
+          await Updates.reloadAsync();
+          return;
+        } catch {
+          /* reload may fail in dev */
+        }
+      }
+      const language = i18n.getLanguage();
       await i18n.setLanguage(language);
       
       // App only supports dark mode - always set to dark
@@ -215,8 +225,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const state = get();
       
-      // Language is always English, no need to save
-      
+      await secureStorage.setItemAsync('app_language', state.language);
+
       // Save theme
       await secureStorage.setItemAsync('app_theme', state.theme);
       

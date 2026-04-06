@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard, GlassButton, Avatar, TagChip } from '../../src/components/common';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useTranslation } from '../../src/hooks/useTranslation';
 import { useAuthStore } from '../../src/store/authStore';
 import { userService } from '../../src/services/user.service';
 import { groupService } from '../../src/services/group.service';
@@ -61,6 +62,7 @@ const MenuItem: React.FC<MenuItemProps> = React.memo(({
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user, isAuthenticated, logout } = useAuthStore();
   const [stats, setStats] = useState({
@@ -140,7 +142,7 @@ export default function ProfileScreen() {
         style={styles.container}
       >
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile_header_title')}</Text>
         </View>
         
         <View style={styles.authPrompt}>
@@ -152,20 +154,20 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={48} color={colors.primary} />
             </LinearGradient>
           </View>
-          <Text style={[styles.authPromptTitle, { color: colors.text }]}>Welcome, Guest</Text>
+          <Text style={[styles.authPromptTitle, { color: colors.text }]}>{t('profile_guest_title')}</Text>
           <Text style={[styles.authPromptText, { color: colors.textMuted }]}>
-            Log in or create an account to use all features
+            {t('profile_guest_sub')}
           </Text>
           
           <View style={styles.authButtons}>
             <GlassButton
-              title="Log in"
+              title={t('Login')}
               onPress={() => router.push('/(auth)/login')}
               variant="primary"
               style={styles.authButton}
             />
             <GlassButton
-              title="Register"
+              title={t('register_link')}
               onPress={() => router.push('/(auth)/register')}
               variant="outline"
               style={styles.authButton}
@@ -192,7 +194,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile_header_title')}</Text>
           <Pressable style={[styles.headerButton, { backgroundColor: colors.glass.background, borderColor: colors.glass.border }]} onPress={() => router.push('/settings')}>
             <Ionicons name="settings-outline" size={24} color={colors.text} />
           </Pressable>
@@ -231,7 +233,7 @@ export default function ProfileScreen() {
               <View style={[styles.healthInfoSection, { borderTopColor: colors.glass.border }]}>
                 {(user.healthInfo.mentalHealth && user.healthInfo.mentalHealth.length > 0) && (
                   <View style={styles.healthCategory}>
-                    <Text style={[styles.healthCategoryLabel, { color: colors.textMuted }]}>Mental health</Text>
+                    <Text style={[styles.healthCategoryLabel, { color: colors.textMuted }]}>{t('profile_mental_health')}</Text>
                     <View style={styles.healthTags}>
                       {user.healthInfo.mentalHealth.slice(0, 3).map((item, index) => {
                         const condition = typeof item === 'string' ? item : item.condition;
@@ -261,7 +263,7 @@ export default function ProfileScreen() {
                 )}
                 {(user.healthInfo.physicalHealth && user.healthInfo.physicalHealth.length > 0) && (
                   <View style={styles.healthCategory}>
-                    <Text style={styles.healthCategoryLabel}>Physical health</Text>
+                    <Text style={styles.healthCategoryLabel}>{t('profile_physical_health')}</Text>
                     <View style={styles.healthTags}>
                       {user.healthInfo.physicalHealth.slice(0, 3).map((item, index) => {
                         const condition = typeof item === 'string' ? item : item.condition;
@@ -298,21 +300,21 @@ export default function ProfileScreen() {
                 <Text style={[styles.statValue, { color: colors.text }]}>
                   {isLoadingStats ? '...' : stats.posts}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Posts</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('profile_stat_posts')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.glass.border }]} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.text }]}>
                   {isLoadingStats ? '...' : stats.connections}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Connecties</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('profile_stat_connections')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.glass.border }]} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.text }]}>
                   {isLoadingStats ? '...' : stats.groups}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Groups</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('profile_stat_groups')}</Text>
               </View>
             </View>
           </GlassCard>
@@ -320,58 +322,58 @@ export default function ProfileScreen() {
 
         {/* Menu Sections */}
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.textMuted }]}>Account</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.textMuted }]}>{t('profile_section_account')}</Text>
           <GlassCard padding={0}>
             <MenuItem
               icon="person-outline"
-              title="Edit profile"
-              subtitle="Name, bio, photo"
+              title={t('profile_edit_profile')}
+              subtitle={t('profile_edit_sub')}
               onPress={() => router.push('/edit-profile')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="mail-outline"
-              title="Account Settings"
-              subtitle="Email & phone number"
+              title={t('profile_account_settings')}
+              subtitle={t('profile_account_sub')}
               onPress={() => router.push('/account-settings')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="diamond-outline"
-              title="Premium"
-              subtitle="free trial, then premium per month"
+              title={t('profile_premium')}
+              subtitle={t('profile_premium_sub')}
               onPress={() => router.push('/subscription')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="heart-outline"
-              title="Health Information"
-              subtitle="Mental & physical health"
+              title={t('profile_health_info')}
+              subtitle={t('profile_health_sub')}
               onPress={() => router.push('/health-info')}
             />
           </GlassCard>
         </View>
 
         <View style={styles.menuSection}>
-          <Text style={[styles.menuSectionTitle, { color: colors.textMuted }]}>App</Text>
+          <Text style={[styles.menuSectionTitle, { color: colors.textMuted }]}>{t('profile_section_app')}</Text>
           <GlassCard padding={0}>
             <MenuItem
               icon="settings-outline"
-              title="Settings"
-              subtitle="App settings"
+              title={t('profile_settings')}
+              subtitle={t('profile_settings_sub')}
               onPress={() => router.push('/settings')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="help-circle-outline"
-              title="Help & Support"
+              title={t('profile_help')}
               onPress={() => router.push('/help-support')}
             />
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="bulb-outline"
-              title="Submit Ideas"
-              subtitle="Share your ideas for the app"
+              title={t('profile_ideas')}
+              subtitle={t('profile_ideas_sub')}
               onPress={() => router.push('/ideas')}
             />
           </GlassCard>
@@ -381,7 +383,7 @@ export default function ProfileScreen() {
           <GlassCard padding={0}>
             <MenuItem
               icon="log-out-outline"
-              title="Log out"
+              title={t('profile_log_out')}
               onPress={handleLogout}
               showArrow={false}
               danger

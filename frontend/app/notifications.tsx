@@ -17,10 +17,26 @@ import { NotificationCard } from '../src/components/notification/NotificationCar
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 import { useNotificationStore } from '../src/store/notificationStore';
 import { useAuthStore } from '../src/store/authStore';
+import { useTranslation } from '../src/hooks/useTranslation';
+import type { TranslationKey } from '../src/locales/translate';
+
+const NOTIF_FILTER_CHIPS: {
+  id: 'all' | 'like' | 'comment' | 'message' | 'follow' | 'group_invite';
+  labelKey: TranslationKey;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'all', labelKey: 'feed_tab_all', icon: 'apps-outline' },
+  { id: 'like', labelKey: 'likes', icon: 'heart-outline' },
+  { id: 'comment', labelKey: 'comments', icon: 'chatbubble-outline' },
+  { id: 'message', labelKey: 'messages', icon: 'mail-outline' },
+  { id: 'follow', labelKey: 'follows', icon: 'person-add-outline' },
+  { id: 'group_invite', labelKey: 'groups', icon: 'people-outline' },
+];
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuthStore();
   const {
     notifications,
@@ -86,14 +102,14 @@ export default function NotificationsScreen() {
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('notif_screen_title')}</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="notifications-outline" size={64} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>Log in to see notifications</Text>
+          <Text style={styles.emptyText}>{t('notif_login_prompt')}</Text>
           <GlassButton
-            title="Log in"
+            title={t('log_in')}
             onPress={() => router.push('/(auth)/login')}
             style={styles.loginButton}
           />
@@ -109,10 +125,10 @@ export default function NotificationsScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notif_screen_title')}</Text>
         {unreadCount > 0 && (
           <Pressable style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{t('notif_mark_all_read')}</Text>
           </Pressable>
         )}
       </View>
@@ -190,7 +206,9 @@ export default function NotificationsScreen() {
           unreadCount > 0 ? (
             <View style={styles.unreadHeader}>
               <Text style={styles.unreadHeaderText}>
-                {unreadCount} {unreadCount === 1 ? 'unread notification' : 'unread notifications'}
+                {unreadCount === 1
+                  ? t('notif_unread_single', { count: unreadCount })
+                  : t('notif_unread_plural', { count: unreadCount })}
               </Text>
             </View>
           ) : null
@@ -210,10 +228,8 @@ export default function NotificationsScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="notifications-outline" size={64} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>No notifications</Text>
-              <Text style={styles.emptySubtext}>
-                You'll get notifications here when someone likes your post, comments, or follows you.
-              </Text>
+              <Text style={styles.emptyText}>{t('notif_empty_title')}</Text>
+              <Text style={styles.emptySubtext}>{t('notif_empty_sub')}</Text>
             </View>
           )
         }

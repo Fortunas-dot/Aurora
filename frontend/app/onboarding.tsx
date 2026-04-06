@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { PaginationDots } from '../src/components/onboarding/PaginationDots';
 import { AuroraCore } from '../src/components/voice/AuroraCore';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
+import { useTranslation } from '../src/hooks/useTranslation';
 import { useOnboardingStore } from '../src/store/onboardingStore';
 
 // Import university logos
@@ -383,34 +384,37 @@ interface OnboardingSlide {
   route?: string | null; // Route to navigate to, null means stay on onboarding screen
 }
 
-const onboardingSlides: OnboardingSlide[] = [
-  {
-    id: '1',
-    icon: 'sparkles',
-    title: 'Meet your AI\nMental Health\ncompanion',
-    description: 'Someone to talk to whenever you need it.\nHelping you reflect and grow',
-    route: null,
-  },
-  {
-    id: '2',
-    icon: 'brain',
-    title: 'Built with the best\nExperts in Mental\nHealth',
-    description: 'Trained on comprehensive psychology and behavioral science. Developed with the best in their fields.',
-    route: null,
-  },
-  {
-    id: '3',
-    icon: 'medical',
-    title: 'Real Therapists\nReady to Help',
-    description: 'Licensed professionals are available in the app. They respond under your posts and question posts to provide real, professional guidance when you need it most.',
-    route: '/(tabs)',
-  },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  const onboardingSlides = useMemo((): OnboardingSlide[] => {
+    return [
+      {
+        id: '1',
+        icon: 'sparkles',
+        title: t('ob_slide1_title'),
+        description: t('ob_slide1_desc'),
+        route: null,
+      },
+      {
+        id: '2',
+        icon: 'school-outline',
+        title: t('ob_slide2_title'),
+        description: t('ob_slide2_desc'),
+        route: null,
+      },
+      {
+        id: '3',
+        icon: 'medical',
+        title: t('ob_slide3_title'),
+        description: t('ob_slide3_desc'),
+        route: '/(tabs)',
+      },
+    ];
+  }, [t]);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [logosReady, setLogosReady] = useState(false);
@@ -553,15 +557,15 @@ export default function OnboardingScreen() {
               <View style={styles.credentialTagsContainer}>
                 <View style={styles.credentialTag}>
                   <Ionicons name="school-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Harvard</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_harvard')}</Text>
                 </View>
                 <View style={styles.credentialTag}>
                   <Ionicons name="school-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Oxford</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_oxford')}</Text>
                 </View>
                 <View style={styles.credentialTag}>
                   <Ionicons name="school-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Stanford</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_stanford')}</Text>
                 </View>
               </View>
               <LinearGradient
@@ -572,11 +576,11 @@ export default function OnboardingScreen() {
 
             <View style={styles.welcomeContent}>
               <Text style={styles.welcomeTitle}>
-                <Text style={styles.welcomeTitleDark}>Built with </Text>
-                <Text style={styles.welcomeTitleAccent1}>the best{'\n'}</Text>
-                <Text style={styles.welcomeTitleDark}>Experts in </Text>
-                <Text style={styles.welcomeTitleAccent2}>Mental{'\n'}</Text>
-                <Text style={styles.welcomeTitleAccent2}>Health</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_built_with')}</Text>
+                <Text style={styles.welcomeTitleAccent1}>{t('ob_hero_the_best')}{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_experts_in')}</Text>
+                <Text style={styles.welcomeTitleAccent2}>{t('ob_hero_mental')}{'\n'}</Text>
+                <Text style={styles.welcomeTitleAccent2}>{t('ob_hero_health')}</Text>
               </Text>
 
               <Text style={styles.welcomeSubtitle}>
@@ -601,15 +605,15 @@ export default function OnboardingScreen() {
               <View style={styles.credentialTagsContainer}>
                 <View style={styles.credentialTag}>
                   <Ionicons name="checkmark-circle-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Licensed</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_licensed')}</Text>
                 </View>
                 <View style={styles.credentialTag}>
                   <Ionicons name="chatbubbles-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Respond on Posts</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_respond_posts')}</Text>
                 </View>
                 <View style={styles.credentialTag}>
                   <Ionicons name="help-circle-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.credentialTagText}>Answer Questions</Text>
+                  <Text style={styles.credentialTagText}>{t('ob_tag_answer_questions')}</Text>
                 </View>
               </View>
               <LinearGradient
@@ -620,10 +624,10 @@ export default function OnboardingScreen() {
 
             <View style={styles.welcomeContent}>
               <Text style={styles.welcomeTitle}>
-                <Text style={styles.welcomeTitleDark}>Real </Text>
-                <Text style={styles.welcomeTitleAccent1}>Therapists{'\n'}</Text>
-                <Text style={styles.welcomeTitleDark}>Ready to </Text>
-                <Text style={styles.welcomeTitleAccent2}>Help</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_real')}</Text>
+                <Text style={styles.welcomeTitleAccent1}>{t('ob_hero_therapists')}{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_ready_to')}</Text>
+                <Text style={styles.welcomeTitleAccent2}>{t('ob_hero_help')}</Text>
               </Text>
 
               <Text style={styles.welcomeSubtitle}>
@@ -652,12 +656,12 @@ export default function OnboardingScreen() {
             {/* Text content */}
             <View style={styles.welcomeContent}>
               <Text style={styles.welcomeTitle}>
-                <Text style={styles.welcomeTitleDark}>Meet </Text>
-                <Text style={styles.welcomeTitleAccent1}>your </Text>
-                <Text style={styles.welcomeTitleDark}>AI{'\n'}</Text>
-                <Text style={styles.welcomeTitleDark}>Mental </Text>
-                <Text style={styles.welcomeTitleAccent2}>Health{'\n'}</Text>
-                <Text style={styles.welcomeTitleDark}>companion</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_meet')}</Text>
+                <Text style={styles.welcomeTitleAccent1}>{t('ob_hero_your')}</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_ai')}{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_mental_lower')}</Text>
+                <Text style={styles.welcomeTitleAccent2}>{t('ob_hero_health')}{'\n'}</Text>
+                <Text style={styles.welcomeTitleDark}>{t('ob_hero_companion')}</Text>
               </Text>
 
               <Text style={styles.welcomeSubtitle}>
@@ -700,7 +704,7 @@ export default function OnboardingScreen() {
         )}
       </View>
     );
-  }, [colors.text, currentIndex]);
+  }, [colors.text, currentIndex, t]);
 
   const isHeroSlide = true;
 
@@ -764,11 +768,11 @@ export default function OnboardingScreen() {
               pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <Text style={styles.welcomeButtonText}>{currentIndex === 1 ? "Next" : "Get Started"}</Text>
+            <Text style={styles.welcomeButtonText}>{currentIndex === 1 ? t('ob_next') : t('ob_get_started')}</Text>
           </Pressable>
         ) : (
           <GlassButton
-            title={currentIndex === onboardingSlides.length - 1 ? "Get Started" : "Next"}
+            title={currentIndex === onboardingSlides.length - 1 ? t('ob_get_started') : t('ob_next')}
             onPress={handleNext}
             variant="primary"
             size="lg"

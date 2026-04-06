@@ -8,20 +8,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
+import { useTranslation } from '../../hooks/useTranslation';
+import type { TranslationKey } from '../../locales/translate';
 
 export type SortOption = 'newest' | 'popular' | 'discussed';
 
-interface SortConfig {
+const SORT_OPTIONS: {
   id: SortOption;
-  label: string;
-  labelEn: string;
+  labelKey: TranslationKey;
   icon: keyof typeof Ionicons.glyphMap;
-}
-
-const SORT_OPTIONS: SortConfig[] = [
-  { id: 'newest', label: 'Newest', labelEn: 'Newest', icon: 'time-outline' },
-  { id: 'popular', label: 'Most Popular', labelEn: 'Most Popular', icon: 'heart-outline' },
-  { id: 'discussed', label: 'Most Discussed', labelEn: 'Most Discussed', icon: 'chatbubbles-outline' },
+}[] = [
+  { id: 'newest', labelKey: 'feed_sort_newest', icon: 'time-outline' },
+  { id: 'popular', labelKey: 'feed_sort_popular', icon: 'heart-outline' },
+  { id: 'discussed', labelKey: 'feed_sort_discussed', icon: 'chatbubbles-outline' },
 ];
 
 interface SortDropdownProps {
@@ -33,8 +32,9 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
   selectedSort,
   onSortChange,
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const selectedOption = SORT_OPTIONS.find((opt) => opt.id === selectedSort) || SORT_OPTIONS[0];
 
   const handleSelect = (sort: SortOption) => {
@@ -46,7 +46,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
     <View style={styles.container}>
       <Pressable style={styles.button} onPress={() => setIsOpen(true)}>
         <Ionicons name={selectedOption.icon} size={18} color={COLORS.textSecondary} />
-        <Text style={styles.buttonText}>{selectedOption.label}</Text>
+        <Text style={styles.buttonText}>{t(selectedOption.labelKey)}</Text>
         <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
       </Pressable>
 
@@ -58,7 +58,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
       >
         <Pressable style={styles.overlay} onPress={() => setIsOpen(false)}>
           <View style={styles.dropdown}>
-            <Text style={styles.dropdownTitle}>Sort by</Text>
+            <Text style={styles.dropdownTitle}>{t('feed_sort_by')}</Text>
             {SORT_OPTIONS.map((option) => {
               const isSelected = selectedSort === option.id;
               return (
@@ -73,7 +73,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
                     color={isSelected ? COLORS.primary : COLORS.textSecondary}
                   />
                   <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                   {isSelected && (
                     <Ionicons name="checkmark" size={20} color={COLORS.primary} />
