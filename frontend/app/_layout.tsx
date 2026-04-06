@@ -571,13 +571,6 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="world"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
             name="onboarding"
             options={{
               presentation: 'fullScreenModal',

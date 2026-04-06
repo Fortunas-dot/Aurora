@@ -47,6 +47,51 @@ validateEnv();
 const app: Application = express() as any;
 const PORT = process.env.PORT || 3000;
 
+// Connect to MongoDB
+connectDB().then(async () => {
+  // One-time maintenance: ensure no invalid compound index exists on parallel
+  // array fields upvotes/downvotes in the ideas collection.
+  //
+  // MongoDB does not allow a compound index where multiple indexed fields are
+  // arrays. If such an index was ever created (e.g. { upvotes: 1, downvotes: 1 }),
+  // any write can fail with:
+  //   "cannot index parallel arrays [downvotes] [upvotes]"
+  //
+  // This block is safe to keep: it only drops the specific invalid index if
+  // present, and logs a warning instead of crashing the app.
+  try {
+    const collection = (Idea as any).collection;
+    if (collection?.indexes) {
+      const indexes = await collection.indexes();
+      for (const idx of indexes) {
+        const key = idx.key || {};
+        const fields = Object.keys(key);
+        if (fields.includes('upvotes') && fields.includes('downvotes')) {
+          console.warn(
+            `[Idea] Dropping invalid compound index "${idx.name}" on parallel arrays upvotes/downvotes to fix "cannot index parallel arrays" error`
+          );
+          await collection.dropIndex(idx.name);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Idea] Failed to inspect/drop invalid upvotes/downvotes index:', err);
+  }
+
+  // Demo content safety net.
+  // Production uses Railway DB and does not allow /api/seed in NODE_ENV=production,
+  // so we ensure a small set of demo posts exist without wiping any data.
+  try {
+    await ensureDemoPostsAndComments();
+  } catch (err) {
+    console.warn('[ensureDemoPosts] Failed:', err);
+  }
+
+  startInactivityCron();
+}).catch((err) => {
+  console.error('Failed to connect to MongoDB:', err);
+});
+
 // Trust proxy (required for Railway and other platforms that use reverse proxies)
 // This allows express-rate-limit to correctly identify users behind proxies
 // Updated: 2026-02-19 - Fix for Railway deployment
@@ -179,10 +224,8 @@ console.log('✅ WebSocket support enabled');
 // WebSocket Routes (must be before regular API routes)
 import { handleNotificationWebSocket } from './controllers/notificationWebSocket';
 import { handleChatWebSocket } from './controllers/chatWebSocket';
-import { handleWorldWebSocket } from './controllers/worldWebSocket';
 (app as any).ws('/ws/notifications', handleNotificationWebSocket);
 (app as any).ws('/ws/chat', handleChatWebSocket);
-(app as any).ws('/ws/world', handleWorldWebSocket);
 
 // API Routes with specific rate limiting
 app.use('/api/auth', authLimiter, authRoutes); // Stricter rate limiting for auth
@@ -207,42 +250,9 @@ app.use('/api/calendar', calendarRoutes);
 // Error handling middleware
 app.use(errorHandler);
 
-/**
- * Bind HTTP only after MongoDB is ready. Previously `app.listen` ran while
- * `connectDB()` was still in flight, so API routes could hang until mongoose finished connecting.
- */
-async function startServer(): Promise<void> {
-  await connectDB();
-
-  try {
-    const collection = (Idea as any).collection;
-    if (collection?.indexes) {
-      const indexes = await collection.indexes();
-      for (const idx of indexes) {
-        const key = idx.key || {};
-        const fields = Object.keys(key);
-        if (fields.includes('upvotes') && fields.includes('downvotes')) {
-          console.warn(
-            `[Idea] Dropping invalid compound index "${idx.name}" on parallel arrays upvotes/downvotes to fix "cannot index parallel arrays" error`
-          );
-          await collection.dropIndex(idx.name);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[Idea] Failed to inspect/drop invalid upvotes/downvotes index:', err);
-  }
-
-  try {
-    await ensureDemoPostsAndComments();
-  } catch (err) {
-    console.warn('[ensureDemoPosts] Failed:', err);
-  }
-
-  startInactivityCron();
-
-  app.listen(PORT, () => {
-    console.log(`
+// Start server
+app.listen(PORT, () => {
+  console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║            Aurora Backend API Server                       ║
 ╠════════════════════════════════════════════════════════════╣
@@ -251,12 +261,6 @@ async function startServer(): Promise<void> {
 ║  Health: /health                                           ║
 ╚════════════════════════════════════════════════════════════╝
   `);
-  });
-}
-
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
 });
 
 export default app;

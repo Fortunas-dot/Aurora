@@ -1212,28 +1212,6 @@ export default function GroupsScreen() {
             scrollEventThrottle={16}
             decelerationRate="normal"
             getItemLayout={undefined}
-            ListHeaderComponent={
-              isAuthenticated ? (
-                <Pressable
-                  style={[
-                    styles.plazaCard,
-                    { borderColor: colors.glass.border, backgroundColor: colors.glass.backgroundDark },
-                  ]}
-                  onPress={() => router.push('/world')}
-                >
-                  <View style={styles.plazaRow}>
-                    <Ionicons name="apps-outline" size={26} color={colors.primary} />
-                    <View style={styles.plazaTextCol}>
-                      <Text style={[styles.plazaTitle, { color: colors.text }]}>Commune Plaza</Text>
-                      <Text style={[styles.plazaSub, { color: colors.textMuted }]}>
-                        Pixel lobby — walk around and see who is here
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                  </View>
-                </Pressable>
-              ) : null
-            }
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
@@ -1788,28 +1766,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '500',
   },
-  plazaCard: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  plazaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  plazaTextCol: {
-    flex: 1,
-  },
-  plazaTitle: {
-    ...TYPOGRAPHY.h3,
-    fontWeight: '700',
-  },
-  plazaSub: {
-    ...TYPOGRAPHY.small,
-    marginTop: 4,
-  },
   listContent: {
     padding: SPACING.md,
     paddingBottom: 100,
@@ -1991,5 +1947,47 @@ const styles = StyleSheet.create({
   createGroupButtonText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.primary,
+  },
+  starField: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  star: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  fallingStarContainer: {
+    position: 'absolute',
+    top: -20,
+    width: 6,
+    height: 30,
+    zIndex: 1,
+  },
+  fallingStar: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#60A5FA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  fallingStarTrail: {
+    position: 'absolute',
+    top: 6,
+    left: 1.5,
+    width: 3,
+    height: 24,
+    borderRadius: 1.5,
   },
 });
