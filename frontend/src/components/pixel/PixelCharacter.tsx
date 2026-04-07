@@ -3,43 +3,30 @@ import Svg, { Rect } from 'react-native-svg';
 import { PixelCharacterConfig, HairStyle } from '../../constants/pixelCharacterOptions';
 
 // ═══════════════════════════════════════════════════════════════
-// HABBO-STYLE LAYERED PIXEL CHARACTER — "Paper Doll" System
+// HABBO-STYLE LAYERED PIXEL CHARACTER
 //
-// Like real Habbo, the character is built from independent sprite
-// layers that composite back-to-front:
+// Actual Habbo proportions:
+//   • Head is ~50% of total height, wide & boxy (not dome)
+//   • Body is compact and chunky
+//   • Short stubby legs
+//   • Big eyes with white + iris + pupil
+//   • Thick 1px dark outlines
+//   • Isometric 3/4 view with right-side depth shading
 //
-//   1. Body (skin base — torso, arms, head dome)
-//   2. Legs (pants)
-//   3. Chest (shirt)
-//   4. Shoes
-//   5. Face (eyes, mouth, nose — special colors)
-//   6. Hair (covers top of head)
+// Layers composite back→front:
+//   Body(skin) → Legs → Chest(shirt) → Shoes → Face → Hair
 //
-// Each layer is a grid of shade codes:
-//   _ = transparent, B = base, S = shadow, D = deep shadow
-//
-// Direction support:
-//   dir 2 = front-right (default, drawn as-is)
-//   dir 4 = front-left  (horizontally mirrored)
-//   dir 0 = back-right  (uses BACK variants)
-//   dir 6 = back-left   (BACK mirrored)
-//
-// The component accepts `direction` (0–7) and `frame` props.
-// Habbo only draws 5 angles and mirrors for the other 3.
-//
-// Grid: 16 wide × 28 tall
+// Grid: 14 wide × 22 tall (Habbo-accurate proportions)
 // ═══════════════════════════════════════════════════════════════
 
-const GRID_W = 16;
-const GRID_H = 28;
-const OUTLINE = '#0C0C18';
+const GRID_W = 14;
+const GRID_H = 22;
+const OUTLINE = '#08080F';
 
 const _ = 0;  // transparent
-const B = 1;  // base
-const S = 2;  // shadow (~18% darker)
-const D = 3;  // deep shadow (~35% darker)
-
-// ── Helper: build full grid from sparse row map ──────────────
+const B = 1;  // base color
+const S = 2;  // shadow (~20% darker)
+const D = 3;  // deep shadow / side (~38% darker)
 
 function layer(rows: Record<number, number[]>): number[][] {
   return Array.from({ length: GRID_H }, (__, i) =>
@@ -47,227 +34,225 @@ function layer(rows: Record<number, number[]>): number[][] {
   );
 }
 
-// ── Helper: mirror a layer horizontally ──────────────────────
-
 function mirrorLayer(l: number[][]): number[][] {
   return l.map((row) => [...row].reverse());
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SPRITE LAYERS (direction 2 — front-right facing)
+// BODY LAYER — skin (big boxy head, neck, arms)
+//
+// Habbo heads: wide rectangle with slightly rounded top corners
+// Head takes rows 0–10 (11 rows), body 11–21 (11 rows) → 50/50
 // ═══════════════════════════════════════════════════════════════
 
-// BODY — skin (head dome, neck, arms, hands)
 const BODY_FRONT = layer({
-  2:  [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],  // head crown
-  3:  [_,_,_,_,B,B,B,B,B,B,B,B,_,_,_,_],
-  4:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  5:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  6:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],  // forehead
-  7:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],  // eye row
-  8:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],  // nose row
-  9:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],  // mouth row
-  10: [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],  // jaw
-  11: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],  // chin
-  12: [_,_,_,_,_,_,B,B,B,S,_,_,_,_,_,_],  // neck
-  13: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],  // shoulders
-  14: [_,B,B,_,_,_,_,_,_,_,_,_,_,_,_,_],  // left arm
-  15: [_,B,S,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  16: [_,B,B,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  17: [_,B,S,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  18: [_,B,B,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  19: [_,_,B,_,_,_,_,_,_,_,_,_,_,_,_,_],  // hand
+  // Head — big boxy rectangle, classic Habbo shape
+  0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],  // top (slightly narrower = rounded corners)
+  1:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  2:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  3:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // forehead
+  4:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // eye row
+  5:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // below eyes
+  6:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // nose
+  7:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // mouth
+  8:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],  // chin area
+  9:  [_,_,_,B,B,B,B,B,B,B,D,_,_,_],  // jaw (slightly narrower)
+  10: [_,_,_,_,_,B,B,B,B,D,_,_,_,_],  // neck
+
+  // Torso — arms stick out to the sides
+  11: [_,_,_,_,B,B,B,B,B,B,D,_,_,_],  // shoulders
+  12: [_,B,B,_,_,_,_,_,_,_,_,_,_,_],  // left arm
+  13: [_,B,S,_,_,_,_,_,_,_,_,_,_,_],
+  14: [_,B,B,_,_,_,_,_,_,_,_,_,_,_],
+  15: [_,S,B,_,_,_,_,_,_,_,_,_,_,_],  // hand
 });
 
-// BODY — back view (no face details, arm on right side)
 const BODY_BACK = layer({
-  2:  [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],
-  3:  [_,_,_,_,B,B,B,B,B,B,B,B,_,_,_,_],
-  4:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  5:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  6:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  7:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  8:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  9:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-  10: [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],
-  11: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],
-  12: [_,_,_,_,_,_,B,B,B,S,_,_,_,_,_,_],
-  13: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],
-  14: [_,_,_,_,_,_,_,_,_,_,_,_,B,B,_,_],  // right arm (back view)
-  15: [_,_,_,_,_,_,_,_,_,_,_,_,S,B,_,_],
-  16: [_,_,_,_,_,_,_,_,_,_,_,_,B,B,_,_],
-  17: [_,_,_,_,_,_,_,_,_,_,_,_,S,B,_,_],
-  18: [_,_,_,_,_,_,_,_,_,_,_,_,B,B,_,_],
-  19: [_,_,_,_,_,_,_,_,_,_,_,_,B,_,_,_],
+  0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],
+  1:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  2:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  3:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  4:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  5:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  6:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  7:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  8:  [_,_,B,B,B,B,B,B,B,B,B,D,_,_],
+  9:  [_,_,_,B,B,B,B,B,B,B,D,_,_,_],
+  10: [_,_,_,_,_,B,B,B,B,D,_,_,_,_],
+  11: [_,_,_,_,B,B,B,B,B,B,D,_,_,_],
+  12: [_,_,_,_,_,_,_,_,_,_,_,B,B,_],  // right arm (back)
+  13: [_,_,_,_,_,_,_,_,_,_,_,S,B,_],
+  14: [_,_,_,_,_,_,_,_,_,_,_,B,B,_],
+  15: [_,_,_,_,_,_,_,_,_,_,_,B,S,_],
 });
 
-// CHEST — shirt with fold detail
+// ═══════════════════════════════════════════════════════════════
+// CHEST LAYER — shirt on torso
+// ═══════════════════════════════════════════════════════════════
+
 const CHEST_FRONT = layer({
-  13: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],  // collar
-  14: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  15: [_,_,_,B,B,S,D,D,S,B,B,S,D,_,_,_],  // fold
-  16: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  17: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  18: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
+  11: [_,_,_,_,B,B,B,B,B,B,D,_,_,_],  // collar
+  12: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],  // shirt
+  13: [_,_,_,B,B,S,D,D,S,B,B,D,_,_],  // fold detail
+  14: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],
+  15: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],
 });
 
 const CHEST_BACK = layer({
-  13: [_,_,_,_,_,B,B,B,B,B,S,_,_,_,_,_],
-  14: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  15: [_,_,_,B,B,B,B,S,B,B,B,S,D,_,_,_],  // back seam
-  16: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  17: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  18: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
+  11: [_,_,_,_,B,B,B,B,B,B,D,_,_,_],
+  12: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],
+  13: [_,_,_,B,B,B,B,S,B,B,B,D,_,_],
+  14: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],
+  15: [_,_,_,B,B,B,B,B,B,B,B,D,_,_],
 });
 
-// LEGS — pants with belt, 1px gap between legs
+// ═══════════════════════════════════════════════════════════════
+// LEGS LAYER — short pants with belt, stubby Habbo legs
+// ═══════════════════════════════════════════════════════════════
+
 const LEGS = layer({
-  19: [_,_,_,D,D,D,D,D,D,D,D,D,_,_,_,_],  // belt
-  20: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  21: [_,_,_,B,B,B,B,B,B,B,B,S,D,_,_,_],
-  22: [_,_,_,B,B,B,_,B,B,B,B,S,_,_,_,_],  // legs split
-  23: [_,_,_,B,B,B,_,B,B,B,B,S,_,_,_,_],
-  24: [_,_,_,B,B,S,_,B,B,B,S,S,_,_,_,_],
-  25: [_,_,_,S,S,S,_,S,S,S,S,S,_,_,_,_],  // cuffs
+  16: [_,_,_,D,D,D,D,D,D,D,D,D,_,_],  // belt
+  17: [_,_,_,B,B,B,B,B,B,B,B,S,_,_],  // pants
+  18: [_,_,_,B,B,B,_,B,B,B,B,S,_,_],  // legs split (1px gap)
+  19: [_,_,_,B,B,S,_,B,B,B,S,S,_,_],  // lower legs
 });
 
-// SHOES — wider than legs
+// ═══════════════════════════════════════════════════════════════
+// SHOES LAYER — wider than legs (classic Habbo look)
+// ═══════════════════════════════════════════════════════════════
+
 const SHOES = layer({
-  26: [_,_,B,B,B,B,_,B,B,B,B,B,S,_,_,_],
-  27: [_,_,B,B,S,D,_,B,B,B,S,D,D,_,_,_],
+  20: [_,_,B,B,B,B,_,B,B,B,B,B,_,_],  // shoes (wider)
+  21: [_,_,B,B,S,D,_,B,B,S,S,D,_,_],  // shoe shading
 });
 
-// FACE — special color codes: 1=eye white, 2=iris, 3=mouth, 4=nose
+// ═══════════════════════════════════════════════════════════════
+// FACE LAYER — big Habbo eyes
+//
+// Codes: 1=eye white, 2=iris color, 3=pupil(black), 4=mouth, 5=nose
+//
+// Each eye is 2px wide: [white, iris] — with a dark pupil dot
+// Eyes are big and centered — THE defining Habbo feature
+// ═══════════════════════════════════════════════════════════════
+
 const FACE_FRONT = layer({
-  7: [_,_,_,_,_,1,2,_,_,1,2,_,_,_,_,_],   // eyes
-  8: [_,_,_,_,_,_,_,_,4,_,_,_,_,_,_,_],   // nose
-  9: [_,_,_,_,_,_,_,3,3,_,_,_,_,_,_,_],   // mouth
+  4:  [_,_,_,_,1,2,3,_,1,2,3,_,_,_],  // eyes: white-iris-pupil × 2
+  6:  [_,_,_,_,_,_,_,5,_,_,_,_,_,_],  // nose (subtle)
+  7:  [_,_,_,_,_,_,4,4,_,_,_,_,_,_],  // mouth
 });
 
-// No face for back view (empty layer)
 const FACE_BACK = layer({});
 
 // ═══════════════════════════════════════════════════════════════
-// HAIR LAYERS (front-right facing)
+// HAIR LAYERS
+//
+// Hair sits on top of the big boxy head.
+// Front: covers top rows + frames sides of face
+// Back: covers entire back of head
 // ═══════════════════════════════════════════════════════════════
 
 const HAIR_FRONT: Record<HairStyle, number[][]> = {
   bob: layer({
-    0: [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],
-    1: [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],
-    2: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    5: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    6: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],  // sides frame face
-    7: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    8: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
+    0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],  // thick bangs
+    4:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],  // sides frame face
+    5:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    6:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    7:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    8:  [_,_,_,_,_,_,_,_,_,_,_,_,_,_],  // bob ends at chin
   }),
   long: layer({
-    0:  [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],
-    1:  [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],
-    2:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    5:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    6:  [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    7:  [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    8:  [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    9:  [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    10: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    11: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    12: [_,_,_,B,_,_,_,_,_,_,_,B,S,_,_,_],
-    13: [_,_,_,_,_,_,_,_,_,_,_,S,_,_,_,_],
+    0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    4:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    5:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    6:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    7:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    8:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],
+    9:  [_,_,B,_,_,_,_,_,_,_,_,S,_,_],  // past jaw
+    10: [_,_,B,_,_,_,_,_,_,_,_,S,_,_],  // past neck
+    11: [_,_,S,_,_,_,_,_,_,_,_,S,_,_],  // shoulder length
+    12: [_,_,_,_,_,_,_,_,_,_,_,S,_,_],  // tapers
   }),
   spiky: layer({
-    0: [_,_,B,_,B,_,B,B,B,_,B,_,B,_,_,_],
-    1: [_,_,_,B,B,B,B,B,B,B,B,S,_,_,_,_],
-    2: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
+    0:  [_,B,_,B,_,B,B,B,B,_,B,_,B,_],  // spikes pointing up!
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    // forehead exposed — no bangs
   }),
   curly: layer({
-    0: [_,_,_,B,B,B,B,B,B,B,B,B,B,_,_,_],
-    1: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    2: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    3: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    4: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    5: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    6: [_,_,B,_,_,_,_,_,_,_,_,_,B,S,_,_],
-    7: [_,_,B,_,_,_,_,_,_,_,_,_,B,S,_,_],
-    8: [_,_,_,_,_,_,_,_,_,_,_,_,_,S,_,_],
+    0:  [_,B,B,B,B,B,B,B,B,B,B,B,B,_],  // voluminous, wider than head
+    1:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    2:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    3:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    4:  [_,B,_,_,_,_,_,_,_,_,_,_,S,_],  // wide sides
+    5:  [_,B,_,_,_,_,_,_,_,_,_,_,S,_],
+    6:  [_,B,_,_,_,_,_,_,_,_,_,_,S,_],
+    7:  [_,S,_,_,_,_,_,_,_,_,_,_,S,_],
   }),
 };
 
-// Hair back — covers back of head
 const HAIR_BACK: Record<HairStyle, number[][]> = {
   bob: layer({
-    0: [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],
-    1: [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],
-    2: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    5: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    6: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    7: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    8: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    9: [_,_,_,_,B,B,B,B,B,B,S,_,_,_,_,_],
+    0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    4:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    5:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    6:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    7:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    8:  [_,_,_,B,B,B,B,B,B,B,S,_,_,_],
   }),
   long: layer({
-    0:  [_,_,_,_,_,B,B,B,B,B,B,_,_,_,_,_],
-    1:  [_,_,_,_,B,B,B,B,B,B,B,S,_,_,_,_],
-    2:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    5:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    6:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    7:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    8:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    9:  [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    10: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    11: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    12: [_,_,_,_,B,B,B,B,B,B,S,_,_,_,_,_],
-    13: [_,_,_,_,_,S,S,S,S,S,_,_,_,_,_,_],
+    0:  [_,_,_,B,B,B,B,B,B,B,B,_,_,_],
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    4:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    5:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    6:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    7:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    8:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    9:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    10: [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    11: [_,_,_,B,B,B,B,B,B,B,S,_,_,_],
+    12: [_,_,_,_,S,S,S,S,S,S,_,_,_,_],
   }),
   spiky: layer({
-    0: [_,_,B,_,B,_,B,B,B,_,B,_,B,_,_,_],
-    1: [_,_,_,B,B,B,B,B,B,B,B,S,_,_,_,_],
-    2: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    3: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    4: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    5: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
-    6: [_,_,_,_,B,B,B,B,B,B,S,_,_,_,_,_],
+    0:  [_,B,_,B,_,B,B,B,B,_,B,_,B,_],
+    1:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    2:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    3:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    4:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    5:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    6:  [_,_,_,B,B,B,B,B,B,B,S,_,_,_],
   }),
   curly: layer({
-    0: [_,_,_,B,B,B,B,B,B,B,B,B,B,_,_,_],
-    1: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    2: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    3: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    4: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    5: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    6: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    7: [_,_,B,B,B,B,B,B,B,B,B,B,B,S,_,_],
-    8: [_,_,_,B,B,B,B,B,B,B,B,B,S,_,_,_],
+    0:  [_,B,B,B,B,B,B,B,B,B,B,B,B,_],
+    1:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    2:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    3:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    4:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    5:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    6:  [_,B,B,B,B,B,B,B,B,B,B,B,S,_],
+    7:  [_,_,B,B,B,B,B,B,B,B,B,S,_,_],
+    8:  [_,_,_,S,S,S,S,S,S,S,S,_,_,_],
   }),
 };
 
 // ═══════════════════════════════════════════════════════════════
-// DIRECTION RESOLVER
-//
-// Habbo directions: 0=N, 1=NE, 2=E(front-right), 3=SE, 4=S(front-left),
-//                   5=SW, 6=W(back-left), 7=NW
-//
-// We draw directions 0-3 natively; 4-7 = mirror of 0-3
+// DIRECTION LOGIC
 // ═══════════════════════════════════════════════════════════════
 
 function resolveDirection(dir: number): { base: number; mirror: boolean } {
-  // Normalize to 0-7
   const d = ((dir % 8) + 8) % 8;
   if (d <= 3) return { base: d, mirror: false };
-  // 4→4(mirror of 0), 5→3(mirror of 1)... simplified:
-  // For our simplified 2-state system (front/back):
-  //   0,1 = back-facing;  2,3 = front-facing
-  //   4,5 = front-facing mirrored;  6,7 = back-facing mirrored
   return { base: (8 - d) % 8, mirror: true };
 }
 
@@ -276,16 +261,8 @@ function isFrontFacing(baseDir: number): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// COMPOSITING ENGINE
-//
-// Stacks layers back→front: Body → Legs → Chest → Shoes → Face → Hair
-// Each layer overwrites transparent pixels only where it has data.
+// COMPOSITING — stack all layers into final color grid
 // ═══════════════════════════════════════════════════════════════
-
-interface LayerDef {
-  data: number[][];
-  color: (v: number) => string;
-}
 
 function compositeCharacter(cfg: PixelCharacterConfig, direction: number): (string | null)[][] {
   const grid: (string | null)[][] = Array.from({ length: GRID_H }, () =>
@@ -295,20 +272,14 @@ function compositeCharacter(cfg: PixelCharacterConfig, direction: number): (stri
   const { base, mirror } = resolveDirection(direction);
   const front = isFrontFacing(base);
 
-  // Pick direction-appropriate layer variants
-  const bodyLayer = front ? BODY_FRONT : BODY_BACK;
-  const chestLayer = front ? CHEST_FRONT : CHEST_BACK;
-  const faceLayer = front ? FACE_FRONT : FACE_BACK;
-  const hairLayer = front ? HAIR_FRONT[cfg.hairStyle] : HAIR_BACK[cfg.hairStyle];
-
-  // Habbo Z-order: body → legs → chest → shoes → face → hair
-  const layers: LayerDef[] = [
-    { data: bodyLayer,  color: v => tint(cfg.skinColor, v) },
-    { data: LEGS,       color: v => tint(cfg.pantsColor, v) },
-    { data: chestLayer, color: v => tint(cfg.shirtColor, v) },
-    { data: SHOES,      color: v => tint(cfg.shoeColor, v) },
-    { data: faceLayer,  color: v => faceColor(v, cfg) },
-    { data: hairLayer,  color: v => tint(cfg.hairColor, v) },
+  const layers = [
+    { data: front ? BODY_FRONT : BODY_BACK,   color: (v: number) => tint(cfg.skinColor, v) },
+    { data: LEGS,                               color: (v: number) => tint(cfg.pantsColor, v) },
+    { data: front ? CHEST_FRONT : CHEST_BACK,  color: (v: number) => tint(cfg.shirtColor, v) },
+    { data: SHOES,                              color: (v: number) => tint(cfg.shoeColor, v) },
+    { data: front ? FACE_FRONT : FACE_BACK,    color: (v: number) => faceColor(v, cfg) },
+    { data: front ? HAIR_FRONT[cfg.hairStyle] : HAIR_BACK[cfg.hairStyle],
+      color: (v: number) => tint(cfg.hairColor, v) },
   ];
 
   for (const l of layers) {
@@ -324,27 +295,24 @@ function compositeCharacter(cfg: PixelCharacterConfig, direction: number): (stri
   return grid;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// COLOR FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-
 function tint(hex: string, v: number): string {
   if (v === B) return hex;
-  if (v === S) return darken(hex, 0.18);
-  if (v === D) return darken(hex, 0.35);
+  if (v === S) return darken(hex, 0.20);
+  if (v === D) return darken(hex, 0.38);
   return hex;
 }
 
 function faceColor(v: number, cfg: PixelCharacterConfig): string {
-  if (v === 1) return '#FFFFFF';                    // eye white
-  if (v === 2) return cfg.eyeColor;                 // iris
-  if (v === 3) return darken(cfg.skinColor, 0.35);  // mouth
-  if (v === 4) return darken(cfg.skinColor, 0.08);  // nose
+  if (v === 1) return '#FFFFFF';                     // eye white
+  if (v === 2) return cfg.eyeColor;                  // iris
+  if (v === 3) return '#0C0C18';                     // pupil (black)
+  if (v === 4) return darken(cfg.skinColor, 0.40);   // mouth
+  if (v === 5) return darken(cfg.skinColor, 0.10);   // nose hint
   return cfg.skinColor;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AUTO-OUTLINE — dark border around filled pixels
+// AUTO-OUTLINE
 // ═══════════════════════════════════════════════════════════════
 
 function computeOutlines(grid: (string | null)[][]): [number, number][] {
@@ -374,14 +342,14 @@ function computeOutlines(grid: (string | null)[][]): [number, number][] {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// COMPONENT — React.memo for performance in rooms with 20+ users
+// COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
 interface PixelCharacterProps {
   config: PixelCharacterConfig;
   size?: number;
-  direction?: number;  // 0–7 (Habbo direction, default 2 = front-right)
-  frame?: number;      // animation frame (reserved for walk cycle)
+  direction?: number;
+  frame?: number;
 }
 
 const PixelCharacter = React.memo(
@@ -414,7 +382,6 @@ const PixelCharacter = React.memo(
       </Svg>
     );
   },
-  // Custom comparison: only re-render when visible props change
   (prev, next) =>
     prev.size === next.size &&
     prev.direction === next.direction &&

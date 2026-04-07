@@ -105,9 +105,9 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const SVG_W = SCREEN_W;
 const SVG_H = SVG_W * (VB_H / VB_W);
 
-// Character size (30/18 ≈ 1.67 aspect for 16x28 grid)
-const CHAR_W = Math.round((TILE_W * 0.7) / VB_W * SVG_W);
-const CHAR_H = Math.round(CHAR_W * 1.67);
+// Character size — Habbo proportions (24/16 = 1.5 aspect for 14x22 grid)
+const CHAR_W = Math.round((TILE_W * 0.75) / VB_W * SVG_W);
+const CHAR_H = Math.round(CHAR_W * 1.5);
 
 // Convert room SVG coords → screen pixels
 function roomToScreen(rx: number, ry: number) {
