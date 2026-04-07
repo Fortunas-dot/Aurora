@@ -141,7 +141,7 @@ export default function PixelAvatarScreen() {
               )}
             </View>
 
-            <PixelCharacter config={config} size={180} />
+            <PixelCharacter config={config} size={120} />
           </LinearGradient>
         </View>
 
@@ -195,7 +195,7 @@ export default function PixelAvatarScreen() {
                     {/* Mini character preview per style */}
                     <PixelCharacter
                       config={{ ...config, hairStyle: style.value as HairStyle }}
-                      size={56}
+                      size={40}
                     />
                     <Text style={[
                       styles.styleLabel,

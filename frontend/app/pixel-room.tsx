@@ -105,9 +105,9 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const SVG_W = SCREEN_W;
 const SVG_H = SVG_W * (VB_H / VB_W);
 
-// Character size — Habbo proportions (24/16 = 1.5 aspect for 14x22 grid)
-const CHAR_W = Math.round((TILE_W * 0.75) / VB_W * SVG_W);
-const CHAR_H = Math.round(CHAR_W * 1.5);
+// Character size — real Habbo avatar images are ~110px wide, aspect ~1:1.85
+const CHAR_W = Math.round((TILE_W * 0.85) / VB_W * SVG_W);
+const CHAR_H = Math.round(CHAR_W * 1.85);
 
 // Convert room SVG coords → screen pixels
 function roomToScreen(rx: number, ry: number) {
