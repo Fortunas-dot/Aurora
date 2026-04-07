@@ -9,6 +9,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Animated as RNAnimated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,11 +18,8 @@ import Svg, { Polygon, Line, Rect } from 'react-native-svg';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../src/constants/theme';
 import { useAuthStore } from '../src/store/authStore';
-import {
-  roomWebSocketService,
-  RoomPlayer,
-  RoomChatMessage,
-} from '../src/services/roomWebSocket.service';
+import { useRoomStore } from '../src/store/roomStore';
+import { RoomPlayer } from '../src/services/roomWebSocket.service';
 import PixelCharacter from '../src/components/pixel/PixelCharacter';
 import {
   PixelCharacterConfig,
@@ -30,18 +28,18 @@ import {
 } from '../src/constants/pixelCharacterOptions';
 
 // ════════════════════════════════════════════════════════════════
-// HABBO-STYLE CONSTANTS
+// ISOMETRIC CONSTANTS — 2:1 Dimetric Projection (Habbo standard)
 // ════════════════════════════════════════════════════════════════
 
 const GRID_W = 10;
 const GRID_H = 8;
 
 const TILE_W = 64;
-const TILE_H = 32;
+const TILE_H = 32;   // Isometric tile height (2:1 ratio)
 const TILE_DEPTH = 8;
 const WALL_HEIGHT = 120;
 
-// ── Habbo color palette ─────────────────────────────────────
+// Habbo color palette
 const FLOOR = {
   topA: '#7AB648',
   topB: '#6DA03C',
@@ -49,20 +47,24 @@ const FLOOR = {
   right: '#4A7528',
   outline: '#3D6120',
 };
-
 const WALL = {
   back: '#89B2D3',
-  backDark: '#7AA3C4',
   left: '#6E98B8',
-  leftDark: '#5F89A9',
   trim: '#4A6E88',
   stripe: 'rgba(255,255,255,0.10)',
   corner: '#3A5A74',
 };
-
 const ROOM_BG = '#0D1B2A';
 
-// ── Isometric math ──────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// ISOMETRIC MATH
+//
+// Grid (x,y) → Screen (px,py) using standard 2:1 dimetric:
+//   ScreenX = (x - y) * (TILE_W / 2)
+//   ScreenY = (x + y) * (TILE_H / 2)
+//
+// Depth sorting: zIndex = x + y (higher = closer to camera)
+// ════════════════════════════════════════════════════════════════
 
 function toIso(gx: number, gy: number) {
   return {
@@ -71,24 +73,23 @@ function toIso(gx: number, gy: number) {
   };
 }
 
-// ── Compute viewBox ─────────────────────────────────────────
+function isoDepth(gx: number, gy: number): number {
+  return Math.floor(gx + gy);
+}
 
-const cornerTop = { x: 0, y: -TILE_H / 2 }; // tile(0,0).top — where walls meet
+// ── ViewBox computation ────────────────────────────────────────
+
+const cornerTop = { x: 0, y: -(TILE_H / 2) };
 const wallTopY = cornerTop.y - WALL_HEIGHT;
 
-// Left wall extends to tile(0, GRID_H-1).left
 const leftWallEnd = {
   x: -(GRID_H) * (TILE_W / 2),
   y: (GRID_H - 1) * (TILE_H / 2),
 };
-
-// Back wall extends to tile(GRID_W-1, 0).right
 const backWallEnd = {
   x: GRID_W * (TILE_W / 2),
   y: (GRID_W - 1) * (TILE_H / 2),
 };
-
-// Floor bottom = tile(GRID_W-1, GRID_H-1).bottom + depth
 const floorBottomTile = toIso(GRID_W - 1, GRID_H - 1);
 const floorBottomY = floorBottomTile.y + TILE_H / 2 + TILE_DEPTH;
 
@@ -98,195 +99,17 @@ const VB_Y = wallTopY - PAD;
 const VB_W = backWallEnd.x - leftWallEnd.x + PAD * 2;
 const VB_H = floorBottomY - wallTopY + PAD * 2;
 
-// ── Tile polygon helpers (returns SVG points string) ────────
-
-function pts(coords: number[][]): string {
-  return coords.map(([x, y]) => `${x},${y}`).join(' ');
-}
-
-function tileTopPts(cx: number, cy: number): string {
-  const hw = TILE_W / 2;
-  const hh = TILE_H / 2;
-  return pts([
-    [cx, cy - hh],
-    [cx + hw, cy],
-    [cx, cy + hh],
-    [cx - hw, cy],
-  ]);
-}
-
-function tileLeftSidePts(cx: number, cy: number): string {
-  const hw = TILE_W / 2;
-  const hh = TILE_H / 2;
-  return pts([
-    [cx - hw, cy],
-    [cx, cy + hh],
-    [cx, cy + hh + TILE_DEPTH],
-    [cx - hw, cy + TILE_DEPTH],
-  ]);
-}
-
-function tileRightSidePts(cx: number, cy: number): string {
-  const hw = TILE_W / 2;
-  const hh = TILE_H / 2;
-  return pts([
-    [cx, cy + hh],
-    [cx + hw, cy],
-    [cx + hw, cy + TILE_DEPTH],
-    [cx, cy + hh + TILE_DEPTH],
-  ]);
-}
-
-// ── Wall stripe line data ───────────────────────────────────
-
-function getWallStripes() {
-  const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
-  const stripeCount = 5;
-  for (let i = 1; i <= stripeCount; i++) {
-    const h = (WALL_HEIGHT / (stripeCount + 1)) * i;
-    // Back wall stripe
-    lines.push({
-      x1: cornerTop.x,
-      y1: cornerTop.y - h,
-      x2: backWallEnd.x,
-      y2: backWallEnd.y - h,
-    });
-    // Left wall stripe
-    lines.push({
-      x1: cornerTop.x,
-      y1: cornerTop.y - h,
-      x2: leftWallEnd.x,
-      y2: leftWallEnd.y - h,
-    });
-  }
-  return lines;
-}
-
-const WALL_STRIPES = getWallStripes();
-
-// ════════════════════════════════════════════════════════════════
-// ROOM SVG COMPONENT
-// ════════════════════════════════════════════════════════════════
-
-const HabboRoom = React.memo(() => {
-  const tiles: React.ReactNode[] = [];
-
-  // Render tiles back-to-front (gy=0 first, then gy=1, etc.)
-  for (let gy = 0; gy < GRID_H; gy++) {
-    for (let gx = 0; gx < GRID_W; gx++) {
-      const { x: cx, y: cy } = toIso(gx, gy);
-      const isEven = (gx + gy) % 2 === 0;
-      const topColor = isEven ? FLOOR.topA : FLOOR.topB;
-      const key = `t${gx}-${gy}`;
-
-      tiles.push(
-        <Polygon key={`${key}l`} points={tileLeftSidePts(cx, cy)} fill={FLOOR.left} />,
-        <Polygon key={`${key}r`} points={tileRightSidePts(cx, cy)} fill={FLOOR.right} />,
-        <Polygon
-          key={`${key}t`}
-          points={tileTopPts(cx, cy)}
-          fill={topColor}
-          stroke={FLOOR.outline}
-          strokeWidth={0.5}
-        />,
-      );
-    }
-  }
-
-  // Wall polygons
-  const backWallPts = pts([
-    [cornerTop.x, cornerTop.y],
-    [backWallEnd.x, backWallEnd.y],
-    [backWallEnd.x, backWallEnd.y - WALL_HEIGHT],
-    [cornerTop.x, cornerTop.y - WALL_HEIGHT],
-  ]);
-
-  const leftWallPts = pts([
-    [cornerTop.x, cornerTop.y],
-    [leftWallEnd.x, leftWallEnd.y],
-    [leftWallEnd.x, leftWallEnd.y - WALL_HEIGHT],
-    [cornerTop.x, cornerTop.y - WALL_HEIGHT],
-  ]);
-
-  return (
-    <>
-      {/* Background */}
-      <Rect x={VB_X} y={VB_Y} width={VB_W} height={VB_H} fill={ROOM_BG} />
-
-      {/* Left wall */}
-      <Polygon points={leftWallPts} fill={WALL.left} />
-      {/* Back wall */}
-      <Polygon points={backWallPts} fill={WALL.back} />
-
-      {/* Wall stripes (wallpaper pattern) */}
-      {WALL_STRIPES.map((s, i) => (
-        <Line
-          key={`ws${i}`}
-          x1={s.x1}
-          y1={s.y1}
-          x2={s.x2}
-          y2={s.y2}
-          stroke={WALL.stripe}
-          strokeWidth={1}
-        />
-      ))}
-
-      {/* Corner vertical line */}
-      <Line
-        x1={cornerTop.x}
-        y1={cornerTop.y}
-        x2={cornerTop.x}
-        y2={cornerTop.y - WALL_HEIGHT}
-        stroke={WALL.corner}
-        strokeWidth={2}
-      />
-
-      {/* Wall–floor trim (baseboard) */}
-      <Line
-        x1={cornerTop.x}
-        y1={cornerTop.y}
-        x2={backWallEnd.x}
-        y2={backWallEnd.y}
-        stroke={WALL.trim}
-        strokeWidth={2.5}
-      />
-      <Line
-        x1={cornerTop.x}
-        y1={cornerTop.y}
-        x2={leftWallEnd.x}
-        y2={leftWallEnd.y}
-        stroke={WALL.trim}
-        strokeWidth={2.5}
-      />
-
-      {/* Floor tiles */}
-      {tiles}
-    </>
-  );
-});
-
-// ════════════════════════════════════════════════════════════════
-// MAIN SCREEN
-// ════════════════════════════════════════════════════════════════
-
-const CHAT_BUBBLE_DURATION = 5000;
-const WALK_STEP_MS = 180;
+// ── Screen sizing ──────────────────────────────────────────────
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SVG_W = SCREEN_W;
 const SVG_H = SVG_W * (VB_H / VB_W);
 
-// Character display size — layered Habbo proportions (30/18 ≈ 1.67 aspect)
+// Character size (30/18 ≈ 1.67 aspect for 16x28 grid)
 const CHAR_W = Math.round((TILE_W * 0.7) / VB_W * SVG_W);
 const CHAR_H = Math.round(CHAR_W * 1.67);
 
-interface ChatBubble {
-  userId: string;
-  text: string;
-  expiresAt: number;
-}
-
-// Convert room coords → screen pixel coords
+// Convert room SVG coords → screen pixels
 function roomToScreen(rx: number, ry: number) {
   return {
     x: (rx - VB_X) / VB_W * SVG_W,
@@ -294,7 +117,7 @@ function roomToScreen(rx: number, ry: number) {
   };
 }
 
-// Convert screen tap → grid cell
+// Convert screen tap → grid cell (inverse isometric projection)
 function screenToGrid(sx: number, sy: number) {
   const rx = sx / SVG_W * VB_W + VB_X;
   const ry = sy / SVG_H * VB_H + VB_Y;
@@ -306,117 +129,278 @@ function screenToGrid(sx: number, sy: number) {
   };
 }
 
+// ════════════════════════════════════════════════════════════════
+// TILE & WALL POLYGON HELPERS
+// ════════════════════════════════════════════════════════════════
+
+function pts(coords: number[][]): string {
+  return coords.map(([x, y]) => `${x},${y}`).join(' ');
+}
+
+function tileTopPts(cx: number, cy: number): string {
+  const hw = TILE_W / 2;
+  const hh = TILE_H / 2;
+  return pts([[cx, cy - hh], [cx + hw, cy], [cx, cy + hh], [cx - hw, cy]]);
+}
+
+function tileLeftSidePts(cx: number, cy: number): string {
+  const hw = TILE_W / 2;
+  const hh = TILE_H / 2;
+  return pts([[cx - hw, cy], [cx, cy + hh], [cx, cy + hh + TILE_DEPTH], [cx - hw, cy + TILE_DEPTH]]);
+}
+
+function tileRightSidePts(cx: number, cy: number): string {
+  const hw = TILE_W / 2;
+  const hh = TILE_H / 2;
+  return pts([[cx, cy + hh], [cx + hw, cy], [cx + hw, cy + TILE_DEPTH], [cx, cy + hh + TILE_DEPTH]]);
+}
+
+// ── Wall stripe data ───────────────────────────────────────────
+
+const WALL_STRIPES = (() => {
+  const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let i = 1; i <= 5; i++) {
+    const h = (WALL_HEIGHT / 6) * i;
+    lines.push(
+      { x1: cornerTop.x, y1: cornerTop.y - h, x2: backWallEnd.x, y2: backWallEnd.y - h },
+      { x1: cornerTop.x, y1: cornerTop.y - h, x2: leftWallEnd.x, y2: leftWallEnd.y - h },
+    );
+  }
+  return lines;
+})();
+
+// ════════════════════════════════════════════════════════════════
+// ROOM SVG — React.memo (static geometry, never re-renders)
+// ════════════════════════════════════════════════════════════════
+
+const HabboRoom = React.memo(() => {
+  const tiles: React.ReactNode[] = [];
+
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const { x: cx, y: cy } = toIso(gx, gy);
+      const topColor = (gx + gy) % 2 === 0 ? FLOOR.topA : FLOOR.topB;
+      const k = `t${gx}-${gy}`;
+      tiles.push(
+        <Polygon key={`${k}l`} points={tileLeftSidePts(cx, cy)} fill={FLOOR.left} />,
+        <Polygon key={`${k}r`} points={tileRightSidePts(cx, cy)} fill={FLOOR.right} />,
+        <Polygon key={`${k}t`} points={tileTopPts(cx, cy)} fill={topColor} stroke={FLOOR.outline} strokeWidth={0.5} />,
+      );
+    }
+  }
+
+  const backWallPts = pts([
+    [cornerTop.x, cornerTop.y],
+    [backWallEnd.x, backWallEnd.y],
+    [backWallEnd.x, backWallEnd.y - WALL_HEIGHT],
+    [cornerTop.x, cornerTop.y - WALL_HEIGHT],
+  ]);
+  const leftWallPts = pts([
+    [cornerTop.x, cornerTop.y],
+    [leftWallEnd.x, leftWallEnd.y],
+    [leftWallEnd.x, leftWallEnd.y - WALL_HEIGHT],
+    [cornerTop.x, cornerTop.y - WALL_HEIGHT],
+  ]);
+
+  return (
+    <>
+      <Rect x={VB_X} y={VB_Y} width={VB_W} height={VB_H} fill={ROOM_BG} />
+      <Polygon points={leftWallPts} fill={WALL.left} />
+      <Polygon points={backWallPts} fill={WALL.back} />
+      {WALL_STRIPES.map((s, i) => (
+        <Line key={`ws${i}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={WALL.stripe} strokeWidth={1} />
+      ))}
+      <Line x1={cornerTop.x} y1={cornerTop.y} x2={cornerTop.x} y2={cornerTop.y - WALL_HEIGHT} stroke={WALL.corner} strokeWidth={2} />
+      <Line x1={cornerTop.x} y1={cornerTop.y} x2={backWallEnd.x} y2={backWallEnd.y} stroke={WALL.trim} strokeWidth={2.5} />
+      <Line x1={cornerTop.x} y1={cornerTop.y} x2={leftWallEnd.x} y2={leftWallEnd.y} stroke={WALL.trim} strokeWidth={2.5} />
+      {tiles}
+    </>
+  );
+});
+
+// ════════════════════════════════════════════════════════════════
+// ANIMATED PLAYER SPRITE
+//
+// Each player gets their own Animated.ValueXY that smoothly
+// interpolates between tiles using useNativeDriver: true.
+// Direction is computed from movement delta.
+// ════════════════════════════════════════════════════════════════
+
+const WALK_ANIM_MS = 200;
+
+interface AnimatedPlayerProps {
+  player: RoomPlayer;
+  isMe: boolean;
+  bubbleText?: string;
+}
+
+const AnimatedPlayer = React.memo(
+  function AnimatedPlayer({ player, isMe, bubbleText }: AnimatedPlayerProps) {
+    const iso = toIso(player.x, player.y);
+    const screen = roomToScreen(iso.x, iso.y);
+
+    const posRef = useRef({ x: player.x, y: player.y });
+    const animX = useRef(new RNAnimated.Value(screen.x)).current;
+    const animY = useRef(new RNAnimated.Value(screen.y)).current;
+    const [direction, setDirection] = useState(2); // default front-right
+
+    useEffect(() => {
+      const prevX = posRef.current.x;
+      const prevY = posRef.current.y;
+      const newIso = toIso(player.x, player.y);
+      const newScreen = roomToScreen(newIso.x, newIso.y);
+
+      // Compute facing direction from movement delta
+      const dx = player.x - prevX;
+      const dy = player.y - prevY;
+      if (dx !== 0 || dy !== 0) {
+        // Map dx,dy to Habbo direction (0-7)
+        if (dx > 0 && dy === 0) setDirection(2);       // east → front-right
+        else if (dx > 0 && dy > 0) setDirection(3);    // SE
+        else if (dx === 0 && dy > 0) setDirection(4);   // south → front-left
+        else if (dx < 0 && dy > 0) setDirection(5);     // SW
+        else if (dx < 0 && dy === 0) setDirection(6);   // west → back-left
+        else if (dx < 0 && dy < 0) setDirection(7);     // NW
+        else if (dx === 0 && dy < 0) setDirection(0);   // north → back-right
+        else if (dx > 0 && dy < 0) setDirection(1);     // NE
+      }
+
+      posRef.current = { x: player.x, y: player.y };
+
+      // Animate to new position
+      RNAnimated.parallel([
+        RNAnimated.timing(animX, {
+          toValue: newScreen.x,
+          duration: WALK_ANIM_MS,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(animY, {
+          toValue: newScreen.y,
+          duration: WALK_ANIM_MS,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, [player.x, player.y]);
+
+    const charConfig: PixelCharacterConfig = player.pixelCharacter
+      ? {
+          skinColor: player.pixelCharacter.skinColor,
+          hairStyle: (player.pixelCharacter.hairStyle as HairStyle) || 'bob',
+          hairColor: player.pixelCharacter.hairColor,
+          eyeColor: player.pixelCharacter.eyeColor,
+          shirtColor: player.pixelCharacter.shirtColor,
+          pantsColor: player.pixelCharacter.pantsColor,
+          shoeColor: player.pixelCharacter.shoeColor,
+        }
+      : DEFAULT_PIXEL_CHARACTER;
+
+    const depth = isoDepth(player.x, player.y);
+
+    return (
+      <RNAnimated.View
+        style={[
+          styles.playerContainer,
+          {
+            width: CHAR_W,
+            zIndex: 100 + depth,
+            transform: [
+              { translateX: RNAnimated.subtract(animX, CHAR_W / 2) },
+              { translateY: RNAnimated.subtract(animY, CHAR_H - 4) },
+            ],
+          },
+        ]}
+        pointerEvents="none"
+      >
+        {/* Chat bubble */}
+        {bubbleText && (
+          <View style={styles.chatBubble}>
+            <Text style={styles.chatBubbleText} numberOfLines={2}>
+              {bubbleText}
+            </Text>
+            <View style={styles.chatBubbleArrow} />
+          </View>
+        )}
+
+        {/* Shadow ellipse */}
+        <View style={styles.charShadow} />
+
+        {/* Layered character with direction */}
+        <PixelCharacter config={charConfig} size={CHAR_W} direction={direction} />
+
+        {/* Name tag */}
+        <View style={[styles.nameTagBg, isMe && styles.nameTagBgMe]}>
+          <Text style={styles.nameTag} numberOfLines={1}>
+            {player.pixelCharacter?.name || player.displayName}
+          </Text>
+        </View>
+      </RNAnimated.View>
+    );
+  },
+);
+
+// ════════════════════════════════════════════════════════════════
+// MAIN SCREEN
+// ════════════════════════════════════════════════════════════════
+
+const WALK_STEP_MS = 180;
+
 export default function PixelRoomScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
-  const [players, setPlayers] = useState<Map<string, RoomPlayer>>(new Map());
-  const [chatBubbles, setChatBubbles] = useState<ChatBubble[]>([]);
-  const [chatLog, setChatLog] = useState<RoomChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [connected, setConnected] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [playerCount, setPlayerCount] = useState(0);
+  // Zustand room state
+  const connected = useRoomStore((s) => s.connected);
+  const playerCount = useRoomStore((s) => s.playerCount);
+  const sortedPlayers = useRoomStore((s) => s.sortedPlayers);
+  const chatBubbles = useRoomStore((s) => s.chatBubbles);
+  const chatLog = useRoomStore((s) => s.chatLog);
+  const roomConnect = useRoomStore((s) => s.connect);
+  const roomDisconnect = useRoomStore((s) => s.disconnect);
+  const roomMove = useRoomStore((s) => s.move);
+  const roomChat = useRoomStore((s) => s.chat);
+  const expireBubbles = useRoomStore((s) => s.expireBubbles);
 
-  const playersRef = useRef(players);
-  playersRef.current = players;
+  const [chatInput, setChatInput] = useState('');
+  const [showChat, setShowChat] = useState(false);
+
   const walkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const walkPathRef = useRef<{ x: number; y: number }[]>([]);
 
-  // ── WebSocket ─────────────────────────────────────────────
+  // We need a ref to access current players for tap handler
+  const playersRef = useRef(sortedPlayers);
+  playersRef.current = sortedPlayers;
+
+  // ── Connect/disconnect lifecycle ──────────────────────────────
   useEffect(() => {
-    const unsubs: (() => void)[] = [];
+    roomConnect();
 
-    unsubs.push(roomWebSocketService.on('connected', () => setConnected(true)));
-    unsubs.push(roomWebSocketService.on('disconnected', () => setConnected(false)));
-
-    unsubs.push(
-      roomWebSocketService.on('snapshot', (snapshotPlayers: RoomPlayer[]) => {
-        const map = new Map<string, RoomPlayer>();
-        snapshotPlayers.forEach((p) => map.set(p.userId, p));
-        setPlayers(map);
-        setPlayerCount(map.size);
-      }),
-    );
-
-    unsubs.push(
-      roomWebSocketService.on('player_joined', (player: RoomPlayer) => {
-        setPlayers((prev) => {
-          const next = new Map(prev);
-          next.set(player.userId, player);
-          setPlayerCount(next.size);
-          return next;
-        });
-      }),
-    );
-
-    unsubs.push(
-      roomWebSocketService.on('player_left', (userId: string) => {
-        setPlayers((prev) => {
-          const next = new Map(prev);
-          next.delete(userId);
-          setPlayerCount(next.size);
-          return next;
-        });
-      }),
-    );
-
-    unsubs.push(
-      roomWebSocketService.on('player_moved', (userId: string, x: number, y: number) => {
-        setPlayers((prev) => {
-          const p = prev.get(userId);
-          if (!p) return prev;
-          const next = new Map(prev);
-          next.set(userId, { ...p, x, y });
-          return next;
-        });
-      }),
-    );
-
-    unsubs.push(
-      roomWebSocketService.on('chat', (msg: RoomChatMessage) => {
-        setChatLog((prev) => [...prev.slice(-50), msg]);
-        setChatBubbles((prev) => [
-          ...prev.filter((b) => b.userId !== msg.userId),
-          { userId: msg.userId, text: msg.text, expiresAt: Date.now() + CHAT_BUBBLE_DURATION },
-        ]);
-      }),
-    );
-
-    roomWebSocketService.connect();
+    // Expire bubbles periodically
+    const bubbleTimer = setInterval(expireBubbles, 1000);
 
     return () => {
-      unsubs.forEach((u) => u());
+      clearInterval(bubbleTimer);
       if (walkTimerRef.current) clearTimeout(walkTimerRef.current);
-      roomWebSocketService.disconnect();
+      roomDisconnect();
     };
   }, []);
 
-  // Expire chat bubbles
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setChatBubbles((prev) => prev.filter((b) => b.expiresAt > Date.now()));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // ── Auto-walk: tap a tile and the character walks there ───
+  // ── Auto-walk: tap a tile → L-path of 1-tile moves ───────────
   const startWalking = useCallback(() => {
     if (walkTimerRef.current) return;
     function step() {
       const next = walkPathRef.current.shift();
       if (!next) { walkTimerRef.current = null; return; }
-      roomWebSocketService.move(next.x, next.y);
+      roomMove(next.x, next.y);
       walkTimerRef.current = setTimeout(step, WALK_STEP_MS);
     }
     step();
-  }, []);
+  }, [roomMove]);
 
   const handleTapRoom = useCallback(
     (evt: any) => {
       if (!user) return;
-      const me = playersRef.current.get(user._id);
+      const me = playersRef.current.find((p) => p.userId === user._id);
       if (!me) return;
 
       const { locationX, locationY } = evt.nativeEvent;
@@ -428,7 +412,7 @@ export default function PixelRoomScreen() {
         walkTimerRef.current = null;
       }
 
-      // Build path (horizontal then vertical — simple L-path)
+      // Build L-path (horizontal then vertical)
       const path: { x: number; y: number }[] = [];
       let cx = me.x;
       let cy = me.y;
@@ -449,23 +433,15 @@ export default function PixelRoomScreen() {
     [user, startWalking],
   );
 
-  // ── Send chat ─────────────────────────────────────────────
+  // ── Chat ──────────────────────────────────────────────────────
   const handleSendChat = useCallback(() => {
     const text = chatInput.trim();
     if (!text) return;
-    roomWebSocketService.chat(text);
+    roomChat(text);
     setChatInput('');
-  }, [chatInput]);
+  }, [chatInput, roomChat]);
 
-  // ── Render ────────────────────────────────────────────────
-
-  const sortedPlayers = useMemo(
-    () =>
-      Array.from(players.values()).sort(
-        (a, b) => a.y + a.x * 0.01 - (b.y + b.x * 0.01),
-      ),
-    [players],
-  );
+  // ── Render ────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: ROOM_BG }]}>
@@ -505,62 +481,16 @@ export default function PixelRoomScreen() {
                 <HabboRoom />
               </Svg>
 
-              {/* Player sprites (overlay on top of SVG) */}
+              {/* Animated player sprites */}
               {sortedPlayers.map((p) => {
-                const iso = toIso(p.x, p.y);
-                const screen = roomToScreen(iso.x, iso.y);
-                const isMe = p.userId === user?._id;
                 const bubble = chatBubbles.find((b) => b.userId === p.userId);
-
-                const charConfig: PixelCharacterConfig = p.pixelCharacter
-                  ? {
-                      skinColor: p.pixelCharacter.skinColor,
-                      hairStyle: (p.pixelCharacter.hairStyle as HairStyle) || 'bob',
-                      hairColor: p.pixelCharacter.hairColor,
-                      eyeColor: p.pixelCharacter.eyeColor,
-                      shirtColor: p.pixelCharacter.shirtColor,
-                      pantsColor: p.pixelCharacter.pantsColor,
-                      shoeColor: p.pixelCharacter.shoeColor,
-                    }
-                  : DEFAULT_PIXEL_CHARACTER;
-
                 return (
-                  <View
+                  <AnimatedPlayer
                     key={p.userId}
-                    style={[
-                      styles.playerContainer,
-                      {
-                        left: screen.x - CHAR_W / 2,
-                        top: screen.y - CHAR_H + 4,
-                        width: CHAR_W,
-                        zIndex: 100 + p.y * GRID_W + p.x,
-                      },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    {/* Chat bubble */}
-                    {bubble && (
-                      <View style={styles.chatBubble}>
-                        <Text style={styles.chatBubbleText} numberOfLines={2}>
-                          {bubble.text}
-                        </Text>
-                        <View style={styles.chatBubbleArrow} />
-                      </View>
-                    )}
-
-                    {/* Shadow ellipse */}
-                    <View style={styles.charShadow} />
-
-                    {/* Character */}
-                    <PixelCharacter config={charConfig} size={CHAR_W} />
-
-                    {/* Name tag */}
-                    <View style={[styles.nameTagBg, isMe && styles.nameTagBgMe]}>
-                      <Text style={styles.nameTag} numberOfLines={1}>
-                        {p.pixelCharacter?.name || p.displayName}
-                      </Text>
-                    </View>
-                  </View>
+                    player={p}
+                    isMe={p.userId === user?._id}
+                    bubbleText={bubble?.text}
+                  />
                 );
               })}
             </View>
@@ -625,12 +555,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   headerBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)',
   },
   headerCenter: { alignItems: 'center' },
   headerTitle: { color: '#fff', fontWeight: '700', fontSize: 17 },
@@ -639,11 +565,7 @@ const styles = StyleSheet.create({
   onlineDotActive: { backgroundColor: '#4ade80' },
   onlineText: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
 
-  roomWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  roomWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // Player sprite
   playerContainer: {
@@ -651,69 +573,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   charShadow: {
-    width: '80%',
-    height: 4,
-    borderRadius: 100,
+    width: '80%', height: 4, borderRadius: 100,
     backgroundColor: 'rgba(0,0,0,0.25)',
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
+    position: 'absolute', bottom: 12, alignSelf: 'center',
   },
   nameTagBg: {
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    marginTop: 1,
+    borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 1,
   },
-  nameTagBgMe: {
-    backgroundColor: 'rgba(59,130,246,0.6)',
-  },
-  nameTag: {
-    color: '#fff',
-    fontSize: 7,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
+  nameTagBgMe: { backgroundColor: 'rgba(59,130,246,0.6)' },
+  nameTag: { color: '#fff', fontSize: 7, fontWeight: '700', textAlign: 'center' },
 
   // Chat bubble
   chatBubble: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginBottom: 4,
-    maxWidth: 130,
-    alignSelf: 'center',
+    backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#e0e0e0',
+    paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4,
+    maxWidth: 130, alignSelf: 'center',
   },
-  chatBubbleText: {
-    color: '#1a1a2e',
-    fontSize: 10,
-    fontWeight: '500',
-  },
+  chatBubbleText: { color: '#1a1a2e', fontSize: 10, fontWeight: '500' },
   chatBubbleArrow: {
-    position: 'absolute',
-    bottom: -5,
-    left: '45%',
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 5,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#fff',
+    position: 'absolute', bottom: -5, left: '45%',
+    width: 0, height: 0,
+    borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 5,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#fff',
   },
 
   // Chat log
   chatLogPanel: {
-    maxHeight: 130,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    marginHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.sm,
+    maxHeight: 130, backgroundColor: 'rgba(0,0,0,0.5)',
+    marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.lg, padding: SPACING.sm,
   },
   chatLogContent: { gap: 3 },
   chatLogEmpty: { color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', paddingVertical: 8 },
@@ -722,30 +610,19 @@ const styles = StyleSheet.create({
 
   // Chat bar
   chatBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    gap: SPACING.sm,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: SPACING.md, paddingTop: SPACING.sm, gap: SPACING.sm,
   },
   chatInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 20,
-    paddingHorizontal: SPACING.md,
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20, paddingHorizontal: SPACING.md,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    color: '#fff',
-    fontSize: 14,
+    color: '#fff', fontSize: 14,
   },
   sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#3b82f6',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#3b82f6',
+    alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.35 },
 });
