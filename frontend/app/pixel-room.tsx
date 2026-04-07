@@ -276,9 +276,9 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const SVG_W = SCREEN_W;
 const SVG_H = SVG_W * (VB_H / VB_W);
 
-// Character display size — Habbo proportions (26/15 ≈ 1.73 aspect, rounded head)
+// Character display size — layered Habbo proportions (30/18 ≈ 1.67 aspect)
 const CHAR_W = Math.round((TILE_W * 0.7) / VB_W * SVG_W);
-const CHAR_H = Math.round(CHAR_W * 1.65);
+const CHAR_H = Math.round(CHAR_W * 1.67);
 
 interface ChatBubble {
   userId: string;
