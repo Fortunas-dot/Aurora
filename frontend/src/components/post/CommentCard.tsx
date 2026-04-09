@@ -176,6 +176,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
               uri={comment.author.avatar}
               name={comment.author.displayName || comment.author.username}
               userId={comment.author._id}
+              pixelCharacter={(comment.author as any).pixelCharacter}
               avatarCharacter={comment.author.avatarCharacter}
               avatarBackgroundColor={comment.author.avatarBackgroundColor}
               size="sm"

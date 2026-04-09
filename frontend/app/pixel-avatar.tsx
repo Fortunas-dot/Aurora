@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,12 +15,24 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/the
 import PixelCharacter from '../src/components/pixel/PixelCharacter';
 import {
   PixelCharacterConfig,
-  DEFAULT_PIXEL_CHARACTER,
   HairStyle,
+  Gender,
+  ShirtStyle,
+  PantsStyle,
+  ShoeStyle,
+  normalizePixelCharacterConfig,
+  GENDER_OPTIONS,
   SKIN_COLORS,
   HAIR_STYLES,
+  getHairStyleLabel,
   HAIR_COLORS,
   EYE_COLORS,
+  SHIRT_STYLES,
+  getShirtStyleLabel,
+  PANTS_STYLES,
+  getPantsStyleLabel,
+  SHOE_STYLES,
+  getShoeStyleLabel,
   SHIRT_COLORS,
   PANTS_COLORS,
   SHOE_COLORS,
@@ -36,37 +47,25 @@ export default function PixelAvatarScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuthStore();
 
-  const [config, setConfig] = useState<PixelCharacterConfig>(() => {
-    if (user?.pixelCharacter) {
-      return {
-        skinColor: user.pixelCharacter.skinColor || DEFAULT_PIXEL_CHARACTER.skinColor,
-        hairStyle: (user.pixelCharacter.hairStyle as HairStyle) || DEFAULT_PIXEL_CHARACTER.hairStyle,
-        hairColor: user.pixelCharacter.hairColor || DEFAULT_PIXEL_CHARACTER.hairColor,
-        eyeColor: user.pixelCharacter.eyeColor || DEFAULT_PIXEL_CHARACTER.eyeColor,
-        shirtColor: user.pixelCharacter.shirtColor || DEFAULT_PIXEL_CHARACTER.shirtColor,
-        pantsColor: user.pixelCharacter.pantsColor || DEFAULT_PIXEL_CHARACTER.pantsColor,
-        shoeColor: user.pixelCharacter.shoeColor || DEFAULT_PIXEL_CHARACTER.shoeColor,
-      };
-    }
-    return DEFAULT_PIXEL_CHARACTER;
-  });
+  const [config, setConfig] = useState<PixelCharacterConfig>(() =>
+    normalizePixelCharacterConfig(user?.pixelCharacter as Partial<PixelCharacterConfig> | undefined),
+  );
   const [activeTab, setActiveTab] = useState<Tab>('body');
-  const [characterName, setCharacterName] = useState(user?.pixelCharacter?.name || '');
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
-    if (!characterName.trim()) {
-      Alert.alert('Name required', 'Give your character a name!');
+    const username = user?.username?.trim();
+    if (!username) {
+      Alert.alert('Error', 'Could not determine your username.');
       return;
     }
     setIsSaving(true);
     try {
-      const pixelCharacter = { ...config, name: characterName.trim() };
+      const pixelCharacter = { ...config, name: username };
       const response = await userService.updateProfile({ pixelCharacter });
       if (response.success) {
         updateUser({ pixelCharacter } as any);
         Alert.alert('Saved!', 'Your pixel character has been saved.', [
-          { text: 'Enter Room', onPress: () => router.replace('/pixel-room') },
           { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
@@ -88,7 +87,6 @@ export default function PixelAvatarScreen() {
       colors={COLORS.backgroundGradient}
       style={[styles.container, { paddingTop: insets.top }]}
     >
-      {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.headerBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
@@ -106,27 +104,14 @@ export default function PixelAvatarScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
       >
-        {/* Character Name */}
-        <View style={styles.nameRow}>
-          <TextInput
-            style={styles.nameInput}
-            value={characterName}
-            onChangeText={setCharacterName}
-            placeholder="Character name…"
-            placeholderTextColor={COLORS.textMuted}
-            maxLength={20}
-            selectionColor={COLORS.primary}
-          />
-        </View>
-
-        {/* Character Preview */}
         <View style={styles.previewContainer}>
           <LinearGradient
             colors={['rgba(96,165,250,0.12)', 'rgba(167,139,250,0.12)']}
             style={styles.previewCard}
           >
-            {/* Pixel grid background dots */}
             <View style={styles.gridOverlay} pointerEvents="none">
               {Array.from({ length: 6 }).map((_, row) =>
                 Array.from({ length: 8 }).map((_, col) => (
@@ -137,7 +122,7 @@ export default function PixelAvatarScreen() {
                       { top: row * 28 + 14, left: col * 28 + 14 },
                     ]}
                   />
-                ))
+                )),
               )}
             </View>
 
@@ -145,7 +130,6 @@ export default function PixelAvatarScreen() {
           </LinearGradient>
         </View>
 
-        {/* Tabs */}
         <View style={styles.tabs}>
           {(['body', 'hair', 'outfit'] as Tab[]).map(tab => (
             <Pressable
@@ -160,17 +144,46 @@ export default function PixelAvatarScreen() {
           ))}
         </View>
 
-        {/* Tab Content */}
         <View style={styles.panel}>
           {activeTab === 'body' && (
             <>
-              <SectionTitle title="Skin Tone" />
+              <SectionTitle title="Body type" />
+              <View style={styles.genderRow}>
+                {GENDER_OPTIONS.map(opt => (
+                  <Pressable
+                    key={opt.value}
+                    style={[
+                      styles.genderCard,
+                      config.gender === opt.value && styles.genderCardActive,
+                    ]}
+                    onPress={() => update({ gender: opt.value as Gender })}
+                  >
+                    <View style={styles.genderPreview}>
+                      <PixelCharacter
+                        config={{ ...config, gender: opt.value as Gender }}
+                        size={68}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.genderLabel,
+                        config.gender === opt.value && styles.genderLabelActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <SectionTitle title="Skin tone" />
               <ColorRow
                 options={SKIN_COLORS}
                 selected={config.skinColor}
                 onSelect={value => update({ skinColor: value })}
               />
-              <SectionTitle title="Eye Color" />
+
+              <SectionTitle title="Eye color" />
               <ColorRow
                 options={EYE_COLORS}
                 selected={config.eyeColor}
@@ -181,7 +194,7 @@ export default function PixelAvatarScreen() {
 
           {activeTab === 'hair' && (
             <>
-              <SectionTitle title="Hair Style" />
+              <SectionTitle title="Hair style" />
               <View style={styles.styleGrid}>
                 {HAIR_STYLES.map(style => (
                   <Pressable
@@ -192,22 +205,24 @@ export default function PixelAvatarScreen() {
                     ]}
                     onPress={() => update({ hairStyle: style.value as HairStyle })}
                   >
-                    {/* Mini character preview per style */}
                     <PixelCharacter
                       config={{ ...config, hairStyle: style.value as HairStyle }}
                       size={40}
                     />
-                    <Text style={[
-                      styles.styleLabel,
-                      config.hairStyle === style.value && styles.styleLabelActive,
-                    ]}>
-                      {style.label}
+                    <Text
+                      style={[
+                        styles.styleLabel,
+                        config.hairStyle === style.value && styles.styleLabelActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {getHairStyleLabel(style.value as HairStyle, config.gender)}
                     </Text>
                   </Pressable>
                 ))}
               </View>
 
-              <SectionTitle title="Hair Color" />
+              <SectionTitle title="Hair color" />
               <ColorRow
                 options={HAIR_COLORS}
                 selected={config.hairColor}
@@ -218,19 +233,117 @@ export default function PixelAvatarScreen() {
 
           {activeTab === 'outfit' && (
             <>
-              <SectionTitle title="Shirt" />
+              <SectionTitle title="Top — style" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {SHIRT_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.shirtStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ shirtStyle: s.value })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, shirtStyle: s.value }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.shirtStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {getShirtStyleLabel(s.value as ShirtStyle, config.gender)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <SectionTitle title="Top — color" />
               <ColorRow
                 options={SHIRT_COLORS}
                 selected={config.shirtColor}
                 onSelect={value => update({ shirtColor: value })}
               />
-              <SectionTitle title="Pants" />
+
+              <SectionTitle title="Bottom — style" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {PANTS_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.pantsStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ pantsStyle: s.value })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, pantsStyle: s.value }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.pantsStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {getPantsStyleLabel(s.value as PantsStyle, config.gender)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <SectionTitle title="Bottom — color" />
               <ColorRow
                 options={PANTS_COLORS}
                 selected={config.pantsColor}
                 onSelect={value => update({ pantsColor: value })}
               />
-              <SectionTitle title="Shoes" />
+
+              <SectionTitle title="Shoes — style" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {SHOE_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.shoeStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ shoeStyle: s.value })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, shoeStyle: s.value }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.shoeStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {getShoeStyleLabel(s.value as ShoeStyle, config.gender)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <SectionTitle title="Shoes — color" />
               <ColorRow
                 options={SHOE_COLORS}
                 selected={config.shoeColor}
@@ -245,8 +358,6 @@ export default function PixelAvatarScreen() {
     </LinearGradient>
   );
 }
-
-// ── Sub-components ──────────────────────────────────────────────────────────
 
 function SectionTitle({ title }: { title: string }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
@@ -268,26 +379,27 @@ function ColorRow({
 }) {
   return (
     <View style={styles.colorRow}>
-      {options.map(opt => (
-        <Pressable
-          key={opt.value}
-          onPress={() => onSelect(opt.value)}
-          style={[
-            styles.colorSwatch,
-            { backgroundColor: opt.value },
-            selected === opt.value && styles.colorSwatchSelected,
-          ]}
-        >
-          {selected === opt.value && (
-            <Ionicons name="checkmark" size={14} color="#fff" />
-          )}
-        </Pressable>
-      ))}
+      {options.map(opt => {
+        const isSel = selected.toUpperCase() === opt.value.toUpperCase();
+        return (
+          <Pressable
+            key={opt.value}
+            onPress={() => onSelect(opt.value)}
+            style={[
+              styles.colorSwatch,
+              { backgroundColor: opt.value },
+              isSel && styles.colorSwatchSelected,
+              !isSel && styles.colorSwatchIdle,
+            ]}
+            accessibilityLabel={opt.label}
+          >
+            {isSel && <Ionicons name="checkmark" size={14} color="#fff" />}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
-
-// ── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -298,7 +410,6 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -333,24 +444,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Name
-  nameRow: {
-    marginBottom: SPACING.md,
-  },
-  nameInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: BORDER_RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  // Preview
   previewContainer: {
     alignItems: 'center',
     marginBottom: SPACING.lg,
@@ -377,7 +470,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
 
-  // Tabs
   tabs: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -403,7 +495,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Panel
   panel: {
     gap: 4,
   },
@@ -417,7 +508,41 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
 
-  // Color swatches
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: SPACING.sm,
+  },
+  genderCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    minHeight: 146,
+    justifyContent: 'center',
+  },
+  genderCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(96,165,250,0.15)',
+  },
+  genderPreview: {
+    height: 76,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  genderLabel: {
+    color: COLORS.textMuted,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  genderLabelActive: {
+    color: COLORS.primary,
+  },
+
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -432,12 +557,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
+  colorSwatchIdle: {
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
   colorSwatchSelected: {
     borderColor: '#fff',
-    transform: [{ scale: 1.15 }],
+    transform: [{ scale: 1.12 }],
   },
 
-  // Hair style cards
   styleGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -449,12 +576,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingTop: 8,
     paddingBottom: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    minWidth: 80,
+    minWidth: 72,
+    maxWidth: 100,
     gap: 4,
   },
   styleCardActive: {
@@ -463,10 +591,43 @@ const styles = StyleSheet.create({
   },
   styleLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
+    textAlign: 'center',
   },
   styleLabelActive: {
+    color: COLORS.primary,
+  },
+
+  stylePreviewScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 6,
+    paddingBottom: SPACING.sm,
+  },
+  outfitStyleCard: {
+    width: 96,
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 6,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  outfitStyleCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(96,165,250,0.15)',
+  },
+  outfitStyleLabel: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  outfitStyleLabelActive: {
     color: COLORS.primary,
   },
 });

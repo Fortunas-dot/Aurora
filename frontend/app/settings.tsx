@@ -316,6 +316,15 @@ export default function SettingsScreen() {
               subtitle={t('view_onboarding_sub')}
               onPress={() => router.push('/onboarding')}
             />
+            {/*
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
+              icon="cube-outline"
+              title="Pixel Room"
+              subtitle="The Lounge (multiplayer)"
+              onPress={() => router.push('/pixel-room')}
+            />
+            */}
           </GlassCard>
         </View>
 
@@ -715,6 +724,7 @@ export default function SettingsScreen() {
                       uri={blockedUser.avatar}
                       name={blockedUser.displayName || blockedUser.username}
                       userId={blockedUser._id}
+                      pixelCharacter={(blockedUser as any).pixelCharacter}
                       avatarCharacter={blockedUser.avatarCharacter}
                       avatarBackgroundColor={blockedUser.avatarBackgroundColor}
                       size="md"

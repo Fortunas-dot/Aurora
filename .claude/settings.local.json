@@ -39,7 +39,15 @@
       "Bash(node test-server.js:*)",
       "Bash(git submodule:*)",
       "Bash(git ls-tree:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:www.habbo.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "Bash(gh api:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:habbianos.github.io)"
     ]
   }
 }

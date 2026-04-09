@@ -698,6 +698,7 @@ export default function GroupsScreen() {
                       uri={member.avatar}
                       name={member.displayName || member.username}
                       userId={member._id}
+                      pixelCharacter={(member as any).pixelCharacter}
                       avatarCharacter={member.avatarCharacter}
                       avatarBackgroundColor={member.avatarBackgroundColor}
                       size="sm"
@@ -786,6 +787,7 @@ export default function GroupsScreen() {
                 uri={item.avatar}
                 name={item.displayName || item.username}
                 userId={item._id}
+                pixelCharacter={(item as any).pixelCharacter}
                 avatarCharacter={item.avatarCharacter}
                 avatarBackgroundColor={item.avatarBackgroundColor}
                 size={48}

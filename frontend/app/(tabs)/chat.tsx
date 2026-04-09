@@ -296,6 +296,7 @@ export default function ChatScreen() {
               uri={item.user.avatar}
               name={item.user.displayName || item.user.username}
               userId={item.user._id}
+              pixelCharacter={(item.user as any).pixelCharacter}
               avatarCharacter={item.user.avatarCharacter}
               avatarBackgroundColor={item.user.avatarBackgroundColor}
               size="lg"

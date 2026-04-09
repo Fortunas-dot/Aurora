@@ -208,6 +208,7 @@ export default function ProfileScreen() {
                 uri={user.avatar}
                 name={user.displayName || user.username}
                 userId={user._id}
+                pixelCharacter={user.pixelCharacter}
                 avatarCharacter={user.avatarCharacter}
                 avatarBackgroundColor={user.avatarBackgroundColor}
                 size="xl"
@@ -337,13 +338,15 @@ export default function ProfileScreen() {
               subtitle="Create your avatar for the Pixel World"
               onPress={() => router.push('/pixel-avatar')}
             />
+            {/*
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
-              icon="game-controller-outline"
-              title="Pixel Room"
-              subtitle="Walk around and chat with others"
+              icon="cube-outline"
+              title="The Lounge"
+              subtitle="Multiplayer pixel room"
               onPress={() => router.push('/pixel-room')}
             />
+            */}
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
             <MenuItem
               icon="mail-outline"

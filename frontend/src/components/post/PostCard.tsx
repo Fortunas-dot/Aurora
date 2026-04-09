@@ -226,6 +226,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
           uri={post.author.avatar}
           name={post.author.displayName || post.author.username}
           userId={post.author._id}
+          pixelCharacter={(post.author as any).pixelCharacter}
           avatarCharacter={post.author.avatarCharacter}
           avatarBackgroundColor={post.author.avatarBackgroundColor}
           size="md"

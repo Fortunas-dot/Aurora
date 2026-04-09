@@ -7,6 +7,20 @@ export interface UserProfile {
   avatar?: string;
   avatarCharacter?: string;
   avatarBackgroundColor?: string;
+  pixelCharacter?: {
+    gender?: string;
+    skinColor: string;
+    hairStyle: string;
+    hairColor: string;
+    eyeColor: string;
+    shirtStyle?: string;
+    shirtColor: string;
+    pantsStyle?: string;
+    pantsColor: string;
+    shoeStyle?: string;
+    shoeColor: string;
+    name?: string;
+  };
   nameColor?: string | null;
   bio?: string;
   email?: string;
@@ -67,12 +81,16 @@ class UserService {
     phoneNumber?: string;
     healthInfo?: UserProfile['healthInfo'];
     pixelCharacter?: {
+      gender?: string;
       skinColor: string;
       hairStyle: string;
       hairColor: string;
       eyeColor: string;
+      shirtStyle?: string;
       shirtColor: string;
+      pantsStyle?: string;
       pantsColor: string;
+      shoeStyle?: string;
       shoeColor: string;
       name?: string;
     };

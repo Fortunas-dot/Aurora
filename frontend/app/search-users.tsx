@@ -132,6 +132,7 @@ export default function SearchUsersScreen() {
             uri={item.avatar}
             name={item.displayName || item.username}
             userId={item._id}
+            pixelCharacter={(item as any).pixelCharacter}
             avatarCharacter={item.avatarCharacter}
             avatarBackgroundColor={item.avatarBackgroundColor}
             size="md"

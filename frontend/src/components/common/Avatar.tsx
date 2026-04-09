@@ -4,11 +4,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, BORDER_RADIUS } from '../../constants/theme';
 import { getCharacterForUser } from '../../utils/characters';
 import { getColorByValue, getDefaultGradientColors } from '../../utils/avatarColors';
+import {
+  PixelCharacterConfig,
+  normalizePixelCharacterConfig,
+} from '../../constants/pixelCharacterOptions';
+import { buildHabboImageUrl } from '../../utils/habboFigure';
 
 interface AvatarProps {
   uri?: string | null;
   name?: string;
   userId?: string;
+  pixelCharacter?: Partial<PixelCharacterConfig> | null;
   avatarCharacter?: string | null;
   avatarBackgroundColor?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -20,6 +26,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   uri,
   name,
   userId,
+  pixelCharacter,
   avatarCharacter,
   avatarBackgroundColor,
   size = 'md',
@@ -67,6 +74,21 @@ export const Avatar: React.FC<AvatarProps> = ({
     return normalized;
   }, [uri]);
 
+  const pixelAvatarUri = useMemo(() => {
+    if (!pixelCharacter) return null;
+    const config = normalizePixelCharacterConfig(pixelCharacter);
+    return buildHabboImageUrl({
+      config,
+      direction: 2,
+      headDirection: 2,
+      size: 'l',
+      action: 'std',
+      gesture: 'std',
+    });
+  }, [pixelCharacter]);
+
+  const effectiveImageUri = pixelAvatarUri ?? normalizedUri;
+
   // Get character to display (prefer avatarCharacter, fallback to user-based character, then initials)
   const getDisplayCharacter = (): string => {
     if (avatarCharacter) {
@@ -111,24 +133,45 @@ export const Avatar: React.FC<AvatarProps> = ({
         style,
       ]}
     >
-      {normalizedUri ? (
-        <Image
-          source={{ uri: normalizedUri }}
+      {effectiveImageUri ? (
+        <View
           style={[
-            styles.image,
+            styles.imageHolder,
             {
               width: sizeValue - (showBorder ? 4 : 0),
               height: sizeValue - (showBorder ? 4 : 0),
               borderRadius: (sizeValue - (showBorder ? 4 : 0)) / 2,
+              backgroundColor: pixelAvatarUri ? (avatarBackgroundColor || 'rgba(255,255,255,0.08)') : 'transparent',
             },
           ]}
-          onError={(e) => {
-            if (__DEV__) {
-              const errMsg = e?.nativeEvent?.error || 'Unknown';
-              console.warn('Avatar: failed to load image', { uri: normalizedUri, error: errMsg });
-            }
-          }}
-        />
+        >
+          <Image
+            source={{ uri: effectiveImageUri }}
+            style={[
+              styles.image,
+              {
+                width: sizeValue - (showBorder ? 4 : 0),
+                height: sizeValue - (showBorder ? 4 : 0),
+                borderRadius: (sizeValue - (showBorder ? 4 : 0)) / 2,
+              },
+              pixelAvatarUri
+                ? {
+                    // Bias crop to upper body so profile avatar shows head + torso.
+                    transform: [{ scale: 1.2 }, { translateY: 10 }],
+                  }
+                : null,
+            ]}
+            onError={(e) => {
+              if (__DEV__) {
+                const errMsg = e?.nativeEvent?.error || 'Unknown';
+                console.warn('Avatar: failed to load image', {
+                  uri: effectiveImageUri,
+                  error: errMsg,
+                });
+              }
+            }}
+          />
+        </View>
       ) : (
         <LinearGradient
           colors={getGradientColors()}
@@ -164,6 +207,9 @@ const styles = StyleSheet.create({
   },
   image: {
     resizeMode: 'cover',
+  },
+  imageHolder: {
+    overflow: 'hidden',
   },
   placeholder: {
     justifyContent: 'center',

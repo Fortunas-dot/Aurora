@@ -39,9 +39,22 @@ const PixelCharacter = React.memo(
 
     const imageUrl = useMemo(
       () => buildHabboImageUrl({ config, direction, action, gesture, size: 'l' }),
-      [config.skinColor, config.hairStyle, config.hairColor,
-       config.eyeColor, config.shirtColor, config.pantsColor,
-       config.shoeColor, direction, action, gesture],
+      [
+        config.gender,
+        config.skinColor,
+        config.hairStyle,
+        config.hairColor,
+        config.eyeColor,
+        config.shirtStyle,
+        config.shirtColor,
+        config.pantsStyle,
+        config.pantsColor,
+        config.shoeStyle,
+        config.shoeColor,
+        direction,
+        action,
+        gesture,
+      ],
     );
 
     // Habbo imaging API returns ~110px wide images for size=l
@@ -81,12 +94,16 @@ const PixelCharacter = React.memo(
     prev.direction === next.direction &&
     prev.action === next.action &&
     prev.gesture === next.gesture &&
+    prev.config.gender === next.config.gender &&
     prev.config.skinColor === next.config.skinColor &&
     prev.config.hairStyle === next.config.hairStyle &&
     prev.config.hairColor === next.config.hairColor &&
     prev.config.eyeColor === next.config.eyeColor &&
+    prev.config.shirtStyle === next.config.shirtStyle &&
     prev.config.shirtColor === next.config.shirtColor &&
+    prev.config.pantsStyle === next.config.pantsStyle &&
     prev.config.pantsColor === next.config.pantsColor &&
+    prev.config.shoeStyle === next.config.shoeStyle &&
     prev.config.shoeColor === next.config.shoeColor,
 );
 

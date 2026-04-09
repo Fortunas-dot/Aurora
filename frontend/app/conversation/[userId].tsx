@@ -225,6 +225,9 @@ export default function ConversationScreen() {
           username: response.data.username,
           displayName: response.data.displayName,
           avatar: response.data.avatar,
+          pixelCharacter: response.data.pixelCharacter as any,
+          avatarCharacter: response.data.avatarCharacter,
+          avatarBackgroundColor: response.data.avatarBackgroundColor,
         } as Message['sender']);
       }
     } catch (error) {
@@ -996,6 +999,7 @@ export default function ConversationScreen() {
             uri={item.sender.avatar}
             name={item.sender.displayName || item.sender.username}
             userId={item.sender._id}
+            pixelCharacter={(item.sender as any).pixelCharacter}
             avatarCharacter={item.sender.avatarCharacter}
             avatarBackgroundColor={item.sender.avatarBackgroundColor}
             size="sm"
@@ -1138,6 +1142,7 @@ export default function ConversationScreen() {
                 uri={otherUser.avatar}
                 name={otherUser.displayName || otherUser.username}
                 userId={otherUser._id}
+                pixelCharacter={(otherUser as any).pixelCharacter}
                 avatarCharacter={otherUser.avatarCharacter}
                 avatarBackgroundColor={otherUser.avatarBackgroundColor}
                 size="sm"

@@ -311,6 +311,7 @@ export default function JournalViewScreen() {
                           size={24}
                           name={owner.displayName || owner.username}
                           userId={owner._id}
+                          pixelCharacter={(owner as any).pixelCharacter}
                           avatarCharacter={owner.avatarCharacter}
                           avatarBackgroundColor={owner.avatarBackgroundColor}
                         />

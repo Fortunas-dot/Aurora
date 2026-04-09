@@ -2,12 +2,16 @@ import { getApiUrl } from '../utils/apiUrl';
 import { secureStorage } from '../utils/secureStorage';
 
 export interface PixelCharacterPublic {
+  gender?: string;
   skinColor: string;
   hairStyle: string;
   hairColor: string;
   eyeColor: string;
+  shirtStyle?: string;
   shirtColor: string;
+  pantsStyle?: string;
   pantsColor: string;
+  shoeStyle?: string;
   shoeColor: string;
   name?: string;
 }

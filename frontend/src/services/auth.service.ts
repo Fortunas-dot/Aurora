@@ -12,12 +12,16 @@ export interface User {
   avatarBackgroundColor?: string;
   nameColor?: string | null;
   pixelCharacter?: {
+    gender?: string;
     skinColor: string;
     hairStyle: string;
     hairColor: string;
     eyeColor: string;
+    shirtStyle?: string;
     shirtColor: string;
+    pantsStyle?: string;
     pantsColor: string;
+    shoeStyle?: string;
     shoeColor: string;
     name?: string;
   };

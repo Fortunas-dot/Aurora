@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+/**
+ * Pixel Room — multiplayer isometric lounge (Habbo-style).
+ * Kept in the codebase for later; entry points are commented out in profile and settings so it is not visible in the UI.
+ */
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,7 +28,7 @@ import PixelCharacter from '../src/components/pixel/PixelCharacter';
 import {
   PixelCharacterConfig,
   DEFAULT_PIXEL_CHARACTER,
-  HairStyle,
+  normalizePixelCharacterConfig,
 } from '../src/constants/pixelCharacterOptions';
 
 // ════════════════════════════════════════════════════════════════
@@ -283,15 +287,7 @@ const AnimatedPlayer = React.memo(
     }, [player.x, player.y]);
 
     const charConfig: PixelCharacterConfig = player.pixelCharacter
-      ? {
-          skinColor: player.pixelCharacter.skinColor,
-          hairStyle: (player.pixelCharacter.hairStyle as HairStyle) || 'bob',
-          hairColor: player.pixelCharacter.hairColor,
-          eyeColor: player.pixelCharacter.eyeColor,
-          shirtColor: player.pixelCharacter.shirtColor,
-          pantsColor: player.pixelCharacter.pantsColor,
-          shoeColor: player.pixelCharacter.shoeColor,
-        }
+      ? normalizePixelCharacterConfig(player.pixelCharacter as Partial<PixelCharacterConfig>)
       : DEFAULT_PIXEL_CHARACTER;
 
     const depth = isoDepth(player.x, player.y);
@@ -447,7 +443,13 @@ export default function PixelRoomScreen() {
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: ROOM_BG }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.headerBtn} onPress={() => router.back()}>
+        <Pressable
+          style={styles.headerBtn}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)/profile');
+          }}
+        >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
         <View style={styles.headerCenter}>

@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { generateRandomPixelCharacter } from '../utils/pixelCharacter';
 
 export interface PushToken {
   token: string;
@@ -18,12 +19,16 @@ export interface IUser extends Document {
   avatarBackgroundColor?: string; // Background color for avatar character
   nameColor?: string; // Color for the user's display name (Yellow, Blue, Pink, Green, Red, Purple)
   pixelCharacter?: {
+    gender?: string;
     skinColor: string;
     hairStyle: string;
     hairColor: string;
     eyeColor: string;
+    shirtStyle?: string;
     shirtColor: string;
+    pantsStyle?: string;
     pantsColor: string;
+    shoeStyle?: string;
     shoeColor: string;
     name?: string;
   };
@@ -134,12 +139,16 @@ const UserSchema = new Schema<IUser>(
     },
     pixelCharacter: {
       type: {
+        gender: String,
         skinColor: String,
         hairStyle: String,
         hairColor: String,
         eyeColor: String,
+        shirtStyle: String,
         shirtColor: String,
+        pantsStyle: String,
         pantsColor: String,
+        shoeStyle: String,
         shoeColor: String,
         name: String,
       },
@@ -407,6 +416,16 @@ UserSchema.pre('save', async function (next) {
   
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Ensure every user has a pixel character (new docs and edits where missing).
+UserSchema.pre('save', function (next) {
+  if (!this.pixelCharacter) {
+    this.pixelCharacter = generateRandomPixelCharacter(this.username);
+  } else if (!this.pixelCharacter.name) {
+    this.pixelCharacter.name = this.username;
+  }
   next();
 });
 

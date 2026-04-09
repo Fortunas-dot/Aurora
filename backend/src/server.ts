@@ -25,6 +25,8 @@ import { startInactivityCron } from './jobs/inactivityNotification';
 
 // Models
 import Idea from './models/Idea';
+import User from './models/User';
+import { generateRandomPixelCharacter } from './utils/pixelCharacter';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -85,6 +87,29 @@ connectDB().then(async () => {
     await ensureDemoPostsAndComments();
   } catch (err) {
     console.warn('[ensureDemoPosts] Failed:', err);
+  }
+
+  // Backfill: users that still don't have a pixel character.
+  try {
+    const usersMissingPixel = await User.find({
+      $or: [{ pixelCharacter: null }, { pixelCharacter: { $exists: false } }],
+    }).select('_id username');
+
+    if (usersMissingPixel.length > 0) {
+      for (const user of usersMissingPixel) {
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              pixelCharacter: generateRandomPixelCharacter(user.username),
+            },
+          }
+        );
+      }
+      console.log(`[PixelCharacter] Backfilled ${usersMissingPixel.length} users`);
+    }
+  } catch (err) {
+    console.warn('[PixelCharacter] Backfill failed:', err);
   }
 
   startInactivityCron();
@@ -224,10 +249,8 @@ console.log('✅ WebSocket support enabled');
 // WebSocket Routes (must be before regular API routes)
 import { handleNotificationWebSocket } from './controllers/notificationWebSocket';
 import { handleChatWebSocket } from './controllers/chatWebSocket';
-import { handleWorldWebSocket } from './controllers/worldWebSocket';
 (app as any).ws('/ws/notifications', handleNotificationWebSocket);
 (app as any).ws('/ws/chat', handleChatWebSocket);
-(app as any).ws('/ws/world', handleWorldWebSocket);
 
 // API Routes with specific rate limiting
 app.use('/api/auth', authLimiter, authRoutes); // Stricter rate limiting for auth

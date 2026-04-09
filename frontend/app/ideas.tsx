@@ -248,6 +248,7 @@ export default function IdeasScreen() {
               uri={author.avatar}
               name={author.displayName || author.username}
               userId={author._id}
+              pixelCharacter={(author as any).pixelCharacter}
               avatarCharacter={(author as any).avatarCharacter}
               avatarBackgroundColor={(author as any).avatarBackgroundColor}
               size={32}

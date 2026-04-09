@@ -168,6 +168,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                 uri={notification.relatedUser.avatar}
                 name={notification.relatedUser.displayName || notification.relatedUser.username}
                 userId={notification.relatedUser._id}
+                pixelCharacter={(notification.relatedUser as any).pixelCharacter}
                 avatarCharacter={notification.relatedUser.avatarCharacter}
                 avatarBackgroundColor={notification.relatedUser.avatarBackgroundColor}
                 size="md"

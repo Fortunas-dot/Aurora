@@ -380,6 +380,7 @@ export default function UserProfileScreen() {
               uri={profile.avatar}
               name={profile.displayName || profile.username}
               userId={profile._id}
+              pixelCharacter={(profile as any).pixelCharacter}
               avatarCharacter={profile.avatarCharacter}
               avatarBackgroundColor={profile.avatarBackgroundColor}
               size="xl"

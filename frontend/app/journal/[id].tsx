@@ -378,6 +378,7 @@ export default function JournalEntryScreen() {
                 size={40}
                 name={author.displayName || author.username}
                 userId={author._id}
+                pixelCharacter={(author as any).pixelCharacter}
                 avatarCharacter={author.avatarCharacter}
                 avatarBackgroundColor={author.avatarBackgroundColor}
               />

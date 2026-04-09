@@ -122,6 +122,7 @@ export default function GroupMembersScreen() {
                     uri={member.avatar}
                     name={member.displayName || member.username}
                     userId={member._id}
+                    pixelCharacter={(member as any).pixelCharacter}
                     avatarCharacter={member.avatarCharacter}
                     avatarBackgroundColor={member.avatarBackgroundColor}
                     size="md"

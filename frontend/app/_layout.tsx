@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -127,6 +127,37 @@ export default function RootLayout() {
   const { updateUnreadCount, loadNotifications } = useNotificationStore();
   const { loadSettings } = useSettingsStore();
   const { colors, isDark } = useTheme();
+
+  /** Do not pass `<Stack.Screen />` children: with non-empty `order`, expo-router only merges
+   *  routes that match — missing names can drop screens. Empty order = all `app/*.tsx` routes register. */
+  const rootStackScreenOptions = useMemo(
+    () =>
+      ({ route }: { route: { name: string } }) => {
+        const base = {
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: colors.background,
+          },
+          animation: 'fade' as const,
+        };
+        if (route.name === 'voice' || route.name === 'onboarding') {
+          return {
+            ...base,
+            presentation: 'fullScreenModal' as const,
+            animation: 'slide_from_bottom' as const,
+          };
+        }
+        if (route.name === 'text-chat') {
+          return {
+            ...base,
+            presentation: 'card' as const,
+            animation: 'slide_from_right' as const,
+          };
+        }
+        return base;
+      },
+    [colors.background],
+  );
   const { aiConsentStatus, loadConsent, resetConsent } = useConsentStore();
   const { checkPremiumStatus } = usePremiumStore();
   const { requirePremium } = useRequirePremium();
@@ -541,43 +572,7 @@ export default function RootLayout() {
       <ResponsiveWrapper>
         <PostHogInitializer />
         <PostHogScreenTracker />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: colors.background,
-            },
-            animation: 'fade',
-          }}
-        >
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="forgot-password" />
-          <Stack.Screen name="reset-password" />
-          <Stack.Screen name="verify-email" />
-          <Stack.Screen name="email-verified" />
-          <Stack.Screen
-            name="voice"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
-            name="text-chat"
-            options={{
-              presentation: 'card',
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="onboarding"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-        </Stack>
+        <Stack screenOptions={rootStackScreenOptions} />
       </ResponsiveWrapper>
     </SafeAreaProvider>
   );
