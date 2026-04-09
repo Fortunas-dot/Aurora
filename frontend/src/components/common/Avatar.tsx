@@ -53,6 +53,16 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const sizeValue = getSize();
   const fontSize = getFontSize();
+  const pixelTransform = useMemo(() => {
+    // Small avatars (comments/lists) need less downward offset, otherwise the face drops too low.
+    if (sizeValue <= 32) {
+      return [{ scale: 1.18 }, { translateY: 5 }];
+    }
+    if (sizeValue <= 44) {
+      return [{ scale: 1.2 }, { translateY: 8 }];
+    }
+    return [{ scale: 1.2 }, { translateY: 10 }];
+  }, [sizeValue]);
 
   // Normalize avatar URL to ensure it's always absolute
   // Keep local file URIs (file://) as-is for immediate preview
@@ -157,7 +167,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               pixelAvatarUri
                 ? {
                     // Bias crop to upper body so profile avatar shows head + torso.
-                    transform: [{ scale: 1.2 }, { translateY: 10 }],
+                    transform: pixelTransform,
                   }
                 : null,
             ]}

@@ -11,6 +11,7 @@ import { Post } from '../../services/post.service';
 import { postService } from '../../services/post.service';
 import { useTheme } from '../../hooks/useTheme';
 import { getUsernameColor } from '../../utils/usernameColors';
+import { useAuthStore } from '../../store/authStore';
 
 interface PostCardProps {
   post: Post;
@@ -43,6 +44,7 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
 }) => {
   const router = useRouter();
   const { colors } = useTheme();
+  const currentUser = useAuthStore((state) => state.user);
   const [isLiked, setIsLiked] = useState(
     currentUserId ? post.likes.includes(currentUserId) : false
   );
@@ -52,6 +54,8 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
   const [videoError, setVideoError] = useState<string | null>(null);
   
   const isOwnPost = currentUserId === post.author._id;
+  const avatarSourceUser =
+    currentUser && currentUser._id === post.author._id ? currentUser : post.author;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -223,12 +227,12 @@ export const PostCard: React.FC<PostCardProps> = React.memo(({
       {/* Header */}
       <Pressable style={styles.header} onPress={onAuthorPress}>
         <Avatar
-          uri={post.author.avatar}
+          uri={avatarSourceUser.avatar}
           name={post.author.displayName || post.author.username}
           userId={post.author._id}
-          pixelCharacter={(post.author as any).pixelCharacter}
-          avatarCharacter={post.author.avatarCharacter}
-          avatarBackgroundColor={post.author.avatarBackgroundColor}
+          pixelCharacter={(avatarSourceUser as any).pixelCharacter}
+          avatarCharacter={avatarSourceUser.avatarCharacter}
+          avatarBackgroundColor={avatarSourceUser.avatarBackgroundColor}
           size="md"
         />
         <View style={styles.headerInfo}>

@@ -80,6 +80,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
       avatar: normalizeUrl(user.avatar), // Normalize avatar URL
       avatarCharacter: user.avatarCharacter,
       avatarBackgroundColor: user.avatarBackgroundColor,
+      pixelCharacter: user.pixelCharacter,
       bio: user.bio,
       createdAt: user.createdAt || new Date(), // Ensure createdAt exists
       postCount,
