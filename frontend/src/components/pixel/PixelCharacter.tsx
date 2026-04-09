@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Image, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { PixelCharacterConfig } from '../../constants/pixelCharacterOptions';
 import { buildHabboImageUrl } from '../../utils/habboFigure';
@@ -51,11 +51,20 @@ const PixelCharacter = React.memo(
         config.pantsColor,
         config.shoeStyle,
         config.shoeColor,
+        config.eyewearStyle,
+        config.earringStyle,
+        config.necklaceStyle,
+        config.accessoryColor,
         direction,
         action,
         gesture,
       ],
     );
+
+    useEffect(() => {
+      setLoaded(false);
+      setErrored(false);
+    }, [imageUrl]);
 
     // Habbo imaging API returns ~110px wide images for size=l
     // We scale to desired size while maintaining aspect ratio
@@ -104,7 +113,11 @@ const PixelCharacter = React.memo(
     prev.config.pantsStyle === next.config.pantsStyle &&
     prev.config.pantsColor === next.config.pantsColor &&
     prev.config.shoeStyle === next.config.shoeStyle &&
-    prev.config.shoeColor === next.config.shoeColor,
+    prev.config.shoeColor === next.config.shoeColor &&
+    prev.config.eyewearStyle === next.config.eyewearStyle &&
+    prev.config.earringStyle === next.config.earringStyle &&
+    prev.config.necklaceStyle === next.config.necklaceStyle &&
+    prev.config.accessoryColor === next.config.accessoryColor,
 );
 
 export default PixelCharacter;

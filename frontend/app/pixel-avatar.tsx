@@ -21,10 +21,8 @@ import {
   PantsStyle,
   ShoeStyle,
   EyewearStyle,
-  MakeupStyle,
   EarringStyle,
   NecklaceStyle,
-  PiercingStyle,
   normalizePixelCharacterConfig,
   GENDER_OPTIONS,
   SKIN_COLORS,
@@ -42,12 +40,9 @@ import {
   PANTS_COLORS,
   SHOE_COLORS,
   EYEWEAR_STYLES,
-  MAKEUP_STYLES,
   EARRING_STYLES,
   NECKLACE_STYLES,
-  PIERCING_STYLES,
   ACCESSORY_COLORS,
-  MAKEUP_COLORS,
 } from '../src/constants/pixelCharacterOptions';
 import { useAuthStore } from '../src/store/authStore';
 import { userService } from '../src/services/user.service';
@@ -399,39 +394,6 @@ export default function PixelAvatarScreen() {
                 ))}
               </ScrollView>
 
-              <SectionTitle title="Make-up" />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.stylePreviewScroll}
-                nestedScrollEnabled
-              >
-                {MAKEUP_STYLES.map(s => (
-                  <Pressable
-                    key={s.value}
-                    style={[
-                      styles.outfitStyleCard,
-                      config.makeupStyle === s.value && styles.outfitStyleCardActive,
-                    ]}
-                    onPress={() => update({ makeupStyle: s.value as MakeupStyle })}
-                  >
-                    <PixelCharacter
-                      config={{ ...config, makeupStyle: s.value as MakeupStyle }}
-                      size={56}
-                    />
-                    <Text
-                      style={[
-                        styles.outfitStyleLabel,
-                        config.makeupStyle === s.value && styles.outfitStyleLabelActive,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-
               <SectionTitle title="Earrings" />
               <ScrollView
                 horizontal
@@ -498,51 +460,11 @@ export default function PixelAvatarScreen() {
                 ))}
               </ScrollView>
 
-              <SectionTitle title="Piercings" />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.stylePreviewScroll}
-                nestedScrollEnabled
-              >
-                {PIERCING_STYLES.map(s => (
-                  <Pressable
-                    key={s.value}
-                    style={[
-                      styles.outfitStyleCard,
-                      config.piercingStyle === s.value && styles.outfitStyleCardActive,
-                    ]}
-                    onPress={() => update({ piercingStyle: s.value as PiercingStyle })}
-                  >
-                    <PixelCharacter
-                      config={{ ...config, piercingStyle: s.value as PiercingStyle }}
-                      size={56}
-                    />
-                    <Text
-                      style={[
-                        styles.outfitStyleLabel,
-                        config.piercingStyle === s.value && styles.outfitStyleLabelActive,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-
               <SectionTitle title="Accessory color" />
               <ColorRow
                 options={ACCESSORY_COLORS}
                 selected={config.accessoryColor}
                 onSelect={value => update({ accessoryColor: value })}
-              />
-
-              <SectionTitle title="Make-up color" />
-              <ColorRow
-                options={MAKEUP_COLORS}
-                selected={config.makeupColor}
-                onSelect={value => update({ makeupColor: value })}
               />
             </>
           )}
@@ -702,7 +624,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     marginBottom: SPACING.xs,
   },
-
   genderRow: {
     flexDirection: 'row',
     gap: 12,

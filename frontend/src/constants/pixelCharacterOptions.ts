@@ -70,11 +70,15 @@ export type PantsStyle =
   | 'frillskirt'
   | 'bowskirt';
 export type ShoeStyle = 'sneakers' | 'boots' | 'dress' | 'sandals' | 'bootie' | 'bowshoes';
-export type EyewearStyle = 'none' | 'classicShades' | 'aviators' | 'retroRound' | 'neonShades';
-export type MakeupStyle = 'none' | 'softLiner' | 'glamLips' | 'boldShadow';
-export type EarringStyle = 'none' | 'studs' | 'hoops' | 'starDrops';
-export type NecklaceStyle = 'none' | 'chain' | 'choker' | 'gemPendant';
-export type PiercingStyle = 'none' | 'noseRing' | 'lipRing' | 'browRing';
+export type EyewearStyle =
+  | 'none'
+  | 'sunglasses'
+  | 'classicShades'
+  | 'aviators'
+  | 'retroRound'
+  | 'neonShades';
+export type EarringStyle = 'none' | 'studs' | 'hoops' | 'starDrops' | 'leafEarrings';
+export type NecklaceStyle = 'none' | 'chain' | 'choker' | 'gemPendant' | 'strandNecklace';
 
 export interface PixelCharacterConfig {
   gender: Gender;
@@ -89,12 +93,9 @@ export interface PixelCharacterConfig {
   shoeStyle: ShoeStyle;
   shoeColor: string;
   eyewearStyle: EyewearStyle;
-  makeupStyle: MakeupStyle;
   earringStyle: EarringStyle;
   necklaceStyle: NecklaceStyle;
-  piercingStyle: PiercingStyle;
   accessoryColor: string;
-  makeupColor: string;
 }
 
 interface HairStyleOption {
@@ -117,12 +118,9 @@ export const DEFAULT_PIXEL_CHARACTER: PixelCharacterConfig = {
   shoeStyle: 'sneakers',
   shoeColor: '#1A1A1A',
   eyewearStyle: 'none',
-  makeupStyle: 'none',
   earringStyle: 'none',
   necklaceStyle: 'none',
-  piercingStyle: 'none',
   accessoryColor: '#D8DCE0',
-  makeupColor: '#CC5599',
 };
 
 export function normalizePixelCharacterConfig(
@@ -131,55 +129,54 @@ export function normalizePixelCharacterConfig(
   const base = { ...DEFAULT_PIXEL_CHARACTER };
   if (!raw || typeof raw !== 'object') return base;
 
-  const gender: Gender =
-    raw.gender === 'male' || raw.gender === 'female' ? raw.gender : base.gender;
+  const cleaned = { ...raw } as Record<string, unknown>;
+  delete cleaned.makeupStyle;
+  delete cleaned.piercingStyle;
+  delete cleaned.makeupColor;
+  const rawSafe = cleaned as Partial<PixelCharacterConfig>;
 
-  const rawHairStyle = typeof raw.hairStyle === 'string' ? raw.hairStyle : '';
+  const gender: Gender =
+    rawSafe.gender === 'male' || rawSafe.gender === 'female' ? rawSafe.gender : base.gender;
+
+  const rawHairStyle = typeof rawSafe.hairStyle === 'string' ? rawSafe.hairStyle : '';
   const mappedLegacyHairStyle =
     LEGACY_HAIR_STYLE_MAP[rawHairStyle] ?? (rawHairStyle as HairStyle);
   const hairOk = HAIR_STYLES.some((h) => h.value === mappedLegacyHairStyle);
   const hairStyle = hairOk ? mappedLegacyHairStyle : base.hairStyle;
 
-  const shirtOk = SHIRT_STYLES.some((s) => s.value === raw.shirtStyle);
-  const shirtStyle = shirtOk ? (raw.shirtStyle as ShirtStyle) : base.shirtStyle;
+  const shirtOk = SHIRT_STYLES.some((s) => s.value === rawSafe.shirtStyle);
+  const shirtStyle = shirtOk ? (rawSafe.shirtStyle as ShirtStyle) : base.shirtStyle;
 
-  const pantsOk = PANTS_STYLES.some((s) => s.value === raw.pantsStyle);
-  const pantsStyle = pantsOk ? (raw.pantsStyle as PantsStyle) : base.pantsStyle;
+  const pantsOk = PANTS_STYLES.some((s) => s.value === rawSafe.pantsStyle);
+  const pantsStyle = pantsOk ? (rawSafe.pantsStyle as PantsStyle) : base.pantsStyle;
 
-  const shoeOk = SHOE_STYLES.some((s) => s.value === raw.shoeStyle);
-  const shoeStyle = shoeOk ? (raw.shoeStyle as ShoeStyle) : base.shoeStyle;
-  const eyewearOk = EYEWEAR_STYLES.some((s) => s.value === raw.eyewearStyle);
-  const eyewearStyle = eyewearOk ? (raw.eyewearStyle as EyewearStyle) : base.eyewearStyle;
-  const makeupOk = MAKEUP_STYLES.some((s) => s.value === raw.makeupStyle);
-  const makeupStyle = makeupOk ? (raw.makeupStyle as MakeupStyle) : base.makeupStyle;
-  const earringOk = EARRING_STYLES.some((s) => s.value === raw.earringStyle);
-  const earringStyle = earringOk ? (raw.earringStyle as EarringStyle) : base.earringStyle;
-  const necklaceOk = NECKLACE_STYLES.some((s) => s.value === raw.necklaceStyle);
-  const necklaceStyle = necklaceOk ? (raw.necklaceStyle as NecklaceStyle) : base.necklaceStyle;
-  const piercingOk = PIERCING_STYLES.some((s) => s.value === raw.piercingStyle);
-  const piercingStyle = piercingOk ? (raw.piercingStyle as PiercingStyle) : base.piercingStyle;
+  const shoeOk = SHOE_STYLES.some((s) => s.value === rawSafe.shoeStyle);
+  const shoeStyle = shoeOk ? (rawSafe.shoeStyle as ShoeStyle) : base.shoeStyle;
+  const eyewearOk = EYEWEAR_STYLES.some((s) => s.value === rawSafe.eyewearStyle);
+  const eyewearStyle = eyewearOk ? (rawSafe.eyewearStyle as EyewearStyle) : base.eyewearStyle;
+  const earringOk = EARRING_STYLES.some((s) => s.value === rawSafe.earringStyle);
+  const earringStyle = earringOk ? (rawSafe.earringStyle as EarringStyle) : base.earringStyle;
+  const necklaceOk = NECKLACE_STYLES.some((s) => s.value === rawSafe.necklaceStyle);
+  const necklaceStyle = necklaceOk ? (rawSafe.necklaceStyle as NecklaceStyle) : base.necklaceStyle;
 
   return {
     ...base,
-    ...raw,
+    ...rawSafe,
     gender,
     hairStyle,
     shirtStyle,
     pantsStyle,
     shoeStyle,
     eyewearStyle,
-    makeupStyle,
     earringStyle,
     necklaceStyle,
-    piercingStyle,
-    skinColor: raw.skinColor || base.skinColor,
-    hairColor: raw.hairColor || base.hairColor,
-    eyeColor: raw.eyeColor || base.eyeColor,
-    shirtColor: raw.shirtColor || base.shirtColor,
-    pantsColor: raw.pantsColor || base.pantsColor,
-    shoeColor: raw.shoeColor || base.shoeColor,
-    accessoryColor: raw.accessoryColor || base.accessoryColor,
-    makeupColor: raw.makeupColor || base.makeupColor,
+    skinColor: rawSafe.skinColor || base.skinColor,
+    hairColor: rawSafe.hairColor || base.hairColor,
+    eyeColor: rawSafe.eyeColor || base.eyeColor,
+    shirtColor: rawSafe.shirtColor || base.shirtColor,
+    pantsColor: rawSafe.pantsColor || base.pantsColor,
+    shoeColor: rawSafe.shoeColor || base.shoeColor,
+    accessoryColor: rawSafe.accessoryColor || base.accessoryColor,
   };
 }
 
@@ -426,48 +423,36 @@ export const ACCESSORY_COLORS = [
   { label: 'Blue', value: '#4F86C6' },
 ];
 
-export const MAKEUP_COLORS = [
-  { label: 'Rose', value: '#CC5599' },
-  { label: 'Cherry', value: '#CC2200' },
-  { label: 'Nude', value: '#9E8054' },
-  { label: 'Plum', value: '#7B2D8B' },
-  { label: 'Onyx', value: '#1A1A1A' },
+// Set IDs: `open-hotel-resources` `settype.ea.set` keys. Each `eaSet` was checked against
+// `figuremap.json` `parts.ea` → `libs[]` so the preview matches the label (not legacy
+// `hh_human_acc_eye` sets 1401–1406, and not mislabeled club items like 3083 = heromask).
+export const EYEWEAR_STYLES: { label: string; value: EyewearStyle; eaSet: number }[] = [
+  { label: 'None', value: 'none', eaSet: 0 },
+  { label: 'Sunglasses', value: 'sunglasses', eaSet: 3169 }, // acc_eye_U_sunglasses4 (see docs/habbo-figure-mapping.md)
+  { label: 'Big shades', value: 'classicShades', eaSet: 3493 }, // acc_eye_U_bigshades
+  { label: 'Sport shades', value: 'aviators', eaSet: 3925 }, // acc_eye_U_sportsshade
+  { label: 'Cute glasses', value: 'retroRound', eaSet: 3698 }, // acc_eye_U_cuteglasses
+  { label: 'Cyber glasses', value: 'neonShades', eaSet: 3388 }, // acc_eye_U_cyglass
 ];
 
-export const EYEWEAR_STYLES: { label: string; value: EyewearStyle; eaM: number; eaF: number }[] = [
-  { label: 'None', value: 'none', eaM: 0, eaF: 0 },
-  { label: 'Classic Shades', value: 'classicShades', eaM: 1403, eaF: 1403 },
-  { label: 'Aviators', value: 'aviators', eaM: 1409, eaF: 1409 },
-  { label: 'Retro Round', value: 'retroRound', eaM: 1410, eaF: 1410 },
-  { label: 'Neon Shades', value: 'neonShades', eaM: 1417, eaF: 1417 },
+// `heSet` keys: `settype.he.set`. Verified via `figuremap.parts.he` → `libs[]`
+// (3297 was acc_head_U_doctors_mirror, 3295 ponytail, 3376 goggles — not earrings).
+export const EARRING_STYLES: { label: string; value: EarringStyle; heSet: number }[] = [
+  { label: 'None', value: 'none', heSet: 0 },
+  { label: 'Ring studs', value: 'studs', heSet: 3070 }, // acc_head_U_earring_ring
+  { label: 'Gem earrings', value: 'hoops', heSet: 3069 }, // acc_head_U_earring_gem
+  { label: 'Star earrings', value: 'starDrops', heSet: 3974 }, // acc_head_U_starearrings
+  { label: 'Leaf earrings', value: 'leafEarrings', heSet: 3833 }, // acc_head_U_leafearrings, club 0
 ];
 
-export const MAKEUP_STYLES: { label: string; value: MakeupStyle; faM: number; faF: number }[] = [
-  { label: 'None', value: 'none', faM: 0, faF: 0 },
-  { label: 'Soft Liner', value: 'softLiner', faM: 9098, faF: 9098 },
-  { label: 'Glam Lips', value: 'glamLips', faM: 9099, faF: 9099 },
-  { label: 'Bold Shadow', value: 'boldShadow', faM: 9100, faF: 9100 },
-];
-
-export const EARRING_STYLES: { label: string; value: EarringStyle; heM: number; heF: number }[] = [
-  { label: 'None', value: 'none', heM: 0, heF: 0 },
-  { label: 'Studs', value: 'studs', heM: 3608, heF: 3608 },
-  { label: 'Hoops', value: 'hoops', heM: 3613, heF: 3613 },
-  { label: 'Star Drops', value: 'starDrops', heM: 3621, heF: 3621 },
-];
-
-export const NECKLACE_STYLES: { label: string; value: NecklaceStyle; caM: number; caF: number }[] = [
-  { label: 'None', value: 'none', caM: 0, caF: 0 },
-  { label: 'Chain', value: 'chain', caM: 1803, caF: 1803 },
-  { label: 'Choker', value: 'choker', caM: 1806, caF: 1806 },
-  { label: 'Gem Pendant', value: 'gemPendant', caM: 1812, caF: 1812 },
-];
-
-export const PIERCING_STYLES: { label: string; value: PiercingStyle; waM: number; waF: number }[] = [
-  { label: 'None', value: 'none', waM: 0, waF: 0 },
-  { label: 'Nose Ring', value: 'noseRing', waM: 2001, waF: 2001 },
-  { label: 'Lip Ring', value: 'lipRing', waM: 2002, waF: 2002 },
-  { label: 'Brow Ring', value: 'browRing', waM: 2003, waF: 2003 },
+// `caSet` keys: `settype.ca.set`. Verified via `figuremap.parts.ca` → `libs[]`
+// (3131/3151 were scarves; 3545 was acc_chest_U_bear — not necklaces).
+export const NECKLACE_STYLES: { label: string; value: NecklaceStyle; caSet: number }[] = [
+  { label: 'None', value: 'none', caSet: 0 },
+  { label: 'Bead necklace', value: 'chain', caSet: 3343 }, // acc_chest_U_beads
+  { label: 'Medal', value: 'choker', caSet: 3423 }, // acc_chest_U_medal1
+  { label: 'Heart necklace', value: 'gemPendant', caSet: 3885 }, // acc_chest_U_heartnecklace
+  { label: 'Strand necklace', value: 'strandNecklace', caSet: 3177 }, // acc_chest_U_strands
 ];
 
 export function getShirtChSet(style: ShirtStyle, gender: Gender): number {
@@ -506,32 +491,21 @@ export function getShoeStyleLabel(style: ShoeStyle, gender: Gender): string {
   return gender === 'male' ? row.male : row.female;
 }
 
-export function getEyewearSet(style: EyewearStyle, gender: Gender): number {
+export function getEyewearSet(style: EyewearStyle, _gender: Gender): number {
   const row = EYEWEAR_STYLES.find((s) => s.value === style);
   if (!row || style === 'none') return 0;
-  return gender === 'male' ? row.eaM : row.eaF;
+  return row.eaSet;
 }
 
-export function getMakeupSet(style: MakeupStyle, gender: Gender): number {
-  const row = MAKEUP_STYLES.find((s) => s.value === style);
-  if (!row || style === 'none') return 0;
-  return gender === 'male' ? row.faM : row.faF;
-}
-
-export function getEarringSet(style: EarringStyle, gender: Gender): number {
+export function getEarringSet(style: EarringStyle, _gender: Gender): number {
   const row = EARRING_STYLES.find((s) => s.value === style);
   if (!row || style === 'none') return 0;
-  return gender === 'male' ? row.heM : row.heF;
+  return row.heSet;
 }
 
-export function getNecklaceSet(style: NecklaceStyle, gender: Gender): number {
+export function getNecklaceSet(style: NecklaceStyle, _gender: Gender): number {
   const row = NECKLACE_STYLES.find((s) => s.value === style);
   if (!row || style === 'none') return 0;
-  return gender === 'male' ? row.caM : row.caF;
+  return row.caSet;
 }
 
-export function getPiercingSet(style: PiercingStyle, gender: Gender): number {
-  const row = PIERCING_STYLES.find((s) => s.value === style);
-  if (!row || style === 'none') return 0;
-  return gender === 'male' ? row.waM : row.waF;
-}
