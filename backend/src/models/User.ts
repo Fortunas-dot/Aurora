@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { generateRandomPixelCharacter } from '../utils/pixelCharacter';
+import { getRandomAvatarBackgroundColor } from '../utils/avatarColors';
 
 export interface PushToken {
   token: string;
@@ -425,6 +426,9 @@ UserSchema.pre('save', function (next) {
     this.pixelCharacter = generateRandomPixelCharacter(this.username);
   } else if (!this.pixelCharacter.name) {
     this.pixelCharacter.name = this.username;
+  }
+  if (!this.avatarBackgroundColor) {
+    this.avatarBackgroundColor = getRandomAvatarBackgroundColor();
   }
   next();
 });

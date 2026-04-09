@@ -27,6 +27,7 @@ import { startInactivityCron } from './jobs/inactivityNotification';
 import Idea from './models/Idea';
 import User from './models/User';
 import { generateRandomPixelCharacter } from './utils/pixelCharacter';
+import { getRandomAvatarBackgroundColor } from './utils/avatarColors';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -110,6 +111,33 @@ connectDB().then(async () => {
     }
   } catch (err) {
     console.warn('[PixelCharacter] Backfill failed:', err);
+  }
+
+  // Backfill: users that still don't have an avatar background color.
+  try {
+    const usersMissingAvatarBg = await User.find({
+      $or: [
+        { avatarBackgroundColor: null },
+        { avatarBackgroundColor: { $exists: false } },
+        { avatarBackgroundColor: '' },
+      ],
+    }).select('_id');
+
+    if (usersMissingAvatarBg.length > 0) {
+      for (const user of usersMissingAvatarBg) {
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              avatarBackgroundColor: getRandomAvatarBackgroundColor(),
+            },
+          }
+        );
+      }
+      console.log(`[AvatarColor] Backfilled ${usersMissingAvatarBg.length} users`);
+    }
+  } catch (err) {
+    console.warn('[AvatarColor] Backfill failed:', err);
   }
 
   startInactivityCron();
