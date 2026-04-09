@@ -114,6 +114,9 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
             username: '$user.username',
             displayName: '$user.displayName',
             avatar: '$user.avatar',
+            avatarCharacter: '$user.avatarCharacter',
+            avatarBackgroundColor: '$user.avatarBackgroundColor',
+            pixelCharacter: '$user.pixelCharacter',
           },
           lastMessage: {
             _id: '$lastMessage._id',
@@ -182,8 +185,8 @@ export const getConversation = async (req: AuthRequest, res: Response): Promise<
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
-      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
+      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
 
     const total = await Message.countDocuments({
       $or: [
@@ -297,8 +300,8 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       attachments: normalizedAttachments,
     });
 
-    await message.populate('sender', 'username displayName avatar');
-    await message.populate('receiver', 'username displayName avatar');
+    await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
+    await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     // Create notification
     const notification = await Notification.create({
@@ -308,7 +311,7 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       message: 'sent you a message',
     });
 
-    await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+    await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
 
     // Send notification via WebSocket
     await sendNotificationToUser(receiverId, notification);
@@ -415,9 +418,9 @@ export const reactToMessage = async (req: AuthRequest, res: Response): Promise<v
     await message.save();
 
     // Populate all necessary fields for response
-    await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor');
-    await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor');
-    await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+    await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
+    await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
+    await message.populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
 
     // Convert to plain object to ensure proper serialization
     const messageObj = message.toObject ? message.toObject() : message;
@@ -466,9 +469,9 @@ export const searchMessages = async (req: AuthRequest, res: Response): Promise<v
     };
 
     const messages = await Message.find(searchQuery)
-      .populate('sender', 'username displayName avatar')
-      .populate('receiver', 'username displayName avatar')
-      .populate('reactions.users', 'username displayName avatar')
+      .populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
+      .populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
+      .populate('reactions.users', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort({ createdAt: -1 })
       .limit(50);
 

@@ -66,7 +66,7 @@ export const getUserJournals = async (req: AuthRequest, res: Response): Promise<
     const query: any = { owner: req.userId };
 
     const journals = await Journal.find(query)
-      .populate('owner', 'username displayName avatar')
+      .populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -144,7 +144,7 @@ export const getPublicJournals = async (req: AuthRequest, res: Response): Promis
     }
 
     const journals = await Journal.find(query)
-      .populate('owner', 'username displayName avatar')
+      .populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort(sortOrder)
       .skip(skip)
       .limit(limit);
@@ -227,8 +227,8 @@ export const getJournal = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Now populate for the response
-    await journal.populate('owner', 'username displayName avatar');
-    await journal.populate('followers', 'username displayName avatar');
+    await journal.populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
+    await journal.populate('followers', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     const journalObj = journal.toObject();
     const isFollowing = req.userId ? journal.followers.some((followerId) => {
@@ -395,7 +395,7 @@ export const followJournal = async (req: AuthRequest, res: Response): Promise<vo
 
     // Reload journal to ensure we have the latest state
     const updatedJournal = await Journal.findById(journal._id)
-      .populate('owner', 'username displayName avatar');
+      .populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
     
     if (!updatedJournal) {
       res.status(404).json({
@@ -459,7 +459,7 @@ export const unfollowJournal = async (req: AuthRequest, res: Response): Promise<
 
     // Reload journal to ensure we have the latest state
     const updatedJournal = await Journal.findById(journal._id)
-      .populate('owner', 'username displayName avatar');
+      .populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
     
     if (!updatedJournal) {
       res.status(404).json({
@@ -504,7 +504,7 @@ export const getFollowingJournals = async (req: AuthRequest, res: Response): Pro
 
     const userIdObjectId = new Types.ObjectId(req.userId);
     const journals = await Journal.find({ followers: userIdObjectId })
-      .populate('owner', 'username displayName avatar')
+      .populate('owner', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -642,7 +642,7 @@ export const getEntries = async (req: AuthRequest, res: Response): Promise<void>
 
     const entries = await JournalEntry.find(query)
       .populate('journal', 'name isPublic owner')
-      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -694,7 +694,7 @@ export const getEntry = async (req: AuthRequest, res: Response): Promise<void> =
     // First, try to find entry by ID
     const entry = await JournalEntry.findById(req.params.id)
       .populate('journal', 'name isPublic owner')
-      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor');
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     if (!entry) {
       res.status(404).json({
@@ -851,7 +851,7 @@ export const createEntry = async (req: AuthRequest, res: Response): Promise<void
           });
 
           // Populate minimal fields for WebSocket/push usage
-          await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+          await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
           await notification.populate('relatedJournal', 'name');
           await notification.populate('relatedEntry', '_id');
 
@@ -1064,7 +1064,7 @@ export const getFollowingEntries = async (req: AuthRequest, res: Response): Prom
       journal: { $in: journalIds },
       isPrivate: false,
     })
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .populate('journal', 'name isPublic')
       .sort({ createdAt: -1 })
       .skip(skip)

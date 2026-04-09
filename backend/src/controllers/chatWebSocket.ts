@@ -240,8 +240,8 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
       attachments: Array.isArray(attachments) && attachments.length > 0 ? attachments : [],
     });
 
-    await message.populate('sender', 'username displayName avatar');
-    await message.populate('receiver', 'username displayName avatar');
+    await message.populate('sender', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
+    await message.populate('receiver', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     // Normalize message data (attachments and user avatars)
     const messageObj = message.toObject ? message.toObject() : message;
@@ -273,7 +273,7 @@ const handleChatMessage = async (senderId: string, data: any): Promise<void> => 
       message: 'sent you a message',
     });
 
-    await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+    await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
 
     // Send notification via WebSocket
     await sendNotificationToUser(receiverId, notification);

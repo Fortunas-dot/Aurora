@@ -305,7 +305,7 @@ export const searchUsers = async (req: AuthRequest, res: Response): Promise<void
     const users = await User.find({
       username: { $regex: sanitizedQuery, $options: 'i' },
     })
-      .select('username displayName avatar bio')
+      .select('username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter bio')
       .skip(skip)
       .limit(limit);
 
@@ -378,7 +378,7 @@ export const getUserPosts = async (req: AuthRequest, res: Response): Promise<voi
       author: targetUserId,
       groupId: null, // Only public posts
     })
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -516,7 +516,7 @@ export const followUser = async (req: AuthRequest, res: Response): Promise<void>
         message: 'started following you',
       });
 
-      await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+      await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
 
       // Send notification via WebSocket
       await sendNotificationToUser(targetUserId, notification);
@@ -546,7 +546,7 @@ export const getFollowers = async (req: AuthRequest, res: Response): Promise<voi
     const skip = calculateSkip(page, limit);
 
     const followers = await User.find({ following: req.params.id })
-      .select('username displayName avatar bio avatarCharacter avatarBackgroundColor nameColor createdAt')
+      .select('username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter bio nameColor createdAt')
       .skip(skip)
       .limit(limit);
 
@@ -590,7 +590,7 @@ export const getFollowing = async (req: AuthRequest, res: Response): Promise<voi
   try {
     const user = await User.findById(req.params.id).populate(
       'following',
-      'username displayName avatar bio avatarCharacter avatarBackgroundColor nameColor createdAt'
+      'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter bio nameColor createdAt'
     );
 
     if (!user) {
@@ -777,7 +777,7 @@ export const blockUser = async (req: AuthRequest, res: Response): Promise<void> 
 export const getBlockedUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const currentUser = await User.findById(req.userId)
-      .populate('blockedUsers', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
+      .populate('blockedUsers', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .select('blockedUsers');
 
     if (!currentUser) {

@@ -28,7 +28,7 @@ export const getIdeas = async (req: AuthRequest, res: Response): Promise<void> =
     if (sortBy === 'popular' || sortBy === 'trending') {
       // For popular/trending, we need to calculate vote score and sort
       const allIdeas = await Idea.find(query)
-        .populate('author', 'username displayName avatar')
+        .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
         .lean();
       
       // Calculate vote score and sort
@@ -49,7 +49,7 @@ export const getIdeas = async (req: AuthRequest, res: Response): Promise<void> =
     } else {
       // Recent: simple date sort
       ideas = await Idea.find(query)
-        .populate('author', 'username displayName avatar')
+        .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -113,7 +113,7 @@ export const getIdeas = async (req: AuthRequest, res: Response): Promise<void> =
 export const getIdea = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const idea = await Idea.findById(req.params.id)
-      .populate('author', 'username displayName avatar');
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     if (!idea) {
       res.status(404).json({
@@ -171,7 +171,7 @@ export const createIdea = async (req: AuthRequest, res: Response): Promise<void>
       category: category || 'feature',
     });
 
-    await idea.populate('author', 'username displayName avatar');
+    await idea.populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     const ideaObj: any = idea.toObject();
     ideaObj.hasUpvoted = false;

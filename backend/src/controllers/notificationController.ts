@@ -14,7 +14,7 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
     const skip = calculateSkip(page, limit);
 
     const notifications = await Notification.find({ user: req.userId })
-      .populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor')
+      .populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('relatedPost', 'content title')
       .populate('relatedGroup', 'name')
       .sort({ createdAt: -1 })

@@ -74,8 +74,8 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     const groups = await Group.find(query)
-      .populate('admins', 'username displayName avatar')
-      .populate('members', 'username displayName avatar avatarCharacter avatarBackgroundColor')
+      .populate('admins', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
+      .populate('members', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -114,8 +114,8 @@ export const getGroups = async (req: AuthRequest, res: Response): Promise<void> 
 export const getGroup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const group = await Group.findById(req.params.id)
-      .populate('admins', 'username displayName avatar')
-      .populate('members', 'username displayName avatar');
+      .populate('admins', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
+      .populate('members', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     if (!group) {
       res.status(404).json({
@@ -174,7 +174,7 @@ export const createGroup = async (req: AuthRequest, res: Response): Promise<void
       admins: [req.userId],
     });
 
-    await group.populate('admins', 'username displayName avatar');
+    await group.populate('admins', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     res.status(201).json({
       success: true,
@@ -231,7 +231,7 @@ export const joinGroup = async (req: AuthRequest, res: Response): Promise<void> 
           message: 'joined your group',
         });
 
-        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
         await notification.populate('relatedGroup', 'name');
 
         // Send notification via WebSocket
@@ -346,7 +346,7 @@ export const updateGroup = async (req: AuthRequest, res: Response): Promise<void
     if (healthCondition !== undefined) group.healthCondition = healthCondition;
 
     await group.save();
-    await group.populate('admins', 'username displayName avatar');
+    await group.populate('admins', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     res.json({
       success: true,
@@ -415,7 +415,7 @@ export const getGroupPosts = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const posts = await Post.find({ groupId: req.params.id })
-      .populate('author', 'username displayName avatar')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sort)
       .skip(skip)

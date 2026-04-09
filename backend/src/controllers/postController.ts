@@ -174,7 +174,7 @@ export const getPosts = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Now get posts with populate
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sortOption)
       .skip(skip)
@@ -350,7 +350,7 @@ export const getPost = async (req: AuthRequest, res: Response): Promise<void> =>
     }
 
     const post = await Post.findById(id)
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar');
 
     if (!post) {
@@ -445,7 +445,7 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
       groupId: groupId || null,
     });
 
-    await post.populate('author', 'username displayName avatar');
+    await post.populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     // Normalize URLs before returning
     const normalizedPost = normalizePostData(post.toObject());
@@ -513,7 +513,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
       req.params.id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('author', 'username displayName avatar');
+    ).populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter');
 
     res.json({
       success: true,
@@ -599,7 +599,7 @@ export const likePost = async (req: AuthRequest, res: Response): Promise<void> =
           message: 'liked your post',
         });
 
-        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
         await notification.populate('relatedPost', 'content title');
 
         // Send notification via WebSocket
@@ -838,7 +838,7 @@ export const getFollowingPosts = async (req: AuthRequest, res: Response): Promis
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -956,7 +956,7 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
       }
 
       const posts = await Post.find(query)
-        .populate('author', 'username displayName avatar nameColor')
+        .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
         .populate('groupId', 'name description tags memberCount isPrivate avatar')
         .sort(sortOption)
         .skip(skip)
@@ -1071,7 +1071,7 @@ export const getJoinedGroupsPosts = async (req: AuthRequest, res: Response): Pro
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort(sortOption)
       .skip(skip)
@@ -1174,7 +1174,7 @@ export const getSavedPosts = async (req: AuthRequest, res: Response): Promise<vo
     const savedPostIds = user.savedPosts || [];
 
     const posts = await Post.find({ _id: { $in: savedPostIds } })
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .populate('groupId', 'name description tags memberCount isPrivate avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -1370,7 +1370,7 @@ export const searchPosts = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const posts = await Post.find(query)
-      .populate('author', 'username displayName avatar nameColor')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

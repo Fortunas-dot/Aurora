@@ -22,7 +22,7 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
     };
 
     const topLevelComments = await Comment.find(topLevelQuery)
-      .populate('author', 'username displayName avatar nameColor isTherapist')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor isTherapist')
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
@@ -36,7 +36,7 @@ export const getComments = async (req: AuthRequest, res: Response): Promise<void
       post: req.params.postId,
       parentComment: { $in: topIds },
     })
-      .populate('author', 'username displayName avatar nameColor isTherapist')
+      .populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor isTherapist')
       .sort({ createdAt: 1 });
 
     const repliesByParent: Record<string, any[]> = {};
@@ -145,7 +145,7 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
             message: 'replied to your comment',
           });
 
-          await replyNotification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+          await replyNotification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
           await replyNotification.populate('relatedPost', 'content title');
 
           // Send notification via WebSocket
@@ -164,7 +164,7 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
           message: 'commented on your post',
         });
 
-        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor nameColor');
+        await notification.populate('relatedUser', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter nameColor');
         await notification.populate('relatedPost', 'content title');
 
         // Send notification via WebSocket
@@ -173,7 +173,7 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    await comment.populate('author', 'username displayName avatar isTherapist');
+    await comment.populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter isTherapist');
 
     res.status(201).json({
       success: true,
@@ -217,7 +217,7 @@ export const updateComment = async (req: AuthRequest, res: Response): Promise<vo
       req.params.id,
       { content },
       { new: true, runValidators: true }
-    ).populate('author', 'username displayName avatar isTherapist');
+    ).populate('author', 'username displayName avatar avatarCharacter avatarBackgroundColor pixelCharacter isTherapist');
 
     res.json({
       success: true,
