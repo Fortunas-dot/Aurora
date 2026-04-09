@@ -36,6 +36,8 @@ const PixelCharacter = React.memo(
   }: PixelCharacterProps) {
     const [loaded, setLoaded] = useState(false);
     const [errored, setErrored] = useState(false);
+    /** Bumps to retry failed loads (cache-bust); reset when `imageUrl` changes. */
+    const [loadAttempt, setLoadAttempt] = useState(0);
 
     const imageUrl = useMemo(
       () => buildHabboImageUrl({ config, direction, action, gesture, size: 'l' }),
@@ -61,10 +63,19 @@ const PixelCharacter = React.memo(
       ],
     );
 
+    const uri =
+      loadAttempt > 0 ? `${imageUrl}&_cb=${loadAttempt}` : imageUrl;
+
     useEffect(() => {
       setLoaded(false);
       setErrored(false);
+      setLoadAttempt(0);
     }, [imageUrl]);
+
+    useEffect(() => {
+      if (loadAttempt === 0) return;
+      setLoaded(false);
+    }, [loadAttempt]);
 
     // Habbo imaging API returns ~110px wide images for size=l
     // We scale to desired size while maintaining aspect ratio
@@ -83,11 +94,21 @@ const PixelCharacter = React.memo(
         {/* Actual Habbo avatar image */}
         {!errored && (
           <Image
-            source={{ uri: imageUrl }}
+            key={uri}
+            source={{ uri }}
             style={[styles.image, { width, height }]}
             resizeMode="contain"
-            onLoad={() => setLoaded(true)}
-            onError={() => setErrored(true)}
+            onLoad={() => {
+              setLoaded(true);
+              setErrored(false);
+            }}
+            onError={() => {
+              setLoadAttempt(a => {
+                if (a < 2) return a + 1;
+                setErrored(true);
+                return a;
+              });
+            }}
           />
         )}
 
