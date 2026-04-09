@@ -33,6 +33,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   style,
   showBorder = true,
 }) => {
+  const isLocalPreviewUri = typeof uri === 'string' && uri.startsWith('file://');
+
   const getSize = (): number => {
     switch (size) {
       case 'sm': return 32;
@@ -85,8 +87,12 @@ export const Avatar: React.FC<AvatarProps> = ({
   }, [uri]);
 
   const pixelAvatarUri = useMemo(() => {
-    if (!pixelCharacter) return null;
-    const config = normalizePixelCharacterConfig(pixelCharacter);
+    // Keep local file previews (e.g. edit-profile picker result) visible.
+    if (isLocalPreviewUri) return null;
+    // Always prefer pixel avatars for user entities, even when legacy users
+    // do not yet have an explicit pixelCharacter object stored.
+    if (!pixelCharacter && !userId) return null;
+    const config = normalizePixelCharacterConfig(pixelCharacter ?? null);
     return buildHabboImageUrl({
       config,
       direction: 2,
@@ -95,7 +101,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       action: 'std',
       gesture: 'std',
     });
-  }, [pixelCharacter]);
+  }, [isLocalPreviewUri, pixelCharacter, userId]);
 
   const effectiveImageUri = pixelAvatarUri ?? normalizedUri;
 
