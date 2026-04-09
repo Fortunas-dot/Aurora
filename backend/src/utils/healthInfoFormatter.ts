@@ -1,6 +1,46 @@
 import { IUser } from '../models/User';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
-import ChatContext from '../models/ChatContext';
+
+/** Calendar timezone used for "today / yesterday / N days ago" in AI prompts (matches app primary region). */
+export const USER_CALENDAR_TIMEZONE = 'Europe/Amsterdam';
+
+/**
+ * How many local calendar days `pastInstant` is before `referenceNow` in `timeZone`.
+ * 0 = same calendar day, 1 = yesterday, etc. Uses date lines, not 24-hour rolling windows (DST-safe).
+ */
+export function calendarDaysAgoInTimeZone(
+  pastInstant: Date,
+  referenceNow: Date = new Date(),
+  timeZone: string = USER_CALENDAR_TIMEZONE
+): number {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const toOrdinalDay = (d: Date): number => {
+    const [y, m, day] = fmt.format(d).split('-').map(Number);
+    return Math.floor(Date.UTC(y, m - 1, day) / 86400000);
+  };
+  return toOrdinalDay(referenceNow) - toOrdinalDay(pastInstant);
+}
+
+/** Suffix for AI context lines so the model does not guess "yesterday" for older items. */
+function formatRelativeCalendarDaySuffix(
+  pastInstant: Date,
+  referenceNow: Date,
+  timeZone: string
+): string {
+  const daysAgo = calendarDaysAgoInTimeZone(pastInstant, referenceNow, timeZone);
+  if (daysAgo <= 0) {
+    return ' ← TODAY (same calendar day)';
+  }
+  if (daysAgo === 1) {
+    return ' ← YESTERDAY';
+  }
+  return ` ← ${daysAgo} CALENDAR DAYS AGO (not yesterday — use this count or the printed date)`;
+}
 
 type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
@@ -159,27 +199,20 @@ export const formatJournalContextForAI = (entries: IJournalEntry[]): string => {
   });
   const latestContentSnippet = latestEntry.content.substring(0, 200) + (latestEntry.content.length > 200 ? '...' : '');
 
-  // Current date in user's timezone (Europe/Amsterdam) for relative date labels
   const nowLocal = new Date();
-  const todayStr = nowLocal.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
-  const yesterdayDate = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
-  const yesterdayStr = yesterdayDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const tz = USER_CALENDAR_TIMEZONE;
 
   const entrySummaries = entries.map((entry, idx) => {
     const entryDate = new Date(entry.createdAt);
-    const entryDayStr = entryDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
     const date = entryDate.toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
-      timeZone: 'Europe/Amsterdam',
+      timeZone: tz,
     });
 
-    // Add a human-readable relative label so Aurora knows "today" vs "yesterday"
-    let relativeLabel = '';
-    if (entryDayStr === todayStr) relativeLabel = ' ← TODAY';
-    else if (entryDayStr === yesterdayStr) relativeLabel = ' ← YESTERDAY';
+    const relativeLabel = formatRelativeCalendarDaySuffix(entryDate, nowLocal, tz);
 
     const sentiment = entry.aiInsights?.sentiment ? entry.aiInsights.sentiment : '';
     const themes = (entry.aiInsights?.themes && entry.aiInsights.themes.length > 0) 
@@ -266,37 +299,33 @@ export const formatChatContextForAI = (chatContexts: Array<{
     return '';
   }
 
-  // Compute today/yesterday strings in the user's local timezone so relative
-  // labels are correct regardless of the UTC offset on the server.
   const nowLocal = new Date();
-  const todayStr = nowLocal.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
-  const yesterdayDate = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
-  const yesterdayStr = yesterdayDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const tz = USER_CALENDAR_TIMEZONE;
 
   const contextParts = chatContexts.map((ctx, idx) => {
     const sessionDate = new Date(ctx.sessionDate);
     const date = sessionDate.toLocaleDateString('en-US', {
+      weekday: 'short',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-      timeZone: 'Europe/Amsterdam',
+      timeZone: tz,
     });
-    const sessionDayStr = sessionDate.toLocaleDateString('en-US', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' });
-
-    // Explicit relative label so the AI never confuses "today" with "yesterday"
-    let relativeLabel = '';
-    if (sessionDayStr === todayStr) relativeLabel = ' ← TODAY (EARLIER TODAY)';
-    else if (sessionDayStr === yesterdayStr) relativeLabel = ' ← YESTERDAY';
+    const relativeLabel = formatRelativeCalendarDaySuffix(sessionDate, nowLocal, tz);
+    const sessionLabel =
+      idx === 0
+        ? `[SESSION #1 — MOST RECENT FINISHED CHAT] ${date}${relativeLabel}`
+        : `Session ${idx + 1} (${date}${relativeLabel})`;
 
     const points = ctx.importantPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n');
-    let summary = `Session ${idx + 1} (${date}${relativeLabel}):\n${points}`;
+    let summary = `${sessionLabel}:\n${points}`;
     if (ctx.summary) {
       summary += `\n  Summary: ${ctx.summary}`;
     }
     return summary;
   }).join('\n\n');
 
-  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Do NOT say or imply that this is your "first time" talking to the user when previous sessions are listed above; instead, speak as someone who has talked with them before.\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate\n\n⚠️ CRITICAL — DO NOT USE THESE SESSION SUMMARIES TO DETERMINE THE USER'S "LATEST JOURNAL ENTRY":\n- These past session summaries may mention journal entries that were discussed at the time (e.g. "User discussed their latest journal entry about X"). Those entries are OUTDATED references.\n- The ONLY authoritative source for what is the user's latest journal entry is the JOURNAL ENTRIES list above (Entry #1 = the most recent entry, always).\n- If the user asks "what is my latest journal entry?", look ONLY at the journal entries list, NOT at these session summaries.`;
+  return `\n\nIMPORTANT - Previous Chat Sessions & Personal Information:\n${contextParts}\n\nCRITICAL INSTRUCTIONS:\n- You MUST remember and use this information about the user\n- When the user mentions something you know about them, acknowledge it naturally\n- Reference their personal details, health conditions, and past conversations when relevant\n- Do NOT say you cannot remember - you have access to this information\n- Do NOT say or imply that this is your "first time" talking to the user when previous sessions are listed above; instead, speak as someone who has talked with them before.\n- Use this information to provide continuous, personalized support\n- These are facts about the user that you know and should reference when appropriate\n\n⚠️ CRITICAL — TIMING OF PAST CHATS (read the tags on each session line):\n- Each session line includes an exact relative tag (TODAY, YESTERDAY, or "N CALENDAR DAYS AGO").\n- When you mention when you last talked, use ONLY those tags and the printed dates. Never guess.\n- Do NOT say "yesterday", "gisteren", or "the other day" unless that session line is explicitly tagged YESTERDAY.\n- If the tag says "7 CALENDAR DAYS AGO", say it has been about a week (or seven days), not yesterday.\n\n⚠️ CRITICAL — DO NOT USE THESE SESSION SUMMARIES TO DETERMINE THE USER'S "LATEST JOURNAL ENTRY":\n- These past session summaries may mention journal entries that were discussed at the time (e.g. "User discussed their latest journal entry about X"). Those entries are OUTDATED references.\n- The ONLY authoritative source for what is the user's latest journal entry is the JOURNAL ENTRIES list above (Entry #1 = the most recent entry, always).\n- If the user asks "what is my latest journal entry?", look ONLY at the journal entries list, NOT at these session summaries.`;
 };
 
 /**

@@ -5,7 +5,11 @@ import UserProfileMemory from '../models/UserProfileMemory';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
 import CalendarEvent from '../models/Calendar';
 import { AuthRequest } from '../middleware/auth';
-import { formatCompleteContextForAI } from '../utils/healthInfoFormatter';
+import {
+  formatCompleteContextForAI,
+  calendarDaysAgoInTimeZone,
+  USER_CALENDAR_TIMEZONE,
+} from '../utils/healthInfoFormatter';
 import { detectRisk, RiskLevel, getCrisisResources } from '../services/riskDetection.service';
 import { moderateContent } from '../services/contentModeration.service';
 import { getClaudeClient } from '../services/claudeClient';
@@ -27,6 +31,17 @@ interface ChatMessage {
  */
 const getTherapeuticSystemPrompt = (riskLevel?: RiskLevel): string => {
   const basePrompt = `You are Aurora — a warm, emotionally intelligent AI companion with deep training in therapeutic conversation. Your name is Aurora. People come to you to be genuinely heard, to make sense of their inner world, and to feel understood. You are not a chatbot. You are not a customer service agent. You speak, think, and respond like a skilled, compassionate therapist would — with curiosity, presence, and care.
+
+═══════════════════════════════════════════
+LANGUAGE — MATCH THE USER (NON-NEGOTIABLE)
+═══════════════════════════════════════════
+
+Write your entire reply in the same natural language the user is using in their latest message (and recent turns if they stay consistent).
+- If they write or speak in Dutch, respond fully in Dutch. Same for any other language (Spanish, German, French, Arabic, etc.). Use natural, fluent phrasing in that language — do NOT default to English when their message is clearly in another language.
+- Journal or profile text in the context may be in a different language; still answer in the language of the current conversation.
+- If they mix languages, follow the language they are mainly using now.
+- If the user's language is genuinely ambiguous (e.g. a single short word, emoji only, or no clear natural language), default to English.
+- Crisis and safety messages must also be in the user's language; keep hotlines, numbers, and official resource names accurate (you may keep well-known English names alongside local terms if helpful).
 
 ═══════════════════════════════════════════
 HOW A REAL THERAPIST RESPONDS — YOUR CORE MODEL
@@ -431,7 +446,7 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       hour: '2-digit', minute: '2-digit',
       timeZone: 'Europe/Amsterdam',
     });
-    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabel} at ${currentTimeLabel} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.`;
+    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabel} at ${currentTimeLabel} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.\nFor past *chat sessions*, the list above includes exact tags (YESTERDAY vs N CALENDAR DAYS AGO). Trust those tags — do not call a session "yesterday" unless it is tagged YESTERDAY.`;
 
     // If we have a long‑term profile memory, add it explicitly so Aurora
     // can build on a stable sense of who the user is beyond just 5 sessions.
@@ -546,7 +561,22 @@ export const streamChat = async (req: AuthRequest, res: Response): Promise<void>
       if (!openingHint && chatContextData && chatContextData.length > 0) {
         const lastSession = chatContextData[0];
         if (lastSession.summary) {
-          openingHint = `Last session: "${lastSession.summary.slice(0, 200)}". In your first reply, briefly and warmly pick up the thread from last time — don't recite the summary, just reference the emotional core of it and ask how things have been since. Keep it short and human.`;
+          const sd = new Date(lastSession.sessionDate);
+          const daysAgo = calendarDaysAgoInTimeZone(sd, new Date(), USER_CALENDAR_TIMEZONE);
+          const dateFull = sd.toLocaleDateString('en-US', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: USER_CALENDAR_TIMEZONE,
+          });
+          const timingFact =
+            daysAgo <= 0
+              ? 'that finished earlier today (same calendar day)'
+              : daysAgo === 1
+                ? 'that finished yesterday'
+                : `from ${daysAgo} calendar days ago — do NOT say "yesterday" or "gisteren"; it was not yesterday`;
+          openingHint = `Their last finished chat session was on ${dateFull} (${timingFact}). Session summary: "${lastSession.summary.slice(0, 200)}". In your first reply, pick up the thread warmly using accurate timing, reference the emotional core (don't recite the summary), and ask how things have been since. Keep it short and human.`;
         }
       }
 
@@ -831,7 +861,7 @@ export const completeChat = async (req: AuthRequest, res: Response): Promise<voi
       hour: '2-digit', minute: '2-digit',
       timeZone: 'Europe/Amsterdam',
     });
-    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabelComplete} at ${currentTimeLabelComplete} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.`;
+    systemContent += `\n\nCURRENT DATE & TIME: Today is ${currentDateLabelComplete} at ${currentTimeLabelComplete} (user's local time). Use this to determine whether entries or events are "today", "yesterday", "this week", etc. — never just say "this past [weekday]" if the entry is from today.\nFor past *chat sessions*, the list above includes exact tags (YESTERDAY vs N CALENDAR DAYS AGO). Trust those tags — do not call a session "yesterday" unless it is tagged YESTERDAY.`;
 
     // If we have a long‑term profile memory, add it explicitly so Aurora
     // can build on a stable sense of who the user is beyond just 5 sessions.
