@@ -1,6 +1,6 @@
 # Habbo figure IDs for pixel accessories (Aurora)
 
-This document explains how we map **eyewear** (`ea`), **earrings** (`he`), and **necklaces** (`ca`) to Habbo’s imaging API, so **button labels and previews match the real asset**. Use it when you want to add or fix accessory options in the app.
+This document explains how we map **tops** (`ch`), **eyewear** (`ea`), **earrings** (`he`), and **necklaces** (`ca`) to Habbo’s imaging API, so **button labels and previews match the real asset**. Use it when you want to add or fix clothing and accessory options in the app.
 
 ---
 
@@ -29,7 +29,7 @@ Production Habbo (`habbo.com`) may differ slightly from Open Hotel dumps over ti
 2. Read that set’s **`parts[0].id`** (the part id used for lookup).
 3. In **`figuremap.json`**, open **`parts.<TYPE>`** and look up that part id as a string key, e.g. `parts.ea["1234"]` → library index `N`.
 4. Resolve **`libs[N].id`** — that string is the **real asset** (e.g. `acc_chest_U_beads`).
-5. The Habbo figure fragment is **`ea-<setId>-<paletteIndex>`** (and similarly `he-…`, `ca-…`). Aurora builds the full string in `frontend/src/utils/habboFigure.ts` and resolves set ids from **`frontend/src/constants/pixelCharacterOptions.ts`**.
+5. The Habbo figure fragment is **`ch-<setId>-<paletteIndex>`** for tops (and **`ea-…`**, **`he-…`**, **`ca-…`** for accessories). Aurora builds the full string in `frontend/src/utils/habboFigure.ts` and resolves set ids from **`frontend/src/constants/pixelCharacterOptions.ts`**.
 
 If the label says “chain” but `libs[N].id` is `acc_chest_U_silkscarf`, the **set id is wrong or the label must change**.
 
@@ -69,12 +69,13 @@ function resolve(settype, setId) {
 }
 
 // Examples:
+console.log(resolve('ch', 3323));
 console.log(resolve('ea', 3493));
 console.log(resolve('he', 3070));
 console.log(resolve('ca', 3343));
 ```
 
-To **discover** candidates for a type, loop `Object.keys(fd.settype.ea.set)` (or `he` / `ca`), call `resolve`, and **filter** `lib` by prefix, e.g. `acc_eye_U_`, `acc_head_U_earring`, `acc_chest_U_beads`, etc.
+To **discover** candidates for a type, loop `Object.keys(fd.settype.ea.set)` (or `ch` / `he` / `ca`), call `resolve`, and **filter** `lib` by prefix, e.g. `shirt_M_` / `shirt_F_` (pair matching male/female set ids for the same base name), `acc_eye_U_`, `acc_head_U_earring`, `acc_chest_U_beads`, etc.
 
 ---
 
@@ -82,6 +83,7 @@ To **discover** candidates for a type, loop `Object.keys(fd.settype.ea.set)` (or
 
 | Role | File |
 |------|------|
+| Set ids + UI labels for tops | `frontend/src/constants/pixelCharacterOptions.ts` (`SHIRT_STYLES`, `ShirtStyle`, `chM` / `chF` per row) |
 | Set ids + UI labels for accessories | `frontend/src/constants/pixelCharacterOptions.ts` (`EYEWEAR_STYLES`, `EARRING_STYLES`, `NECKLACE_STYLES`) |
 | Figure string + imaging URL | `frontend/src/utils/habboFigure.ts` |
 | Memo / image reload | `frontend/src/components/pixel/PixelCharacter.tsx` |
@@ -114,13 +116,19 @@ Link this file and, if needed, the exact asset name or Habbo catalogue name you 
 
 These rows were added by resolving **`figuredata` → `figuremap` → `libs[].id`** (see script above), then wiring **`eaSet` / `heSet` / `caSet`** in `pixelCharacterOptions.ts`. Labels match the asset, not a vague nickname.
 
-| UI label | Saved `value` | Type | Set id | `libs[].id` (first part) | Notes |
-|----------|---------------|------|--------|---------------------------|--------|
+| UI label | Saved `value` | Type | Set id(s) | `libs[].id` (first part) | Notes |
+|----------|---------------|------|-----------|---------------------------|--------|
+| Long T-shirt | `longTee` | `ch` | M `3498` / F `3497` | `shirt_M_longtshirt` / `shirt_F_longtshirt` | Club `0` in figuredata. |
+| Flowing shirt | `flowingShirt` | `ch` | M `3806` / F `3807` | `shirt_M_flowingshirt` / `shirt_F_flowingshirt` | Club `0`. |
+| Ripped top | `rippedTop` | `ch` | M `3527` / F `3530` | `shirt_M_rippedtop` / `shirt_F_rippedtop` | Club `0`. |
+| Waistcoat | `waistcoat` | `ch` | M `3779` / F `3780` | `shirt_M_waistcoat` / `shirt_F_waistcoat` | Club `0`. |
+| Sailor top | `sailor` | `ch` | M `3683` / F `3682` | `shirt_M_sailor` / `shirt_F_sailor` | Club `0`. |
+| Halter top | `halter` | `ch` | M `3510` / F `3496` | `shirt_M_halter1` / `shirt_F_halter1` | Club `0`. |
 | Sunglasses | `sunglasses` | `ea` | `3169` | `acc_eye_U_sunglasses4` | Single-part classic Habbo shades (HC in figuredata). |
 | Leaf earrings | `leafEarrings` | `he` | `3833` | `acc_head_U_leafearrings` | Club `0` in figuredata; distinct from ring/gem/star studs. |
 | Strand necklace | `strandNecklace` | `ca` | `3177` | `acc_chest_U_strands` | Multi-strand chest piece; HC in figuredata. |
 
-Run `resolve('ea', 3169)`, `resolve('he', 3833)`, `resolve('ca', 3177)` with the audit script to re-verify after updating open-hotel-resources.
+Run `resolve('ch', …)` for each set id, and `resolve('ea', 3169)`, `resolve('he', 3833)`, `resolve('ca', 3177)` with the audit script to re-verify after updating open-hotel-resources.
 
 ---
 

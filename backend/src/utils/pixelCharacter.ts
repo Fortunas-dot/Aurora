@@ -49,7 +49,25 @@ const HAIR_STYLES = [
 ] as const;
 const HAIR_COLORS = ['#1A1A1A', '#4A2C0A', '#E8C44A', '#8B2500', '#CC2200', '#8A8A8A', '#1A6EBF', '#7B2D8B', '#CC5599', '#1A7A3C'];
 const EYE_COLORS = ['#1A6EBF', '#2E86AB', '#1A7A3C', '#6B3A1F', '#6B7280', '#1F2937', '#7B2D8B', '#C9A227'];
-const SHIRT_STYLES = ['tee', 'hoodie', 'polo', 'tank', 'sweater', 'dressshirt', 'kimono', 'offshoulder', 'boho', 'cute', 'dress'] as const;
+const SHIRT_STYLES = [
+  'tee',
+  'hoodie',
+  'polo',
+  'tank',
+  'sweater',
+  'dressshirt',
+  'kimono',
+  'offshoulder',
+  'boho',
+  'cute',
+  'dress',
+  'longTee',
+  'flowingShirt',
+  'rippedTop',
+  'waistcoat',
+  'sailor',
+  'halter',
+] as const;
 const SHIRT_COLORS = ['#4F86C6', '#CC2200', '#1A7A3C', '#D4A017', '#7B2D8B', '#C45C00', '#CC5599', '#D8DCE0', '#2C3E50', '#0F7A6E'];
 const PANTS_STYLES = ['jeans', 'shorts', 'cargo', 'slacks', 'skirt', 'frillskirt', 'bowskirt'] as const;
 const PANTS_COLORS = ['#1A2744', '#2D5F8A', '#18181B', '#9E8054', '#6B1A2A', '#1A4A2A', '#4A5568', '#C0C4C8'];

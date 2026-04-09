@@ -60,7 +60,13 @@ export type ShirtStyle =
   | 'offshoulder'
   | 'boho'
   | 'cute'
-  | 'dress';
+  | 'dress'
+  | 'longTee'
+  | 'flowingShirt'
+  | 'rippedTop'
+  | 'waistcoat'
+  | 'sailor'
+  | 'halter';
 export type PantsStyle =
   | 'jeans'
   | 'shorts'
@@ -318,6 +324,12 @@ export const SHIRT_STYLES: {
   { label: 'Boho tunic', value: 'boho', chM: 3796, chF: 3797 }, // shirt_M_bohotunic | shirt_F_bohotunic
   { label: 'Cute top', value: 'cute', chM: 3618, chF: 3616 }, // shirt_M_cutie | shirt_F_cutie
   { label: 'Dress', value: 'dress', chM: 3630, chF: 3629 }, // shirt_M_vicdress | shirt_F_vicdress
+  { label: 'Long T-shirt', value: 'longTee', chM: 3498, chF: 3497 }, // shirt_M_longtshirt | shirt_F_longtshirt
+  { label: 'Flowing shirt', value: 'flowingShirt', chM: 3806, chF: 3807 }, // shirt_M_flowingshirt | shirt_F_flowingshirt
+  { label: 'Ripped top', value: 'rippedTop', chM: 3527, chF: 3530 }, // shirt_M_rippedtop | shirt_F_rippedtop
+  { label: 'Waistcoat', value: 'waistcoat', chM: 3779, chF: 3780 }, // shirt_M_waistcoat | shirt_F_waistcoat
+  { label: 'Sailor top', value: 'sailor', chM: 3683, chF: 3682 }, // shirt_M_sailor | shirt_F_sailor
+  { label: 'Halter top', value: 'halter', chM: 3510, chF: 3496 }, // shirt_M_halter1 | shirt_F_halter1
 ];
 
 const SHIRT_LABEL_BY_GENDER: Record<ShirtStyle, { male: string; female: string }> = {
@@ -332,6 +344,12 @@ const SHIRT_LABEL_BY_GENDER: Record<ShirtStyle, { male: string; female: string }
   boho: { male: 'Boho Tunic', female: 'Boho Tunic' },
   cute: { male: 'Cute Top', female: 'Cute Top' },
   dress: { male: 'Dress', female: 'Dress' },
+  longTee: { male: 'Long T-shirt', female: 'Long T-shirt' },
+  flowingShirt: { male: 'Flowing Shirt', female: 'Flowing Shirt' },
+  rippedTop: { male: 'Ripped Top', female: 'Ripped Top' },
+  waistcoat: { male: 'Waistcoat', female: 'Waistcoat' },
+  sailor: { male: 'Sailor Top', female: 'Sailor Top' },
+  halter: { male: 'Halter Top', female: 'Halter Top' },
 };
 
 export const PANTS_STYLES: {
