@@ -5,6 +5,11 @@ import {
   getShirtChSet,
   getPantsLgSet,
   getShoeShSet,
+  getEyewearSet,
+  getMakeupSet,
+  getEarringSet,
+  getNecklaceSet,
+  getPiercingSet,
 } from '../constants/pixelCharacterOptions';
 
 // ═══════════════════════════════════════════════════════════════
@@ -123,6 +128,21 @@ export function buildFigureString(config: PixelCharacterConfig): string {
   const chSet = getShirtChSet(config.shirtStyle, config.gender);
   const lgSet = getPantsLgSet(config.pantsStyle, config.gender);
   const shSet = getShoeShSet(config.shoeStyle, config.gender);
+  const eyewearSet = getEyewearSet(config.eyewearStyle, config.gender);
+  const makeupSet = getMakeupSet(config.makeupStyle, config.gender);
+  const earringSet = getEarringSet(config.earringStyle, config.gender);
+  const necklaceSet = getNecklaceSet(config.necklaceStyle, config.gender);
+  const piercingSet = getPiercingSet(config.piercingStyle, config.gender);
+  const accessoryColor = paletteId(config.accessoryColor);
+  const makeupColor = paletteId(config.makeupColor);
+
+  const accessoryParts = [
+    eyewearSet > 0 ? `ea-${eyewearSet}-${accessoryColor}` : null,
+    makeupSet > 0 ? `fa-${makeupSet}-${makeupColor}` : null,
+    earringSet > 0 ? `he-${earringSet}-${accessoryColor}` : null,
+    necklaceSet > 0 ? `ca-${necklaceSet}-${accessoryColor}` : null,
+    piercingSet > 0 ? `wa-${piercingSet}-${accessoryColor}` : null,
+  ].filter(Boolean) as string[];
 
   return [
     `hd-${headSet}-${skin}`,
@@ -131,6 +151,7 @@ export function buildFigureString(config: PixelCharacterConfig): string {
     `ch-${chSet}-${shirtColor}`,
     `lg-${lgSet}-${pantsColor}`,
     `sh-${shSet}-${shoeColor}`,
+    ...accessoryParts,
   ].join('.');
 }
 

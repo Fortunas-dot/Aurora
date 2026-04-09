@@ -70,6 +70,11 @@ export type PantsStyle =
   | 'frillskirt'
   | 'bowskirt';
 export type ShoeStyle = 'sneakers' | 'boots' | 'dress' | 'sandals' | 'bootie' | 'bowshoes';
+export type EyewearStyle = 'none' | 'classicShades' | 'aviators' | 'retroRound' | 'neonShades';
+export type MakeupStyle = 'none' | 'softLiner' | 'glamLips' | 'boldShadow';
+export type EarringStyle = 'none' | 'studs' | 'hoops' | 'starDrops';
+export type NecklaceStyle = 'none' | 'chain' | 'choker' | 'gemPendant';
+export type PiercingStyle = 'none' | 'noseRing' | 'lipRing' | 'browRing';
 
 export interface PixelCharacterConfig {
   gender: Gender;
@@ -83,6 +88,13 @@ export interface PixelCharacterConfig {
   pantsColor: string;
   shoeStyle: ShoeStyle;
   shoeColor: string;
+  eyewearStyle: EyewearStyle;
+  makeupStyle: MakeupStyle;
+  earringStyle: EarringStyle;
+  necklaceStyle: NecklaceStyle;
+  piercingStyle: PiercingStyle;
+  accessoryColor: string;
+  makeupColor: string;
 }
 
 interface HairStyleOption {
@@ -104,6 +116,13 @@ export const DEFAULT_PIXEL_CHARACTER: PixelCharacterConfig = {
   pantsColor: '#2C3E50',
   shoeStyle: 'sneakers',
   shoeColor: '#1A1A1A',
+  eyewearStyle: 'none',
+  makeupStyle: 'none',
+  earringStyle: 'none',
+  necklaceStyle: 'none',
+  piercingStyle: 'none',
+  accessoryColor: '#D8DCE0',
+  makeupColor: '#CC5599',
 };
 
 export function normalizePixelCharacterConfig(
@@ -129,6 +148,16 @@ export function normalizePixelCharacterConfig(
 
   const shoeOk = SHOE_STYLES.some((s) => s.value === raw.shoeStyle);
   const shoeStyle = shoeOk ? (raw.shoeStyle as ShoeStyle) : base.shoeStyle;
+  const eyewearOk = EYEWEAR_STYLES.some((s) => s.value === raw.eyewearStyle);
+  const eyewearStyle = eyewearOk ? (raw.eyewearStyle as EyewearStyle) : base.eyewearStyle;
+  const makeupOk = MAKEUP_STYLES.some((s) => s.value === raw.makeupStyle);
+  const makeupStyle = makeupOk ? (raw.makeupStyle as MakeupStyle) : base.makeupStyle;
+  const earringOk = EARRING_STYLES.some((s) => s.value === raw.earringStyle);
+  const earringStyle = earringOk ? (raw.earringStyle as EarringStyle) : base.earringStyle;
+  const necklaceOk = NECKLACE_STYLES.some((s) => s.value === raw.necklaceStyle);
+  const necklaceStyle = necklaceOk ? (raw.necklaceStyle as NecklaceStyle) : base.necklaceStyle;
+  const piercingOk = PIERCING_STYLES.some((s) => s.value === raw.piercingStyle);
+  const piercingStyle = piercingOk ? (raw.piercingStyle as PiercingStyle) : base.piercingStyle;
 
   return {
     ...base,
@@ -138,12 +167,19 @@ export function normalizePixelCharacterConfig(
     shirtStyle,
     pantsStyle,
     shoeStyle,
+    eyewearStyle,
+    makeupStyle,
+    earringStyle,
+    necklaceStyle,
+    piercingStyle,
     skinColor: raw.skinColor || base.skinColor,
     hairColor: raw.hairColor || base.hairColor,
     eyeColor: raw.eyeColor || base.eyeColor,
     shirtColor: raw.shirtColor || base.shirtColor,
     pantsColor: raw.pantsColor || base.pantsColor,
     shoeColor: raw.shoeColor || base.shoeColor,
+    accessoryColor: raw.accessoryColor || base.accessoryColor,
+    makeupColor: raw.makeupColor || base.makeupColor,
   };
 }
 
@@ -382,6 +418,58 @@ export const SHOE_COLORS = [
   { label: 'Gray', value: '#5A6472' },
 ];
 
+export const ACCESSORY_COLORS = [
+  { label: 'Silver', value: '#D8DCE0' },
+  { label: 'Gold', value: '#D4A017' },
+  { label: 'Rose Gold', value: '#C45C00' },
+  { label: 'Black', value: '#1A1A1A' },
+  { label: 'Blue', value: '#4F86C6' },
+];
+
+export const MAKEUP_COLORS = [
+  { label: 'Rose', value: '#CC5599' },
+  { label: 'Cherry', value: '#CC2200' },
+  { label: 'Nude', value: '#9E8054' },
+  { label: 'Plum', value: '#7B2D8B' },
+  { label: 'Onyx', value: '#1A1A1A' },
+];
+
+export const EYEWEAR_STYLES: { label: string; value: EyewearStyle; eaM: number; eaF: number }[] = [
+  { label: 'None', value: 'none', eaM: 0, eaF: 0 },
+  { label: 'Classic Shades', value: 'classicShades', eaM: 1403, eaF: 1403 },
+  { label: 'Aviators', value: 'aviators', eaM: 1409, eaF: 1409 },
+  { label: 'Retro Round', value: 'retroRound', eaM: 1410, eaF: 1410 },
+  { label: 'Neon Shades', value: 'neonShades', eaM: 1417, eaF: 1417 },
+];
+
+export const MAKEUP_STYLES: { label: string; value: MakeupStyle; faM: number; faF: number }[] = [
+  { label: 'None', value: 'none', faM: 0, faF: 0 },
+  { label: 'Soft Liner', value: 'softLiner', faM: 9098, faF: 9098 },
+  { label: 'Glam Lips', value: 'glamLips', faM: 9099, faF: 9099 },
+  { label: 'Bold Shadow', value: 'boldShadow', faM: 9100, faF: 9100 },
+];
+
+export const EARRING_STYLES: { label: string; value: EarringStyle; heM: number; heF: number }[] = [
+  { label: 'None', value: 'none', heM: 0, heF: 0 },
+  { label: 'Studs', value: 'studs', heM: 3608, heF: 3608 },
+  { label: 'Hoops', value: 'hoops', heM: 3613, heF: 3613 },
+  { label: 'Star Drops', value: 'starDrops', heM: 3621, heF: 3621 },
+];
+
+export const NECKLACE_STYLES: { label: string; value: NecklaceStyle; caM: number; caF: number }[] = [
+  { label: 'None', value: 'none', caM: 0, caF: 0 },
+  { label: 'Chain', value: 'chain', caM: 1803, caF: 1803 },
+  { label: 'Choker', value: 'choker', caM: 1806, caF: 1806 },
+  { label: 'Gem Pendant', value: 'gemPendant', caM: 1812, caF: 1812 },
+];
+
+export const PIERCING_STYLES: { label: string; value: PiercingStyle; waM: number; waF: number }[] = [
+  { label: 'None', value: 'none', waM: 0, waF: 0 },
+  { label: 'Nose Ring', value: 'noseRing', waM: 2001, waF: 2001 },
+  { label: 'Lip Ring', value: 'lipRing', waM: 2002, waF: 2002 },
+  { label: 'Brow Ring', value: 'browRing', waM: 2003, waF: 2003 },
+];
+
 export function getShirtChSet(style: ShirtStyle, gender: Gender): number {
   const row = SHIRT_STYLES.find((s) => s.value === style);
   if (!row) return gender === 'male' ? 3030 : 3033;
@@ -416,4 +504,34 @@ export function getShoeStyleLabel(style: ShoeStyle, gender: Gender): string {
   const row = SHOE_LABEL_BY_GENDER[style];
   if (!row) return style;
   return gender === 'male' ? row.male : row.female;
+}
+
+export function getEyewearSet(style: EyewearStyle, gender: Gender): number {
+  const row = EYEWEAR_STYLES.find((s) => s.value === style);
+  if (!row || style === 'none') return 0;
+  return gender === 'male' ? row.eaM : row.eaF;
+}
+
+export function getMakeupSet(style: MakeupStyle, gender: Gender): number {
+  const row = MAKEUP_STYLES.find((s) => s.value === style);
+  if (!row || style === 'none') return 0;
+  return gender === 'male' ? row.faM : row.faF;
+}
+
+export function getEarringSet(style: EarringStyle, gender: Gender): number {
+  const row = EARRING_STYLES.find((s) => s.value === style);
+  if (!row || style === 'none') return 0;
+  return gender === 'male' ? row.heM : row.heF;
+}
+
+export function getNecklaceSet(style: NecklaceStyle, gender: Gender): number {
+  const row = NECKLACE_STYLES.find((s) => s.value === style);
+  if (!row || style === 'none') return 0;
+  return gender === 'male' ? row.caM : row.caF;
+}
+
+export function getPiercingSet(style: PiercingStyle, gender: Gender): number {
+  const row = PIERCING_STYLES.find((s) => s.value === style);
+  if (!row || style === 'none') return 0;
+  return gender === 'male' ? row.waM : row.waF;
 }

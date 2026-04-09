@@ -561,6 +561,7 @@ export const getFollowers = async (req: AuthRequest, res: Response): Promise<voi
       avatar: normalizeUrl(user.avatar),
       avatarCharacter: user.avatarCharacter,
       avatarBackgroundColor: user.avatarBackgroundColor,
+      pixelCharacter: user.pixelCharacter,
       bio: user.bio,
       createdAt: user.createdAt || new Date(),
       // These list endpoints don't currently include counts / stats for performance reasons
@@ -616,6 +617,7 @@ export const getFollowing = async (req: AuthRequest, res: Response): Promise<voi
       avatar: normalizeUrl(f.avatar),
       avatarCharacter: f.avatarCharacter,
       avatarBackgroundColor: f.avatarBackgroundColor,
+      pixelCharacter: f.pixelCharacter,
       bio: f.bio,
       createdAt: f.createdAt || new Date(),
     }));
@@ -796,6 +798,7 @@ export const getBlockedUsers = async (req: AuthRequest, res: Response): Promise<
       avatar: user.avatar,
       avatarCharacter: user.avatarCharacter,
       avatarBackgroundColor: user.avatarBackgroundColor,
+      pixelCharacter: user.pixelCharacter,
     }));
 
     res.json({

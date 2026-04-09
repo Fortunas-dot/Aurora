@@ -404,9 +404,14 @@ const broadcastOnlineStatus = (userId: string, isOnline: boolean): void => {
 const updateConversationList = (userId: string, otherUserId: string, message: any): void => {
   const userWs = activeChatConnections.get(userId);
   if (userWs && userWs.readyState === 1) {
-    // Normalize avatar URL
-    const avatar = message.sender.avatar || message.receiver.avatar;
-    const normalizedAvatar = normalizeUrl(avatar);
+    // Build conversation user from the "other" side of this conversation.
+    const senderId = message.sender?._id?.toString?.() ?? message.sender?.toString?.();
+    const receiverId = message.receiver?._id?.toString?.() ?? message.receiver?.toString?.();
+    const otherUser =
+      senderId === otherUserId ? message.sender :
+      receiverId === otherUserId ? message.receiver :
+      (message.sender || message.receiver);
+    const normalizedAvatar = normalizeUrl(otherUser?.avatar);
     
     // Normalize attachments if they exist
     let normalizedAttachments = undefined;
@@ -422,9 +427,12 @@ const updateConversationList = (userId: string, otherUserId: string, message: an
       conversation: {
         user: {
           _id: otherUserId,
-          username: message.sender.username || message.receiver.username,
-          displayName: message.sender.displayName || message.receiver.displayName,
+          username: otherUser?.username || '',
+          displayName: otherUser?.displayName || '',
           avatar: normalizedAvatar,
+          avatarCharacter: otherUser?.avatarCharacter || null,
+          avatarBackgroundColor: otherUser?.avatarBackgroundColor || null,
+          pixelCharacter: otherUser?.pixelCharacter || null,
         },
         lastMessage: {
           _id: message._id,

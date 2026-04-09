@@ -20,6 +20,11 @@ import {
   ShirtStyle,
   PantsStyle,
   ShoeStyle,
+  EyewearStyle,
+  MakeupStyle,
+  EarringStyle,
+  NecklaceStyle,
+  PiercingStyle,
   normalizePixelCharacterConfig,
   GENDER_OPTIONS,
   SKIN_COLORS,
@@ -36,11 +41,18 @@ import {
   SHIRT_COLORS,
   PANTS_COLORS,
   SHOE_COLORS,
+  EYEWEAR_STYLES,
+  MAKEUP_STYLES,
+  EARRING_STYLES,
+  NECKLACE_STYLES,
+  PIERCING_STYLES,
+  ACCESSORY_COLORS,
+  MAKEUP_COLORS,
 } from '../src/constants/pixelCharacterOptions';
 import { useAuthStore } from '../src/store/authStore';
 import { userService } from '../src/services/user.service';
 
-type Tab = 'body' | 'hair' | 'outfit';
+type Tab = 'body' | 'hair' | 'outfit' | 'accessories';
 
 export default function PixelAvatarScreen() {
   const router = useRouter();
@@ -131,7 +143,7 @@ export default function PixelAvatarScreen() {
         </View>
 
         <View style={styles.tabs}>
-          {(['body', 'hair', 'outfit'] as Tab[]).map(tab => (
+          {(['body', 'hair', 'outfit', 'accessories'] as Tab[]).map(tab => (
             <Pressable
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -348,6 +360,189 @@ export default function PixelAvatarScreen() {
                 options={SHOE_COLORS}
                 selected={config.shoeColor}
                 onSelect={value => update({ shoeColor: value })}
+              />
+            </>
+          )}
+
+          {activeTab === 'accessories' && (
+            <>
+              <SectionTitle title="Eyewear" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {EYEWEAR_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.eyewearStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ eyewearStyle: s.value as EyewearStyle })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, eyewearStyle: s.value as EyewearStyle }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.eyewearStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <SectionTitle title="Make-up" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {MAKEUP_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.makeupStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ makeupStyle: s.value as MakeupStyle })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, makeupStyle: s.value as MakeupStyle }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.makeupStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <SectionTitle title="Earrings" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {EARRING_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.earringStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ earringStyle: s.value as EarringStyle })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, earringStyle: s.value as EarringStyle }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.earringStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <SectionTitle title="Necklaces" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {NECKLACE_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.necklaceStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ necklaceStyle: s.value as NecklaceStyle })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, necklaceStyle: s.value as NecklaceStyle }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.necklaceStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <SectionTitle title="Piercings" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stylePreviewScroll}
+                nestedScrollEnabled
+              >
+                {PIERCING_STYLES.map(s => (
+                  <Pressable
+                    key={s.value}
+                    style={[
+                      styles.outfitStyleCard,
+                      config.piercingStyle === s.value && styles.outfitStyleCardActive,
+                    ]}
+                    onPress={() => update({ piercingStyle: s.value as PiercingStyle })}
+                  >
+                    <PixelCharacter
+                      config={{ ...config, piercingStyle: s.value as PiercingStyle }}
+                      size={56}
+                    />
+                    <Text
+                      style={[
+                        styles.outfitStyleLabel,
+                        config.piercingStyle === s.value && styles.outfitStyleLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <SectionTitle title="Accessory color" />
+              <ColorRow
+                options={ACCESSORY_COLORS}
+                selected={config.accessoryColor}
+                onSelect={value => update({ accessoryColor: value })}
+              />
+
+              <SectionTitle title="Make-up color" />
+              <ColorRow
+                options={MAKEUP_COLORS}
+                selected={config.makeupColor}
+                onSelect={value => update({ makeupColor: value })}
               />
             </>
           )}
