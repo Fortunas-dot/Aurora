@@ -18,6 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { userService } from '../../src/services/user.service';
 import { groupService } from '../../src/services/group.service';
 import { getUsernameColor } from '../../src/utils/usernameColors';
+import Constants from 'expo-constants';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -409,7 +410,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* Version */}
-        <Text style={[styles.version, { color: colors.textMuted }]}>Aurora v1.0.0</Text>
+        <Text style={[styles.version, { color: colors.textMuted }]}>
+          Aurora v{Constants.expoConfig?.version ?? '1.0.7'}
+        </Text>
       </ScrollView>
     </LinearGradient>
   );

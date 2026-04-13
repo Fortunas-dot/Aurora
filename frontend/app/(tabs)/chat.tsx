@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { useRequirePremium } from '../../src/hooks/usePremium';
 import { messageService, Conversation } from '../../src/services/message.service';
+import { userService } from '../../src/services/user.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
 import { getUsernameColor } from '../../src/utils/usernameColors';
@@ -140,6 +141,10 @@ export default function ChatScreen() {
   const { requirePremium } = useRequirePremium();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  /** Users the current user has blocked — used to hide threads from WebSocket updates before the next full reload. */
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+  const blockedUserIdsRef = useRef<Set<string>>(new Set());
+  blockedUserIdsRef.current = blockedUserIds;
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,11 +154,21 @@ export default function ChatScreen() {
 
     setIsLoading(true);
     try {
-      const response = await messageService.getConversations();
-      if (response.success && response.data) {
-        setConversations(response.data);
+      const [convResponse, blockedResponse] = await Promise.all([
+        messageService.getConversations(),
+        userService.getBlockedUsers(),
+      ]);
+
+      if (blockedResponse.success && blockedResponse.data) {
+        setBlockedUserIds(new Set(blockedResponse.data.map((u) => u._id)));
       } else {
-        console.error('Error loading conversations:', response.message);
+        setBlockedUserIds(new Set());
+      }
+
+      if (convResponse.success && convResponse.data) {
+        setConversations(convResponse.data);
+      } else {
+        console.error('Error loading conversations:', convResponse.message);
         setConversations([]);
       }
     } catch (error) {
@@ -194,6 +209,10 @@ export default function ChatScreen() {
     });
 
     const unsubConversationUpdated = chatWebSocketService.on('conversation_updated', (conversation: any) => {
+      const otherId = conversation?.user?._id;
+      if (otherId && blockedUserIdsRef.current.has(otherId)) {
+        return;
+      }
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.user._id === conversation.user._id);
         if (index !== -1) {
@@ -231,7 +250,12 @@ export default function ChatScreen() {
     setIsRefreshing(false);
   }, [loadConversations]);
 
-  const filteredConversations = conversations.filter((conv) =>
+  const conversationsWithoutBlocked = useMemo(
+    () => conversations.filter((conv) => !blockedUserIds.has(conv.user._id)),
+    [conversations, blockedUserIds]
+  );
+
+  const filteredConversations = conversationsWithoutBlocked.filter((conv) =>
     conv.user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.user.username.toLowerCase().includes(searchQuery.toLowerCase())
   );

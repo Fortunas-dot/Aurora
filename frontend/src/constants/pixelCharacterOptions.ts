@@ -187,8 +187,8 @@ export function normalizePixelCharacterConfig(
 }
 
 export const GENDER_OPTIONS: { label: string; value: Gender; emoji: string }[] = [
-  { label: 'Male', value: 'male', emoji: '♂' },
-  { label: 'Female', value: 'female', emoji: '♀' },
+  { label: 'Body X', value: 'male', emoji: '' },
+  { label: 'Body Y', value: 'female', emoji: '' },
 ];
 
 export const SKIN_COLORS = [

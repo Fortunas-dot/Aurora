@@ -60,6 +60,18 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
   try {
     const userId = new mongoose.Types.ObjectId(req.userId);
 
+    const [currentUser, usersWhoBlockedMe] = await Promise.all([
+      User.findById(userId).select('blockedUsers').lean(),
+      User.find({ blockedUsers: userId }).select('_id').lean(),
+    ]);
+
+    const blockedByMe = new Set(
+      (currentUser?.blockedUsers || []).map((id: any) => id.toString())
+    );
+    const blockedMe = new Set(
+      (usersWhoBlockedMe || []).map((u: any) => u._id.toString())
+    );
+
     // Get latest message from each conversation
     const conversations = await Message.aggregate([
       {
@@ -133,25 +145,31 @@ export const getConversations = async (req: AuthRequest, res: Response): Promise
       },
     ]);
 
-    // Normalize URLs in conversations
-    const normalizedConversations = conversations.map((conv: any) => {
-      const normalized = { ...conv };
-      
-      // Normalize user avatar
-      if (normalized.user?.avatar) {
-        normalized.user.avatar = normalizeUrl(normalized.user.avatar);
-      }
-      
-      // Normalize attachments in lastMessage
-      if (normalized.lastMessage?.attachments && Array.isArray(normalized.lastMessage.attachments)) {
-        normalized.lastMessage.attachments = normalized.lastMessage.attachments.map((attachment: any) => ({
-          ...attachment,
-          url: normalizeUrl(attachment.url) || attachment.url,
-        }));
-      }
-      
-      return normalized;
-    });
+    // Normalize URLs in conversations; omit anyone in a block relationship (either direction)
+    const normalizedConversations = conversations
+      .map((conv: any) => {
+        const normalized = { ...conv };
+
+        // Normalize user avatar
+        if (normalized.user?.avatar) {
+          normalized.user.avatar = normalizeUrl(normalized.user.avatar);
+        }
+
+        // Normalize attachments in lastMessage
+        if (normalized.lastMessage?.attachments && Array.isArray(normalized.lastMessage.attachments)) {
+          normalized.lastMessage.attachments = normalized.lastMessage.attachments.map((attachment: any) => ({
+            ...attachment,
+            url: normalizeUrl(attachment.url) || attachment.url,
+          }));
+        }
+
+        return normalized;
+      })
+      .filter((conv: any) => {
+        const otherId = conv.user?._id != null ? String(conv.user._id) : '';
+        if (!otherId) return false;
+        return !blockedByMe.has(otherId) && !blockedMe.has(otherId);
+      });
 
     res.json({
       success: true,

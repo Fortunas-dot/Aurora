@@ -12,6 +12,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 import { messageService } from '../../src/services/message.service';
+import { userService } from '../../src/services/user.service';
 import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { useCallback } from 'react';
 
@@ -59,9 +60,17 @@ export default function TabsLayout() {
     }
     
     try {
-      const response = await messageService.getConversations();
-      if (response.success && response.data) {
-        const total = response.data.reduce((sum: number, conv: any) => sum + (conv.unreadCount || 0), 0);
+      const [convResponse, blockedResponse] = await Promise.all([
+        messageService.getConversations(),
+        userService.getBlockedUsers(),
+      ]);
+      if (convResponse.success && convResponse.data) {
+        const blockedIds = new Set(
+          (blockedResponse.success && blockedResponse.data ? blockedResponse.data : []).map((u) => u._id)
+        );
+        const total = convResponse.data
+          .filter((conv: any) => !blockedIds.has(conv.user?._id))
+          .reduce((sum: number, conv: any) => sum + (conv.unreadCount || 0), 0);
         setTotalUnreadMessages(total);
       }
     } catch (error) {
