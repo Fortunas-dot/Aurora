@@ -60,4 +60,35 @@ export const settingsScreensEn = {
   accessibility_language: 'Language: {{label}}. Double tap to change.',
   blocked_users_title: 'Blocked Users',
   blocked_users_empty: 'No blocked users',
+
+  settings_login_styles: 'Other sign-in layouts',
+  settings_login_styles_menu_sub:
+    '{{layout}} — Aurora Glass, Cipher Frame, and more. Tap to preview and switch.',
+  settings_login_styles_sub:
+    'Coral Wave is the default sign-in screen. Open previews here to switch to Aurora Glass, Cipher Frame, or any other layout.',
+  login_style_variant_aurora_glass: 'Aurora Glass',
+  login_style_desc_aurora_glass: 'Voice orb hero with a centered glass card — the original look.',
+  login_style_variant_prism_split: 'Prism Depth',
+  login_style_desc_prism_split: 'Layered panes, diagonal color columns, and a bold typographic stack.',
+  login_style_variant_nocturne_bloom: 'Nocturne Bloom',
+  login_style_desc_nocturne_bloom: 'Deep space gradient with softly drifting light orbs behind the form.',
+  login_style_variant_horizon_sweep: 'Horizon Sweep',
+  login_style_desc_horizon_sweep: 'A rich color horizon on top and a tucked sheet for your credentials.',
+  login_style_variant_cipher_frame: 'Cipher Frame',
+  login_style_desc_cipher_frame: 'Tactical grid, framed corners, and a calm radar-style pulse.',
+  login_style_variant_summit_line: 'Summit Line',
+  login_style_desc_summit_line:
+    'Photo-like dusk sky, mountain silhouette, teal underlines, and a circular arrow sign-in — inspired by minimalist outdoor auth screens.',
+  login_summit_title: 'LOGIN',
+  login_summit_new_account: 'NEW ACCOUNT',
+  login_summit_forgot: 'FORGOT PASSWORD?',
+  login_style_variant_coral_wave: 'Coral Wave',
+  login_style_desc_coral_wave:
+    'Coral hero (your image can replace the gradient), white wave sheet, underline title, and soft minimal fields.',
+  login_style_preview_cta: 'Full-screen preview',
+  login_style_current_badge: 'Active',
+  login_style_preview_label: 'Previewing',
+  login_style_use: 'Use',
+  login_style_applied_title: 'Saved',
+  login_style_applied_body: 'This layout will be used the next time you open the login screen.',
 } as const;

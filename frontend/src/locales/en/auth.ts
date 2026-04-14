@@ -1,4 +1,7 @@
 export const authEn = {
+  sign_in_heading: 'Sign in',
+  remember_me: 'Remember me',
+  sign_up: 'Sign up',
   login_welcome_back: 'Welcome Back',
   login_subtitle: 'Log in to continue with Aurora',
   email_label: 'Email',

@@ -22,6 +22,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/the
 import { useTheme } from '../src/hooks/useTheme';
 import { useTranslation } from '../src/hooks/useTranslation';
 import { useSettingsStore, NotificationPreferences } from '../src/store/settingsStore';
+import { LOGIN_VARIANT_TITLE_KEY } from '../src/constants/loginScreenVariant';
 import { useAuthStore } from '../src/store/authStore';
 import { useConsentStore } from '../src/store/consentStore';
 import { userService, UserProfile } from '../src/services/user.service';
@@ -111,6 +112,7 @@ export default function SettingsScreen() {
     setNotificationPreference,
     loadSettings,
     language,
+    loginScreenVariant,
   } = useSettingsStore();
 
   const { t } = useTranslation();
@@ -315,6 +317,15 @@ export default function SettingsScreen() {
               title={t('view_onboarding')}
               subtitle={t('view_onboarding_sub')}
               onPress={() => router.push('/onboarding')}
+            />
+            <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
+            <MenuItem
+              icon="color-wand-outline"
+              title={t('settings_login_styles')}
+              subtitle={t('settings_login_styles_menu_sub', {
+                layout: t(LOGIN_VARIANT_TITLE_KEY[loginScreenVariant]),
+              })}
+              onPress={() => router.push('/login-style-showcase')}
             />
             {/*
             <View style={[styles.menuDivider, { backgroundColor: colors.glass.border }]} />
