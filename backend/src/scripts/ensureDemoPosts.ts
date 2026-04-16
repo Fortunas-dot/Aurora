@@ -171,20 +171,241 @@ const DEMO_POSTS: DemoPostSeed[] = [
     ],
     targetCommentCount: 4,
   },
+  {
+    title: 'Panic at work and I still feel shaky hours later',
+    content:
+      'Something small went wrong in a meeting and my body went straight into panic mode. I stepped out, did box breathing, and came back.\n\nI am safe now but my legs still feel weird. Does anyone else get this delayed physical hangover?',
+    postType: 'post',
+    tags: ['anxiety', 'panic', 'work', 'grounding'],
+    authorUsername: 'sophia_zen',
+    dayOffset: 0,
+    hour: 9,
+    minute: 47,
+    comments: [
+      { text: 'Yes. Sometimes the adrenaline outlasts the situation by hours.', authorUsername: 'sarah_wellness' },
+      { text: 'Cold water on wrists helps me signal safety to my body.', authorUsername: 'mike_mindful' },
+      { text: 'That delayed somatic response is common after a big stress spike. Gentle movement and hydration can help it metabolize.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Therapist cancelled last minute and I spiralled',
+    content:
+      'I know cancellations happen, but I had been holding things in all week for that session. I ended up doom-scrolling and feeling pathetic for being so affected.\n\nHow do you cope when the one appointment you counted on disappears?',
+    postType: 'question',
+    tags: ['therapy', 'cancellation', 'question', 'support'],
+    authorUsername: 'david_strong',
+    dayOffset: 1,
+    hour: 19,
+    minute: 12,
+    comments: [
+      { text: 'I keep a backup list: a walk, a voice note to myself, or a hot shower.', authorUsername: 'emma_hopeful' },
+      { text: 'You are not pathetic. Disruption hits harder when your nervous system was already full.', authorUsername: 'lisa_healing' },
+      { text: 'I journal the stuff I was going to say. It is not the same but it helps.', authorUsername: 'sarah_wellness' },
+      { text: 'Sometimes I message my therapist a short summary anyway. Not everyone allows that, but worth asking.', authorUsername: 'alex_recovery' },
+    ],
+    targetCommentCount: 4,
+  },
+  {
+    title: 'Another 3am night and I am trying not to catastrophize',
+    content:
+      'I know sleep deprivation makes everything feel worse. I am lying here listing every mistake I have ever made like it is a podcast I cannot unsubscribe from.\n\nIf you are awake too, you are not alone.',
+    postType: 'post',
+    tags: ['insomnia', 'anxiety', 'night', 'rumination'],
+    authorUsername: 'emma_hopeful',
+    dayOffset: 0,
+    hour: 3,
+    minute: 18,
+    comments: [
+      { text: 'I am awake too. Reading this instead of spiralling alone helps.', authorUsername: 'james_calm' },
+      { text: 'The 3am brain is not a reliable narrator. Morning-you will see things differently.', authorUsername: 'mike_mindful' },
+      { text: 'Try a boring audio book at low volume. It interrupts the spiral for me.', authorUsername: 'sophia_zen' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Six months without self-harm. Quietly proud.',
+    content:
+      'I did not post milestones before because I was scared of jinxing it. Today I bought myself flowers and wrote down what helped: therapy, boundaries, and boring routines I used to hate.\n\nIf you are on day one, I see you. It can get lighter.',
+    postType: 'story',
+    tags: ['recovery', 'self-harm', 'hope', 'progress'],
+    authorUsername: 'alex_recovery',
+    dayOffset: 3,
+    hour: 15,
+    minute: 6,
+    comments: [
+      { text: 'This made me tear up. Congratulations.', authorUsername: 'sarah_wellness' },
+      { text: 'So proud of you. Milestones matter even when they feel quiet.', authorUsername: 'emma_hopeful' },
+      { text: 'Thank you for sharing. I needed this today.', authorUsername: 'david_strong' },
+      { text: 'Beautiful work. Recovery is nonlinear and you are building real skills.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 4,
+  },
+  {
+    title: 'My partner tries but my sensory overload confuses them',
+    content:
+      'Noise and bright lights can shut me down fast. They think I am angry when I am just overloaded.\n\nHow do you explain sensory needs without sounding like you are blaming them?',
+    postType: 'question',
+    tags: ['adhd', 'relationships', 'sensory', 'question'],
+    authorUsername: 'james_calm',
+    dayOffset: 2,
+    hour: 12,
+    minute: 53,
+    comments: [
+      { text: 'I use a traffic light code: green, yellow, red. Less explaining in the moment.', authorUsername: 'sophia_zen' },
+      { text: 'I literally say "my brain is full" and ask for 10 minutes in a dark room.', authorUsername: 'emma_hopeful' },
+      { text: 'Framing it as capacity, not mood, helped my partner understand.', authorUsername: 'mike_mindful' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Gratitude lists felt fake until I made them tiny',
+    content:
+      'I used to write big things and feel nothing. Now I write embarrassingly small wins: warm socks, water, a text back.\n\nIt still feels silly sometimes, but it shifts something.',
+    postType: 'post',
+    tags: ['gratitude', 'depression', 'coping', 'small-wins'],
+    authorUsername: 'sarah_wellness',
+    dayOffset: 4,
+    hour: 8,
+    minute: 24,
+    comments: [
+      { text: 'Tiny is valid. Your brain learns safety in small doses.', authorUsername: 'lisa_healing' },
+      { text: 'Same shift for me when I stopped trying to force big emotions.', authorUsername: 'david_strong' },
+      { text: 'I write one line on a sticky note. That is enough.', authorUsername: 'alex_recovery' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Weighted blanket: worth it or hype?',
+    content:
+      'I am debating spending money on one. Sleep is rough and I like pressure when I am anxious.\n\nIf you use one, what weight did you pick and did it actually help?',
+    postType: 'question',
+    tags: ['sleep', 'anxiety', 'question', 'tools'],
+    authorUsername: 'mike_mindful',
+    dayOffset: 1,
+    hour: 22,
+    minute: 41,
+    comments: [
+      { text: 'Mine is 10% of body weight roughly. Game changer for me.', authorUsername: 'sophia_zen' },
+      { text: 'Try borrowing first if you can. I loved it, my partner hated it.', authorUsername: 'james_calm' },
+      { text: 'Helped my restless legs more than anything else.', authorUsername: 'emma_hopeful' },
+      { text: 'If cost is a barrier, a heavy folded duvet can be a cheap experiment.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 4,
+  },
+  {
+    title: 'First group therapy tomorrow and I am terrified',
+    content:
+      'I keep imagining I will say the wrong thing or cry in front of strangers. I want to go but my stomach has been in knots for two days.\n\nAny first-timer tips?',
+    postType: 'question',
+    tags: ['therapy', 'group-therapy', 'anxiety', 'question'],
+    authorUsername: 'emma_hopeful',
+    dayOffset: 0,
+    hour: 20,
+    minute: 3,
+    comments: [
+      { text: 'You can pass and just listen the first time. That is allowed.', authorUsername: 'david_strong' },
+      { text: 'I brought a fidget ring so my hands had a job.', authorUsername: 'james_calm' },
+      { text: 'Most people are nervous too. Facilitators expect that.', authorUsername: 'lisa_healing' },
+      { text: 'Arrive 10 minutes early so you are not rushing. Small thing, big difference.', authorUsername: 'sarah_wellness' },
+    ],
+    targetCommentCount: 4,
+  },
+  {
+    title: 'Burnout recovery: I went for a walk instead of clearing my inbox',
+    content:
+      'My brain screams that email is urgent. Today I walked 20 minutes first and somehow the world did not end.\n\nStill behind, still anxious, but I am trying to treat myself like a person, not a machine.',
+    postType: 'post',
+    tags: ['burnout', 'boundaries', 'self-care', 'work'],
+    authorUsername: 'david_strong',
+    dayOffset: 2,
+    hour: 7,
+    minute: 38,
+    comments: [
+      { text: 'The inbox will always refill. Your body will not.', authorUsername: 'sophia_zen' },
+      { text: 'Proud of you. That choice is harder than it sounds.', authorUsername: 'mike_mindful' },
+      { text: 'Micro breaks add up. You are rewiring a habit.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Climate anxiety has been crushing me lately',
+    content:
+      'I doom-read news and then feel guilty for feeling bad when other people have it worse. It is a loop.\n\nHow do you stay informed without melting down every day?',
+    postType: 'question',
+    tags: ['anxiety', 'climate', 'news', 'question'],
+    authorUsername: 'sarah_wellness',
+    dayOffset: 4,
+    hour: 17,
+    minute: 29,
+    comments: [
+      { text: 'Time-box news to 15 minutes. Timer on phone.', authorUsername: 'james_calm' },
+      { text: 'Action helps me: volunteering locally channels the fear.', authorUsername: 'alex_recovery' },
+      { text: 'Your distress is valid even if others have different struggles.', authorUsername: 'emma_hopeful' },
+      { text: 'Pair information intake with grounding after. Walk, shower, music.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 4,
+  },
+  {
+    title: 'I said no to a friend and the guilt is eating me',
+    content:
+      'They asked for another big favor and I finally said I could not. They said it was fine but I keep replaying their tone.\n\nWhy does protecting my energy feel like I am a bad person?',
+    postType: 'post',
+    tags: ['boundaries', 'friendship', 'guilt', 'people-pleasing'],
+    authorUsername: 'alex_recovery',
+    dayOffset: 3,
+    hour: 11,
+    minute: 7,
+    comments: [
+      { text: 'Their tone might be awkwardness, not punishment.', authorUsername: 'david_strong' },
+      { text: 'No is a full sentence. You did nothing wrong.', authorUsername: 'sarah_wellness' },
+      { text: 'Guilt after boundaries is common while you are retraining old patterns.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 3,
+  },
+  {
+    title: 'Microdosing mindfulness: 60 seconds actually counted today',
+    content:
+      'I cannot do long meditations yet. I set a timer for one minute of breathing while my kettle boiled and I noticed my shoulders drop.\n\nSmall, but I will take it.',
+    postType: 'story',
+    tags: ['mindfulness', 'meditation', 'small-wins', 'anxiety'],
+    authorUsername: 'sophia_zen',
+    dayOffset: 1,
+    hour: 6,
+    minute: 55,
+    comments: [
+      { text: 'One minute done beats twenty minutes avoided.', authorUsername: 'james_calm' },
+      { text: 'I stack habits like this too. It builds trust with yourself.', authorUsername: 'mike_mindful' },
+      { text: 'Short practices done consistently change baseline arousal over time.', authorUsername: 'lisa_healing' },
+    ],
+    targetCommentCount: 3,
+  },
 ];
 
 const getPostTimestamp = (seed: DemoPostSeed): Date => {
   const now = new Date();
   const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), seed.hour, seed.minute, 0, 0);
   ts.setDate(ts.getDate() - seed.dayOffset);
+  // Never stamp demo content in the future (e.g. "today" at 22:00 while the server starts at 09:00).
+  if (ts.getTime() > now.getTime()) {
+    const bump = (seed.hour * 37 + seed.minute + seed.dayOffset * 91) % 180;
+    ts.setTime(now.getTime() - (5 + bump) * 60 * 1000);
+  }
   return ts;
 };
 
 /** Comments appear after the post, staggered by a few minutes each. */
 const getCommentTimestamp = (seed: DemoPostSeed, commentIndex: number): Date => {
-  const base = getPostTimestamp(seed).getTime();
+  const now = new Date();
+  const postTime = getPostTimestamp(seed).getTime();
   const offsetMinutes = 5 + commentIndex * 9 + (seed.dayOffset * 3 + seed.minute) % 7;
-  return new Date(base + offsetMinutes * 60 * 1000);
+  let t = postTime + offsetMinutes * 60 * 1000;
+  t = Math.min(t, now.getTime());
+  const minAfterPost = postTime + 60 * 1000;
+  if (t < minAfterPost) t = minAfterPost;
+  if (t > now.getTime()) t = now.getTime() - 30 * 1000;
+  if (t <= postTime) t = postTime + 60 * 1000;
+  return new Date(t);
 };
 
 export const ensureDemoPostsAndComments = async (): Promise<void> => {
