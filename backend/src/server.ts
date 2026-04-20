@@ -265,6 +265,13 @@ app.use('/uploads', async (req, res, next) => {
 });
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
+// Google AdMob app-ads.txt — must be served at the root of the developer
+// website listed on Google Play / the App Store.
+app.get('/app-ads.txt', (_req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.join(__dirname, '../public/app-ads.txt'));
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
