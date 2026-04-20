@@ -421,20 +421,29 @@ export default function RootLayout() {
         timestamp: new Date().toISOString(),
       });
 
-      // Identify user in RevenueCat and send basic subscriber attributes
-      revenueCatService.identifyUser(user._id, {
-        email: user.email,
-        phoneNumber: (user as any).phoneNumber,
-        username: user.username,
-        displayName: user.displayName,
-      }).catch((error) => {
-        console.warn('RevenueCat identify user failed:', error);
-      });
+      // Identify user in RevenueCat FIRST, then check premium status.
+      // If checkPremiumStatus() runs before identifyUser() completes, RevenueCat
+      // returns null customer info and we flip hasCheckedPremium=true with
+      // isPremium=false — which causes requirePremium() to wrongly redirect
+      // actual premium users to the paywall on cold start.
+      (async () => {
+        try {
+          await revenueCatService.identifyUser(user._id, {
+            email: user.email,
+            phoneNumber: (user as any).phoneNumber,
+            username: user.username,
+            displayName: user.displayName,
+          });
+        } catch (error) {
+          console.warn('RevenueCat identify user failed:', error);
+        }
 
-      // Check premium status
-      checkPremiumStatus().catch((error) => {
-        console.warn('Failed to check premium status:', error);
-      });
+        try {
+          await checkPremiumStatus();
+        } catch (error) {
+          console.warn('Failed to check premium status:', error);
+        }
+      })();
     } else if (!isAuthenticated) {
       // Reset RevenueCat user on logout
       revenueCatService.resetUser().catch((error) => {
