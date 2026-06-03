@@ -6,6 +6,7 @@ import {
   getMe,
   logout,
   facebookAuth,
+  googleAuth,
   checkUsername,
   requestPasswordReset,
   resetPassword,
@@ -41,6 +42,7 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.post('/facebook', facebookAuth);
+router.post('/google', googleAuth);
 
 // Email verification
 router.post('/verify-email', verifyEmail);

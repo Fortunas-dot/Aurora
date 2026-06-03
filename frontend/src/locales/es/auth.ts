@@ -10,6 +10,9 @@ export const authEs = {
   register_link: 'Registrarse',
   email_required: 'El correo electrónico es obligatorio',
   password_required: 'La contraseña es obligatoria',
+  or_continue_with: 'o continúa con',
+  continue_with_google: 'Continuar con Google',
+  continue_with_facebook: 'Continuar con Facebook',
 
   register_title: 'Crear cuenta',
   register_subtitle: 'Únete a la comunidad Aurora',

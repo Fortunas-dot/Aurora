@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../../constants/theme';
 import type { ShellProps } from './shellTypes';
 import loginCoralHero from '../../../../assets/images/login-coral-hero.png';
+import { SocialAuthRow } from './SocialAuthRow';
 
 /** Hero: `frontend/assets/images/login-coral-hero.png` — swap file + import to change. */
 export const CORAL_LOGIN_HERO_IMAGE: ImageSourcePropType = loginCoralHero;
@@ -257,6 +258,8 @@ export function ShellCoralWave(p: ShellProps) {
             <Text style={styles.loginBtnText}>{p.t('log_in')}</Text>
           )}
         </Pressable>
+
+        <SocialAuthRow textColor={text} mutedColor={textMuted} dividerColor={glass.border} />
 
         <View style={styles.footer}>
           <Text style={[styles.footerMuted, { color: textSecondary }]}>{p.t('no_account')}</Text>

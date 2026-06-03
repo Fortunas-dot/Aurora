@@ -5,7 +5,7 @@ module.exports = {
     name: 'Aurora',
     slug: 'aurora',
     owner: 'pawbuddies',
-    version: '1.0.7',
+    version: '1.0.8',
     runtimeVersion: {
       policy: 'appVersion', // Use app version as runtime version
     },
@@ -135,6 +135,17 @@ module.exports = {
         return config;
         })(),
       ],
+      [
+        '@react-native-google-signin/google-signin',
+        {
+          // Reverse-DNS of the iOS OAuth client ID, e.g.
+          //   com.googleusercontent.apps.123456789-abcdefg
+          // Required to receive the OAuth callback URL on iOS.
+          iosUrlScheme:
+            process.env.GOOGLE_IOS_URL_SCHEME ||
+            'com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID',
+        },
+      ],
       require('./plugins/withAndroidLocale'),
       require('./plugins/withAndroidFacebookAutoLog'),
       require('./plugins/withIOSFacebookAppDelegate'),
@@ -176,6 +187,14 @@ module.exports = {
       // App Secret (TTTKAx9Hybui6DPuIEajio326Vk8pgTB) stays on the backend only
       TIKTOK_APP_ID: '6758727961',
       TIKTOK_TIKTOK_APP_ID: '7620071833756237841',
+      // Google Sign-In Web Client ID — passed to GoogleSignin.configure() and used by
+      // the backend to verify the returned ID token. Set GOOGLE_WEB_CLIENT_ID in .env
+      // (or EAS env vars) to the OAuth 2.0 "Web application" client ID from Google
+      // Cloud Console.
+      GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID || null,
+      // iOS-specific OAuth client ID (not always required at runtime — the iOS plugin
+      // uses iosUrlScheme above — but exposing it lets the SDK pick it up directly).
+      GOOGLE_IOS_CLIENT_ID: process.env.GOOGLE_IOS_CLIENT_ID || null,
     },
   },
 };

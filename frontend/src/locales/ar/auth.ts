@@ -10,6 +10,9 @@ export const authAr = {
   register_link: 'إنشاء حساب',
   email_required: 'البريد الإلكتروني مطلوب',
   password_required: 'كلمة المرور مطلوبة',
+  or_continue_with: 'أو تابع عبر',
+  continue_with_google: 'المتابعة بحساب Google',
+  continue_with_facebook: 'المتابعة بحساب Facebook',
 
   register_title: 'إنشاء حساب',
   register_subtitle: 'انضم إلى مجتمع Aurora',

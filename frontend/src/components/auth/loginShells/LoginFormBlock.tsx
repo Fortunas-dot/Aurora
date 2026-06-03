@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard, GlassButton, GlassInput } from '../../common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../../constants/theme';
 import type { LoginShellRenderProps } from './types';
+import { SocialAuthRow } from './SocialAuthRow';
 
 type Props = Pick<
   LoginShellRenderProps,
@@ -73,6 +74,8 @@ export function LoginFormBlock({
       <Pressable style={styles.forgotPassword} onPress={() => router.push('/forgot-password')} hitSlop={8}>
         <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
       </Pressable>
+
+      <SocialAuthRow />
     </GlassCard>
   );
 }

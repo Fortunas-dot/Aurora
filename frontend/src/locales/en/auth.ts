@@ -13,6 +13,9 @@ export const authEn = {
   register_link: 'Register',
   email_required: 'Email is required',
   password_required: 'Password is required',
+  or_continue_with: 'or continue with',
+  continue_with_google: 'Continue with Google',
+  continue_with_facebook: 'Continue with Facebook',
 
   register_title: 'Create Account',
   register_subtitle: 'Join the Aurora community',

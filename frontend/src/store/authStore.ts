@@ -71,6 +71,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, username: string, displayName?: string) => Promise<boolean>;
   loginWithFacebook: () => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -240,8 +241,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithFacebook: async () => {
-    set({ isLoading: true, error: null });
-    
+    set({ authSubmitting: true, error: null });
+
     try {
       // Import Facebook SDK dynamically to avoid issues if not available
       let FacebookSDK;
@@ -252,34 +253,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const errorMessage = 'Facebook login is not available in Expo Go. Please create a development build to use Facebook login.';
         console.warn(errorMessage, importError);
         set({
-          isLoading: false,
+          authSubmitting: false,
           error: errorMessage,
         });
         return false;
       }
-      
+
       const { LoginManager, AccessToken, GraphRequest, GraphRequestManager } = FacebookSDK;
-      
+
       // Log out any existing session
       LoginManager.logOut();
-      
+
       // Request Facebook login
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-      
+
       if (result.isCancelled) {
         set({
-          isLoading: false,
+          authSubmitting: false,
           error: null,
         });
         return false;
       }
-      
+
       // Get access token
       const data = await AccessToken.getCurrentAccessToken();
-      
+
       if (!data) {
         set({
-          isLoading: false,
+          authSubmitting: false,
           error: 'Failed to get Facebook access token',
         });
         return false;
@@ -338,11 +339,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // Cache user data for persistence
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
-        
+
         set({
           user: user,
           isAuthenticated: true,
-          isLoading: false,
+          authSubmitting: false,
           error: null,
         });
         return true;
@@ -353,9 +354,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           [POSTHOG_PROPERTIES.ERROR_MESSAGE]: response.message || 'Facebook login failed',
           timestamp: new Date().toISOString(),
         });
-        
+
         set({
-          isLoading: false,
+          authSubmitting: false,
           error: response.message || 'Facebook login failed',
         });
         return false;
@@ -368,20 +369,156 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         [POSTHOG_PROPERTIES.ERROR_TYPE]: error.constructor?.name || 'Error',
         timestamp: new Date().toISOString(),
       });
-      
+
       // Check if error is about native module
       if (error?.message?.includes('native module') || error?.message?.includes('doesn\'t exist')) {
         const errorMessage = 'Facebook login requires a development build. Please create a development build to use Facebook login.';
         set({
-          isLoading: false,
+          authSubmitting: false,
           error: errorMessage,
         });
         return false;
       }
-      
+
       set({
-        isLoading: false,
+        authSubmitting: false,
         error: error.message || 'Facebook login failed',
+      });
+      return false;
+    }
+  },
+
+  loginWithGoogle: async () => {
+    set({ authSubmitting: true, error: null });
+
+    try {
+      let GoogleSigninModule;
+      try {
+        GoogleSigninModule = await import('@react-native-google-signin/google-signin');
+      } catch (importError: any) {
+        const errorMessage = 'Google login is not available in Expo Go. Please create a development build to use Google login.';
+        console.warn(errorMessage, importError);
+        set({ authSubmitting: false, error: errorMessage });
+        return false;
+      }
+
+      const { GoogleSignin, statusCodes } = GoogleSigninModule;
+
+      // Read configured web client ID from app.config.js → extra
+      const Constants = (await import('expo-constants')).default;
+      const extra: any = (Constants.expoConfig?.extra as any) || {};
+      const webClientId: string | null = extra.GOOGLE_WEB_CLIENT_ID || null;
+      const iosClientId: string | null = extra.GOOGLE_IOS_CLIENT_ID || null;
+
+      if (!webClientId) {
+        const errorMessage = 'Google login is not configured. Set GOOGLE_WEB_CLIENT_ID in env and rebuild.';
+        console.warn(errorMessage);
+        set({ authSubmitting: false, error: errorMessage });
+        return false;
+      }
+
+      GoogleSignin.configure({
+        webClientId,
+        iosClientId: iosClientId || undefined,
+        offlineAccess: false,
+      });
+
+      try {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      } catch (psError: any) {
+        // Android-only; iOS will skip silently
+      }
+
+      let signInResult: any;
+      try {
+        signInResult = await GoogleSignin.signIn();
+      } catch (signInError: any) {
+        if (signInError?.code === statusCodes?.SIGN_IN_CANCELLED) {
+          set({ authSubmitting: false, error: null });
+          return false;
+        }
+        if (signInError?.code === statusCodes?.IN_PROGRESS) {
+          set({ authSubmitting: false, error: 'Google sign-in already in progress' });
+          return false;
+        }
+        if (signInError?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
+          set({ authSubmitting: false, error: 'Google Play Services not available' });
+          return false;
+        }
+        throw signInError;
+      }
+
+      // The new ("user") shape wraps the user under `data` in v13+; older shape returns it directly.
+      const idToken: string | undefined =
+        signInResult?.data?.idToken || signInResult?.idToken || signInResult?.data?.user?.idToken;
+
+      if (!idToken) {
+        set({ authSubmitting: false, error: 'Failed to get Google ID token' });
+        return false;
+      }
+
+      const response = await authService.loginWithGoogle(idToken);
+
+      if (response.success && response.data) {
+        const user = response.data.user;
+
+        posthogService.identify(user._id, {
+          email: user.email,
+          username: user.username,
+          displayName: user.displayName,
+          last_login: new Date().toISOString(),
+          signup_method: (user as any).googleId ? 'google' : 'email',
+        });
+
+        posthogService.trackEvent(POSTHOG_EVENTS.USER_LOGGED_IN, {
+          [POSTHOG_PROPERTIES.USER_ID]: user._id,
+          login_method: 'google',
+          timestamp: new Date().toISOString(),
+        });
+
+        facebookAnalytics.logLogin('google');
+
+        await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
+
+        set({
+          user: user,
+          isAuthenticated: true,
+          authSubmitting: false,
+          error: null,
+        });
+        return true;
+      }
+
+      posthogService.trackEvent(POSTHOG_EVENTS.LOGIN_FAILED, {
+        login_method: 'google',
+        [POSTHOG_PROPERTIES.ERROR_MESSAGE]: response.message || 'Google login failed',
+        timestamp: new Date().toISOString(),
+      });
+
+      set({
+        authSubmitting: false,
+        error: response.message || 'Google login failed',
+      });
+      return false;
+    } catch (error: any) {
+      posthogService.trackEvent(POSTHOG_EVENTS.LOGIN_FAILED, {
+        login_method: 'google',
+        [POSTHOG_PROPERTIES.ERROR_MESSAGE]: error.message || 'Google login failed',
+        [POSTHOG_PROPERTIES.ERROR_TYPE]: error.constructor?.name || 'Error',
+        timestamp: new Date().toISOString(),
+      });
+
+      if (error?.message?.includes('native module') || error?.message?.includes('doesn\'t exist')) {
+        set({
+          authSubmitting: false,
+          error: 'Google login requires a development build. Please create a development build to use Google login.',
+        });
+        return false;
+      }
+
+      set({
+        authSubmitting: false,
+        error: error.message || 'Google login failed',
       });
       return false;
     }

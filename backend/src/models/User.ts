@@ -39,6 +39,7 @@ export interface IUser extends Document {
   showEmail: boolean;
   phoneNumber?: string; // Phone number in E.164 format (e.g., +31612345678)
   facebookId?: string;
+  googleId?: string;
   isProtected?: boolean; // Protected accounts cannot be deleted (e.g., Apple review account)
   following: Types.ObjectId[];
   savedPosts: Types.ObjectId[];
@@ -183,6 +184,12 @@ const UserSchema = new Schema<IUser>(
       default: false,
     },
     facebookId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    googleId: {
       type: String,
       unique: true,
       sparse: true,
@@ -382,15 +389,15 @@ UserSchema.pre('validate', async function (next) {
       return next();
     }
     // If password is being removed (set to null/undefined) during update,
-    // check if user has facebookId or existing password in DB
+    // check if user has facebookId/googleId or existing password in DB
     if (!this.password) {
       try {
-        // Check if user has facebookId or if password exists in DB
+        // Check if user has a social identity or if password exists in DB
         const UserModel = mongoose.model<IUser>('User');
-        const existingUser = await UserModel.findById(this._id).select('password facebookId');
-        if (existingUser && !existingUser.facebookId && !existingUser.password) {
-          // User doesn't have facebookId and no password in DB - require password
-          this.invalidate('password', 'Password is required for non-Facebook users');
+        const existingUser = await UserModel.findById(this._id).select('password facebookId googleId');
+        if (existingUser && !existingUser.facebookId && !existingUser.googleId && !existingUser.password) {
+          // User doesn't have a social identity and no password in DB - require password
+          this.invalidate('password', 'Password is required for non-social users');
           return next();
         }
       } catch (error: any) {
@@ -400,18 +407,18 @@ UserSchema.pre('validate', async function (next) {
     }
     return next();
   }
-  
-  // For new documents, require password unless Facebook user
-  if (this.isNew && !this.facebookId && !this.password) {
-    this.invalidate('password', 'Password is required for non-Facebook users');
+
+  // For new documents, require password unless authenticating via a social provider
+  if (this.isNew && !this.facebookId && !this.googleId && !this.password) {
+    this.invalidate('password', 'Password is required for non-social users');
   }
-  
+
   next();
 });
 
-// Hash password before saving (skip if password is not modified or user is from Facebook)
+// Hash password before saving (skip if password is not modified or user is from a social provider)
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password') || this.facebookId || !this.password) {
+  if (!this.isModified('password') || this.facebookId || this.googleId || !this.password) {
     return next();
   }
   

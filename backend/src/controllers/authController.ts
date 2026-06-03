@@ -1,10 +1,19 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User';
 import { generateToken, sanitizeUser } from '../utils/helpers';
 import { AuthRequest } from '../middleware/auth';
 import { getRandomCharacter } from '../utils/characters';
 import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
+
+// Accept ID tokens issued for any of the OAuth clients we ship (iOS, Android, web).
+// CSV in env, e.g. "123-ios.apps.googleusercontent.com,456-web.apps.googleusercontent.com".
+const GOOGLE_AUDIENCE = (process.env.GOOGLE_OAUTH_CLIENT_IDS || '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+const googleOAuthClient = new OAuth2Client();
 
 // Available name colors
 const NAME_COLORS = ['Yellow', 'Blue', 'Pink', 'Green', 'Red', 'Purple'];
@@ -335,6 +344,132 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({
       success: false,
       message: error.message || 'Server error during Facebook authentication',
+    });
+  }
+};
+
+// @desc    Login/Register with Google
+// @route   POST /api/auth/google
+// @access  Public
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    if (!idToken) {
+      res.status(400).json({
+        success: false,
+        message: 'Google ID token is required',
+      });
+      return;
+    }
+
+    if (GOOGLE_AUDIENCE.length === 0) {
+      console.error('GOOGLE_OAUTH_CLIENT_IDS env var is not configured');
+      res.status(500).json({
+        success: false,
+        message: 'Google login is not configured on the server',
+      });
+      return;
+    }
+
+    // Verify the ID token against our allowed OAuth client IDs.
+    let payload;
+    try {
+      const ticket = await googleOAuthClient.verifyIdToken({
+        idToken,
+        audience: GOOGLE_AUDIENCE,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError: any) {
+      console.warn('Google ID token verification failed:', verifyError?.message);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid Google ID token',
+      });
+      return;
+    }
+
+    if (!payload || !payload.sub) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid Google ID token payload',
+      });
+      return;
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email?.toLowerCase();
+    const name = payload.name;
+    const picture = payload.picture;
+
+    // Find existing user by googleId or email
+    let user = await User.findOne({
+      $or: [
+        { googleId },
+        ...(email ? [{ email }] : []),
+      ],
+    });
+
+    if (user) {
+      // Link Google ID if the account previously used another method
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+      if (picture && !user.avatar) {
+        user.avatar = picture;
+        await user.save();
+      }
+      if (!user.avatarCharacter) {
+        user.avatarCharacter = getRandomCharacter();
+        await user.save();
+      }
+    } else {
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: 'Email is required for Google registration',
+        });
+        return;
+      }
+
+      // Generate a unique username from the Google profile
+      const baseUsername =
+        (name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') ||
+          email.split('@')[0].replace(/[^a-z0-9_]/g, '')).slice(0, 25) || 'user';
+      let username = baseUsername;
+      let counter = 1;
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}_${counter}`;
+        counter++;
+      }
+
+      user = await User.create({
+        email,
+        username,
+        displayName: name || username,
+        avatar: picture,
+        avatarCharacter: getRandomCharacter(),
+        nameColor: getRandomNameColor(),
+        googleId,
+        emailVerified: !!payload.email_verified,
+        isAnonymous: false,
+      });
+    }
+
+    const token = generateToken(user._id.toString());
+
+    res.json({
+      success: true,
+      data: {
+        user: sanitizeUser(user),
+        token,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error during Google authentication',
     });
   }
 };
