@@ -24,6 +24,7 @@ import { usePremiumStore } from '../src/store/premiumStore';
 import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuecat.service';
 import { facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import { tiktokService } from '../src/services/tiktok.service';
+import { appsFlyerService } from '../src/services/appsflyer.service';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -113,6 +114,7 @@ export default function SubscriptionScreen() {
   const auroraBounceAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const trialSparkScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -144,6 +146,25 @@ export default function SubscriptionScreen() {
       ])
     ).start();
   }, []);
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(trialSparkScale, {
+          toValue: 1.04,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(trialSparkScale, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [trialSparkScale]);
 
   // Load subscription status and offerings
   const loadSubscriptionData = useCallback(async () => {
@@ -459,6 +480,14 @@ export default function SubscriptionScreen() {
           value:       String(price),
         });
 
+        appsFlyerService.trackSubscribe();
+        appsFlyerService.trackPurchase({
+          contentId: product?.identifier || 'com.aurora.app.monthly',
+          price,
+          currency,
+          contentType: 'subscription',
+        });
+
         Alert.alert(
           t('sub_welcome_premium_title'),
           t('sub_welcome_premium_body'),
@@ -662,14 +691,24 @@ export default function SubscriptionScreen() {
             </View>
           </Animated.View>
 
-          {/* Free Trial Notice - outside card, between price card and feature list */}
-          <View style={styles.freeTrialNotice}>
-            <Ionicons name="gift-outline" size={20} color="#9B59B6" />
-            <Text style={styles.freeTrialText}>
-              <Text style={styles.freeTrialBold}>{t('sub_free_trial_bold')}</Text>
-              {' '}{t('sub_free_trial_rest')}
-            </Text>
-          </View>
+          {/* Free trial — high-contrast gradient banner so “7 days” stands out */}
+          <Animated.View style={[styles.freeTrialSparkWrap, { transform: [{ scale: trialSparkScale }] }]}>
+            <LinearGradient
+              colors={['#6D28D9', '#C026D3', '#EA580C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.freeTrialSparkGradient}
+            >
+              <View style={styles.freeTrialSparkIconRow}>
+                <Ionicons name="sparkles" size={20} color="#FEF9C3" />
+                <Ionicons name="gift" size={26} color="#FFFBEB" />
+                <Ionicons name="sparkles" size={20} color="#FEF9C3" />
+              </View>
+              <Text style={styles.freeTrialSparkTitle}>{t('sub_free_trial_spark_title')}</Text>
+              <Text style={styles.freeTrialSparkSubtitle}>{t('sub_free_trial_bold')}</Text>
+              <Text style={styles.freeTrialSparkNote}>{t('sub_free_trial_rest')}</Text>
+            </LinearGradient>
+          </Animated.View>
 
           {/* Features Section */}
           <View style={[styles.featuresSection, { backgroundColor: '#FFFFFF', borderColor: '#E8E8E8' }]}>
@@ -976,26 +1015,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6C757D',
   },
-  freeTrialNotice: {
+  freeTrialSparkWrap: {
+    marginTop: 10,
+    marginBottom: 18,
+    borderRadius: BORDER_RADIUS.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#F59E0B',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.55,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  freeTrialSparkGradient: {
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: 18,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 251, 235, 0.9)',
+  },
+  freeTrialSparkIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(155, 89, 182, 0.1)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
-    gap: 8,
+    gap: 14,
+    marginBottom: 6,
   },
-  freeTrialText: {
-    fontSize: 14,
-    color: '#6C757D',
-    fontWeight: '500',
+  freeTrialSparkTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
-  freeTrialBold: {
+  freeTrialSparkSubtitle: {
+    marginTop: 6,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#9B59B6',
+    color: 'rgba(255, 255, 255, 0.95)',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  freeTrialSparkNote: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255, 251, 235, 0.88)',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   featuresSection: {
     marginTop: 16,

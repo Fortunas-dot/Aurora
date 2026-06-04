@@ -34,11 +34,13 @@ export const subscriptionEn = {
   sub_per_month: 'per month',
   sub_you_are_subscribed: '✓ You are already subscribed!',
   sub_coffee_note: '☕ Just 2 coffees per month',
-  sub_free_trial_bold: '3-day free trial',
+  sub_free_trial_bold: '7-day free trial',
+  /** Large headline on the subscription spark banner */
+  sub_free_trial_spark_title: '7 DAYS FREE',
   sub_free_trial_rest: 'included - Cancel anytime',
   sub_cta_manage: 'Manage Subscription',
   sub_cta_coming_soon: 'Coming Soon',
-  sub_cta_start_trial: 'Start 3-day Free Trial',
+  sub_cta_start_trial: 'Start 7-day Free Trial',
   sub_restore_purchases: 'Restore Purchases',
   sub_auto_renew_with_price:
     'Auto-renews for {{price}}/month until canceled. Introductory price valid for the first 500 subscribers.',

@@ -13,6 +13,7 @@ import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { OnboardingOverlay } from '../../src/components/onboarding/OnboardingOverlay';
 import { journalService, JournalInsights } from '../../src/services/journal.service';
 import { useRequirePremium } from '../../src/hooks/usePremium';
+import { appsFlyerService } from '../../src/services/appsflyer.service';
 
 const { width, height } = Dimensions.get('window');
 
@@ -551,6 +552,7 @@ export default function AuroraScreen() {
                 return;
               }
               if (!requirePremium()) return;
+              appsFlyerService.trackChatDoctor({ specialty: 'mental_health_ai' });
               // For now we always use Claude as the AI provider.
               // The OpenAI path and ai-select screen remain in the codebase
               // so they can be re-enabled later if needed.

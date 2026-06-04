@@ -5,6 +5,12 @@ import { i18n, Language } from '../utils/i18n';
 import { secureStorage } from '../utils/secureStorage';
 import { useAuthStore } from './authStore';
 import { userService } from '../services/user.service';
+import type { LoginScreenVariant } from '../constants/loginScreenVariant';
+import {
+  DEFAULT_LOGIN_SCREEN_VARIANT,
+  LOGIN_SCREEN_VARIANT_STORAGE_KEY,
+  isLoginScreenVariant,
+} from '../constants/loginScreenVariant';
 
 export interface NotificationPreferences {
   pushEnabled: boolean;
@@ -35,7 +41,8 @@ interface SettingsState {
   theme: 'dark' | 'light' | 'system';
   fontFamily: string;
   auroraStyle: AuroraStyle;
-  
+  loginScreenVariant: LoginScreenVariant;
+
   // Privacy Settings
   showEmail: boolean;
   isAnonymous: boolean;
@@ -52,6 +59,7 @@ interface SettingsState {
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<void>;
   setFontFamily: (fontFamily: string) => Promise<void>;
   setAuroraStyle: (style: AuroraStyle) => Promise<void>;
+  setLoginScreenVariant: (variant: LoginScreenVariant) => Promise<void>;
   setShowEmail: (show: boolean) => Promise<void>;
   setIsAnonymous: (anonymous: boolean) => Promise<void>;
   setNotificationPreference: (key: keyof NotificationPreferences, value: boolean) => Promise<void>;
@@ -75,6 +83,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   theme: 'dark',
   fontFamily: 'system',
   auroraStyle: 'organic',
+  loginScreenVariant: DEFAULT_LOGIN_SCREEN_VARIANT,
   showEmail: false,
   isAnonymous: true,
   notificationPreferences: defaultNotificationPreferences,
@@ -106,6 +115,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setAuroraStyle: async (auroraStyle: AuroraStyle) => {
     await secureStorage.setItemAsync('app_aurora_style', auroraStyle);
     set({ auroraStyle });
+  },
+
+  setLoginScreenVariant: async (loginScreenVariant: LoginScreenVariant) => {
+    await secureStorage.setItemAsync(LOGIN_SCREEN_VARIANT_STORAGE_KEY, loginScreenVariant);
+    set({ loginScreenVariant });
   },
 
   // Set show email
@@ -190,7 +204,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       } else {
         auroraStyle = storedStyle as AuroraStyle;
       }
-      
+
+      const storedLoginVariant = await secureStorage.getItemAsync(LOGIN_SCREEN_VARIANT_STORAGE_KEY);
+      const loginScreenVariant: LoginScreenVariant = isLoginScreenVariant(storedLoginVariant ?? undefined)
+        ? (storedLoginVariant as LoginScreenVariant)
+        : DEFAULT_LOGIN_SCREEN_VARIANT;
+
       // Load notification preferences
       const prefsJson = await secureStorage.getItemAsync('notification_preferences');
       const notificationPreferences = prefsJson
@@ -207,6 +226,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         theme: theme as 'dark' | 'light' | 'system',
         fontFamily: fontFamily as string,
         auroraStyle,
+        loginScreenVariant,
         showEmail,
         isAnonymous,
         notificationPreferences,

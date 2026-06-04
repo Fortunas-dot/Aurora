@@ -10,6 +10,9 @@ export const authJa = {
   register_link: '新規登録',
   email_required: 'メールアドレスを入力してください',
   password_required: 'パスワードを入力してください',
+  or_continue_with: 'または次でログイン',
+  continue_with_google: 'Googleでログイン',
+  continue_with_facebook: 'Facebookでログイン',
 
   register_title: 'アカウント作成',
   register_subtitle: 'Auroraコミュニティに参加',

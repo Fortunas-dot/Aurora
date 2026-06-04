@@ -43,12 +43,18 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
     try {
       const isPremium = await revenueCatService.checkPremiumStatus();
       const customerInfo = await revenueCatService.getCustomerInfo();
-      
+
+      // If the RevenueCat SDK hasn't been initialized yet (e.g. identifyUser
+      // hasn't completed), treat the result as inconclusive and do NOT mark
+      // hasCheckedPremium. Otherwise premium users get bounced to the paywall
+      // on cold start while the SDK is still syncing.
+      const rcReady = revenueCatService.initialized;
+
       set({
         isPremium,
         customerInfo,
         isLoading: false,
-        hasCheckedPremium: true,
+        hasCheckedPremium: rcReady ? true : get().hasCheckedPremium,
       });
 
     } catch (error: any) {
@@ -56,7 +62,7 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
       set({
         error: error.message || 'Failed to check premium status',
         isLoading: false,
-        hasCheckedPremium: true,
+        hasCheckedPremium: revenueCatService.initialized ? true : get().hasCheckedPremium,
       });
     }
   },

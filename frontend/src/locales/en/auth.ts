@@ -1,4 +1,7 @@
 export const authEn = {
+  sign_in_heading: 'Sign in',
+  remember_me: 'Remember me',
+  sign_up: 'Sign up',
   login_welcome_back: 'Welcome Back',
   login_subtitle: 'Log in to continue with Aurora',
   email_label: 'Email',
@@ -10,6 +13,9 @@ export const authEn = {
   register_link: 'Register',
   email_required: 'Email is required',
   password_required: 'Password is required',
+  or_continue_with: 'or continue with',
+  continue_with_google: 'Continue with Google',
+  continue_with_facebook: 'Continue with Facebook',
 
   register_title: 'Create Account',
   register_subtitle: 'Join the Aurora community',
