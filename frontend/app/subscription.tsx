@@ -24,6 +24,7 @@ import { usePremiumStore } from '../src/store/premiumStore';
 import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuecat.service';
 import { facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import { tiktokService } from '../src/services/tiktok.service';
+import { appsFlyerService } from '../src/services/appsflyer.service';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -477,6 +478,14 @@ export default function SubscriptionScreen() {
           description: 'Aurora AI – Monthly Premium Subscription',
           price,
           value:       String(price),
+        });
+
+        appsFlyerService.trackSubscribe();
+        appsFlyerService.trackPurchase({
+          contentId: product?.identifier || 'com.aurora.app.monthly',
+          price,
+          currency,
+          contentType: 'subscription',
         });
 
         Alert.alert(

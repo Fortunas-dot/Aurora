@@ -142,7 +142,7 @@ The Aurora tab uses a distinctive **visual “core”** (animated blob-style bra
 
 - **RevenueCat** (`react-native-purchases`) with a defined **premium entitlement**.  
 - Hooks such as `useRequirePremium` / `usePremium` gate journal or Aurora-adjacent features per product rules.  
-- **Subscription** screen includes paywall UI, packages, and analytics hooks (e.g. Facebook / TikTok attribution helpers where configured).
+- **Subscription** screen includes paywall UI, packages, and analytics hooks (Facebook, TikTok, AppsFlyer in-app events where configured).
 
 ### 12. Themes, accessibility & polish
 

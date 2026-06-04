@@ -5,6 +5,7 @@ import { authService, User } from '../services/auth.service';
 import { posthogService, POSTHOG_EVENTS, POSTHOG_PROPERTIES } from '../services/posthog.service';
 import { facebookAnalytics } from '../services/facebookAnalytics.service';
 import { tiktokService } from '../services/tiktok.service';
+import { appsFlyerService } from '../services/appsflyer.service';
 import { revenueCatService } from '../services/revenuecat.service';
 
 type AuthErrorContext = 'login' | 'register';
@@ -111,6 +112,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         tiktokService.identify(user._id, user.username || '', '', user.email || '');
         tiktokService.trackLogin();
 
+        appsFlyerService.identify(user._id);
+        appsFlyerService.trackLogin('email');
+
         // Track login event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_LOGGED_IN, {
           [POSTHOG_PROPERTIES.USER_ID]: user._id,
@@ -187,6 +191,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // TikTok: identify user + track registration
         tiktokService.identify(user._id, user.username || '', '', user.email || '');
         tiktokService.trackRegistration();
+
+        appsFlyerService.identify(user._id);
+        appsFlyerService.trackRegistration('email');
 
         // Track signup event
         posthogService.trackEvent(POSTHOG_EVENTS.USER_SIGNED_UP, {
@@ -336,6 +343,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Facebook: log login via Facebook
         facebookAnalytics.logLogin('facebook');
+
+        appsFlyerService.identify(user._id);
+        appsFlyerService.trackLogin('facebook');
         
         // Cache user data for persistence
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
@@ -477,6 +487,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
 
         facebookAnalytics.logLogin('google');
+
+        appsFlyerService.identify(user._id);
+        appsFlyerService.trackLogin('google');
 
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
 

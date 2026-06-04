@@ -28,6 +28,7 @@ import { chatWebSocketService } from '../../src/services/chatWebSocket.service';
 import { Badge } from '../../src/components/common';
 import { getUsernameColor } from '../../src/utils/usernameColors';
 import { useTranslation } from '../../src/hooks/useTranslation';
+import { appsFlyerService } from '../../src/services/appsflyer.service';
 
 // Animated star component for background
 const AnimatedStar = ({ index }: { index: number }) => {
@@ -469,6 +470,7 @@ export default function ChatScreen() {
           description={t('chat_onboarding_desc')}
           onNext={() => {
             finishOnboarding();
+            appsFlyerService.trackTutorialCompletion('aurora_tab_onboarding_chat');
             router.push('/subscription');
           }}
           showSkip={false}

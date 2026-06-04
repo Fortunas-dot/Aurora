@@ -23,6 +23,7 @@ import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/the
 import { useTheme } from '../src/hooks/useTheme';
 import { useTranslation } from '../src/hooks/useTranslation';
 import { useOnboardingStore } from '../src/store/onboardingStore';
+import { appsFlyerService } from '../src/services/appsflyer.service';
 
 // Import university logos
 const harvardLogo = require('../assets/Harvard_University_logo.svg.png');
@@ -528,6 +529,7 @@ export default function OnboardingScreen() {
 
   const handleGetStarted = () => {
     finishOnboarding();
+    appsFlyerService.trackTutorialCompletion('aurora_onboarding_slides');
     router.push('/subscription');
   };
 

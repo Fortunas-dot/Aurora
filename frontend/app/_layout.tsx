@@ -19,7 +19,7 @@ import { usePremiumStore } from '../src/store/premiumStore';
 import { useRequirePremium } from '../src/hooks/usePremium';
 import { trackingTransparencyService } from '../src/services/trackingTransparency.service';
 import { initializeFacebookSDK, facebookAnalytics } from '../src/services/facebookAnalytics.service';
-import { tiktokService } from '../src/services/tiktok.service';
+import { appsFlyerService } from '../src/services/appsflyer.service';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PostHogProvider, PostHog, usePostHog } from 'posthog-react-native';
@@ -259,6 +259,12 @@ export default function RootLayout() {
           console.warn('Facebook SDK initialization failed:', error);
         });
 
+        const cachedUserId = useAuthStore.getState().user?._id;
+        appsFlyerService
+          .initialize({ trackingAllowed, customerUserId: cachedUserId })
+          .catch((error) => {
+            console.warn('AppsFlyer SDK initialization failed:', error);
+          });
 
         // NOTE: RevenueCat is intentionally NOT initialized here anonymously.
         // Initializing without a user ID would create a new anonymous customer
@@ -415,6 +421,8 @@ export default function RootLayout() {
         displayName: user.displayName,
         last_seen: new Date().toISOString(),
       });
+
+      appsFlyerService.identify(user._id);
       
       // Track app opened event when user is already authenticated (app restart)
       posthogService.trackEvent(POSTHOG_EVENTS.APP_OPENED, {
@@ -504,11 +512,12 @@ export default function RootLayout() {
     maybeRequestReview();
   }, [isAuthenticated, user]);
 
-  // Track screen views in Facebook (PostHog screen tracking is handled by PostHogScreenTracker)
+  // Track screen views in Facebook + AppsFlyer (PostHog: PostHogScreenTracker)
   useEffect(() => {
     if (!pathname) return;
     const screenName = pathname.replace(/^\//, '') || 'home';
     facebookAnalytics.logScreenView(screenName);
+    appsFlyerService.trackContentView(screenName);
   }, [pathname]);
 
   // Setup WebSocket connection for real-time notifications

@@ -151,6 +151,14 @@ module.exports = {
       require('./plugins/withIOSFacebookAppDelegate'),
       require('./plugins/withIOSFacebookClientToken'),
       require('./plugins/withTikTokSDK'),
+      [
+        'react-native-appsflyer',
+        {
+          shouldUseStrictMode: false,
+          shouldUsePurchaseConnector: false,
+          preferAppsFlyerBackupRules: false,
+        },
+      ],
     ],
     extra: {
       // Expo Project ID for push notifications and EAS
@@ -195,6 +203,9 @@ module.exports = {
       // iOS-specific OAuth client ID (not always required at runtime — the iOS plugin
       // uses iosUrlScheme above — but exposing it lets the SDK pick it up directly).
       GOOGLE_IOS_CLIENT_ID: process.env.GOOGLE_IOS_CLIENT_ID || null,
+      // AppsFlyer — override via EAS env for production
+      APPSFLYER_DEV_KEY: process.env.APPSFLYER_DEV_KEY || process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY || 'RBJkuembZMxdf9Vq2yurf7',
+      APPSFLYER_APP_ID: process.env.APPSFLYER_APP_ID || process.env.EXPO_PUBLIC_APPSFLYER_APP_ID || '6758727961',
     },
   },
 };
