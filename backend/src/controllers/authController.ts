@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import jwt, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksRsa from 'jwks-rsa';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User';
 import { generateToken, sanitizeUser } from '../utils/helpers';
@@ -14,6 +16,71 @@ const GOOGLE_AUDIENCE = (process.env.GOOGLE_OAUTH_CLIENT_IDS || '')
   .map((id) => id.trim())
   .filter(Boolean);
 const googleOAuthClient = new OAuth2Client();
+
+// Facebook Limited Login JWT verification — fetches FB's public keys from JWKS.
+// In Limited Login mode the iOS SDK returns a signed OIDC JWT (AuthenticationToken)
+// containing sub/email/name/picture as claims, so we don't need a Graph API call.
+const facebookJwksClient = jwksRsa({
+  jwksUri: 'https://www.facebook.com/.well-known/oauth/openid/jwks/',
+  cache: true,
+  rateLimit: true,
+  jwksRequestsPerMinute: 10,
+});
+
+function getFacebookSigningKey(header: JwtHeader, callback: SigningKeyCallback) {
+  if (!header.kid) {
+    callback(new Error('Missing kid in Facebook JWT header'));
+    return;
+  }
+  facebookJwksClient.getSigningKey(header.kid, (err, key) => {
+    if (err || !key) {
+      callback(err || new Error('Facebook signing key not found'));
+      return;
+    }
+    callback(null, key.getPublicKey());
+  });
+}
+
+interface FacebookJwtClaims {
+  sub: string;
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string | { data?: { url?: string } };
+  iss?: string;
+  aud?: string;
+  exp?: number;
+  iat?: number;
+}
+
+async function verifyFacebookAuthenticationToken(
+  token: string,
+  expectedAppId: string
+): Promise<FacebookJwtClaims> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(
+      token,
+      getFacebookSigningKey,
+      {
+        algorithms: ['RS256'],
+        audience: expectedAppId,
+        issuer: 'https://www.facebook.com',
+      },
+      (err, decoded) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (!decoded || typeof decoded === 'string') {
+          reject(new Error('Invalid Facebook JWT payload'));
+          return;
+        }
+        resolve(decoded as FacebookJwtClaims);
+      }
+    );
+  });
+}
 
 // Available name colors
 const NAME_COLORS = ['Yellow', 'Blue', 'Pink', 'Green', 'Red', 'Purple'];
@@ -251,14 +318,83 @@ export const logout = async (req: AuthRequest, res: Response): Promise<void> => 
 // @desc    Login/Register with Facebook
 // @route   POST /api/auth/facebook
 // @access  Public
+//
+// Supports two flows:
+//   1. iOS Limited Login (modern, recommended): client sends `authenticationToken`
+//      which is a signed OIDC JWT issued by Facebook. We verify the signature
+//      against FB's JWKS and read sub/email/name/picture from the claims.
+//   2. Classic Login (legacy, Android fallback): client sends `accessToken`
+//      plus email/name/facebookId/picture fetched via Graph API on-device.
+//      Note: on iOS without App Tracking Transparency consent, the access
+//      token's Graph API access is restricted — that's why we prefer flow 1.
 export const facebookAuth = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { accessToken, email, name, facebookId, picture } = req.body;
+    const { accessToken, authenticationToken } = req.body as {
+      accessToken?: string;
+      authenticationToken?: string;
+      email?: string;
+      name?: string;
+      facebookId?: string;
+      picture?: any;
+    };
 
-    if (!accessToken) {
+    let email: string | undefined;
+    let name: string | undefined;
+    let facebookId: string | undefined;
+    let pictureUrl: string | undefined;
+
+    if (authenticationToken) {
+      // Flow 1: iOS Limited Login — verify the OIDC JWT and read claims.
+      const expectedAppId = process.env.FACEBOOK_APP_ID;
+      if (!expectedAppId) {
+        console.error('FACEBOOK_APP_ID env var is not configured');
+        res.status(500).json({
+          success: false,
+          message: 'Facebook login is not configured on the server',
+        });
+        return;
+      }
+
+      let claims: FacebookJwtClaims;
+      try {
+        claims = await verifyFacebookAuthenticationToken(authenticationToken, expectedAppId);
+      } catch (verifyError: any) {
+        console.warn('Facebook JWT verification failed:', verifyError?.message);
+        res.status(401).json({
+          success: false,
+          message: 'Invalid Facebook authentication token',
+        });
+        return;
+      }
+
+      facebookId = claims.sub;
+      email = claims.email?.toLowerCase();
+      name = claims.name;
+      // Picture claim is sometimes a string URL, sometimes an object — normalize.
+      if (typeof claims.picture === 'string') {
+        pictureUrl = claims.picture;
+      } else if (claims.picture && typeof claims.picture === 'object') {
+        pictureUrl = claims.picture.data?.url;
+      }
+    } else if (accessToken) {
+      // Flow 2: Classic Login — trust the user info fetched by client.
+      const body = req.body as { email?: string; name?: string; facebookId?: string; picture?: any };
+      email = body.email?.toLowerCase();
+      name = body.name;
+      facebookId = body.facebookId;
+      pictureUrl = body.picture?.data?.url || (typeof body.picture === 'string' ? body.picture : undefined);
+    } else {
       res.status(400).json({
         success: false,
-        message: 'Facebook access token is required',
+        message: 'Facebook access token or authentication token is required',
+      });
+      return;
+    }
+
+    if (!facebookId) {
+      res.status(400).json({
+        success: false,
+        message: 'Could not determine Facebook user identity',
       });
       return;
     }
@@ -266,8 +402,8 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
     // Try to find existing user by email or Facebook ID
     let user = await User.findOne({
       $or: [
-        { email: email?.toLowerCase() },
-        { 'facebookId': facebookId },
+        ...(email ? [{ email }] : []),
+        { facebookId },
       ],
     });
 
@@ -279,8 +415,8 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
       }
 
       // Update avatar if provided and user doesn't have one
-      if (picture?.data?.url && !user.avatar) {
-        user.avatar = picture.data.url;
+      if (pictureUrl && !user.avatar) {
+        user.avatar = pictureUrl;
         await user.save();
       }
 
@@ -312,21 +448,16 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
 
       // Create user without password (Facebook users don't need password)
       const userData: any = {
-        email: email.toLowerCase(),
+        email,
         username,
         displayName: name || username,
-        avatar: picture?.data?.url,
-        avatarCharacter: getRandomCharacter(), // Assign random character
-        nameColor: getRandomNameColor(), // Assign random name color
+        avatar: pictureUrl,
+        avatarCharacter: getRandomCharacter(),
+        nameColor: getRandomNameColor(),
         facebookId,
         isAnonymous: false,
       };
-      
-      // Only add password if not a Facebook user (shouldn't happen, but safety check)
-      if (!facebookId) {
-        userData.password = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-      }
-      
+
       user = await User.create(userData);
     }
 
