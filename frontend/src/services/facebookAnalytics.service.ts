@@ -1,4 +1,15 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Read the Facebook App ID + Client Token from app.config.js → extra so the
+// values used by Settings.setAppID() at runtime stay in sync with what's
+// baked into Info.plist / AndroidManifest. Drift between the two causes the
+// iOS login flow to crash when Facebook tries to callback via fb<APP_ID>://
+// because no URL scheme matches.
+const FB_EXTRA: any = (Constants.expoConfig?.extra as any) || {};
+const FB_APP_ID: string = FB_EXTRA.FACEBOOK_APP_ID || '1356345856462215';
+const FB_CLIENT_TOKEN: string = FB_EXTRA.FACEBOOK_CLIENT_TOKEN || '1746ac26be98d3ead245f1e8957d068a';
+
 export const FB_EVENTS = {
   APP_LAUNCH: 'fb_mobile_activate_app',
   USER_SIGNED_UP: 'fb_user_signed_up',
@@ -34,9 +45,10 @@ class FacebookAnalyticsService {
       this.appEventsLogger = AppEventsLogger;
 
       // Stap 1: App ID en Client Token instellen VOOR initializeSDK
-      // Deze moeten overeenkomen met Info.plist / AndroidManifest config
-      Settings.setAppID('1261010692592854');
-      Settings.setClientToken('b1aa7924c3706f5ade68c995488318ab');
+      // Deze moeten overeenkomen met Info.plist / AndroidManifest config —
+      // daarom lezen we uit Constants.expoConfig.extra, niet hardcoden.
+      Settings.setAppID(FB_APP_ID);
+      Settings.setClientToken(FB_CLIENT_TOKEN);
 
       // Stap 2: SDK initialiseren – dit activeert de JS ↔ native bridge
       Settings.initializeSDK();

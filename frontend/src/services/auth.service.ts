@@ -124,14 +124,22 @@ class AuthService {
     return !!token;
   }
 
-  async loginWithFacebook(accessToken: string, userInfo: any): Promise<ApiResponse<AuthResponse>> {
-    const response = await apiService.post<AuthResponse>('/auth/facebook', {
-      accessToken,
-      email: userInfo.email,
-      name: userInfo.name,
-      facebookId: userInfo.id,
-      picture: userInfo.picture,
-    });
+  /**
+   * Authenticate with Facebook against the backend.
+   *
+   * iOS uses Limited Login and sends `authenticationToken` (a signed OIDC JWT
+   * the backend verifies against Facebook's JWKS). Android uses classic login
+   * and sends `accessToken` plus the profile fields fetched via Graph API.
+   */
+  async loginWithFacebook(payload: {
+    accessToken?: string;
+    authenticationToken?: string;
+    email?: string;
+    name?: string;
+    facebookId?: string;
+    picture?: any;
+  }): Promise<ApiResponse<AuthResponse>> {
+    const response = await apiService.post<AuthResponse>('/auth/facebook', payload);
 
     if (response.success && response.data?.token) {
       await this.saveToken(response.data.token);

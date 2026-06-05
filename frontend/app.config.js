@@ -28,11 +28,11 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: 'com.auroracommune.app',
       config: {
-        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
+        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1356345856462215'),
         facebookDisplayName: 'Aurora',
       },
       infoPlist: {
-        FacebookAppID: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
+        FacebookAppID: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1356345856462215'),
         FacebookDisplayName: 'Aurora',
         FacebookAutoLogAppEventsEnabled: true, // Enable automatic app event logging (required for test events)
         // CFBundleURLTypes for Facebook URL scheme (required for SDK deep linking)
@@ -44,7 +44,7 @@ module.exports = {
           // Facebook URL scheme required by the Facebook SDK
           {
             CFBundleURLSchemes: [
-              process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1261010692592854',
+              process.env.FACEBOOK_APP_ID ? `fb${process.env.FACEBOOK_APP_ID}` : 'fb1356345856462215',
             ],
           },
         ],
@@ -54,7 +54,7 @@ module.exports = {
         CFBundleDevelopmentRegion: 'en', // Force English locale for native components
         CFBundleLocalizations: ['en'], // Only allow English locale
         // Client Token is REQUIRED for events to transmit - ensure it's always set
-        FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN || 'b1aa7924c3706f5ade68c995488318ab',
+        FacebookClientToken: process.env.FACEBOOK_CLIENT_TOKEN || '1746ac26be98d3ead245f1e8957d068a',
       },
     },
     android: {
@@ -67,7 +67,7 @@ module.exports = {
       softwareKeyboardLayoutMode: 'pan',
       package: 'com.auroracommune.app',
       config: {
-        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854'),
+        facebookAppId: process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1356345856462215'),
         facebookDisplayName: 'Aurora',
       },
       permissions: [],
@@ -106,9 +106,9 @@ module.exports = {
       [
         'react-native-fbsdk-next',
         (() => {
-        const facebookAppId = process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1261010692592854');
+        const facebookAppId = process.env.FACEBOOK_APP_ID || (process.env.NODE_ENV === 'production' ? undefined : '1356345856462215');
         // Client Token with fallback - REQUIRED for events to transmit
-        const facebookClientToken = process.env.FACEBOOK_CLIENT_TOKEN || 'b1aa7924c3706f5ade68c995488318ab';
+        const facebookClientToken = process.env.FACEBOOK_CLIENT_TOKEN || '1746ac26be98d3ead245f1e8957d068a';
         
         if (!facebookAppId && process.env.NODE_ENV === 'production') {
           console.warn('⚠️  FACEBOOK_APP_ID not set in production. Facebook login will not work.');
@@ -119,9 +119,9 @@ module.exports = {
         }
         
         const config = {
-          appID: facebookAppId || '1261010692592854',
+          appID: facebookAppId || '1356345856462215',
           displayName: 'Aurora',
-          scheme: facebookAppId ? `fb${facebookAppId}` : 'fb1261010692592854',
+          scheme: facebookAppId ? `fb${facebookAppId}` : 'fb1356345856462215',
           // Client Token is REQUIRED for events to transmit to Facebook servers
           clientToken: facebookClientToken,
           // Critical settings for Facebook SDK to work correctly
@@ -191,6 +191,11 @@ module.exports = {
         process.env.EXPO_PUBLIC_POSTHOG_API_KEY ||
         'phc_6BMEJjnxrz3BAfLj8Y1N0lOizGAhnk1d9XNp3Tl2HRB',
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
+      // Facebook — exposed so JS can call Settings.setAppID() with the SAME ID
+      // that's baked into Info.plist via the iOS infoPlist + plugin config above.
+      // Drift between these two has crashed iOS login before (URL scheme mismatch).
+      FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || '1356345856462215',
+      FACEBOOK_CLIENT_TOKEN: process.env.FACEBOOK_CLIENT_TOKEN || '1746ac26be98d3ead245f1e8957d068a',
       // TikTok Business SDK – App IDs are safe to ship in the binary
       // App Secret (TTTKAx9Hybui6DPuIEajio326Vk8pgTB) stays on the backend only
       TIKTOK_APP_ID: '6758727961',

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { secureStorage } from '../utils/secureStorage';
 import { authService, User } from '../services/auth.service';
@@ -266,62 +267,104 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false;
       }
 
-      const { LoginManager, AccessToken, GraphRequest, GraphRequestManager } = FacebookSDK;
+      const {
+        LoginManager,
+        AccessToken,
+        AuthenticationToken,
+        GraphRequest,
+        GraphRequestManager,
+      } = FacebookSDK;
 
       // Log out any existing session
       LoginManager.logOut();
 
-      // Request Facebook login
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      let response;
 
-      if (result.isCancelled) {
-        set({
-          authSubmitting: false,
-          error: null,
+      if (Platform.OS === 'ios') {
+        // iOS uses Facebook **Limited Login**. Classic access tokens are not
+        // valid for Graph API on iOS (that's the warning Facebook shows on the
+        // consent screen), so instead of calling /me we read the signed OIDC
+        // JWT (AuthenticationToken) and let the backend verify it against
+        // Facebook's JWKS.
+        const result = await LoginManager.logInWithPermissions(
+          ['public_profile', 'email'],
+          'limited',
+        );
+
+        if (result.isCancelled) {
+          set({ authSubmitting: false, error: null });
+          return false;
+        }
+
+        const tokenData = await AuthenticationToken.getAuthenticationTokenIOS();
+
+        if (!tokenData?.authenticationToken) {
+          set({
+            authSubmitting: false,
+            error: 'Failed to get Facebook authentication token',
+          });
+          return false;
+        }
+
+        response = await authService.loginWithFacebook({
+          authenticationToken: tokenData.authenticationToken,
         });
-        return false;
-      }
+      } else {
+        // Android: classic login + Graph API for profile data.
+        const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
 
-      // Get access token
-      const data = await AccessToken.getCurrentAccessToken();
+        if (result.isCancelled) {
+          set({ authSubmitting: false, error: null });
+          return false;
+        }
 
-      if (!data) {
-        set({
-          authSubmitting: false,
-          error: 'Failed to get Facebook access token',
-        });
-        return false;
-      }
-      
-      // Fetch user info from Facebook Graph API
-      const userInfo = await new Promise<any>((resolve, reject) => {
-        const infoRequest = new GraphRequest(
-          '/me',
-          {
-            parameters: {
-              fields: {
-                string: 'email,name,picture.type(large)'
-              },
-              access_token: {
-                string: data.accessToken
+        // Get access token
+        const data = await AccessToken.getCurrentAccessToken();
+
+        if (!data) {
+          set({
+            authSubmitting: false,
+            error: 'Failed to get Facebook access token',
+          });
+          return false;
+        }
+
+        // Fetch user info from Facebook Graph API
+        const userInfo = await new Promise<any>((resolve, reject) => {
+          const infoRequest = new GraphRequest(
+            '/me',
+            {
+              parameters: {
+                fields: {
+                  string: 'email,name,picture.type(large)'
+                },
+                access_token: {
+                  string: data.accessToken
+                }
+              }
+            },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result);
               }
             }
-          },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        );
-        
-        new GraphRequestManager().addRequest(infoRequest).start();
-      });
-      
-      // Send to backend
-      const response = await authService.loginWithFacebook(data.accessToken, userInfo);
-      
+          );
+
+          new GraphRequestManager().addRequest(infoRequest).start();
+        });
+
+        // Send to backend
+        response = await authService.loginWithFacebook({
+          accessToken: data.accessToken,
+          email: userInfo.email,
+          name: userInfo.name,
+          facebookId: userInfo.id,
+          picture: userInfo.picture,
+        });
+      }
+
       if (response.success && response.data) {
         const user = response.data.user;
         
