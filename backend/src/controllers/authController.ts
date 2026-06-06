@@ -430,17 +430,19 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
         await user.save();
       }
     } else {
-      // Create new user
-      if (!email) {
-        res.status(400).json({
-          success: false,
-          message: 'Email is required for Facebook registration',
-        });
-        return;
-      }
+      // Create new user.
+      //
+      // Facebook Limited Login (iOS) frequently omits the email claim, so we
+      // cannot require it. When it's missing we synthesize a placeholder from
+      // the stable Facebook user id (sub) so the unique-email constraint is
+      // satisfied; the account is still identified by `facebookId`. If Facebook
+      // later returns the real email, the user is matched by it above instead.
+      const hasRealEmail = !!email;
+      const userEmail = email || `fb_${facebookId}@facebook.aurora.local`;
 
-      // Generate username from email or name
-      const baseUsername = name?.toLowerCase().replace(/\s+/g, '_') || email.split('@')[0];
+      // Generate username from name or email local-part
+      const baseUsername =
+        name?.toLowerCase().replace(/\s+/g, '_') || userEmail.split('@')[0];
       let username = baseUsername;
       let counter = 1;
 
@@ -452,7 +454,9 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
 
       // Create user without password (Facebook users don't need password)
       const userData: any = {
-        email,
+        email: userEmail,
+        // A synthesized placeholder must never count as a verified address.
+        emailVerified: hasRealEmail ? undefined : false,
         username,
         displayName: name || username,
         avatar: pictureUrl,
