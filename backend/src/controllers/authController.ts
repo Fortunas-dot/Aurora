@@ -368,8 +368,12 @@ export const facebookAuth = async (req: Request, res: Response): Promise<void> =
       }
 
       facebookId = claims.sub;
-      email = claims.email?.toLowerCase();
-      name = claims.name;
+      // The Limited Login JWT does not always include the `email`/`name` claims.
+      // Fall back to the values the client read from the FB Profile so existing
+      // accounts can still be matched by email and new ones can be created.
+      const body = req.body as { email?: string; name?: string };
+      email = (claims.email || body.email)?.toLowerCase();
+      name = claims.name || body.name;
       // Picture claim is sometimes a string URL, sometimes an object — normalize.
       if (typeof claims.picture === 'string') {
         pictureUrl = claims.picture;
