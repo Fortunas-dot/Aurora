@@ -320,30 +320,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (__DEV__) console.warn('FB Profile fetch failed:', profileError);
         }
 
-        if (__DEV__) {
-          // Decode the JWT payload (no verification) to see which claims FB sent.
-          try {
-            const payload = tokenData.authenticationToken.split('.')[1];
-            const json = JSON.parse(
-              decodeURIComponent(
-                escape(
-                  // base64url -> base64
-                  globalThis.atob
-                    ? globalThis.atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-                    : Buffer.from(payload, 'base64').toString('binary'),
-                ),
-              ),
-            );
-            console.log('🔵 FB Limited Login claims:', {
-              hasEmail: !!json.email,
-              claimKeys: Object.keys(json),
-            });
-          } catch {
-            // ignore decode issues — diagnostic only
-          }
-          console.log('🔵 FB Profile fallback:', { profileEmail, profileName });
-        }
-
         response = await authService.loginWithFacebook({
           authenticationToken: tokenData.authenticationToken,
           email: profileEmail,
