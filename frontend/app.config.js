@@ -5,7 +5,7 @@ module.exports = {
     name: 'Aurora',
     slug: 'aurora',
     owner: 'pawbuddies',
-    version: '1.0.8',
+    version: '1.0.9',
     runtimeVersion: {
       policy: 'appVersion', // Use app version as runtime version
     },
@@ -150,6 +150,7 @@ module.exports = {
       require('./plugins/withAndroidFacebookAutoLog'),
       require('./plugins/withIOSFacebookAppDelegate'),
       require('./plugins/withIOSFacebookClientToken'),
+      require('./plugins/withIOSModularHeaders'),
       require('./plugins/withTikTokSDK'),
       [
         'react-native-appsflyer',

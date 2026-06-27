@@ -56,4 +56,37 @@ export const subscriptionEn = {
   feat_journal_desc: 'Access to functionalities like journals, insights etc',
   feat_coming_title: 'COMING SOON',
   feat_coming_desc: 'Voice sessions, White noises, Events',
+  // Aurora Premium redesign (dark cosmic screen)
+  sub_hero_title_1: 'Room to feel',
+  sub_hero_title_accent: 'everything.',
+  sub_hero_subtitle:
+    'Unlock the full constellation of support — companionship, community, and real therapists, whenever you need them.',
+  sub_founding_offer: 'Founding offer · first 500 members',
+  sub_everything_label: 'Everything in Premium',
+  sub_plan_monthly_title: 'Monthly',
+  sub_plan_monthly_sub: 'Flexible — cancel anytime',
+  sub_plan_quarterly_title: '3 Months',
+  sub_plan_quarterly_sub: 'One payment, fewer renewals',
+  sub_per_3_months: '/ 3 months',
+  sub_restore_short: 'Restore',
+  // Subscribed / membership-active screen
+  sub_help: 'Help',
+  sub_membership_active: 'Membership active',
+  sub_all_set_1: "You're",
+  sub_all_set_accent: 'all set.',
+  sub_subscribed_subtitle:
+    'Your Aurora Premium is active. Thank you for being one of our founding members.',
+  sub_founding_member: 'Founding member',
+  sub_your_membership: 'Your membership',
+  sub_row_plan: 'Plan',
+  sub_row_status: 'Status',
+  sub_row_renews: 'Renews',
+  sub_row_member_since: 'Member since',
+  sub_status_active: 'Active',
+  sub_included_label: 'Included in your plan',
+  sub_change_plan: 'Change plan',
+  sub_manage_app_store: 'Manage in App Store',
+  sub_cancel_membership: 'Cancel membership',
+  sub_subscribed_footer:
+    "Auto-renews until canceled. You'll keep full access until the end of your billing period.",
 } as const;

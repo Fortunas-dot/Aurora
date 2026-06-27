@@ -25,63 +25,49 @@ import { revenueCatService, PREMIUM_ENTITLEMENT } from '../src/services/revenuec
 import { facebookAnalytics } from '../src/services/facebookAnalytics.service';
 import { tiktokService } from '../src/services/tiktok.service';
 import { appsFlyerService } from '../src/services/appsflyer.service';
-import { SPACING, TYPOGRAPHY, BORDER_RADIUS, COLORS } from '../src/constants/theme';
+import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Floating Aurora sparkle component
-const FloatingSparkle = React.memo(({ delay, startX, startY, size }: { delay: number; startX: number; startY: number; size: number }) => {
-  const floatAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+// Dark cosmic palette (Aurora Premium redesign)
+const C = {
+  bg: '#0a0719',
+  bgTop: '#140d2b',
+  bgMid: '#0d0920',
+  accent: '#E97AC4', // magenta-pink: selection rings, dots, glow
+  accentDeep: '#D456A8',
+  lavender: '#DCAEE2', // eyebrow label
+  lavenderLight: '#E7C6EC', // italic headline word
+  textDim: 'rgba(255,255,255,0.62)',
+  textMid: 'rgba(255,255,255,0.5)',
+  textFaint: 'rgba(255,255,255,0.42)',
+  cardBg: 'rgba(255,255,255,0.05)',
+  cardBgSoft: 'rgba(255,255,255,0.045)',
+  cardBorder: 'rgba(255,255,255,0.10)',
+  green: '#3FD89A', // active/membership accent
+  greenText: '#86E3B6',
+};
 
-  useEffect(() => {
-    Animated.sequence([
-      Animated.delay(delay),
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(floatAnim, {
-              toValue: 1,
-              duration: 3000 + Math.random() * 2000,
-              useNativeDriver: true,
-            }),
-            Animated.timing(floatAnim, {
-              toValue: 0,
-              duration: 3000 + Math.random() * 2000,
-              useNativeDriver: true,
-            }),
-          ])
-        ),
-      ]),
-    ]).start();
-  }, []);
+// Per-benefit orb colors, matched to the design's hues (Community→Therapists→AI→Journals→Coming)
+const BENEFIT_COLORS = [
+  '#E07CC6', // pink
+  '#5FAAD0', // blue
+  '#9B72E2', // purple
+  '#5FC79A', // green
+  '#E0B85F', // amber
+];
 
-  const translateY = floatAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -15],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.floatingSparkle,
-        {
-          left: startX,
-          top: startY,
-          opacity: opacityAnim,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
-      <Ionicons name="sparkles" size={size} color="rgba(255, 255, 255, 0.3)" />
-    </Animated.View>
-  );
-});
+// Static starfield — fixed positions so it renders deterministically.
+const STARS: { top: number; left: number; size: number; opacity: number }[] = [
+  { top: 70, left: 36, size: 2, opacity: 0.85 }, { top: 84, left: 132, size: 1.5, opacity: 0.55 },
+  { top: 110, left: 214, size: 2, opacity: 0.75 }, { top: 98, left: 308, size: 1.5, opacity: 0.45 },
+  { top: 150, left: 60, size: 1.5, opacity: 0.5 }, { top: 168, left: 290, size: 3, opacity: 0.9 },
+  { top: 196, left: 24, size: 2, opacity: 0.6 }, { top: 210, left: 348, size: 1.5, opacity: 0.5 },
+  { top: 250, left: 110, size: 2, opacity: 0.7 }, { top: 300, left: 320, size: 1.5, opacity: 0.45 },
+  { top: 340, left: 48, size: 2, opacity: 0.6 }, { top: 360, left: 230, size: 1.5, opacity: 0.5 },
+  { top: 420, left: 300, size: 2, opacity: 0.55 }, { top: 470, left: 90, size: 1.5, opacity: 0.6 },
+  { top: 520, left: 340, size: 2, opacity: 0.5 }, { top: 560, left: 40, size: 1.5, opacity: 0.55 },
+];
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -92,15 +78,12 @@ export default function SubscriptionScreen() {
   const userId = user?._id || '';
   const {
     isPremium,
-    isLoading,
-    offerings,
+    customerInfo,
     availablePackages,
-    error,
     checkPremiumStatus,
     loadOfferings,
     purchasePackage,
     restorePurchases,
-    refreshCustomerInfo,
     clearError,
   } = usePremiumStore();
 
@@ -110,10 +93,17 @@ export default function SubscriptionScreen() {
   const [threeMonthPackage, setThreeMonthPackage] = useState<PurchasesPackage | null>(null);
   // Which plan the buy button purchases ('monthly' is the default).
   const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | 'quarterly'>('monthly');
+  // When a subscribed member taps "Change plan", reveal the plan picker over the membership screen.
+  const [showPlans, setShowPlans] = useState(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false); // Start as false, will be set to true when loading
   const retryAttemptRef = useRef(0);
   // The package the buy button acts on, derived from the selected plan.
   const selectedPackage = selectedPlanId === 'quarterly' ? threeMonthPackage : monthlyPackage;
+
+  // Active entitlement details for the membership screen (null when not premium).
+  const activeEntitlement = customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT] ?? null;
+  const activeIsQuarter = activeEntitlement?.productIdentifier === 'com.aurora.app.3months';
+  const activePackage = activeIsQuarter ? threeMonthPackage : monthlyPackage;
 
   // Find the optional 3-month package in a list of packages (may not exist yet).
   const findThreeMonth = (pkgs: PurchasesPackage[] | undefined | null) =>
@@ -122,61 +112,25 @@ export default function SubscriptionScreen() {
       || pkgs?.find((p) => p.identifier === '$rc_three_month' || p.identifier === 'three_month')
       || null);
 
-  // Animations
-  const auroraBounceAnim = useRef(new Animated.Value(0)).current;
+  // Animations — gentle entrance only.
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const trialSparkScale = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 400,
         useNativeDriver: true,
       }),
       Animated.spring(slideAnim, {
         toValue: 0,
         tension: 50,
-        friction: 8,
+        friction: 9,
         useNativeDriver: true,
       }),
     ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(auroraBounceAnim, {
-          toValue: -10,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(auroraBounceAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
   }, []);
-
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(trialSparkScale, {
-          toValue: 1.04,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(trialSparkScale, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [trialSparkScale]);
 
   // Load subscription status and offerings
   const loadSubscriptionData = useCallback(async () => {
@@ -238,12 +192,12 @@ export default function SubscriptionScreen() {
       }
 
       const loadOfferingsData = async () => {
-        let timeoutId: NodeJS.Timeout | null = null;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
         let isCompleted = false;
-        
+
         try {
           setIsLoadingProducts(true);
-          
+
           // Add timeout to prevent infinite loading (5 seconds - shorter timeout)
           timeoutId = setTimeout(() => {
             if (!isCompleted) {
@@ -253,16 +207,16 @@ export default function SubscriptionScreen() {
               isCompleted = true;
             }
           }, 5000);
-          
+
           try {
             await loadOfferings();
-            
+
             // Wait a bit for state to update after loadOfferings
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Get fresh availablePackages from store
             const currentPackages = usePremiumStore.getState().availablePackages;
-            
+
             console.log('📦 Available packages from store:', currentPackages?.length || 0);
             if (currentPackages && currentPackages.length > 0) {
               console.log('📦 Package details:');
@@ -275,14 +229,14 @@ export default function SubscriptionScreen() {
                 });
               });
             }
-            
+
             // Find monthly package - try multiple strategies with priority
             if (currentPackages && currentPackages.length > 0) {
               // Strategy 1: Find by exact product identifier (PREFERRED)
               let monthly = currentPackages.find(
                 (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
               );
-              
+
               if (monthly) {
                 console.log('✅ Found package by exact product identifier:', monthly.identifier);
                 const priceString = monthly.product?.priceString || '';
@@ -295,7 +249,7 @@ export default function SubscriptionScreen() {
                 monthly = currentPackages.find(
                   (pkg) => pkg.packageType === 'MONTHLY'
                 );
-                
+
                 if (monthly) {
                   console.warn('⚠️ Using package by type MONTHLY (fallback):', monthly.identifier);
                   console.warn('⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
@@ -305,7 +259,7 @@ export default function SubscriptionScreen() {
                   monthly = currentPackages.find(
                     (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
                   );
-                  
+
                   if (monthly) {
                     console.warn('⚠️ Using package by identifier (fallback):', monthly.identifier);
                     console.warn('⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
@@ -319,7 +273,7 @@ export default function SubscriptionScreen() {
                   }
                 }
               }
-              
+
               if (monthly) {
                 setMonthlyPackage(monthly);
                 console.log('✅ Monthly package set:', {
@@ -367,26 +321,26 @@ export default function SubscriptionScreen() {
     };
 
     initializeAndLoad();
-    
+
     // Cleanup on unmount
     return () => {
       setIsLoadingProducts(false);
     };
   }, [isAuthenticated, loadOfferings, userId]);
-  
+
   // Retry mechanism: if no package found after initial load, try again after a delay
   useEffect(() => {
     if (!isAuthenticated || isLoadingProducts) return;
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
     if (!revenueCatService.isAvailableCheck()) return;
     if (monthlyPackage) return; // Already have package
-    
+
     // Wait a bit and retry if no package found
     const retryTimer = setTimeout(() => {
       const currentPackages = usePremiumStore.getState().availablePackages;
       if (currentPackages && currentPackages.length > 0 && !monthlyPackage) {
         console.log('🔄 Retrying to find monthly package...');
-        
+
         // Try to find package again - try multiple strategies
         let monthly = currentPackages.find(
           (pkg) => pkg.product?.identifier === 'com.aurora.app.monthly'
@@ -395,7 +349,7 @@ export default function SubscriptionScreen() {
         ) || currentPackages.find(
           (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
         ) || currentPackages[0];
-        
+
         if (monthly) {
           setMonthlyPackage(monthly);
           console.log('✅ Monthly package found on retry:', monthly.identifier);
@@ -403,7 +357,7 @@ export default function SubscriptionScreen() {
         setThreeMonthPackage(findThreeMonth(currentPackages));
       }
     }, 2000);
-    
+
     return () => clearTimeout(retryTimer);
   }, [isAuthenticated, isLoadingProducts, monthlyPackage]);
 
@@ -430,7 +384,7 @@ export default function SubscriptionScreen() {
           await loadOfferings();
           // Wait a bit for state to update
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           // Check again after reload - try multiple strategies
           if (availablePackages.length > 0) {
             const monthly = availablePackages.find(
@@ -440,7 +394,7 @@ export default function SubscriptionScreen() {
             ) || availablePackages.find(
               (pkg) => pkg.identifier === 'monthly' || pkg.identifier === '$rc_monthly'
             ) || availablePackages[0];
-            
+
             if (monthly) {
               setMonthlyPackage(monthly);
               setThreeMonthPackage(findThreeMonth(availablePackages));
@@ -455,19 +409,21 @@ export default function SubscriptionScreen() {
         }
         retryAttemptRef.current = 0; // Reset even on error
       }
-      
+
       Alert.alert(
-        t('sub_package_not_available'), 
+        t('sub_package_not_available'),
         t('sub_package_not_available_body'),
         [{ text: t('ok') }]
       );
       return;
     }
-    
+
     // Reset retry counter on successful package check
     retryAttemptRef.current = 0;
 
-    if (isPremium) {
+    // Block re-purchase only when the member is NOT explicitly changing plans.
+    // The "Change plan" flow (showPlans) lets RevenueCat handle the upgrade/cross-grade.
+    if (isPremium && !showPlans) {
       Alert.alert(t('sub_already_premium'), t('sub_already_premium_body'));
       return;
     }
@@ -476,9 +432,12 @@ export default function SubscriptionScreen() {
       setIsPurchasing(true);
       clearError();
 
+      const wasChangingPlan = isPremium && showPlans;
       const success = await purchasePackage(selectedPackage);
 
       if (success) {
+        // Returning members changing plan go back to the membership screen.
+        setShowPlans(false);
         // Facebook: track subscription purchase (best-effort; guard product data)
         const product = selectedPackage.product as any;
         const price = typeof product?.price === 'number' ? product.price : 0;
@@ -515,7 +474,8 @@ export default function SubscriptionScreen() {
             {
               text: t('ok'),
               onPress: () => {
-                router.push('/health-info');
+                // New subscribers continue onboarding; plan-changers stay on the membership screen.
+                if (!wasChangingPlan) router.push('/health-info');
               },
             },
           ]
@@ -586,16 +546,98 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const featuresList = useMemo(
+  // Close (×): step back out of the plan picker first when a member is changing plans.
+  const handleClose = () => {
+    if (isPremium && showPlans) {
+      setShowPlans(false);
+    } else {
+      handleBack();
+    }
+  };
+
+  const handleHelp = () => router.push('/help-support');
+  const handleChangePlan = () => setShowPlans(true);
+
+  // Benefit rows — reuse the localized feature copy, paired with the design's orb colors.
+  const benefits = useMemo(
     () => [
-      { icon: 'people' as const, title: t('feat_community_title'), desc: t('feat_community_desc') },
-      { icon: 'medical' as const, title: t('feat_therapists_title'), desc: t('feat_therapists_desc') },
-      { icon: 'sparkles' as const, title: t('feat_ai_title'), desc: t('feat_ai_desc') },
-      { icon: 'book' as const, title: t('feat_journal_title'), desc: t('feat_journal_desc') },
-      { icon: 'rocket' as const, title: t('feat_coming_title'), desc: t('feat_coming_desc') },
-    ],
+      { title: t('feat_community_title'), desc: t('feat_community_desc') },
+      { title: t('feat_therapists_title'), desc: t('feat_therapists_desc') },
+      { title: t('feat_ai_title'), desc: t('feat_ai_desc') },
+      { title: t('feat_journal_title'), desc: t('feat_journal_desc') },
+      { title: t('feat_coming_title'), desc: t('feat_coming_desc') },
+    ].map((b, i) => ({ ...b, color: BENEFIT_COLORS[i] })),
     [t]
   );
+
+  // Plan options — monthly always, 3-month only when the package exists.
+  const plans = useMemo(() => {
+    const list: {
+      id: 'monthly' | 'quarterly';
+      title: string;
+      sub: string;
+      pkg: PurchasesPackage | null;
+      period: string;
+      popular: boolean;
+    }[] = [
+      {
+        id: 'monthly',
+        title: t('sub_plan_monthly_title'),
+        sub: t('sub_plan_monthly_sub'),
+        pkg: monthlyPackage,
+        period: t('sub_per_month'),
+        popular: true,
+      },
+    ];
+    if (threeMonthPackage) {
+      list.push({
+        id: 'quarterly',
+        title: t('sub_plan_quarterly_title'),
+        sub: t('sub_plan_quarterly_sub'),
+        pkg: threeMonthPackage,
+        period: t('sub_per_3_months'),
+        popular: false,
+      });
+    }
+    return list;
+  }, [t, monthlyPackage, threeMonthPackage]);
+
+  const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
+  const ctaDisabled =
+    isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!selectedPackage && isMobile);
+
+  // Build the CTA label string for the active purchasable state.
+  const purchaseLabel = selectedPackage?.product?.priceString
+    ? `${t('sub_cta_start_trial')} · ${selectedPackage.product.priceString}`
+    : t('sub_cta_start_trial');
+
+  // Footer renewal note — only the monthly copy mentions "/month", so fall back to generic otherwise.
+  const renewNote = selectedPackage?.product?.priceString && selectedPlanId === 'monthly'
+    ? t('sub_auto_renew_with_price', { price: selectedPackage.product.priceString })
+    : t('sub_auto_renew_generic');
+
+  // Show the membership screen for active subscribers (unless they tapped "Change plan").
+  const showSubscribed = isPremium && !showPlans;
+
+  // Format an ISO date string for the membership rows; null when unavailable/invalid.
+  // Guards against sandbox/StoreKit sentinel dates (e.g. far-future "2226" expirations)
+  // so we never surface a nonsensical renewal date to the user.
+  const formatDate = (iso?: string | null): string | null => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const nowYear = new Date().getFullYear();
+    if (year < 2000 || year > nowYear + 5) return null;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const activePlanName = activeIsQuarter ? t('sub_plan_quarterly_title') : t('sub_plan_monthly_title');
+  const activePlanValue = activePackage?.product?.priceString
+    ? `${activePlanName} · ${activePackage.product.priceString}`
+    : activePlanName;
+  const renewsLabel = formatDate(activeEntitlement?.expirationDate);
+  const memberSinceLabel = formatDate(activeEntitlement?.originalPurchaseDate);
 
   if (!isAuthenticated) {
     return (
@@ -625,220 +667,330 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: '#F5F7FA' }]}>
-      {/* Header with gradient background - Fixed at top */}
+    <View style={[styles.container, { backgroundColor: C.bg }]}>
+      {/* Cosmic background */}
       <LinearGradient
-        colors={[colors.primary, colors.secondary, colors.primaryDark]}
+        colors={[C.bgTop, C.bgMid, C.bg]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerBackground}
-      >
-          {/* Floating decorative elements */}
-          <FloatingSparkle delay={0} startX={20} startY={60} size={22} />
-          <FloatingSparkle delay={300} startX={SCREEN_WIDTH - 50} startY={50} size={18} />
-          <FloatingSparkle delay={500} startX={SCREEN_WIDTH / 2 + 40} startY={80} size={16} />
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* Soft nebula glows */}
+      <View pointerEvents="none" style={[styles.glow, styles.glowPurple]} />
+      <View pointerEvents="none" style={[styles.glow, styles.glowBlue]} />
+      {/* Starfield */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {STARS.map((s, i) => (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              top: s.top,
+              left: s.left,
+              width: s.size,
+              height: s.size,
+              borderRadius: s.size,
+              backgroundColor: '#fff',
+              opacity: s.opacity,
+            }}
+          />
+        ))}
+      </View>
 
-          {/* Close button */}
-          <TouchableOpacity onPress={handleBack} style={styles.closeButtonHeader}>
-            <Ionicons name="close" size={26} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          {/* Header content */}
-          <View style={styles.headerContent}>
-            <Text style={styles.headerSmallTitle}>{t('sub_limited_offer')}</Text>
-            <Animated.View style={[styles.headerTitleRow, { opacity: fadeAnim }]}>
-              <Text style={styles.headerBigTitle}>{t('sub_brand_title')}</Text>
-            </Animated.View>
+      {showSubscribed ? (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 32 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Top bar */}
+          <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+            <TouchableOpacity onPress={handleBack} style={styles.closeCircle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={18} color="rgba(255,255,255,0.75)" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleHelp} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.restoreTop}>{t('sub_help')}</Text>
+            </TouchableOpacity>
           </View>
-        </LinearGradient>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        scrollEventThrottle={16}
-        decelerationRate="normal"
-        nestedScrollEnabled={true}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Content */}
-        <View style={styles.contentContainer}>
-          {/* Premium Plan Card */}
-          <Animated.View
-            style={[
-              styles.planCard,
-              {
-                backgroundColor: '#FFFFFF',
-                borderColor: isPremium ? '#27AE60' : '#9B59B6',
-                borderWidth: 2,
-              },
-              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-            ]}
-          >
-            <View style={styles.planCardInner}>
-              {/* Dynamic promo text at the very top of the card */}
-              <Text style={[styles.planNote, styles.introBadge, { color: '#9B59B6' }]}>
-                {t('sub_price_first_500')}
-              </Text>
-              <View style={styles.planHeader}>
-                <Text style={[styles.planLabel, { color: '#1A1F2E' }]}>{t('sub_plan_label')}</Text>
-                {isPremium ? (
-                  <View style={[styles.saveBadge, { backgroundColor: '#27AE60' }]}>
-                    <Text style={styles.saveBadgeText}>{t('sub_badge_active')}</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.saveBadge, { backgroundColor: '#9B59B6' }]}>
-                    <Text style={styles.saveBadgeText}>{t('sub_badge_popular')}</Text>
-                  </View>
-                )}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+            {/* Status hero */}
+            <View style={styles.hero}>
+              <LinearGradient
+                colors={['#EAC7F0', '#C77BD8', '#7E54BE', '#5B3FA0']}
+                start={{ x: 0.3, y: 0.2 }}
+                end={{ x: 0.8, y: 1 }}
+                style={styles.heroOrbCheck}
+              >
+                <Ionicons name="checkmark" size={42} color="#fff" />
+              </LinearGradient>
+              <View style={styles.eyebrowRow}>
+                <View style={styles.statusDot} />
+                <Text style={[styles.eyebrow, { color: C.greenText }]}>{t('sub_membership_active')}</Text>
               </View>
-              {threeMonthPackage ? (
-                <View style={styles.planSelectorRow}>
-                  {([
-                    { id: 'monthly' as const, pkg: monthlyPackage, period: t('sub_per_month') },
-                    { id: 'quarterly' as const, pkg: threeMonthPackage, period: '/ 3 months' },
-                  ]).map((o) => {
-                    const isSel = selectedPlanId === o.id;
-                    return (
-                      <TouchableOpacity
-                        key={o.id}
-                        activeOpacity={0.85}
-                        onPress={() => setSelectedPlanId(o.id)}
-                        style={[
-                          styles.planOption,
-                          {
-                            borderColor: isSel ? '#9B59B6' : '#E8E8E8',
-                            backgroundColor: isSel ? 'rgba(155,89,182,0.08)' : '#FFFFFF',
-                          },
-                        ]}
-                      >
-                        <Text style={[styles.planOptionPrice, { color: '#9B59B6' }]}>
-                          {o.pkg?.product?.priceString ?? '...'}
-                        </Text>
-                        <Text style={[styles.planOptionPeriod, { color: '#6C757D' }]}>{o.period}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+              <Text style={styles.heroTitle}>
+                {t('sub_all_set_1')}{' '}
+                <Text style={styles.heroTitleAccent}>{t('sub_all_set_accent')}</Text>
+              </Text>
+              <Text style={styles.heroSubtitle}>{t('sub_subscribed_subtitle')}</Text>
+            </View>
+
+            {/* Founding member badge */}
+            <View style={styles.foundingRow}>
+              <View style={styles.foundingPill}>
+                <Text style={styles.eyebrowStar}>✦</Text>
+                <Text style={styles.foundingText}>{t('sub_founding_member')}</Text>
+              </View>
+            </View>
+
+            {/* Your membership */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>{t('sub_your_membership')}</Text>
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{t('sub_row_plan')}</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>{activePlanValue}</Text>
                 </View>
-              ) : (
-                <View style={styles.priceRow}>
-                  <Text style={[styles.priceBig, { color: '#9B59B6' }]}>
-                    {monthlyPackage?.product?.priceString ?? '...'}
-                  </Text>
-                  <Text style={[styles.priceDetail, { color: '#6C757D' }]}>{t('sub_per_month')}</Text>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{t('sub_row_status')}</Text>
+                  <View style={styles.statusValueRow}>
+                    <View style={styles.statusDot} />
+                    <Text style={[styles.infoValue, styles.infoValueAuto, { color: C.greenText }]} numberOfLines={1}>
+                      {t('sub_status_active')}
+                    </Text>
+                  </View>
                 </View>
-              )}
-              {isPremium ? (
-                <Text style={[styles.planNote, { color: '#27AE60', fontWeight: '700' }]}>
-                  {t('sub_you_are_subscribed')}
-                </Text>
-              ) : (
-                <Text style={[styles.planNote, styles.planCoffeeNote]}>
-                  {t('sub_coffee_note')}
-                </Text>
-              )}
+                {renewsLabel ? (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{t('sub_row_renews')}</Text>
+                    <Text style={styles.infoValue} numberOfLines={1}>{renewsLabel}</Text>
+                  </View>
+                ) : null}
+                {memberSinceLabel ? (
+                  <View style={[styles.infoRow, styles.infoRowLast]}>
+                    <Text style={styles.infoLabel}>{t('sub_row_member_since')}</Text>
+                    <Text style={styles.infoValue} numberOfLines={1}>{memberSinceLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Included in your plan */}
+            <View style={[styles.section, { paddingTop: 14 }]}>
+              <Text style={styles.sectionLabel}>{t('sub_included_label')}</Text>
+              <View style={[styles.infoCard, { paddingVertical: 4 }]}>
+                {benefits.map((b, i) => (
+                  <View key={i} style={styles.accessRow}>
+                    <View style={styles.accessCheck}>
+                      <Ionicons name="checkmark" size={12} color={C.greenText} />
+                    </View>
+                    <Text style={styles.accessText}>{b.title}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Manage actions */}
+            <View style={[styles.section, { paddingTop: 14 }]}>
+              <View style={styles.infoCard}>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleChangePlan} style={styles.actionRow}>
+                  <Text style={styles.actionText}>{t('sub_change_plan')}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleRestorePurchases} disabled={isRestoring} style={styles.actionRow}>
+                  <Text style={styles.actionText}>{t('sub_restore_purchases')}</Text>
+                  {isRestoring ? (
+                    <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleManageSubscription} style={[styles.actionRow, styles.infoRowLast]}>
+                  <Text style={styles.actionText}>{t('sub_manage_app_store')}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Cancel + footer */}
+            <View style={[styles.section, { paddingTop: 18 }]}>
+              <TouchableOpacity activeOpacity={0.8} onPress={handleManageSubscription} style={styles.cancelBtn}>
+                <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
+              </TouchableOpacity>
+              <Text style={styles.subscribedFooter}>{t('sub_subscribed_footer')}</Text>
             </View>
           </Animated.View>
-
-          {/* Free-trial banner removed — app plans have no free trial (monthly + 3-month only). */}
-
-          {/* Features Section */}
-          <View style={[styles.featuresSection, { backgroundColor: '#FFFFFF', borderColor: '#E8E8E8' }]}>
-            {featuresList.map((feature, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.featureRow,
-                  index === featuresList.length - 1 && { borderBottomWidth: 0 },
-                  { borderBottomColor: '#F5F5F5' },
-                ]}
-              >
-                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(243, 156, 18, 0.12)' }]}>
-                  <Ionicons name={feature.icon as any} size={18} color="#F39C12" />
-                </View>
-                <View style={styles.featureTextContainer}>
-                  <Text style={[styles.featureTitle, { color: '#1A1F2E' }]}>{feature.title}</Text>
-                  <Text style={[styles.featureDesc, { color: '#6C757D' }]}>{feature.desc}</Text>
-                </View>
-                <View style={styles.featureCheckContainer}>
-                  <Ionicons name="checkmark-circle" size={18} color="#27AE60" />
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* CTA Button */}
-          <TouchableOpacity
-            style={[
-              styles.ctaButton,
-              {
-                backgroundColor: colors.secondary,
-                opacity:
-                  isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))
-                    ? 0.7
-                    : 1,
-              },
-            ]}
-            onPress={isPremium ? handleManageSubscription : handlePurchase}
-            disabled={isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))}
-            activeOpacity={0.9}
-          >
-            {isPurchasing ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : isPremium ? (
-              <Text style={styles.ctaButtonText}>{t('sub_cta_manage')}</Text>
-            ) : isLoadingProducts && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (
-              <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
-            ) : !selectedPackage ? (
-              <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
+        </ScrollView>
+      ) : (
+       <>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top bar */}
+        <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity onPress={handleClose} style={styles.closeCircle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={18} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleRestorePurchases} disabled={isRestoring} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            {isRestoring ? (
+              <ActivityIndicator size="small" color="rgba(255,255,255,0.6)" />
             ) : (
-              <Text style={styles.ctaButtonText}>{t('sub_cta_start_trial')}</Text>
+              <Text style={styles.restoreTop}>{t('sub_restore_short')}</Text>
             )}
           </TouchableOpacity>
-
-          {/* Auto-renew note */}
-          <Text style={[styles.autoRenewNote, { color: '#6C757D' }]}>
-            {selectedPackage?.product?.priceString ? (
-              <>
-                {t('sub_auto_renew_with_price', { price: selectedPackage.product.priceString })}
-              </>
-            ) : (
-              <>{t('sub_auto_renew_generic')}</>
-            )}
-          </Text>
-
-          {/* Restore Purchases */}
-          {(Platform.OS === 'ios' || Platform.OS === 'android') && (
-            <TouchableOpacity style={styles.restoreButton} onPress={handleRestorePurchases} disabled={isRestoring}>
-              {isRestoring ? (
-                <ActivityIndicator color="#6C757D" size="small" />
-              ) : (
-                <Text style={[styles.restoreButtonText, { color: '#6C757D' }]}>{t('sub_restore_purchases')}</Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Terms of Service & Privacy Policy */}
-          <View style={styles.legalLinksContainer}>
-            <TouchableOpacity
-              style={styles.legalLink}
-              onPress={() => router.push('/terms-of-service')}
-            >
-              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>{t('termsOfService')}</Text>
-            </TouchableOpacity>
-            <Text style={[styles.legalLinkSeparator, { color: '#6C757D' }]}>•</Text>
-            <TouchableOpacity
-              style={styles.legalLink}
-              onPress={() => router.push('/privacy-policy')}
-            >
-              <Text style={[styles.legalLinkText, { color: '#6C757D' }]}>{t('privacyPolicy')}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
+
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          {/* Hero */}
+          <View style={styles.hero}>
+            <LinearGradient
+              colors={['#EAC7F0', '#C77BD8', '#7E54BE', '#5B3FA0']}
+              start={{ x: 0.3, y: 0.2 }}
+              end={{ x: 0.8, y: 1 }}
+              style={styles.heroOrb}
+            />
+            <View style={styles.eyebrowRow}>
+              <Text style={styles.eyebrowStar}>✦</Text>
+              <Text style={styles.eyebrow}>{`${t('sub_brand_title')} ${t('sub_header_premium')}`}</Text>
+            </View>
+            <Text style={styles.heroTitle}>
+              {t('sub_hero_title_1')}
+              {'\n'}
+              <Text style={styles.heroTitleAccent}>{t('sub_hero_title_accent')}</Text>
+            </Text>
+            <Text style={styles.heroSubtitle}>{t('sub_hero_subtitle')}</Text>
+          </View>
+
+          {/* Founding offer badge */}
+          <View style={styles.foundingRow}>
+            <View style={styles.foundingPill}>
+              <View style={styles.foundingDot} />
+              <Text style={styles.foundingText}>{t('sub_founding_offer')}</Text>
+            </View>
+          </View>
+
+          {/* Benefits */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('sub_everything_label')}</Text>
+            <View style={styles.benefitsCard}>
+              {benefits.map((b, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.benefitRow,
+                    i === benefits.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.benefitOrb,
+                      Platform.select({
+                        ios: { shadowColor: b.color, shadowOpacity: 0.8, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+                        android: {},
+                      }),
+                      { backgroundColor: b.color },
+                    ]}
+                  />
+                  <View style={styles.benefitText}>
+                    <Text style={styles.benefitTitle}>{b.title}</Text>
+                    <Text style={styles.benefitDesc}>{b.desc}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Plans */}
+          <View style={styles.plansWrap}>
+            {plans.map((p) => {
+              const isSel = selectedPlanId === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  activeOpacity={0.85}
+                  onPress={() => setSelectedPlanId(p.id)}
+                  style={[
+                    styles.planCard,
+                    isSel && styles.planCardSelected,
+                  ]}
+                >
+                  <View style={styles.planRadio}>
+                    {isSel && <View style={styles.planRadioDot} />}
+                  </View>
+                  <View style={styles.planMid}>
+                    <View style={styles.planTitleRow}>
+                      <Text style={styles.planTitle}>{p.title}</Text>
+                      {p.popular && (
+                        <View style={styles.popularBadge}>
+                          <Text style={styles.popularText}>{t('sub_badge_popular')}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.planSub}>{p.sub}</Text>
+                  </View>
+                  <View style={styles.planPriceCol}>
+                    <Text style={styles.planPrice}>{p.pkg?.product?.priceString ?? '...'}</Text>
+                    <Text style={styles.planPeriod}>{p.period}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Animated.View>
       </ScrollView>
+
+      {/* Sticky CTA */}
+      <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 18 }]} pointerEvents="box-none">
+        <LinearGradient
+          colors={['transparent', C.bgMid, C.bg]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={handlePurchase}
+          disabled={ctaDisabled}
+          style={[styles.ctaButtonShadow, { opacity: ctaDisabled ? 0.7 : 1 }]}
+        >
+          <LinearGradient
+            colors={['#F0A9D8', '#C9A0EE', '#A9C0F0']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaButton}
+          >
+            {isPurchasing ? (
+              <ActivityIndicator color="#1a0f22" size="small" />
+            ) : isLoadingProducts && isMobile ? (
+              <ActivityIndicator color="#1a0f22" size="small" />
+            ) : !selectedPackage && isMobile ? (
+              <Text style={styles.ctaText}>{t('sub_cta_coming_soon')}</Text>
+            ) : (
+              <Text style={styles.ctaText}>{purchaseLabel}</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <Text style={styles.ctaFootnote}>
+          {t('sub_price_first_500')} {renewNote}
+        </Text>
+        <View style={styles.legalRow}>
+          <TouchableOpacity onPress={handleRestorePurchases} disabled={isRestoring}>
+            <Text style={styles.legalLink}>{t('sub_restore_purchases')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/terms-of-service')}>
+            <Text style={styles.legalLink}>{t('termsOfService')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+            <Text style={styles.legalLink}>{t('privacyPolicy')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      </>
+      )}
     </View>
   );
 }
@@ -849,36 +1001,470 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: SCREEN_HEIGHT * 0.18,
-    zIndex: 5,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingHorizontal: 0,
   },
-  floatingSparkle: {
+  glow: {
     position: 'absolute',
-    zIndex: 0,
+    borderRadius: 999,
   },
-  headerBackground: {
+  glowPurple: {
+    width: 360,
+    height: 360,
+    top: -120,
+    left: -90,
+    backgroundColor: 'rgba(150,70,220,0.22)',
+  },
+  glowBlue: {
+    width: 320,
+    height: 320,
+    top: -60,
+    right: -110,
+    backgroundColor: 'rgba(70,120,220,0.16)',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingBottom: 4,
+  },
+  closeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restoreTop: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.textDim,
+    letterSpacing: 0.2,
+  },
+  hero: {
+    paddingHorizontal: 26,
+    paddingTop: 22,
+    paddingBottom: 4,
+    alignItems: 'center',
+  },
+  heroOrb: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    marginBottom: 22,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#B266E0',
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.55,
+        shadowRadius: 30,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 14,
+  },
+  eyebrowStar: {
+    fontSize: 12,
+    color: C.lavender,
+  },
+  eyebrow: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 2.4,
+    color: C.lavender,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 33,
+    lineHeight: 37,
+    fontWeight: '400',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.2,
+  },
+  heroTitleAccent: {
+    fontStyle: 'italic',
+    color: C.lavenderLight,
+  },
+  heroSubtitle: {
+    fontSize: 14.5,
+    lineHeight: 22,
+    color: C.textDim,
+    textAlign: 'center',
+    maxWidth: 290,
+  },
+  foundingRow: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  foundingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 999,
+    backgroundColor: 'rgba(212,86,168,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(232,124,196,0.35)',
+  },
+  foundingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.accent,
+    ...Platform.select({
+      ios: { shadowColor: C.accent, shadowOpacity: 1, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } },
+      android: {},
+    }),
+  },
+  foundingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EEC9E8',
+  },
+  section: {
+    paddingHorizontal: 18,
+    paddingTop: 22,
+    paddingBottom: 8,
+  },
+  sectionLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: C.textFaint,
+    paddingHorizontal: 8,
+    paddingBottom: 12,
+  },
+  benefitsCard: {
+    backgroundColor: C.cardBgSoft,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  benefitOrb: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginTop: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    ...Platform.select({ android: { elevation: 4 } }),
+  },
+  benefitText: {
+    flex: 1,
+  },
+  benefitTitle: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  benefitDesc: {
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  plansWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    gap: 12,
+  },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 20,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
+    backgroundColor: C.cardBg,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+  },
+  planCardSelected: {
+    borderColor: C.accent,
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(232,124,196,0.08)',
+    ...Platform.select({
+      ios: {
+        shadowColor: C.accentDeep,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 18,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  planRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planRadioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: C.accent,
+    ...Platform.select({
+      ios: { shadowColor: C.accent, shadowOpacity: 1, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } },
+      android: {},
+    }),
+  },
+  planMid: {
+    flex: 1,
+  },
+  planTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planTitle: {
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  popularBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 6,
+    backgroundColor: 'rgba(212,86,168,0.20)',
+  },
+  popularText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: '#EEC0E4',
+  },
+  planSub: {
+    fontSize: 12.5,
+    color: C.textMid,
+    marginTop: 2,
+  },
+  planPriceCol: {
+    alignItems: 'flex-end',
+  },
+  planPrice: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.3,
+  },
+  planPeriod: {
+    fontSize: 11,
+    color: C.textMid,
+    marginTop: 1,
+  },
+  ctaBar: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT * 0.26,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    zIndex: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingTop: 26,
   },
-  closeButtonHeader: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 35,
-    right: 16,
-    width: 36,
-    height: 36,
+  ctaButtonShadow: {
+    borderRadius: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#C95FB0',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.45,
+        shadowRadius: 24,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  ctaButton: {
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a0f22',
+  },
+  ctaFootnote: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: C.textFaint,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 6,
+  },
+  legalRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 20,
+    marginTop: 6,
+    gap: 8,
   },
+  legalLink: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.55)',
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  // --- Subscribed / membership-active screen ---
+  heroOrbCheck: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#B266E0',
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.55,
+        shadowRadius: 30,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.green,
+    ...Platform.select({
+      ios: { shadowColor: C.green, shadowOpacity: 1, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } },
+      android: {},
+    }),
+  },
+  infoCard: {
+    backgroundColor: C.cardBgSoft,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
+  },
+  infoLabel: {
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.55)',
+    flexShrink: 0,
+    marginRight: 12,
+  },
+  infoValue: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'right',
+  },
+  // Status pill value sits inside its own row, so it sizes to content instead of flexing.
+  infoValueAuto: {
+    flex: 0,
+  },
+  statusValueRow: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  accessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+  },
+  accessCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(63,216,154,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(63,216,154,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accessText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.62)',
+  },
+  subscribedFooter: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+    marginTop: 14,
+    paddingHorizontal: 6,
+  },
+  // --- Unauthenticated prompt (kept from prior screen) ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -900,40 +1486,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-  },
-  headerContent: {
-    paddingTop: Platform.OS === 'ios' ? 70 : 58,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  headerSmallTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.85)',
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerEmoji: {
-    fontSize: 32,
-  },
-  headerBigTitle: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-    textShadowColor: 'rgba(0, 0, 0, 0.15)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    zIndex: 5,
   },
   authPrompt: {
     flex: 1,
@@ -957,282 +1509,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     textAlign: 'center',
-  },
-  planCard: {
-    borderRadius: 12,
-    marginBottom: 10,
-    position: 'relative',
-    zIndex: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  selectedIndicator: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-  },
-  planCardInner: {
-    padding: 16,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  planLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'lowercase',
-  },
-  saveBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  saveBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  planSelectorRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  planOption: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-  },
-  planOptionPrice: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  planOptionPeriod: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  priceBig: {
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  originalPrice: {
-    fontSize: 20,
-    fontWeight: '700',
-    textDecorationLine: 'line-through',
-    textDecorationStyle: 'solid',
-    marginLeft: 8,
-    marginRight: 4,
-    opacity: 1,
-  },
-  introBadge: {
-    alignSelf: 'center',
-    marginBottom: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(155, 89, 182, 0.12)',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-  priceDetail: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  planNote: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  planCoffeeNote: {
-    fontSize: 13,
-    color: '#6C757D',
-  },
-  freeTrialSparkWrap: {
-    marginTop: 10,
-    marginBottom: 18,
-    borderRadius: BORDER_RADIUS.lg,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#F59E0B',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.55,
-        shadowRadius: 14,
-      },
-      android: {
-        elevation: 10,
-      },
-    }),
-  },
-  freeTrialSparkGradient: {
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: 18,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 251, 235, 0.9)',
-  },
-  freeTrialSparkIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    marginBottom: 6,
-  },
-  freeTrialSparkTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.45)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
-  freeTrialSparkSubtitle: {
-    marginTop: 6,
-    fontSize: 15,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.95)',
-    textAlign: 'center',
-    letterSpacing: 0.2,
-  },
-  freeTrialSparkNote: {
-    marginTop: 4,
-    fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255, 251, 235, 0.88)',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  featuresSection: {
-    marginTop: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  featureIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  featureTextContainer: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  featureTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  featureDesc: {
-    fontSize: 12,
-    fontWeight: '400',
-    marginTop: 1,
-  },
-  featureCheckContainer: {
-    alignSelf: 'flex-start',
-    marginLeft: 4,
-    paddingTop: 4,
-  },
-  ctaButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  ctaButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  autoRenewNote: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  restoreButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  restoreButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-  },
-  legalLinksContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  legalLink: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  legalLinkText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-  },
-  legalLinkSeparator: {
-    fontSize: 12,
-    marginHorizontal: 8,
   },
 });

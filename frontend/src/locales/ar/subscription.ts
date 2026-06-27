@@ -55,4 +55,37 @@ export const subscriptionAr = {
   feat_journal_desc: 'يوميات، رؤى، إلخ',
   feat_coming_title: 'قريباً',
   feat_coming_desc: 'جلسات صوتية، ضوضاء بيضاء، فعاليات',
+  // Aurora Premium redesign (dark cosmic screen)
+  sub_hero_title_1: 'مساحة لتشعر',
+  sub_hero_title_accent: 'بكل شيء.',
+  sub_hero_subtitle:
+    'افتح مجموعة الدعم الكاملة — الرفقة والمجتمع ومعالجون حقيقيون، وقتما تحتاج.',
+  sub_founding_offer: 'عرض التأسيس · أول 500 عضو',
+  sub_everything_label: 'كل ما في بريميوم',
+  sub_plan_monthly_title: 'شهري',
+  sub_plan_monthly_sub: 'مرن — ألغِ في أي وقت',
+  sub_plan_quarterly_title: '3 أشهر',
+  sub_plan_quarterly_sub: 'دفعة واحدة، تجديدات أقل',
+  sub_per_3_months: '/ 3 أشهر',
+  sub_restore_short: 'استعادة',
+  // Subscribed / membership-active screen
+  sub_help: 'مساعدة',
+  sub_membership_active: 'العضوية نشطة',
+  sub_all_set_1: 'كل شيء',
+  sub_all_set_accent: 'جاهز.',
+  sub_subscribed_subtitle:
+    'اشتراكك في Aurora Premium نشط. شكراً لكونك أحد أعضائنا المؤسسين.',
+  sub_founding_member: 'عضو مؤسس',
+  sub_your_membership: 'عضويتك',
+  sub_row_plan: 'الباقة',
+  sub_row_status: 'الحالة',
+  sub_row_renews: 'يتجدد',
+  sub_row_member_since: 'عضو منذ',
+  sub_status_active: 'نشط',
+  sub_included_label: 'مُتضمَّن في باقتك',
+  sub_change_plan: 'تغيير الباقة',
+  sub_manage_app_store: 'الإدارة في App Store',
+  sub_cancel_membership: 'إلغاء العضوية',
+  sub_subscribed_footer:
+    'يتجدد تلقائياً حتى الإلغاء. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
 } as const;

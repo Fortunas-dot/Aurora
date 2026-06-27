@@ -55,4 +55,37 @@ export const subscriptionJa = {
   feat_journal_desc: '日記やインサイトなどの機能',
   feat_coming_title: '近日公開',
   feat_coming_desc: 'ボイスセッション、ホワイトノイズ、イベント',
+  // Aurora Premium redesign (dark cosmic screen)
+  sub_hero_title_1: 'すべてを感じる',
+  sub_hero_title_accent: '余白を。',
+  sub_hero_subtitle:
+    '寄り添い、コミュニティ、本物のセラピスト — 必要なときに、すべてのサポートを解放しましょう。',
+  sub_founding_offer: '創設メンバー特典 · 先着500名',
+  sub_everything_label: 'プレミアムのすべて',
+  sub_plan_monthly_title: '月額',
+  sub_plan_monthly_sub: '柔軟 — いつでも解約可能',
+  sub_plan_quarterly_title: '3か月',
+  sub_plan_quarterly_sub: '一括払い、更新は少なく',
+  sub_per_3_months: '/ 3か月',
+  sub_restore_short: '復元',
+  // Subscribed / membership-active screen
+  sub_help: 'ヘルプ',
+  sub_membership_active: 'メンバーシップ有効',
+  sub_all_set_1: 'これで',
+  sub_all_set_accent: '完了です。',
+  sub_subscribed_subtitle:
+    'Aurora Premium が有効です。創設メンバーのお一人になっていただき、ありがとうございます。',
+  sub_founding_member: '創設メンバー',
+  sub_your_membership: 'メンバーシップ',
+  sub_row_plan: 'プラン',
+  sub_row_status: 'ステータス',
+  sub_row_renews: '更新日',
+  sub_row_member_since: '登録日',
+  sub_status_active: '有効',
+  sub_included_label: 'プランに含まれるもの',
+  sub_change_plan: 'プランを変更',
+  sub_manage_app_store: 'App Store で管理',
+  sub_cancel_membership: 'メンバーシップを解約',
+  sub_subscribed_footer:
+    '解約するまで自動更新されます。請求期間の終了までフルアクセスをご利用いただけます。',
 } as const;
