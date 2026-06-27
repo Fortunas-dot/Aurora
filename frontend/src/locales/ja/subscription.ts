@@ -39,7 +39,7 @@ export const subscriptionJa = {
   sub_free_trial_rest: '付き。いつでも解約できます',
   sub_cta_manage: 'サブスクリプションを管理',
   sub_cta_coming_soon: '近日公開',
-  sub_cta_start_trial: '7日間無料トライアルを始める',
+  sub_cta_start_trial: 'プレミアムに登録',
   sub_restore_purchases: '購入を復元',
   sub_auto_renew_with_price:
     '解約するまで{{price}}/月で自動更新されます。先着500名様限定の紹介価格です。',

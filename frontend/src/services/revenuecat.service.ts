@@ -18,6 +18,7 @@ export const PREMIUM_ENTITLEMENT = 'Aurora Premium';
 // Product identifiers
 export const PRODUCT_IDS = {
   MONTHLY: 'com.aurora.app.monthly',
+  THREE_MONTHS: 'com.aurora.app.3months',
 } as const;
 
 export type ProductId = typeof PRODUCT_IDS[keyof typeof PRODUCT_IDS];

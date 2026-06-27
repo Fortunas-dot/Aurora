@@ -39,7 +39,7 @@ export const subscriptionEs = {
   sub_free_trial_rest: 'incluida — cancela cuando quieras',
   sub_cta_manage: 'Gestionar suscripción',
   sub_cta_coming_soon: 'Próximamente',
-  sub_cta_start_trial: 'Empezar prueba gratuita de 7 días',
+  sub_cta_start_trial: 'Obtener Premium',
   sub_restore_purchases: 'Restaurar compras',
   sub_auto_renew_with_price:
     'Se renueva automáticamente por {{price}}/mes hasta que canceles. Precio introductorio para los primeros 500 suscriptores.',

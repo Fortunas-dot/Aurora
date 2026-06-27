@@ -39,7 +39,7 @@ export const subscriptionAr = {
   sub_free_trial_rest: 'متضمنة — يمكنك الإلغاء في أي وقت',
   sub_cta_manage: 'إدارة الاشتراك',
   sub_cta_coming_soon: 'قريباً',
-  sub_cta_start_trial: 'ابدأ التجربة المجانية 7 أيام',
+  sub_cta_start_trial: 'احصل على بريميوم',
   sub_restore_purchases: 'استعادة المشتريات',
   sub_auto_renew_with_price:
     'يتجدد تلقائياً بـ {{price}} شهرياً حتى الإلغاء. السعر التمهيدي لأول 500 مشترك.',

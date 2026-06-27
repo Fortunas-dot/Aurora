@@ -40,7 +40,7 @@ export const subscriptionEn = {
   sub_free_trial_rest: 'included - Cancel anytime',
   sub_cta_manage: 'Manage Subscription',
   sub_cta_coming_soon: 'Coming Soon',
-  sub_cta_start_trial: 'Start 7-day Free Trial',
+  sub_cta_start_trial: 'Get Premium',
   sub_restore_purchases: 'Restore Purchases',
   sub_auto_renew_with_price:
     'Auto-renews for {{price}}/month until canceled. Introductory price valid for the first 500 subscribers.',

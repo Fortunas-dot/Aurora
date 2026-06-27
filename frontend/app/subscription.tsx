@@ -107,8 +107,20 @@ export default function SubscriptionScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
+  const [threeMonthPackage, setThreeMonthPackage] = useState<PurchasesPackage | null>(null);
+  // Which plan the buy button purchases ('monthly' is the default).
+  const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | 'quarterly'>('monthly');
   const [isLoadingProducts, setIsLoadingProducts] = useState(false); // Start as false, will be set to true when loading
   const retryAttemptRef = useRef(0);
+  // The package the buy button acts on, derived from the selected plan.
+  const selectedPackage = selectedPlanId === 'quarterly' ? threeMonthPackage : monthlyPackage;
+
+  // Find the optional 3-month package in a list of packages (may not exist yet).
+  const findThreeMonth = (pkgs: PurchasesPackage[] | undefined | null) =>
+    (pkgs?.find((p) => p.product?.identifier === 'com.aurora.app.3months')
+      || pkgs?.find((p) => p.packageType === 'THREE_MONTH')
+      || pkgs?.find((p) => p.identifier === '$rc_three_month' || p.identifier === 'three_month')
+      || null);
 
   // Animations
   const auroraBounceAnim = useRef(new Animated.Value(0)).current;
@@ -274,9 +286,9 @@ export default function SubscriptionScreen() {
               if (monthly) {
                 console.log('✅ Found package by exact product identifier:', monthly.identifier);
                 const priceString = monthly.product?.priceString || '';
-                if (!priceString.includes('4.99') && !priceString.includes('4,99')) {
-                  console.warn('⚠️ WARNING: Product price does not match expected €4.99. Current price:', priceString);
-                  console.warn('⚠️ Please check RevenueCat dashboard - product "com.aurora.app.monthly" should be priced at €4.99');
+                if (!priceString.includes('24.90') && !priceString.includes('24,90')) {
+                  console.warn('⚠️ WARNING: Product price does not match expected 24.90. Current price:', priceString);
+                  console.warn('⚠️ Please check App Store Connect - product "com.aurora.app.monthly" should be priced at 24.90/month');
                 }
               } else {
                 // Strategy 2: Find by package type MONTHLY (fallback)
@@ -303,7 +315,7 @@ export default function SubscriptionScreen() {
                     monthly = currentPackages[0];
                     console.warn('⚠️⚠️ Using first available package as last resort (fallback):', monthly.identifier);
                     console.warn('⚠️⚠️ Product ID:', monthly.product?.identifier, 'Price:', monthly.product?.priceString);
-                    console.warn('⚠️⚠️ STRONGLY RECOMMENDED: Configure product "com.aurora.app.monthly" with price €4.99 in RevenueCat dashboard');
+                    console.warn('⚠️⚠️ STRONGLY RECOMMENDED: Configure product "com.aurora.app.monthly" with price 24.90/month in App Store Connect');
                   }
                 }
               }
@@ -320,6 +332,12 @@ export default function SubscriptionScreen() {
               } else {
                 console.error('❌ No monthly package found after all strategies');
                 setMonthlyPackage(null);
+              }
+              // Also pick up the optional 3-month package from the same offering.
+              const threeMonth = findThreeMonth(currentPackages);
+              setThreeMonthPackage(threeMonth);
+              if (threeMonth) {
+                console.log('✅ 3-month package set:', threeMonth.product?.identifier, threeMonth.product?.priceString);
               }
             } else {
               console.warn('⚠️ No packages available from RevenueCat');
@@ -382,6 +400,7 @@ export default function SubscriptionScreen() {
           setMonthlyPackage(monthly);
           console.log('✅ Monthly package found on retry:', monthly.identifier);
         }
+        setThreeMonthPackage(findThreeMonth(currentPackages));
       }
     }, 2000);
     
@@ -402,7 +421,7 @@ export default function SubscriptionScreen() {
       return;
     }
 
-    if (!monthlyPackage) {
+    if (!selectedPackage) {
       // Try to reload offerings if package is not found (max 1 retry)
       if (retryAttemptRef.current === 0) {
         retryAttemptRef.current = 1;
@@ -424,6 +443,7 @@ export default function SubscriptionScreen() {
             
             if (monthly) {
               setMonthlyPackage(monthly);
+              setThreeMonthPackage(findThreeMonth(availablePackages));
               retryAttemptRef.current = 0; // Reset for next time
               // Retry purchase
               handlePurchase();
@@ -456,11 +476,11 @@ export default function SubscriptionScreen() {
       setIsPurchasing(true);
       clearError();
 
-      const success = await purchasePackage(monthlyPackage);
+      const success = await purchasePackage(selectedPackage);
 
       if (success) {
         // Facebook: track subscription purchase (best-effort; guard product data)
-        const product = monthlyPackage.product as any;
+        const product = selectedPackage.product as any;
         const price = typeof product?.price === 'number' ? product.price : 0;
         const currency = product?.currency || 'EUR';
         facebookAnalytics.logSubscriptionPurchased(
@@ -673,12 +693,42 @@ export default function SubscriptionScreen() {
                   </View>
                 )}
               </View>
-              <View style={styles.priceRow}>
-                <Text style={[styles.priceBig, { color: '#9B59B6' }]}>
-                  {monthlyPackage?.product?.priceString ?? '...'}
-                </Text>
-                <Text style={[styles.priceDetail, { color: '#6C757D' }]}>{t('sub_per_month')}</Text>
-              </View>
+              {threeMonthPackage ? (
+                <View style={styles.planSelectorRow}>
+                  {([
+                    { id: 'monthly' as const, pkg: monthlyPackage, period: t('sub_per_month') },
+                    { id: 'quarterly' as const, pkg: threeMonthPackage, period: '/ 3 months' },
+                  ]).map((o) => {
+                    const isSel = selectedPlanId === o.id;
+                    return (
+                      <TouchableOpacity
+                        key={o.id}
+                        activeOpacity={0.85}
+                        onPress={() => setSelectedPlanId(o.id)}
+                        style={[
+                          styles.planOption,
+                          {
+                            borderColor: isSel ? '#9B59B6' : '#E8E8E8',
+                            backgroundColor: isSel ? 'rgba(155,89,182,0.08)' : '#FFFFFF',
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.planOptionPrice, { color: '#9B59B6' }]}>
+                          {o.pkg?.product?.priceString ?? '...'}
+                        </Text>
+                        <Text style={[styles.planOptionPeriod, { color: '#6C757D' }]}>{o.period}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceBig, { color: '#9B59B6' }]}>
+                    {monthlyPackage?.product?.priceString ?? '...'}
+                  </Text>
+                  <Text style={[styles.priceDetail, { color: '#6C757D' }]}>{t('sub_per_month')}</Text>
+                </View>
+              )}
               {isPremium ? (
                 <Text style={[styles.planNote, { color: '#27AE60', fontWeight: '700' }]}>
                   {t('sub_you_are_subscribed')}
@@ -691,24 +741,7 @@ export default function SubscriptionScreen() {
             </View>
           </Animated.View>
 
-          {/* Free trial — high-contrast gradient banner so “7 days” stands out */}
-          <Animated.View style={[styles.freeTrialSparkWrap, { transform: [{ scale: trialSparkScale }] }]}>
-            <LinearGradient
-              colors={['#6D28D9', '#C026D3', '#EA580C']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.freeTrialSparkGradient}
-            >
-              <View style={styles.freeTrialSparkIconRow}>
-                <Ionicons name="sparkles" size={20} color="#FEF9C3" />
-                <Ionicons name="gift" size={26} color="#FFFBEB" />
-                <Ionicons name="sparkles" size={20} color="#FEF9C3" />
-              </View>
-              <Text style={styles.freeTrialSparkTitle}>{t('sub_free_trial_spark_title')}</Text>
-              <Text style={styles.freeTrialSparkSubtitle}>{t('sub_free_trial_bold')}</Text>
-              <Text style={styles.freeTrialSparkNote}>{t('sub_free_trial_rest')}</Text>
-            </LinearGradient>
-          </Animated.View>
+          {/* Free-trial banner removed — app plans have no free trial (monthly + 3-month only). */}
 
           {/* Features Section */}
           <View style={[styles.featuresSection, { backgroundColor: '#FFFFFF', borderColor: '#E8E8E8' }]}>
@@ -742,13 +775,13 @@ export default function SubscriptionScreen() {
               {
                 backgroundColor: colors.secondary,
                 opacity:
-                  isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))
+                  isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))
                     ? 0.7
                     : 1,
               },
             ]}
             onPress={isPremium ? handleManageSubscription : handlePurchase}
-            disabled={isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))}
+            disabled={isPurchasing || (isLoadingProducts && Platform.OS !== 'web') || (!isPremium && !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android'))}
             activeOpacity={0.9}
           >
             {isPurchasing ? (
@@ -757,9 +790,9 @@ export default function SubscriptionScreen() {
               <Text style={styles.ctaButtonText}>{t('sub_cta_manage')}</Text>
             ) : isLoadingProducts && (Platform.OS === 'ios' || Platform.OS === 'android') ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : !monthlyPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (
+            ) : !selectedPackage && (Platform.OS === 'ios' || Platform.OS === 'android') && !isLoadingProducts ? (
               <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
-            ) : !monthlyPackage ? (
+            ) : !selectedPackage ? (
               <Text style={styles.ctaButtonText}>{t('sub_cta_coming_soon')}</Text>
             ) : (
               <Text style={styles.ctaButtonText}>{t('sub_cta_start_trial')}</Text>
@@ -768,9 +801,9 @@ export default function SubscriptionScreen() {
 
           {/* Auto-renew note */}
           <Text style={[styles.autoRenewNote, { color: '#6C757D' }]}>
-            {monthlyPackage?.product?.priceString ? (
+            {selectedPackage?.product?.priceString ? (
               <>
-                {t('sub_auto_renew_with_price', { price: monthlyPackage.product.priceString })}
+                {t('sub_auto_renew_with_price', { price: selectedPackage.product.priceString })}
               </>
             ) : (
               <>{t('sub_auto_renew_generic')}</>
@@ -976,6 +1009,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 8,
+  },
+  planSelectorRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  planOption: {
+    flex: 1,
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  planOptionPrice: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  planOptionPeriod: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
   priceBig: {
     fontSize: 32,
