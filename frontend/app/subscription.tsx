@@ -96,6 +96,7 @@ export default function SubscriptionScreen() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
   // Local override of willRenew so the UI flips immediately after cancel/reactivate,
   // before RevenueCat's flag syncs. null = use RevenueCat's value.
   const [localWillRenew, setLocalWillRenew] = useState<boolean | null>(null);
@@ -728,13 +729,41 @@ export default function SubscriptionScreen() {
   // Change plan. Apple buyers use the in-app picker (RevenueCat handles the
   // upgrade/cross-grade). Stripe/web buyers must NOT buy via Apple here (it would
   // create a second subscription) — send them to web management instead.
+  // Switch a Stripe (web) subscription to a new plan at the next renewal.
+  const changeStripePlan = async (plan: 'monthly' | 'quarterly') => {
+    try {
+      setIsChangingPlan(true);
+      const res = await fetch(`${WEB_BASE}/api/change-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '', plan }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (res.ok && data?.ok) {
+        await checkPremiumStatus();
+        Alert.alert(t('sub_change_plan_done_title'), t('sub_change_plan_done_body'));
+      } else {
+        console.warn('change-plan returned not-ok:', res.status, data?.reason || data?.error);
+        Alert.alert(t('sub_change_plan_failed_title'), t('sub_change_plan_failed_body'));
+      }
+    } catch (error) {
+      console.warn('change-plan failed:', error);
+      Alert.alert(t('sub_change_plan_failed_title'), t('sub_change_plan_failed_body'));
+    } finally {
+      setIsChangingPlan(false);
+    }
+  };
+
   const handleChangePlan = async () => {
     const store = await resolveStore();
-    // Stripe/web buyers must not "change plan" via Apple (it would create a 2nd
-    // subscription) — send them to the Stripe portal instead.
+    // Stripe/web buyers: in-app plan picker (switch at next renewal). Must NOT go
+    // through the Apple picker (that would start a second, Apple subscription).
     if (isStripeStore(store)) {
-      if (await openStripePortal('change_plan')) return;
-      Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
+      Alert.alert(t('sub_change_plan_title'), t('sub_change_plan_body'), [
+        { text: `${t('sub_plan_monthly_title')} · $24.90`, onPress: () => changeStripePlan('monthly') },
+        { text: `${t('sub_plan_quarterly_title')} · $49.90`, onPress: () => changeStripePlan('quarterly') },
+        { text: t('sub_keep_current'), style: 'cancel' },
+      ]);
       return;
     }
     setShowPlans(true);
@@ -975,9 +1004,13 @@ export default function SubscriptionScreen() {
             {/* Manage actions */}
             <View style={[styles.section, { paddingTop: 14 }]}>
               <View style={styles.infoCard}>
-                <TouchableOpacity activeOpacity={0.7} onPress={handleChangePlan} style={styles.actionRow}>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleChangePlan} disabled={isChangingPlan} style={styles.actionRow}>
                   <Text style={styles.actionText}>{t('sub_change_plan')}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                  {isChangingPlan ? (
+                    <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity activeOpacity={0.7} onPress={handleRestorePurchases} disabled={isRestoring} style={styles.actionRow}>
                   <Text style={styles.actionText}>{t('sub_restore_purchases')}</Text>

@@ -112,4 +112,13 @@ export const subscriptionEs = {
   sub_reactivate_failed_title: 'No se pudo reactivar',
   sub_reactivate_failed_body:
     'Algo salió mal al reactivar tu membresía. Inténtalo de nuevo o contacta con soporte.',
+  sub_change_plan_title: 'Cambiar de plan',
+  sub_change_plan_body:
+    'Elige tu nuevo plan. El cambio se aplica en tu próxima renovación; hasta entonces conservas tu plan actual.',
+  sub_keep_current: 'Mantener plan actual',
+  sub_change_plan_done_title: 'Plan actualizado',
+  sub_change_plan_done_body: 'Tu nuevo plan se aplicará en tu próxima renovación.',
+  sub_change_plan_failed_title: 'No se pudo cambiar el plan',
+  sub_change_plan_failed_body:
+    'Algo salió mal al cambiar tu plan. Inténtalo de nuevo o contacta con soporte.',
 } as const;

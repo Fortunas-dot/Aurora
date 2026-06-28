@@ -112,4 +112,13 @@ export const subscriptionJa = {
   sub_reactivate_failed_title: '再開できませんでした',
   sub_reactivate_failed_body:
     'メンバーシップの再開中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
+  sub_change_plan_title: 'プランを変更',
+  sub_change_plan_body:
+    '新しいプランを選択してください。変更は次回の更新時に適用され、それまでは現在のプランが継続します。',
+  sub_keep_current: '現在のプランを維持',
+  sub_change_plan_done_title: 'プランを更新しました',
+  sub_change_plan_done_body: '新しいプランは次回の更新時に適用されます。',
+  sub_change_plan_failed_title: 'プランを変更できませんでした',
+  sub_change_plan_failed_body:
+    'プランの変更中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
 } as const;

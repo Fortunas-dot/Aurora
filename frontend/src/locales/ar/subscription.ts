@@ -112,4 +112,13 @@ export const subscriptionAr = {
   sub_reactivate_failed_title: 'تعذّرت إعادة التفعيل',
   sub_reactivate_failed_body:
     'حدث خطأ ما أثناء إعادة تفعيل عضويتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
+  sub_change_plan_title: 'تغيير الخطة',
+  sub_change_plan_body:
+    'اختر خطتك الجديدة. يسري التغيير عند التجديد التالي — وتحتفظ بخطتك الحالية حتى ذلك الحين.',
+  sub_keep_current: 'الإبقاء على الخطة الحالية',
+  sub_change_plan_done_title: 'تم تحديث الخطة',
+  sub_change_plan_done_body: 'ستسري خطتك الجديدة عند التجديد التالي.',
+  sub_change_plan_failed_title: 'تعذّر تغيير الخطة',
+  sub_change_plan_failed_body:
+    'حدث خطأ ما أثناء تغيير خطتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
 } as const;

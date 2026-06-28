@@ -113,4 +113,13 @@ export const subscriptionEn = {
   sub_reactivate_failed_title: "Couldn't reactivate",
   sub_reactivate_failed_body:
     'Something went wrong reactivating your membership. Please try again or contact support.',
+  sub_change_plan_title: 'Change plan',
+  sub_change_plan_body:
+    'Pick your new plan. The change takes effect at your next renewal — you keep your current plan until then.',
+  sub_keep_current: 'Keep current plan',
+  sub_change_plan_done_title: 'Plan updated',
+  sub_change_plan_done_body: 'Your new plan will take effect at your next renewal.',
+  sub_change_plan_failed_title: "Couldn't change plan",
+  sub_change_plan_failed_body:
+    'Something went wrong changing your plan. Please try again or contact support.',
 } as const;
