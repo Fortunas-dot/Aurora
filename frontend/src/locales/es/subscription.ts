@@ -88,4 +88,15 @@ export const subscriptionEs = {
   sub_cancel_membership: 'Cancelar membresía',
   sub_subscribed_footer:
     'Se renueva automáticamente hasta que canceles. Conservas el acceso completo hasta el final de tu periodo de facturación.',
+  sub_cancel_confirm_title: '¿Cancelar membresía?',
+  sub_cancel_confirm_body:
+    'Tu membresía seguirá activa hasta el final de tu periodo de facturación actual y luego no se renovará.',
+  sub_cancel_keep: 'Mantener membresía',
+  sub_cancel_confirm_cta: 'Cancelar membresía',
+  sub_cancel_done_title: 'Membresía cancelada',
+  sub_cancel_done_body:
+    'Listo. Conservarás el acceso completo hasta el final de tu periodo de facturación actual.',
+  sub_cancel_failed_title: 'No se pudo cancelar',
+  sub_cancel_failed_body:
+    'Algo salió mal al cancelar tu membresía. Inténtalo de nuevo o contacta con soporte.',
 } as const;

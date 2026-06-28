@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PurchasesPackage } from 'react-native-purchases';
+import RevenueCatUI from 'react-native-purchases-ui';
 import { useTheme } from '../src/hooks/useTheme';
 import { useTranslation } from '../src/hooks/useTranslation';
 import { useAuthStore } from '../src/store/authStore';
@@ -28,6 +29,10 @@ import { appsFlyerService } from '../src/services/appsflyer.service';
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../src/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Aurora website (Stripe) — hosts the cancel endpoint + account page for
+// web-funnel buyers who manage their subscription from inside the app.
+const WEB_BASE = 'https://aurora-commune.com';
 
 // Dark cosmic palette (Aurora Premium redesign)
 const C = {
@@ -89,6 +94,7 @@ export default function SubscriptionScreen() {
 
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [threeMonthPackage, setThreeMonthPackage] = useState<PurchasesPackage | null>(null);
   // Which plan the buy button purchases ('monthly' is the default).
@@ -102,6 +108,10 @@ export default function SubscriptionScreen() {
 
   // Active entitlement details for the membership screen (null when not premium).
   const activeEntitlement = customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT] ?? null;
+  // Where the active subscription was bought decides how we manage/cancel it.
+  // Apple (IAP) → native in-app sheet; Stripe (web funnel) → our own flow.
+  const activeStore = activeEntitlement?.store; // 'APP_STORE' | 'STRIPE' | ...
+  const isAppleSub = activeStore === 'APP_STORE' || activeStore === 'MAC_APP_STORE';
   const activeIsQuarter = activeEntitlement?.productIdentifier === 'com.aurora.app.3months';
   const activePackage = activeIsQuarter ? threeMonthPackage : monthlyPackage;
 
@@ -515,27 +525,112 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const handleManageSubscription = async () => {
-    if (Platform.OS === 'ios') {
-      const subscriptionsUrl = 'https://apps.apple.com/account/subscriptions';
-      try {
-        const canOpen = await Linking.canOpenURL(subscriptionsUrl);
-        if (canOpen) {
-          await Linking.openURL(subscriptionsUrl);
-          return;
-        }
-      } catch (error) {
-        console.warn('Failed to open iOS subscriptions link:', error);
-      }
+  // Present Apple's native subscription sheet INSIDE the app (RevenueCat Customer
+  // Center). Returns true if shown. Apple subs can only be managed/cancelled
+  // through Apple — this is the closest-to-native, in-app way to do it.
+  const presentAppleManagement = async (): Promise<boolean> => {
+    try {
+      await RevenueCatUI.presentCustomerCenter();
+      // They may have changed/cancelled while in the sheet — refresh.
+      await checkPremiumStatus();
+      return true;
+    } catch (error) {
+      console.warn('Customer Center unavailable, will fall back:', error);
+      return false;
+    }
+  };
 
-      Alert.alert(
-        t('sub_manage_subscription'),
-        t('sub_manage_ios_settings')
-      );
+  // Last-resort Apple fallback if Customer Center can't present.
+  const openAppleFallback = async () => {
+    try {
+      const ci = await revenueCatService.getCustomerInfo();
+      if (ci?.managementURL) {
+        await Linking.openURL(ci.managementURL);
+        return;
+      }
+    } catch (error) {
+      console.warn('Failed to read managementURL:', error);
+    }
+    try {
+      await Linking.openURL('https://apps.apple.com/account/subscriptions');
+    } catch (error) {
+      Alert.alert(t('sub_manage_subscription'), t('sub_manage_ios_settings'));
+    }
+  };
+
+  // Open the Stripe Customer Portal for a web-funnel buyer (update card / change
+  // plan / cancel on a short-lived Stripe-hosted page). Returns true if opened.
+  const openStripePortal = async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`${WEB_BASE}/api/billing-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '' }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (res.ok && data?.url) {
+        await Linking.openURL(data.url);
+        return true;
+      }
+    } catch (error) {
+      console.warn('Failed to open Stripe billing portal:', error);
+    }
+    return false;
+  };
+
+  // "Manage subscription" row. Apple → in-app native sheet. Stripe → portal.
+  const handleManageSubscription = async () => {
+    if (isAppleSub && isMobile) {
+      if (await presentAppleManagement()) return;
+      await openAppleFallback();
       return;
     }
-
+    // Web/Stripe-bought subs (or unknown) → Stripe portal, never Apple.
+    if (await openStripePortal()) return;
     Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
+  };
+
+  // Cancel a Stripe (web-funnel) subscription via our backend — stays in-app.
+  // Cancels at period end, so the member keeps access until it runs out.
+  const cancelStripeSubscription = async () => {
+    try {
+      setIsCancelling(true);
+      const res = await fetch(`${WEB_BASE}/api/cancel-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '' }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (res.ok && data?.ok) {
+        await checkPremiumStatus();
+        Alert.alert(t('sub_cancel_done_title'), t('sub_cancel_done_body'));
+      } else {
+        Alert.alert(t('sub_cancel_failed_title'), t('sub_cancel_failed_body'));
+      }
+    } catch (error) {
+      console.warn('Stripe cancel failed:', error);
+      Alert.alert(t('sub_cancel_failed_title'), t('sub_cancel_failed_body'));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // "Cancel membership" button. Apple → native in-app sheet; Stripe → in-app
+  // confirm + backend cancel (never bounce a web buyer to Apple).
+  const handleCancelMembership = async () => {
+    if (isAppleSub && isMobile) {
+      if (await presentAppleManagement()) return;
+      await openAppleFallback();
+      return;
+    }
+    Alert.alert(
+      t('sub_cancel_confirm_title'),
+      t('sub_cancel_confirm_body'),
+      [
+        { text: t('sub_cancel_keep'), style: 'cancel' },
+        { text: t('sub_cancel_confirm_cta'), style: 'destructive', onPress: cancelStripeSubscription },
+      ]
+    );
   };
 
   const handleBack = () => {
@@ -556,7 +651,18 @@ export default function SubscriptionScreen() {
   };
 
   const handleHelp = () => router.push('/help-support');
-  const handleChangePlan = () => setShowPlans(true);
+
+  // Change plan. Apple buyers use the in-app picker (RevenueCat handles the
+  // upgrade/cross-grade). Stripe/web buyers must NOT buy via Apple here (it would
+  // create a second subscription) — send them to web management instead.
+  const handleChangePlan = async () => {
+    if (!isAppleSub && activeStore) {
+      if (await openStripePortal()) return;
+      Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
+      return;
+    }
+    setShowPlans(true);
+  };
 
   // Benefit rows — reuse the localized feature copy, paired with the design's orb colors.
   const benefits = useMemo(
@@ -806,7 +912,7 @@ export default function SubscriptionScreen() {
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity activeOpacity={0.7} onPress={handleManageSubscription} style={[styles.actionRow, styles.infoRowLast]}>
-                  <Text style={styles.actionText}>{t('sub_manage_app_store')}</Text>
+                  <Text style={styles.actionText}>{isAppleSub ? t('sub_manage_app_store') : t('sub_manage_subscription')}</Text>
                   <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
                 </TouchableOpacity>
               </View>
@@ -814,8 +920,12 @@ export default function SubscriptionScreen() {
 
             {/* Cancel + footer */}
             <View style={[styles.section, { paddingTop: 18 }]}>
-              <TouchableOpacity activeOpacity={0.8} onPress={handleManageSubscription} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
+              <TouchableOpacity activeOpacity={0.8} onPress={handleCancelMembership} disabled={isCancelling} style={styles.cancelBtn}>
+                {isCancelling ? (
+                  <ActivityIndicator size="small" color="rgba(255,255,255,0.62)" />
+                ) : (
+                  <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
+                )}
               </TouchableOpacity>
               <Text style={styles.subscribedFooter}>{t('sub_subscribed_footer')}</Text>
             </View>

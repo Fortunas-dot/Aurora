@@ -88,4 +88,15 @@ export const subscriptionAr = {
   sub_cancel_membership: 'إلغاء العضوية',
   sub_subscribed_footer:
     'يتجدد تلقائياً حتى الإلغاء. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
+  sub_cancel_confirm_title: 'إلغاء العضوية؟',
+  sub_cancel_confirm_body:
+    'ستظل عضويتك نشطة حتى نهاية فترة الفوترة الحالية، ثم لن تتجدد.',
+  sub_cancel_keep: 'الاحتفاظ بالعضوية',
+  sub_cancel_confirm_cta: 'إلغاء العضوية',
+  sub_cancel_done_title: 'تم إلغاء العضوية',
+  sub_cancel_done_body:
+    'تم كل شيء. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة الحالية.',
+  sub_cancel_failed_title: 'تعذّر الإلغاء',
+  sub_cancel_failed_body:
+    'حدث خطأ ما أثناء إلغاء عضويتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
 } as const;

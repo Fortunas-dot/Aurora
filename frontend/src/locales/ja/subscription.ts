@@ -88,4 +88,15 @@ export const subscriptionJa = {
   sub_cancel_membership: 'メンバーシップを解約',
   sub_subscribed_footer:
     '解約するまで自動更新されます。請求期間の終了までフルアクセスをご利用いただけます。',
+  sub_cancel_confirm_title: 'メンバーシップを解約しますか？',
+  sub_cancel_confirm_body:
+    '現在の請求期間の終了まではメンバーシップが有効で、その後は更新されません。',
+  sub_cancel_keep: 'メンバーシップを継続',
+  sub_cancel_confirm_cta: 'メンバーシップを解約',
+  sub_cancel_done_title: 'メンバーシップを解約しました',
+  sub_cancel_done_body:
+    '完了しました。現在の請求期間の終了までフルアクセスをご利用いただけます。',
+  sub_cancel_failed_title: '解約できませんでした',
+  sub_cancel_failed_body:
+    'メンバーシップの解約中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
 } as const;

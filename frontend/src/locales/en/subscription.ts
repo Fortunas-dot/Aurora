@@ -89,4 +89,15 @@ export const subscriptionEn = {
   sub_cancel_membership: 'Cancel membership',
   sub_subscribed_footer:
     "Auto-renews until canceled. You'll keep full access until the end of your billing period.",
+  sub_cancel_confirm_title: 'Cancel membership?',
+  sub_cancel_confirm_body:
+    "Your membership will stay active until the end of your current billing period, then it won't renew.",
+  sub_cancel_keep: 'Keep membership',
+  sub_cancel_confirm_cta: 'Cancel membership',
+  sub_cancel_done_title: 'Membership canceled',
+  sub_cancel_done_body:
+    "You're all set. You'll keep full access until the end of your current billing period.",
+  sub_cancel_failed_title: "Couldn't cancel",
+  sub_cancel_failed_body:
+    'Something went wrong cancelling your membership. Please try again or contact support.',
 } as const;
