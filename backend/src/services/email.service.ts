@@ -1,11 +1,13 @@
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS;
 const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Aurora';
+
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 /**
  * Base API URL used inside emails for redirect endpoints.
@@ -21,12 +23,10 @@ const API_BASE_URL =
  */
 const APP_SCHEME = 'aurora://';
 
-if (!SENDGRID_API_KEY) {
+if (!RESEND_API_KEY) {
   console.warn(
-    '⚠️  SENDGRID_API_KEY is not set. Email sending will be disabled until this environment variable is configured.'
+    '⚠️  RESEND_API_KEY is not set. Email sending will be disabled until this environment variable is configured.'
   );
-} else {
-  sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
 if (!EMAIL_FROM_ADDRESS) {
@@ -44,42 +44,46 @@ export interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; message: string }> {
   try {
-    if (!SENDGRID_API_KEY || !EMAIL_FROM_ADDRESS) {
+    if (!resend || !EMAIL_FROM_ADDRESS) {
       return {
         success: false,
         message: 'Email service is not configured. Please try again later.',
       };
     }
 
-    const msg = {
+    // Resend expects the sender as a single "Name <email>" string.
+    const from = EMAIL_FROM_NAME
+      ? `${EMAIL_FROM_NAME} <${EMAIL_FROM_ADDRESS}>`
+      : EMAIL_FROM_ADDRESS;
+
+    const { data, error } = await resend.emails.send({
+      from,
       to: options.to,
-      from: {
-        email: EMAIL_FROM_ADDRESS,
-        name: EMAIL_FROM_NAME,
-      },
       subject: options.subject,
       html: options.html,
       text: options.text || stripHtml(options.html),
-    };
+    });
 
-    await sgMail.send(msg);
+    if (error) {
+      console.error('❌ Error sending email via Resend:', error.message || error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send email. Please try again later.',
+      };
+    }
 
     return {
       success: true,
-      message: 'Email sent successfully',
+      message: data?.id ? `Email sent successfully (${data.id})` : 'Email sent successfully',
     };
   } catch (error: any) {
-    // SendGrid provides detailed error information in error.response.body
-    const sendgridMessage =
-      error?.response?.body?.errors?.[0]?.message ||
-      error?.message ||
-      'Failed to send email. Please try again later.';
+    const resendMessage = error?.message || 'Failed to send email. Please try again later.';
 
-    console.error('❌ Error sending email via SendGrid:', sendgridMessage);
+    console.error('❌ Error sending email via Resend:', resendMessage);
 
     return {
       success: false,
-      message: sendgridMessage,
+      message: resendMessage,
     };
   }
 }
