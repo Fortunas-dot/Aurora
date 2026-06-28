@@ -459,7 +459,9 @@ export default function AccountSettingsScreen() {
             </Text>
           </GlassCard>
 
-          {/* Phone Number */}
+          {/* Phone Number — TEMPORARILY DISABLED: we are not collecting phone numbers
+              for now. To re-enable, change `false` to `true` below. */}
+          {false && (
           <GlassCard style={styles.inputCard} padding="lg">
             <Text style={styles.label}>Phone Number</Text>
             <View style={styles.phoneRow}>
@@ -599,6 +601,7 @@ export default function AccountSettingsScreen() {
               </View>
             )}
           </GlassCard>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>

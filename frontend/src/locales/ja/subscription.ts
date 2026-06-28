@@ -99,4 +99,11 @@ export const subscriptionJa = {
   sub_cancel_failed_title: '解約できませんでした',
   sub_cancel_failed_body:
     'メンバーシップの解約中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
+  sub_cancel_scheduled: '解約予約済み',
+  sub_row_cancels: '解約日',
+  sub_already_canceled_title: 'すでに解約済み',
+  sub_already_canceled_body:
+    'メンバーシップはすでに解約予約されています。請求期間の終了までフルアクセスをご利用いただけます。',
+  sub_canceled_footer:
+    'メンバーシップは解約され、更新されません。請求期間の終了までフルアクセスをご利用いただけます。',
 } as const;

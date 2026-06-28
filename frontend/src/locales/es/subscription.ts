@@ -99,4 +99,11 @@ export const subscriptionEs = {
   sub_cancel_failed_title: 'No se pudo cancelar',
   sub_cancel_failed_body:
     'Algo salió mal al cancelar tu membresía. Inténtalo de nuevo o contacta con soporte.',
+  sub_cancel_scheduled: 'Cancelación programada',
+  sub_row_cancels: 'Cancela',
+  sub_already_canceled_title: 'Ya cancelada',
+  sub_already_canceled_body:
+    'Tu membresía ya está programada para cancelarse. Conservarás el acceso completo hasta el final de tu periodo de facturación.',
+  sub_canceled_footer:
+    'Tu membresía está cancelada y no se renovará. Conservarás el acceso completo hasta el final de tu periodo de facturación.',
 } as const;

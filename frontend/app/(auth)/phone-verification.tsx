@@ -225,7 +225,9 @@ export default function PhoneVerificationScreen() {
           </View>
 
           <GlassCard style={styles.card} padding="lg" gradient>
-            {step === 'enter_phone' && (
+            {/* Phone entry TEMPORARILY DISABLED: we are not collecting phone numbers
+                for now. To re-enable, change `false &&` to just the step check below. */}
+            {false && step === 'enter_phone' && (
               <>
                 <Text style={styles.label}>Phone number</Text>
 

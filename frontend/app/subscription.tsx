@@ -95,6 +95,9 @@ export default function SubscriptionScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  // Set immediately after a successful cancel so the UI flips before RevenueCat's
+  // willRenew flag syncs (avoids the "press cancel again, same message" confusion).
+  const [cancelScheduledLocal, setCancelScheduledLocal] = useState(false);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [threeMonthPackage, setThreeMonthPackage] = useState<PurchasesPackage | null>(null);
   // Which plan the buy button purchases ('monthly' is the default).
@@ -112,6 +115,10 @@ export default function SubscriptionScreen() {
   // Apple (IAP) → native in-app sheet; Stripe (web funnel) → our own flow.
   const activeStore = activeEntitlement?.store; // 'APP_STORE' | 'STRIPE' | ...
   const isAppleSub = activeStore === 'APP_STORE' || activeStore === 'MAC_APP_STORE';
+  // The membership is set to cancel (still active until period end). RevenueCat's
+  // willRenew flips to false once the cancellation syncs; the local flag covers
+  // the brief window right after the user taps cancel.
+  const willNotRenew = cancelScheduledLocal || activeEntitlement?.willRenew === false;
   const activeIsQuarter = activeEntitlement?.productIdentifier === 'com.aurora.app.3months';
   const activePackage = activeIsQuarter ? threeMonthPackage : monthlyPackage;
 
@@ -618,6 +625,7 @@ export default function SubscriptionScreen() {
       });
       const data = await res.json().catch(() => ({} as any));
       if (res.ok && data?.ok) {
+        setCancelScheduledLocal(true);
         await checkPremiumStatus();
         Alert.alert(t('sub_cancel_done_title'), t('sub_cancel_done_body'));
       } else {
@@ -636,6 +644,11 @@ export default function SubscriptionScreen() {
   // Apple/unknown → native in-app sheet (never show a web buyer's error to an
   // Apple buyer, and never bounce a web buyer to Apple).
   const handleCancelMembership = async () => {
+    // Already set to cancel → don't re-cancel; tell them and bail.
+    if (willNotRenew) {
+      Alert.alert(t('sub_already_canceled_title'), t('sub_already_canceled_body'));
+      return;
+    }
     const store = await resolveStore();
     if (!isStripeStore(store)) {
       if (isMobile && (await presentAppleManagement())) return;
@@ -890,7 +903,7 @@ export default function SubscriptionScreen() {
                 </View>
                 {renewsLabel ? (
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>{t('sub_row_renews')}</Text>
+                    <Text style={styles.infoLabel}>{willNotRenew ? t('sub_row_cancels') : t('sub_row_renews')}</Text>
                     <Text style={styles.infoValue} numberOfLines={1}>{renewsLabel}</Text>
                   </View>
                 ) : null}
@@ -942,14 +955,26 @@ export default function SubscriptionScreen() {
 
             {/* Cancel + footer */}
             <View style={[styles.section, { paddingTop: 18 }]}>
-              <TouchableOpacity activeOpacity={0.8} onPress={handleCancelMembership} disabled={isCancelling} style={styles.cancelBtn}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleCancelMembership}
+                disabled={isCancelling || willNotRenew}
+                style={[styles.cancelBtn, willNotRenew && styles.cancelBtnDone]}
+              >
                 {isCancelling ? (
                   <ActivityIndicator size="small" color="rgba(255,255,255,0.62)" />
+                ) : willNotRenew ? (
+                  <View style={styles.cancelDoneRow}>
+                    <Ionicons name="checkmark-circle" size={15} color={C.greenText} />
+                    <Text style={[styles.cancelText, { color: C.greenText }]}>{t('sub_cancel_scheduled')}</Text>
+                  </View>
                 ) : (
                   <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
                 )}
               </TouchableOpacity>
-              <Text style={styles.subscribedFooter}>{t('sub_subscribed_footer')}</Text>
+              <Text style={styles.subscribedFooter}>
+                {willNotRenew ? t('sub_canceled_footer') : t('sub_subscribed_footer')}
+              </Text>
             </View>
           </Animated.View>
         </ScrollView>
@@ -1587,6 +1612,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.62)',
+  },
+  cancelBtnDone: {
+    borderColor: 'rgba(63,216,154,0.35)',
+    backgroundColor: 'rgba(63,216,154,0.08)',
+  },
+  cancelDoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
   },
   subscribedFooter: {
     fontSize: 11,

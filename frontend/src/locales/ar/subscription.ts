@@ -99,4 +99,11 @@ export const subscriptionAr = {
   sub_cancel_failed_title: 'تعذّر الإلغاء',
   sub_cancel_failed_body:
     'حدث خطأ ما أثناء إلغاء عضويتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
+  sub_cancel_scheduled: 'تم جدولة الإلغاء',
+  sub_row_cancels: 'يُلغى في',
+  sub_already_canceled_title: 'ملغاة بالفعل',
+  sub_already_canceled_body:
+    'عضويتك مجدولة بالفعل للإلغاء. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
+  sub_canceled_footer:
+    'تم إلغاء عضويتك ولن تتجدد. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
 } as const;

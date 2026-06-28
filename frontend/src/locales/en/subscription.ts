@@ -100,4 +100,11 @@ export const subscriptionEn = {
   sub_cancel_failed_title: "Couldn't cancel",
   sub_cancel_failed_body:
     'Something went wrong cancelling your membership. Please try again or contact support.',
+  sub_cancel_scheduled: 'Cancellation scheduled',
+  sub_row_cancels: 'Cancels',
+  sub_already_canceled_title: 'Already canceled',
+  sub_already_canceled_body:
+    "Your membership is already set to cancel. You'll keep full access until the end of your billing period.",
+  sub_canceled_footer:
+    "Your membership is canceled and won't renew. You'll keep full access until the end of your billing period.",
 } as const;
