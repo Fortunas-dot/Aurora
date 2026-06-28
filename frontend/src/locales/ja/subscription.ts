@@ -121,4 +121,6 @@ export const subscriptionJa = {
   sub_change_plan_failed_title: 'プランを変更できませんでした',
   sub_change_plan_failed_body:
     'プランの変更中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
+  sub_plan_intro_title: '3日間お試し',
+  sub_row_upcoming: '変更後のプラン',
 } as const;

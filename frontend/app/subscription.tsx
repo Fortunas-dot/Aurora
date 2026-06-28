@@ -97,6 +97,11 @@ export default function SubscriptionScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
   const [isChangingPlan, setIsChangingPlan] = useState(false);
+  // Real Stripe subscription state (web buyers) — the actual plan + any upcoming
+  // scheduled plan, read from our backend. Null for Apple/promotional.
+  const [stripeStatus, setStripeStatus] = useState<
+    { current: string; upcoming: string | null; renewsAt: string | null; cancelAtPeriodEnd: boolean } | null
+  >(null);
   // Local override of willRenew so the UI flips immediately after cancel/reactivate,
   // before RevenueCat's flag syncs. null = use RevenueCat's value.
   const [localWillRenew, setLocalWillRenew] = useState<boolean | null>(null);
@@ -127,6 +132,40 @@ export default function SubscriptionScreen() {
   const willNotRenew =
     isManagedSub &&
     (localWillRenew !== null ? !localWillRenew : activeEntitlement?.willRenew === false);
+
+  // Fetch the real Stripe plan + upcoming change for web buyers (the membership
+  // screen otherwise shows the Apple offering price, which is wrong for them).
+  const loadStripeStatus = useCallback(async () => {
+    if (!isStripeSub || !userId) {
+      setStripeStatus(null);
+      return;
+    }
+    try {
+      const res = await fetch(`${WEB_BASE}/api/subscription-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '' }),
+      });
+      const data = await res.json().catch(() => null);
+      setStripeStatus(data?.ok && data.hasStripeSub ? data : null);
+    } catch (error) {
+      console.warn('Failed to load Stripe status:', error);
+    }
+  }, [isStripeSub, userId, user]);
+
+  useEffect(() => {
+    loadStripeStatus();
+  }, [loadStripeStatus]);
+
+  // Localized plan label + the WEB price string for a plan key.
+  const planLabelFor = (k?: string) =>
+    k === 'quarterly'
+      ? t('sub_plan_quarterly_title')
+      : k === 'intro'
+      ? t('sub_plan_intro_title')
+      : t('sub_plan_monthly_title');
+  const planPriceFor = (k?: string) =>
+    k === 'quarterly' ? '$49.90' : k === 'intro' ? '$2.95' : '$24.90';
   const activeIsQuarter = activeEntitlement?.productIdentifier === 'com.aurora.app.3months';
   const activePackage = activeIsQuarter ? threeMonthPackage : monthlyPackage;
 
@@ -635,6 +674,7 @@ export default function SubscriptionScreen() {
       if (res.ok && data?.ok) {
         setLocalWillRenew(false);
         await checkPremiumStatus();
+        await loadStripeStatus();
         Alert.alert(t('sub_cancel_done_title'), t('sub_cancel_done_body'));
       } else {
         console.warn('Stripe cancel returned not-ok:', res.status, data?.reason || data?.error);
@@ -694,6 +734,7 @@ export default function SubscriptionScreen() {
       if (res.ok && data?.ok) {
         setLocalWillRenew(true);
         await checkPremiumStatus();
+        await loadStripeStatus();
         Alert.alert(t('sub_reactivate_done_title'), t('sub_reactivate_done_body'));
       } else {
         console.warn('Reactivate returned not-ok:', res.status, data?.reason || data?.error);
@@ -741,6 +782,7 @@ export default function SubscriptionScreen() {
       const data = await res.json().catch(() => ({} as any));
       if (res.ok && data?.ok) {
         await checkPremiumStatus();
+        await loadStripeStatus();
         Alert.alert(t('sub_change_plan_done_title'), t('sub_change_plan_done_body'));
       } else {
         console.warn('change-plan returned not-ok:', res.status, data?.reason || data?.error);
@@ -847,6 +889,14 @@ export default function SubscriptionScreen() {
   const activePlanValue = activePackage?.product?.priceString
     ? `${activePlanName} · ${activePackage.product.priceString}`
     : activePlanName;
+  // Web (Stripe) buyers: show the REAL plan + price, not the Apple offering price.
+  const planDisplayValue = stripeStatus
+    ? `${planLabelFor(stripeStatus.current)} · ${planPriceFor(stripeStatus.current)}`
+    : activePlanValue;
+  // Upcoming scheduled plan (intro→monthly conversion, or a plan change).
+  const upcomingDisplayValue = stripeStatus?.upcoming
+    ? `${planLabelFor(stripeStatus.upcoming)} · ${planPriceFor(stripeStatus.upcoming)}`
+    : null;
   const renewsLabel = formatDate(activeEntitlement?.expirationDate);
   const memberSinceLabel = formatDate(activeEntitlement?.originalPurchaseDate);
 
@@ -960,7 +1010,7 @@ export default function SubscriptionScreen() {
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('sub_row_plan')}</Text>
-                  <Text style={styles.infoValue} numberOfLines={1}>{activePlanValue}</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>{planDisplayValue}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('sub_row_status')}</Text>
@@ -975,6 +1025,12 @@ export default function SubscriptionScreen() {
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>{willNotRenew ? t('sub_row_cancels') : t('sub_row_renews')}</Text>
                     <Text style={styles.infoValue} numberOfLines={1}>{renewsLabel}</Text>
+                  </View>
+                ) : null}
+                {upcomingDisplayValue && !willNotRenew ? (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{t('sub_row_upcoming')}</Text>
+                    <Text style={styles.infoValue} numberOfLines={1}>{upcomingDisplayValue}</Text>
                   </View>
                 ) : null}
                 {memberSinceLabel ? (

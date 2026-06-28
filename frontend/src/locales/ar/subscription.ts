@@ -121,4 +121,6 @@ export const subscriptionAr = {
   sub_change_plan_failed_title: 'تعذّر تغيير الخطة',
   sub_change_plan_failed_body:
     'حدث خطأ ما أثناء تغيير خطتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
+  sub_plan_intro_title: 'تجربة 3 أيام',
+  sub_row_upcoming: 'يتحوّل إلى',
 } as const;

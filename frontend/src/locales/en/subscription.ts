@@ -122,4 +122,6 @@ export const subscriptionEn = {
   sub_change_plan_failed_title: "Couldn't change plan",
   sub_change_plan_failed_body:
     'Something went wrong changing your plan. Please try again or contact support.',
+  sub_plan_intro_title: '3-day intro',
+  sub_row_upcoming: 'Switches to',
 } as const;

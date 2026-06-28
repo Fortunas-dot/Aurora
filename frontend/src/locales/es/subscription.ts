@@ -121,4 +121,6 @@ export const subscriptionEs = {
   sub_change_plan_failed_title: 'No se pudo cambiar el plan',
   sub_change_plan_failed_body:
     'Algo salió mal al cambiar tu plan. Inténtalo de nuevo o contacta con soporte.',
+  sub_plan_intro_title: 'Prueba 3 días',
+  sub_row_upcoming: 'Cambia a',
 } as const;
