@@ -106,4 +106,10 @@ export const subscriptionJa = {
     'メンバーシップはすでに解約予約されています。請求期間の終了までフルアクセスをご利用いただけます。',
   sub_canceled_footer:
     'メンバーシップは解約され、更新されません。請求期間の終了までフルアクセスをご利用いただけます。',
+  sub_reactivate_membership: 'メンバーシップを再開',
+  sub_reactivate_done_title: 'メンバーシップを再開しました',
+  sub_reactivate_done_body: 'おかえりなさい — メンバーシップは更新され続けます。',
+  sub_reactivate_failed_title: '再開できませんでした',
+  sub_reactivate_failed_body:
+    'メンバーシップの再開中に問題が発生しました。もう一度お試しいただくか、サポートにお問い合わせください。',
 } as const;

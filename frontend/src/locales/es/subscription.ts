@@ -106,4 +106,10 @@ export const subscriptionEs = {
     'Tu membresía ya está programada para cancelarse. Conservarás el acceso completo hasta el final de tu periodo de facturación.',
   sub_canceled_footer:
     'Tu membresía está cancelada y no se renovará. Conservarás el acceso completo hasta el final de tu periodo de facturación.',
+  sub_reactivate_membership: 'Reactivar membresía',
+  sub_reactivate_done_title: 'Membresía reactivada',
+  sub_reactivate_done_body: 'Bienvenido de nuevo: tu membresía seguirá renovándose.',
+  sub_reactivate_failed_title: 'No se pudo reactivar',
+  sub_reactivate_failed_body:
+    'Algo salió mal al reactivar tu membresía. Inténtalo de nuevo o contacta con soporte.',
 } as const;

@@ -106,4 +106,10 @@ export const subscriptionAr = {
     'عضويتك مجدولة بالفعل للإلغاء. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
   sub_canceled_footer:
     'تم إلغاء عضويتك ولن تتجدد. ستحتفظ بالوصول الكامل حتى نهاية فترة الفوترة.',
+  sub_reactivate_membership: 'إعادة تفعيل العضوية',
+  sub_reactivate_done_title: 'تمت إعادة تفعيل العضوية',
+  sub_reactivate_done_body: 'مرحباً بعودتك — ستستمر عضويتك في التجديد.',
+  sub_reactivate_failed_title: 'تعذّرت إعادة التفعيل',
+  sub_reactivate_failed_body:
+    'حدث خطأ ما أثناء إعادة تفعيل عضويتك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
 } as const;

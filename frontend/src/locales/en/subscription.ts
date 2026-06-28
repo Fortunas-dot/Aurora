@@ -107,4 +107,10 @@ export const subscriptionEn = {
     "Your membership is already set to cancel. You'll keep full access until the end of your billing period.",
   sub_canceled_footer:
     "Your membership is canceled and won't renew. You'll keep full access until the end of your billing period.",
+  sub_reactivate_membership: 'Reactivate membership',
+  sub_reactivate_done_title: 'Membership reactivated',
+  sub_reactivate_done_body: 'Welcome back — your membership will keep renewing.',
+  sub_reactivate_failed_title: "Couldn't reactivate",
+  sub_reactivate_failed_body:
+    'Something went wrong reactivating your membership. Please try again or contact support.',
 } as const;

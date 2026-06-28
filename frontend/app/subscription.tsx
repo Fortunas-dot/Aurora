@@ -95,9 +95,10 @@ export default function SubscriptionScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  // Set immediately after a successful cancel so the UI flips before RevenueCat's
-  // willRenew flag syncs (avoids the "press cancel again, same message" confusion).
-  const [cancelScheduledLocal, setCancelScheduledLocal] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
+  // Local override of willRenew so the UI flips immediately after cancel/reactivate,
+  // before RevenueCat's flag syncs. null = use RevenueCat's value.
+  const [localWillRenew, setLocalWillRenew] = useState<boolean | null>(null);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [threeMonthPackage, setThreeMonthPackage] = useState<PurchasesPackage | null>(null);
   // Which plan the buy button purchases ('monthly' is the default).
@@ -115,10 +116,16 @@ export default function SubscriptionScreen() {
   // Apple (IAP) → native in-app sheet; Stripe (web funnel) → our own flow.
   const activeStore = activeEntitlement?.store; // 'APP_STORE' | 'STRIPE' | ...
   const isAppleSub = activeStore === 'APP_STORE' || activeStore === 'MAC_APP_STORE';
+  const isStripeSub = activeStore === 'STRIPE' || activeStore === 'RC_BILLING';
+  // Only real store subscriptions can be canceled/reactivated. Promotional and
+  // lifetime grants report willRenew=false but aren't "canceled" — exclude them.
+  const isManagedSub = isAppleSub || isStripeSub;
   // The membership is set to cancel (still active until period end). RevenueCat's
-  // willRenew flips to false once the cancellation syncs; the local flag covers
-  // the brief window right after the user taps cancel.
-  const willNotRenew = cancelScheduledLocal || activeEntitlement?.willRenew === false;
+  // willRenew flips to false once the cancellation syncs; the local override
+  // covers the brief window right after the user taps cancel/reactivate.
+  const willNotRenew =
+    isManagedSub &&
+    (localWillRenew !== null ? !localWillRenew : activeEntitlement?.willRenew === false);
   const activeIsQuarter = activeEntitlement?.productIdentifier === 'com.aurora.app.3months';
   const activePackage = activeIsQuarter ? threeMonthPackage : monthlyPackage;
 
@@ -625,7 +632,7 @@ export default function SubscriptionScreen() {
       });
       const data = await res.json().catch(() => ({} as any));
       if (res.ok && data?.ok) {
-        setCancelScheduledLocal(true);
+        setLocalWillRenew(false);
         await checkPremiumStatus();
         Alert.alert(t('sub_cancel_done_title'), t('sub_cancel_done_body'));
       } else {
@@ -663,6 +670,40 @@ export default function SubscriptionScreen() {
         { text: t('sub_cancel_confirm_cta'), style: 'destructive', onPress: cancelStripeSubscription },
       ]
     );
+  };
+
+  // "Reactivate membership" — undo a scheduled cancellation. Stripe → backend
+  // clears cancel_at_period_end (and restores the intro→monthly conversion).
+  // Apple/unknown → native sheet (re-enable auto-renew through Apple).
+  const handleReactivate = async () => {
+    const store = await resolveStore();
+    if (!isStripeStore(store)) {
+      if (isMobile && (await presentAppleManagement())) return;
+      await openAppleFallback();
+      return;
+    }
+    try {
+      setIsReactivating(true);
+      const res = await fetch(`${WEB_BASE}/api/reactivate-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '' }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (res.ok && data?.ok) {
+        setLocalWillRenew(true);
+        await checkPremiumStatus();
+        Alert.alert(t('sub_reactivate_done_title'), t('sub_reactivate_done_body'));
+      } else {
+        console.warn('Reactivate returned not-ok:', res.status, data?.reason || data?.error);
+        Alert.alert(t('sub_reactivate_failed_title'), t('sub_reactivate_failed_body'));
+      }
+    } catch (error) {
+      console.warn('Reactivate failed:', error);
+      Alert.alert(t('sub_reactivate_failed_title'), t('sub_reactivate_failed_body'));
+    } finally {
+      setIsReactivating(false);
+    }
   };
 
   const handleBack = () => {
@@ -953,25 +994,38 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
-            {/* Cancel + footer */}
+            {/* Cancel / reactivate + footer */}
             <View style={[styles.section, { paddingTop: 18 }]}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleCancelMembership}
-                disabled={isCancelling || willNotRenew}
-                style={[styles.cancelBtn, willNotRenew && styles.cancelBtnDone]}
-              >
-                {isCancelling ? (
-                  <ActivityIndicator size="small" color="rgba(255,255,255,0.62)" />
-                ) : willNotRenew ? (
-                  <View style={styles.cancelDoneRow}>
-                    <Ionicons name="checkmark-circle" size={15} color={C.greenText} />
-                    <Text style={[styles.cancelText, { color: C.greenText }]}>{t('sub_cancel_scheduled')}</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
-                )}
-              </TouchableOpacity>
+              {willNotRenew ? (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={handleReactivate}
+                  disabled={isReactivating}
+                  style={styles.reactivateBtn}
+                >
+                  {isReactivating ? (
+                    <ActivityIndicator size="small" color={C.greenText} />
+                  ) : (
+                    <View style={styles.reactivateRow}>
+                      <Ionicons name="refresh" size={16} color={C.greenText} />
+                      <Text style={styles.reactivateText}>{t('sub_reactivate_membership')}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleCancelMembership}
+                  disabled={isCancelling}
+                  style={styles.cancelBtn}
+                >
+                  {isCancelling ? (
+                    <ActivityIndicator size="small" color="rgba(255,255,255,0.62)" />
+                  ) : (
+                    <Text style={styles.cancelText}>{t('sub_cancel_membership')}</Text>
+                  )}
+                </TouchableOpacity>
+              )}
               <Text style={styles.subscribedFooter}>
                 {willNotRenew ? t('sub_canceled_footer') : t('sub_subscribed_footer')}
               </Text>
@@ -1613,14 +1667,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(255,255,255,0.62)',
   },
-  cancelBtnDone: {
-    borderColor: 'rgba(63,216,154,0.35)',
-    backgroundColor: 'rgba(63,216,154,0.08)',
+  reactivateBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(63,216,154,0.4)',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(63,216,154,0.10)',
   },
-  cancelDoneRow: {
+  reactivateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 8,
+  },
+  reactivateText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.greenText,
   },
   subscribedFooter: {
     fontSize: 11,
