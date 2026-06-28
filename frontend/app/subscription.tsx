@@ -590,12 +590,12 @@ export default function SubscriptionScreen() {
 
   // Open the Stripe Customer Portal for a web-funnel buyer (update card / change
   // plan / cancel on a short-lived Stripe-hosted page). Returns true if opened.
-  const openStripePortal = async (): Promise<boolean> => {
+  const openStripePortal = async (flow?: 'change_plan'): Promise<boolean> => {
     try {
       const res = await fetch(`${WEB_BASE}/api/billing-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '' }),
+        body: JSON.stringify({ app_user_id: userId, email: (user as any)?.email || '', flow }),
       });
       const data = await res.json().catch(() => ({} as any));
       if (res.ok && data?.url) {
@@ -733,7 +733,7 @@ export default function SubscriptionScreen() {
     // Stripe/web buyers must not "change plan" via Apple (it would create a 2nd
     // subscription) — send them to the Stripe portal instead.
     if (isStripeStore(store)) {
-      if (await openStripePortal()) return;
+      if (await openStripePortal('change_plan')) return;
       Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
       return;
     }
