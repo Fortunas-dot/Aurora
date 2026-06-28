@@ -525,6 +525,22 @@ export default function SubscriptionScreen() {
     }
   };
 
+  // Resolve where the active sub was bought, fetching fresh customer info if the
+  // store-loaded entitlement isn't available yet. Only an explicit Stripe store
+  // routes to our web cancel/portal flow — Apple/promotional/unknown go to the
+  // native sheet (so an Apple buyer never sees a false "couldn't cancel").
+  const resolveStore = async (): Promise<string | undefined> => {
+    if (activeStore) return activeStore;
+    try {
+      const ci = await revenueCatService.getCustomerInfo();
+      return ci?.entitlements.active[PREMIUM_ENTITLEMENT]?.store;
+    } catch (error) {
+      console.warn('Failed to resolve subscription store:', error);
+      return undefined;
+    }
+  };
+  const isStripeStore = (store?: string) => store === 'STRIPE' || store === 'RC_BILLING';
+
   // Present Apple's native subscription sheet INSIDE the app (RevenueCat Customer
   // Center). Returns true if shown. Apple subs can only be managed/cancelled
   // through Apple — this is the closest-to-native, in-app way to do it.
@@ -578,16 +594,16 @@ export default function SubscriptionScreen() {
     return false;
   };
 
-  // "Manage subscription" row. Apple → in-app native sheet. Stripe → portal.
+  // "Manage subscription" row. Stripe → portal. Everything else → native sheet.
   const handleManageSubscription = async () => {
-    if (isAppleSub && isMobile) {
-      if (await presentAppleManagement()) return;
-      await openAppleFallback();
+    const store = await resolveStore();
+    if (isStripeStore(store)) {
+      if (await openStripePortal()) return;
+      Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
       return;
     }
-    // Web/Stripe-bought subs (or unknown) → Stripe portal, never Apple.
-    if (await openStripePortal()) return;
-    Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
+    if (isMobile && (await presentAppleManagement())) return;
+    await openAppleFallback();
   };
 
   // Cancel a Stripe (web-funnel) subscription via our backend — stays in-app.
@@ -605,6 +621,7 @@ export default function SubscriptionScreen() {
         await checkPremiumStatus();
         Alert.alert(t('sub_cancel_done_title'), t('sub_cancel_done_body'));
       } else {
+        console.warn('Stripe cancel returned not-ok:', res.status, data?.reason || data?.error);
         Alert.alert(t('sub_cancel_failed_title'), t('sub_cancel_failed_body'));
       }
     } catch (error) {
@@ -615,11 +632,13 @@ export default function SubscriptionScreen() {
     }
   };
 
-  // "Cancel membership" button. Apple → native in-app sheet; Stripe → in-app
-  // confirm + backend cancel (never bounce a web buyer to Apple).
+  // "Cancel membership" button. Stripe → in-app confirm + backend cancel.
+  // Apple/unknown → native in-app sheet (never show a web buyer's error to an
+  // Apple buyer, and never bounce a web buyer to Apple).
   const handleCancelMembership = async () => {
-    if (isAppleSub && isMobile) {
-      if (await presentAppleManagement()) return;
+    const store = await resolveStore();
+    if (!isStripeStore(store)) {
+      if (isMobile && (await presentAppleManagement())) return;
       await openAppleFallback();
       return;
     }
@@ -656,7 +675,10 @@ export default function SubscriptionScreen() {
   // upgrade/cross-grade). Stripe/web buyers must NOT buy via Apple here (it would
   // create a second subscription) — send them to web management instead.
   const handleChangePlan = async () => {
-    if (!isAppleSub && activeStore) {
+    const store = await resolveStore();
+    // Stripe/web buyers must not "change plan" via Apple (it would create a 2nd
+    // subscription) — send them to the Stripe portal instead.
+    if (isStripeStore(store)) {
       if (await openStripePortal()) return;
       Alert.alert(t('sub_manage_subscription'), t('sub_manage_subscription_body'));
       return;
