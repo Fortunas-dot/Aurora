@@ -20,6 +20,7 @@ import aiRoutes from './routes/ai';
 import therapistRoutes from './routes/therapists';
 import seedRoutes from './routes/seed';
 import calendarRoutes from './routes/calendar';
+import adminRoutes from './routes/admin';
 import { ensureDemoPostsAndComments } from './scripts/ensureDemoPosts';
 import { startInactivityCron } from './jobs/inactivityNotification';
 
@@ -306,6 +307,7 @@ if (process.env.NODE_ENV !== 'production') {
   app.use('/api/seed', seedRoutes);
 }
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

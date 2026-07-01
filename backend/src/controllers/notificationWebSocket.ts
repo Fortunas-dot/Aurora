@@ -6,6 +6,12 @@ import { NotificationType } from '../models/Notification';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
+  /** Current app screen/route the user is on (reported by the client). */
+  currentScreen?: string;
+  /** When this connection was established (ms epoch). */
+  connectedAt?: number;
+  /** Last time we heard from this client (presence/ping), ms epoch. */
+  lastSeen?: number;
 }
 
 // Store active WebSocket connections
@@ -17,6 +23,41 @@ const activeConnections = new Map<string, AuthenticatedWebSocket>();
 export const isUserOnline = (userId: string): boolean => {
   const ws = activeConnections.get(userId);
   return ws !== undefined && ws.readyState === 1; // OPEN
+};
+
+/** A connection is considered "live" if the socket is open and we've heard
+ *  from it within this window (covers the 30s keep-alive with margin). */
+const PRESENCE_STALE_MS = 90_000;
+
+export interface PresenceSnapshot {
+  /** Total distinct users currently online. */
+  total: number;
+  /** Count of online users per screen, e.g. { chat: 12, home: 8 }. */
+  byScreen: Record<string, number>;
+  /** When this snapshot was generated (ISO string). */
+  generatedAt: string;
+}
+
+/**
+ * Build a live-presence snapshot from the open WebSocket connections.
+ * Used by the admin dashboard endpoint. No DB access — reads in-memory state.
+ */
+export const getPresenceSnapshot = (): PresenceSnapshot => {
+  const now = Date.now();
+  const byScreen: Record<string, number> = {};
+  let total = 0;
+
+  activeConnections.forEach((ws) => {
+    const isOpen = ws.readyState === 1; // OPEN
+    const fresh = now - (ws.lastSeen ?? ws.connectedAt ?? 0) < PRESENCE_STALE_MS;
+    if (!isOpen || !fresh) return;
+
+    total += 1;
+    const screen = ws.currentScreen || 'unknown';
+    byScreen[screen] = (byScreen[screen] || 0) + 1;
+  });
+
+  return { total, byScreen, generatedAt: new Date(now).toISOString() };
 };
 
 /**
@@ -43,6 +84,8 @@ export const handleNotificationWebSocket = (ws: AuthenticatedWebSocket, req: any
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
     ws.userId = decoded.userId;
+    ws.connectedAt = Date.now();
+    ws.lastSeen = Date.now();
 
     // Store connection
     activeConnections.set(decoded.userId, ws);
@@ -55,8 +98,15 @@ export const handleNotificationWebSocket = (ws: AuthenticatedWebSocket, req: any
     ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message);
-        if (data.type === 'ping') {
-          ws.send(JSON.stringify({ type: 'pong' }));
+        // Any inbound message counts as activity for presence freshness.
+        ws.lastSeen = Date.now();
+        if (data.type === 'ping' || data.type === 'pong') {
+          if (data.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+        } else if (data.type === 'presence') {
+          // Client reports the screen/route it's currently viewing.
+          if (typeof data.screen === 'string' && data.screen.length <= 100) {
+            ws.currentScreen = data.screen;
+          }
         }
       } catch (error) {
         console.error('Error handling WebSocket message:', error);
