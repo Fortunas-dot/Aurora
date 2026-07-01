@@ -75,6 +75,8 @@ class NotificationWebSocketService {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.callbacks.onConnected?.();
+        // Re-report current screen so presence survives reconnects.
+        this.resendPresence();
       };
 
       this.ws.onmessage = (event) => {
@@ -268,6 +270,29 @@ class NotificationWebSocketService {
    */
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Report the screen/route the user is currently viewing, for live-presence
+   * tracking on the admin dashboard. Best-effort: silently skips if the socket
+   * isn't open (it will be re-sent on the next navigation / reconnect).
+   * We remember the last screen so it can be re-sent automatically on reconnect.
+   */
+  private lastScreen: string | null = null;
+
+  sendPresence(screen: string): void {
+    this.lastScreen = screen;
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    try {
+      this.ws.send(JSON.stringify({ type: 'presence', screen }));
+    } catch (error) {
+      if (__DEV__) console.warn('Failed to send presence:', error);
+    }
+  }
+
+  /** Re-send the last known screen (used after (re)connect). */
+  resendPresence(): void {
+    if (this.lastScreen) this.sendPresence(this.lastScreen);
   }
 }
 

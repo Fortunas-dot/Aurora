@@ -223,16 +223,14 @@ export default function RootLayout() {
         // Wrap in try-catch to handle any module loading errors gracefully
         let trackingAllowed: boolean = true; // Default to true so analytics still work if ATT is unavailable
         try {
-          // Use a setTimeout to defer the call and avoid bundling issues
-          // This allows the app to start even if the module has issues
-          trackingAllowed = await Promise.race([
-            trackingTransparencyService.requestPermission(),
-            new Promise<boolean>((resolve) => {
-              // Timeout after 1 second - if module loading takes too long, assume it's not available
-              setTimeout(() => resolve(true), 1000);
-            }),
-          ]);
-          
+          // Await the real ATT decision. We intentionally do NOT race this with a
+          // short timeout: the user takes more than a second to read and answer the
+          // system prompt, and resolving early would (a) start analytics before the
+          // user consents and (b) let RevenueCat capture a stale/incorrect ATT
+          // status. requestPermission() already no-ops quickly when the native
+          // module is unavailable (web/dev) and waits for foreground-active on iOS.
+          trackingAllowed = await trackingTransparencyService.requestPermission();
+
           if (trackingAllowed) {
             console.log('✅ Tracking permission granted, initializing analytics');
           } else {
@@ -518,6 +516,8 @@ export default function RootLayout() {
     const screenName = pathname.replace(/^\//, '') || 'home';
     facebookAnalytics.logScreenView(screenName);
     appsFlyerService.trackContentView(screenName);
+    // Live-presence: report current screen over the notification WebSocket.
+    notificationWebSocketService.sendPresence(screenName);
   }, [pathname]);
 
   // Setup WebSocket connection for real-time notifications

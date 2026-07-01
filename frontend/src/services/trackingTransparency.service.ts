@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 
 /**
  * Service to handle App Tracking Transparency (ATT) on iOS
@@ -111,6 +111,30 @@ class TrackingTransparencyService {
   }
 
   /**
+   * Wait until the app is in the foreground "active" state.
+   * iOS silently returns `denied` (without showing the system prompt) if
+   * requestTrackingAuthorization is called while the app is still inactive/
+   * background — which is exactly what happens when we call this during the
+   * cold-start initialize() before the first frame is presented. Waiting for
+   * `active` ensures the prompt actually shows and the real user choice is
+   * captured (instead of a bogus "denied" that later propagates to RevenueCat's
+   * $attConsentStatus).
+   */
+  private async waitForActiveAppState(): Promise<void> {
+    if (AppState.currentState === 'active') {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      const subscription = AppState.addEventListener('change', (state) => {
+        if (state === 'active') {
+          subscription.remove();
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
    * Request tracking permission from user
    * Should be called before initializing analytics services
    * @returns Promise<boolean> - true if permission granted, false otherwise
@@ -129,6 +153,12 @@ class TrackingTransparencyService {
     }
 
     try {
+      // Ensure the app is foreground-active before prompting, otherwise iOS
+      // returns `denied` without ever showing the dialog.
+      await this.waitForActiveAppState();
+      // Give the first frame a moment to settle (Apple/Expo recommendation).
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
       // Request tracking permission
       const { status } = await module.requestTrackingPermissionsAsync();
       

@@ -166,6 +166,17 @@ class RevenueCatServiceImpl implements RevenueCatService {
     try {
       await Purchases.logIn(userId);
 
+      // Re-read the device identifiers / ATT consent status now that the user is
+      // identified. RevenueCat auto-collects $attConsentStatus from
+      // ATTrackingManager when it posts attributes; by the time we reach here the
+      // ATT prompt has been answered, so this ensures the stored value reflects
+      // the user's final choice instead of a stale "denied"/"notDetermined".
+      try {
+        await Purchases.collectDeviceIdentifiers();
+      } catch (attError) {
+        console.warn('⚠️ RevenueCat collectDeviceIdentifiers failed:', attError);
+      }
+
       // Set subscriber attributes (email, phone number, etc.) if provided
       if (attributes) {
         if (attributes.email) {

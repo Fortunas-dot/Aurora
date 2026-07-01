@@ -11,6 +11,21 @@ import { revenueCatService } from '../services/revenuecat.service';
 
 type AuthErrorContext = 'login' | 'register';
 
+/**
+ * Social login (Google/Facebook) uses a single endpoint for both first-time
+ * sign-up and returning login. The backend returns the full user including its
+ * `createdAt` timestamp, so a freshly created account (created within the last
+ * couple of minutes) is treated as a registration. This lets us fire the
+ * AppsFlyer `af_complete_registration` event for genuine new social sign-ups —
+ * matching the email-signup flow — instead of only `af_login`.
+ */
+const isFreshlyRegistered = (user: User): boolean => {
+  if (!user?.createdAt) return false;
+  const createdMs = new Date(user.createdAt).getTime();
+  if (Number.isNaN(createdMs)) return false;
+  return Date.now() - createdMs < 120_000; // 2 min window covers clock skew
+};
+
 const formatAuthError = (message: string | null | undefined, context: AuthErrorContext): string => {
   if (!message || typeof message !== 'string') {
     return context === 'register'
@@ -404,7 +419,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         facebookAnalytics.logLogin('facebook');
 
         appsFlyerService.identify(user._id);
-        appsFlyerService.trackLogin('facebook');
+        if (isFreshlyRegistered(user)) {
+          appsFlyerService.trackRegistration('facebook');
+        } else {
+          appsFlyerService.trackLogin('facebook');
+        }
         
         // Cache user data for persistence
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
@@ -548,7 +567,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         facebookAnalytics.logLogin('google');
 
         appsFlyerService.identify(user._id);
-        appsFlyerService.trackLogin('google');
+        if (isFreshlyRegistered(user)) {
+          appsFlyerService.trackRegistration('google');
+        } else {
+          appsFlyerService.trackLogin('google');
+        }
 
         await secureStorage.setItemAsync('cached_user', JSON.stringify(user));
 
