@@ -467,6 +467,9 @@ export const isUserOnline = (userId: string): boolean => {
   return ws !== undefined && ws.readyState === 1;
 };
 
+/** Number of users currently connected to the chat WebSocket. */
+export const getChatConnectionCount = (): number => activeChatConnections.size;
+
 /**
  * Broadcast message reaction update to both users in conversation
  */

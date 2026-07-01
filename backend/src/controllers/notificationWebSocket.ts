@@ -25,6 +25,9 @@ export const isUserOnline = (userId: string): boolean => {
   return ws !== undefined && ws.readyState === 1; // OPEN
 };
 
+/** Number of users currently connected to the notification WebSocket. */
+export const getNotificationConnectionCount = (): number => activeConnections.size;
+
 /** A connection is considered "live" if the socket is open and we've heard
  *  from it within this window (covers the 30s keep-alive with margin). */
 const PRESENCE_STALE_MS = 90_000;

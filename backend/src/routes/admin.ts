@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getPresenceSnapshot } from '../controllers/notificationWebSocket';
+import { getSystemMetrics } from '../controllers/metricsController';
 
 const router = Router();
 
@@ -29,6 +30,11 @@ const requireAdminToken = (req: Request, res: Response, next: NextFunction): voi
 /** Live presence snapshot: how many users are online and on which screen. */
 router.get('/presence', requireAdminToken, (_req: Request, res: Response) => {
   res.json({ success: true, data: getPresenceSnapshot() });
+});
+
+/** Live backend load: memory, CPU, event-loop lag and open WS connections. */
+router.get('/metrics', requireAdminToken, (_req: Request, res: Response) => {
+  res.json({ success: true, data: getSystemMetrics() });
 });
 
 export default router;
