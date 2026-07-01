@@ -179,7 +179,8 @@ class PostHogService {
   setUserProperties(properties: Record<string, any>) {
     if (!this.initialized || !this.client) return;
     try {
-      // Renamed from setUserProperties in posthog-react-native 4.4x
+      // The PostHog RN client method is setPersonProperties (setUserProperties
+      // does not exist and silently threw here on 4.39.x). Valid on 4.39.4+.
       this.client.setPersonProperties(properties);
     } catch (error) {
       console.warn('PostHog setUserProperties failed:', error);
